@@ -1,0 +1,160 @@
+/* Basic Reset & Body */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    background-color: var(--primary-color);
+    color: var(--header-text-color);
+    padding: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 { margin: 0; font-size: 1.5em; }
+nav a, nav button {
+    color: var(--header-text-color);
+    margin-left: 1em;
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1em;
+}
+nav a:hover, nav button:hover { text-decoration: underline; }
+
+main { padding: 1em; max-width: 1200px; margin: auto; }
+footer {
+    text-align: center;
+    padding: 1em;
+    background-color: var(--secondary-color);
+    color: var(--footer-text-color);
+    margin-top: 2em;
+}
+
+/* Menu Items */
+.menu-section { margin-bottom: 2em; }
+.menu-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1em;
+    margin-bottom: 1em;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--card-bg-color);
+}
+.menu-item img {
+    max-width: 150px;
+    max-height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 0.5em;
+}
+.menu-item h3 { margin: 0 0 0.5em 0; }
+.menu-item .price { font-weight: bold; margin-bottom: 0.5em; }
+.menu-item button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    cursor: pointer;
+    align-self: flex-start;
+}
+.menu-item button:hover { background-color: darken(var(--accent-color), 10%); }
+
+/* Cart */
+.cart-item { display: flex; justify-content: space-between; padding: 0.5em 0; border-bottom: 1px solid var(--border-color-light); }
+.cart-item:last-child { border-bottom: none; }
+#cart-total { font-weight: bold; margin-top: 1em; text-align: right; }
+#checkout-button, #confirm-order-button {
+    display: block;
+    width: 100%;
+    padding: 0.8em;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 1em;
+}
+
+/* Forms */
+form div { margin-bottom: 1em; }
+form label { display: block; margin-bottom: 0.3em; }
+form input[type="text"],
+form input[type="email"],
+form input[type="password"],
+form input[type="number"],
+form input[type="time"],
+form input[type="datetime-local"],
+form textarea,
+form select {
+    width: calc(100% - 1em);
+    padding: 0.5em;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg-color);
+    color: var(--input-text-color);
+}
+form button[type="submit"] {
+    padding: 0.7em 1.5em;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: var(--card-bg-color);
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    width: 80%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+}
+.close-button {
+    color: var(--text-color-muted);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.close-button:hover,
+.close-button:focus {
+    color: var(--primary-color);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Admin Sections */
+.dashboard-section {
+    padding: 1em;
+    margin-bottom: 1em;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--card-bg-color);
+}
+.dashboard-section h2 { margin-top: 0;}
+.theme-controls label, .theme-controls input { display: inline-block; margin-right: 10px;}
+.theme-controls input[type="color"] { vertical-align: middle; }

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Awesome Restaurant</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link id="theme-stylesheet" rel="stylesheet" href="css/theme-default.css">
+    <!-- Load Supabase Client (if chosen primary) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <h1 id="site-title">My Awesome Restaurant</h1>
+        <nav>
+            <a href="#menu">Menu</a>
+            <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
+            <span id="auth-status">
+                <button id="login-button">Login/Sign Up</button>
+            </span>
+            <span id="admin-links" style="display:none;">
+                 | <a href="#owner-dashboard">Owner Dashboard</a>
+                 | <a href="#manager-dashboard">Manager Dashboard</a>
+                 | <button id="logout-button">Logout</button>
+            </span>
+        </nav>
+    </header>
+
+    <main id="app-content">
+        <!-- Content will be dynamically inserted here -->
+        <section id="loading-spinner" style="display:none; text-align:center; padding:20px;">Loading...</section>
+    </main>
+
+    <footer>
+        <p>© <span id="current-year"></span> <span id="site-title-footer">My Awesome Restaurant</span>. All rights reserved.</p>
+    </footer>
+
+    <!-- Modal for Login/Signup, Order Confirmation, etc. -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Minimal global config (could also be in main.js)
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // From your Supabase project settings
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // From your Supabase project settings
+        // For Turso (if you add it later)
+        // const TURSO_DB_URL = 'YOUR_TURSO_DB_URL';
+        // const TURSO_AUTH_TOKEN = 'YOUR_TURSO_AUTH_TOKEN_FOR_CLIENT_SIDE_IF_APPLICABLE';
+
+        // Initialize Supabase client (global or passed to modules)
+        let supabase = null;
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.warn("Supabase URL or Anon Key not configured.");
+        }
+    </script>
+    <script src="js/apiService.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
