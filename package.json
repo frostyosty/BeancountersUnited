@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Restaurant ordering website",
   "main": "public/js/main.js",
-  "scripts": {
-    "dev": "vercel dev", 
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+    "scripts": {
+        "start": "serve -s public",
+        "build": "mkdir -p public db && cp index.html styles.css site.webmanifest favicon.ico favicon-*.png .env vercel.json setup_telegram_session.py public/ && cp -r pictures public/pictures && cp -r pdfs public/pdfs && cp db/db.js db/ && pip install -r requirements-vercel.txt"
+    },
   "keywords": [],
   "author": "",
   "license": "ISC",
