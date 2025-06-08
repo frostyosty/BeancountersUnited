@@ -1,9 +1,11 @@
+import * as uiUtils from './ui.js'; 
+
 // cart.js
 let cartItems = JSON.parse(localStorage.getItem('restaurantCart')) || [];
 
 function saveCart() {
     localStorage.setItem('restaurantCart', JSON.stringify(cartItems));
-    ui.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
+    uiUtils.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
     // Dispatch an event that the cart has changed
     document.dispatchEvent(new CustomEvent('cartUpdated', { detail: { cartItems } }));
 }
@@ -49,7 +51,7 @@ const cart = {
 };
 
 // Initialize cart count on load
-ui.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
+uiUtils.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
 
 // Expose cart to global scope or use modules
 window.cart = cart;
