@@ -18,7 +18,7 @@ import * as admin from './admin.js';   // Owner/Manager dashboard rendering
 // Ideally, modules call each other directly via imports, not through window.
 window.api = api;
 window.auth = auth;
-window.ui = ui;
+window.ui = uiUtils;
 window.cart = cart;
 window.admin = admin;
 
