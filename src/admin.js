@@ -4,6 +4,9 @@ const admin = {
     async renderOwnerDashboard() {
         ui.setLoading(true);
         let html = `<div class="dashboard-section"><h2>Owner Dashboard</h2>`;
+
+
+        
         // Orders Management (simplified)
         html += `<h3>Recent Orders</h3><div id="orders-list">Loading orders...</div>`;
         // Menu Management
@@ -23,13 +26,25 @@ const admin = {
                 <button type="submit">Add Item</button>
             </form>
         `;
-        html += `</div>`; // close dashboard-section
-        ui.renderPage(html);
+        
+ const currentFaviconSettings = await loadFaviconSettings(); // This will come from site_settings DB
+
+    html += getFaviconSettingsHTML(currentFaviconSettings);
+
+    html += `</div>`; // close main dashboard-section
+    ui.renderPage(html);
         await this.loadOrdersForOwner();
         await this.loadMenuItemsForOwner();
         
         document.getElementById('add-menu-item-form')?.addEventListener('submit', this.handleAddMenuItem);
-        ui.setLoading(false);
+
+
+
+                
+        attachFaviconSettingsListeners(); // New function to handle favicon UI listeners
+    updateFaviconPreview(currentFaviconSettings); // Update preview on load
+
+    ui.setLoading(false);
     },
 
     async loadOrdersForOwner() {
@@ -276,8 +291,163 @@ const admin = {
             admin.loadManagerSiteSettings(); // Refresh displayed current provider
         } catch (error) {
             alert(`Error switching database provider: ${error.message}`);
-        }
+        }   
+        
+
     }
+
+
+
+
+
+
 };
 
 window.admin = admin;
+
+
+
+
+
+
+function attachFaviconSettingsListeners() {
+    const form = document.getElementById('favicon-settings-form');
+    if (!form) return;
+
+    form.addEventListener('submit', handleSaveFaviconSettings);
+
+    const radios = form.querySelectorAll('input[name="faviconType"]');
+    const textOptions = document.getElementById('text-favicon-options');
+    const imageOptions = document.getElementById('image-favicon-options');
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (textOptions) textOptions.style.display = e.target.value === 'text' ? 'block' : 'none';
+            if (imageOptions) imageOptions.style.display = e.target.value === 'image' ? 'block' : 'none';
+            // Trigger a preview update when type changes
+            const previewData = getPreviewDataFromForm();
+            updateFaviconPreview(previewData);
+        });
+    });
+
+    const previewButton = document.getElementById('preview-text-favicon');
+    if (previewButton) {
+        previewButton.addEventListener('click', () => {
+             const previewData = getPreviewDataFromForm();
+             updateFaviconPreview(previewData);
+        });
+    }
+
+    // Live preview for text favicon inputs
+    ['favicon-text', 'favicon-text-bg-color', 'favicon-text-color'].forEach(id => {
+        const input = document.getElementById(id);
+        if(input) {
+            input.addEventListener('input', () => {
+                 if(document.querySelector('input[name="faviconType"]:checked')?.value === 'text') {
+                    const previewData = getPreviewDataFromForm();
+                    updateFaviconPreview(previewData);
+                 }
+            });
+        }
+    });
+
+    const imageUploadInput = document.getElementById('favicon-image-upload');
+    if(imageUploadInput){
+        imageUploadInput.addEventListener('change', (event) => {
+            if (event.target.files && event.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Preview the uploaded image directly as a data URL
+                    const previewImg = document.getElementById('favicon-preview-img');
+                    if(previewImg) {
+                        previewImg.src = e.target.result;
+                        previewImg.style.backgroundColor = ''; // Clear background for image
+                    }
+                }
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        });
+    }
+}
+
+function getPreviewDataFromForm() {
+    const form = document.getElementById('favicon-settings-form');
+    if(!form) return { type: 'default' };
+
+    const type = form.faviconType.value;
+    if (type === 'text') {
+        return {
+            type: 'text',
+            text: document.getElementById('favicon-text').value || 'R',
+            bgColor: document.getElementById('favicon-text-bg-color').value,
+            textColor: document.getElementById('favicon-text-color').value,
+        };
+    } else if (type === 'image') {
+        // For image type during preview from form, we might only have local file.
+        // The actual save will upload it and get a URL.
+        // Here, we just signal it's an image. Actual image data handled by imageUploadInput listener.
+        return { type: 'image' }; // Simplified for now; updateFaviconPreview will look at image-preview-img
+    }
+    return { type: 'default' };
+}
+
+
+
+// Add this function or integrate its HTML into renderOwnerDashboard
+function getFaviconSettingsHTML(currentFaviconSettings) {
+    // currentFaviconSettings could be an object like:
+    // { type: 'text', text: 'R', bgColor: '#FF0000', textColor: '#FFFFFF' }
+    // or { type: 'image', url: 'https://url.to/image.png' }
+    // or { type: 'default' }
+
+    let textFaviconText = currentFaviconSettings?.type === 'text' ? currentFaviconSettings.text : 'R';
+    let textFaviconBgColor = currentFaviconSettings?.type === 'text' ? currentFaviconSettings.bgColor : '#3498db';
+    let textFaviconTextColor = currentFaviconSettings?.type === 'text' ? currentFaviconSettings.textColor : '#ffffff';
+    let currentImageUrl = currentFaviconSettings?.type === 'image' ? currentFaviconSettings.url : '';
+
+    return `
+        <div class="dashboard-section">
+            <h3>Favicon Settings</h3>
+            <form id="favicon-settings-form">
+                <p>Choose your favicon type:</p>
+                <div>
+                    <input type="radio" id="favicon-type-default" name="faviconType" value="default" ${(!currentFaviconSettings || currentFaviconSettings?.type === 'default') ? 'checked' : ''}>
+                    <label for="favicon-type-default">Use Default Coffee Cup</label>
+                </div>
+
+                <div>
+                    <input type="radio" id="favicon-type-text" name="faviconType" value="text" ${currentFaviconSettings?.type === 'text' ? 'checked' : ''}>
+                    <label for="favicon-type-text">Generate from Text (1-2 Characters Recommended)</label>
+                    <div id="text-favicon-options" style="margin-left: 20px; display: ${currentFaviconSettings?.type === 'text' ? 'block' : 'none'};">
+                        <label for="favicon-text">Text:</label>
+                        <input type="text" id="favicon-text" name="faviconText" value="${textFaviconText}" maxlength="2" style="width: 50px;">
+                        <br>
+                        <label for="favicon-text-bg-color">Background Color:</label>
+                        <input type="color" id="favicon-text-bg-color" name="faviconTextBgColor" value="${textFaviconBgColor}">
+                        <br>
+                        <label for="favicon-text-color">Text Color:</label>
+                        <input type="color" id="favicon-text-color" name="faviconTextColor" value="${textFaviconTextColor}">
+                        <br>
+                        <button type="button" id="preview-text-favicon">Preview Text Favicon</button>
+                    </div>
+                </div>
+
+                <div>
+                    <input type="radio" id="favicon-type-image" name="faviconType" value="image" ${currentFaviconSettings?.type === 'image' ? 'checked' : ''}>
+                    <label for="favicon-type-image">Upload Image (Square .png, .ico, or .svg recommended)</label>
+                    <div id="image-favicon-options" style="margin-left: 20px; display: ${currentFaviconSettings?.type === 'image' ? 'block' : 'none'};">
+                        <input type="file" id="favicon-image-upload" name="faviconImageFile" accept="image/png, image/x-icon, image/svg+xml, image/jpeg">
+                        <p>Current image: <span id="current-favicon-image-url">${currentImageUrl || 'None'}</span></p>
+                        <p><small>Note: Uploading a new image will replace the current one. Images are stored in Supabase Storage.</small></p>
+                    </div>
+                </div>
+                <div style="margin-top:20px;">
+                    <button type="submit">Save Favicon Settings</button>
+                </div>
+            </form>
+            <div style="margin-top:10px;">
+                Preview: <img id="favicon-preview-img" src="/default-favicon.svg" alt="Favicon Preview" width="32" height="32" style="border:1px solid #ccc; vertical-align:middle;">
+            </div>
+        </div>
+    `;
+}

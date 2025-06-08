@@ -4,20 +4,20 @@
   "description": "Restaurant ordering website",
   "type": "module",
   "scripts": {
-    "dev": "vite", 
-    "build": "vite build", 
-    "preview": "vite preview" 
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@libsql/client": "^0.5.x",
-    "@supabase/supabase-js": "^2.x.x"
+    "@supabase/supabase-js": "^2.50.0"
   },
   "devDependencies": {
-    "vite": "^5.x.x", 
-    "@vitejs/plugin-legacy": "^5.x.x", 
-    "vercel": "^32.x"
+    "@vitejs/plugin-legacy": "^5.x.x",
+    "vercel": "^32.x",
+    "vite": "^5.x.x"
   }
 }

@@ -23,12 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOM fully loaded and parsed (Vite Entry)");
 
     document.getElementById('current-year').textContent = new Date().getFullYear();
+    await auth.checkUserSession();
 
-    if (window.supabase) { // supabase is loaded globally from index.html
-        await auth.checkUserSession(); // Make sure checkUserSession is exported from auth.js
-    } else {
-        console.warn("Supabase client not ready.");
-    }
 
     loadSiteSettings(); // Ensure this function is defined or imported
 

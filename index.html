@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- <link rel="icon" type="image/svg+xml" href="/vite.svg" /> Or your favicon, place it in the new /public (Vite's public) or /src/assets -->
+    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="site-title-tag">My Awesome Restaurant</title> <!-- Keep this dynamic part -->
     <!-- CSS will be imported via JS by Vite. Remove old <link> tags for CSS -->
@@ -41,19 +42,6 @@
         </div>
     </div>
 
-    <!-- Supabase Client (keep if needed globally BEFORE your app logic) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // Global config can stay or be moved into your main JS module
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-        let supabase = null;
-        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-            supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } else {
-            console.warn("Supabase URL or Anon Key not configured.");
-        }
-    </script>
 
     <!-- VITE INJECTS YOUR BUNDLED JS HERE. Remove old script tags -->
     <script type="module" src="/src/main.js"></script> <!-- Vite's entry point -->
