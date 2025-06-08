@@ -368,11 +368,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Initial cart count update
-    uiUtils.updateCartCount(cart.getItems().reduce((sum, item) => sum + item.quantity, 0)); // cart.getItems() should also use imported 'cart'
+    console.log("UI Module (as uiUtils) before cart count update:", uiUtils); // For debugging
+    if (uiUtils && typeof uiUtils.updateCartCount === 'function' && cart && typeof cart.getItems === 'function') {
+        uiUtils.updateCartCount(cart.getItems().reduce((sum, item) => sum + item.quantity, 0)); // <<< Use uiUtils.
+    } else {
+        console.error("Either uiUtils.updateCartCount or cart.getItems is not available!");
+    }
 
     document.addEventListener('cartUpdated', (event) => {
-        uiUtils.updateCartCount(event.detail.cartItems.reduce((sum, item) => sum + item.quantity, 0));
+        if (uiUtils && typeof uiUtils.updateCartCount === 'function' && event.detail && Array.isArray(event.detail.cartItems)) {
+            uiUtils.updateCartCount(event.detail.cartItems.reduce((sum, item) => sum + item.quantity, 0)); // <<< Use uiUtils.
+        } else {
+            console.error("Cannot update cart count on event: uiUtils.updateCartCount not available or cartItems missing/invalid.");
+        }
     });
 });
 
