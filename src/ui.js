@@ -79,9 +79,12 @@ const cartCountElement = document.getElementById('cart-count');
  * Updates the cart item count display in the header.
  * @param {number} count - The number of items in the cart.
  */
-export function updateCartCount(count) {
+export function updateCartCount(count) { // <<<< Ensure 'export' keyword is present
+    const cartCountElement = document.getElementById('cart-count'); // Make sure this element exists in index.html
     if (cartCountElement) {
         cartCountElement.textContent = count;
+    } else {
+        console.warn("Cart count element (#cart-count) not found in ui.js");
     }
 }
 

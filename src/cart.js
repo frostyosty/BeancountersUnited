@@ -1,57 +1,60 @@
-import * as uiUtils from './ui.js'; 
-
-// cart.js
 let cartItems = JSON.parse(localStorage.getItem('restaurantCart')) || [];
 
-function saveCart() {
+function _saveCart() { // Internal helper function
     localStorage.setItem('restaurantCart', JSON.stringify(cartItems));
-    uiUtils.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
+    // ui.updateCartCount is called by main.js via 'cartUpdated' event
     // Dispatch an event that the cart has changed
     document.dispatchEvent(new CustomEvent('cartUpdated', { detail: { cartItems } }));
 }
 
-const cart = {
-    addItem: (item, quantity = 1) => {
-        const existingItem = cartItems.find(ci => ci.id === item.id);
-        if (existingItem) {
-            existingItem.quantity += quantity;
+// --- EXPORTED FUNCTIONS ---
+export function addItem(item, quantity = 1) {
+    const existingItem = cartItems.find(ci => ci.id === item.id);
+    if (existingItem) {
+        existingItem.quantity = parseInt(existingItem.quantity, 10) + parseInt(quantity, 10);
+    } else {
+        cartItems.push({ ...item, quantity: parseInt(quantity, 10) });
+    }
+    _saveCart();
+    console.log(`${item.name} added to cart.`);
+    // Optionally show a small notification - this would need uiUtils too
+    // if (window.uiUtils && typeof window.uiUtils.showModal === 'function') { // Check if uiUtils is global or pass it in
+    //     window.uiUtils.showModal(`<p>${item.name} added to cart!</p><button onclick="window.uiUtils.closeModal()">OK</button>`);
+    //     setTimeout(window.uiUtils.closeModal, 1500);
+    // }
+}
+
+export function removeItem(itemId) {
+    cartItems = cartItems.filter(ci => ci.id.toString() !== itemId.toString());
+    _saveCart();
+}
+
+export function updateQuantity(itemId, quantity) {
+    const item = cartItems.find(ci => ci.id.toString() === itemId.toString());
+    const newQuantity = parseInt(quantity, 10);
+    if (item) {
+        if (newQuantity <= 0) {
+            removeItem(itemId); // Call the exported removeItem
         } else {
-            cartItems.push({ ...item, quantity });
+            item.quantity = newQuantity;
+            _saveCart();
         }
-        saveCart();
-        console.log(`${item.name} added to cart.`);
-        // Optionally show a small notification
-        ui.showModal(`<p>${item.name} added to cart!</p><button onclick="ui.closeModal()">OK</button>`);
-        setTimeout(ui.closeModal, 1500);
-    },
-    removeItem: (itemId) => {
-        cartItems = cartItems.filter(ci => ci.id !== itemId);
-        saveCart();
-    },
-    updateQuantity: (itemId, quantity) => {
-        const item = cartItems.find(ci => ci.id === itemId);
-        if (item) {
-            item.quantity = quantity;
-            if (item.quantity <= 0) {
-                cart.removeItem(itemId);
-            } else {
-                saveCart();
-            }
-        }
-    },
-    getItems: () => [...cartItems], // Return a copy
-    getTotal: () => {
-        return cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    },
-    clearCart: () => {
-        cartItems = [];
-        saveCart();
-    },
-    isEmpty: () => cartItems.length === 0,
-};
+    }
+}
 
-// Initialize cart count on load
-uiUtils.updateCartCount(cartItems.reduce((sum, item) => sum + item.quantity, 0));
+export function getItems() { // <<<< Ensure 'export' keyword is present
+    return [...cartItems]; // Return a copy to prevent direct mutation
+}
 
-// Expose cart to global scope or use modules
-window.cart = cart;
+export function getTotal() {
+    return cartItems.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity, 10)), 0);
+}
+
+export function clearCart() {
+    cartItems = [];
+    _saveCart();
+}
+
+export function isEmpty() {
+    return cartItems.length === 0;
+}
