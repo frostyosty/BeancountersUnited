@@ -1,20 +1,26 @@
 {
-  "name": "restaurant-project",
-  "version": "1.0.0",
-  "description": "Restaurant ordering website",
-  "main": "public/js/main.js",
-    "scripts": {
-        "start": "serve -s public",
-        "build": "mkdir -p public db && cp index.html styles.css site.webmanifest favicon.ico favicon-*.png .env vercel.json setup_telegram_session.py public/ && cp -r pictures public/pictures && cp -r pdfs public/pdfs && cp db/db.js db/ && pip install -r requirements-vercel.txt"
-    },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@libsql/client": "^0.5.x", 
-    "@supabase/supabase-js": "^2.x.x"
-  },
-  "devDependencies": {
-    "vercel": "^32.x" 
-  }
+  "version": 2,
+  "builds": [
+    { "src": "api/**/*.js", "use": "@vercel/node" },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+
+      "config": { "distDir": "public" } 
+    }
+  ],
+  "routes": [
+
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
+
+
+
+    { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
+
+
+    { "src": "/(.*\\.(?:ico|png|jpg|jpeg|gif|svg|webmanifest|js|css|map))", "dest": "/public/$1" },
+
+
+    { "src": "/(.*)", "dest": "/public/index.html" }
+  ]
 }

@@ -1,6 +1,4 @@
-git add .
-git commit -m "cafe commit 13052025"
-git push origin master
+git add . && git commit -m "cafe commit new after big change" && git push origin master
 
 
 -- For image storage (if using Supabase Storage)

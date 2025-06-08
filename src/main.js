@@ -1,36 +1,49 @@
-// main.js
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOM fully loaded and parsed");
+import './assets/css/style.css';
+import './assets/css/theme-default.css'; // Or dynamically load themes later
 
-    // Initialize current year in footer
+// Import other JS modules (they need to EXPORT what they provide)
+import * as api from './apiService.js'; // Assuming apiService.js exports functions
+import * as auth from './auth.js';
+import * as ui from './ui.js';
+import * as cart from './cart.js';
+import * as admin from './admin.js';
+
+// Make functions/objects globally available if your old code relied on window.foo
+// THIS IS A TEMPORARY STEP to minimize immediate refactoring.
+// Ideally, you'd refactor to pass dependencies explicitly.
+window.api = api;
+window.auth = auth;
+window.ui = ui;
+window.cart = cart;
+window.admin = admin;
+window.supabase = window.supabase; // Ensure the global supabase from index.html is still accessible if needed this way
+
+// The rest of your existing main.js logic (event listeners, router)
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("DOM fully loaded and parsed (Vite Entry)");
+
     document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    // Initial auth check AFTER Supabase client is confirmed to be initialized
-    if (window.supabase) {
-        await auth.checkUserSession(); // auth.js function
+    if (window.supabase) { // supabase is loaded globally from index.html
+        await auth.checkUserSession(); // Make sure checkUserSession is exported from auth.js
     } else {
-        console.warn("Supabase client not ready on DOMContentLoaded for auth check.");
-        // Fallback or retry logic might be needed if Supabase loads very slowly
+        console.warn("Supabase client not ready.");
     }
-     
-    // Load initial site settings (like name)
-    loadSiteSettings();
 
+    loadSiteSettings(); // Ensure this function is defined or imported
 
-    // Simple hash-based router
     window.addEventListener('hashchange', handleRouteChange);
     handleRouteChange(); // Initial route
 
-
-    // Listener for theme controls (if they are on the page)
     document.body.addEventListener('input', (event) => {
         if (event.target.matches('.theme-controls input[data-css-var]')) {
             const varName = event.target.dataset.cssVar;
             const value = event.target.value;
-            ui.updateCssVariable(varName, value);
+            ui.updateCssVariable(varName, value); // Ensure ui object/module has this
         }
     });
 });
+
 
 async function loadSiteSettings() {
     try {
