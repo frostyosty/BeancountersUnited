@@ -1,6 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
-  <path fill="#6F4E37" d="M15,20 Q10,30 15,80 L70,80 Q75,30 70,20 Z" />
-  <path fill="#6F4E37" d="M70,30 Q90,35 85,55 Q90,75 70,70 Z" />
-  <rect x="10" y="80" width="65" height="5" rx="2" fill="#5c3a21" />
-  <path fill="rgba(255,255,255,0.2)" d="M20,25 Q30,30 65,25 Q60,35 25,35 Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32">
+  <defs>
+    <linearGradient id="cupGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#A0522D;stop-opacity:1" /> <!-- Sienna -->
+      <stop offset="100%" style="stop-color:#8B4513;stop-opacity:1" /> <!-- SaddleBrown -->
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+      <feOffset dx="1" dy="1" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Cup Saucer (optional, can remove if too detailed for favicon) -->
+  <ellipse cx="32" cy="56" rx="26" ry="6" fill="#D3D3D3" filter="url(#shadow)" />
+  <ellipse cx="32" cy="55" rx="24" ry="5" fill="#F5F5F5" />
+
+
+  <!-- Cup Body -->
+  <path fill="url(#cupGradient)" filter="url(#shadow)"
+        d="M 12 15 
+           C 12 10, 16 6, 22 6 
+           L 42 6 
+           C 48 6, 52 10, 52 15 
+           L 50 48
+           C 50 52, 47 55, 43 55
+           L 21 55
+           C 17 55, 14 52, 14 48
+           Z" />
+
+  <!-- Cup Handle -->
+  <path fill="none" stroke="url(#cupGradient)" stroke-width="6" stroke-linecap="round" filter="url(#shadow)"
+        d="M 50 20 
+           C 58 22, 58 38, 50 40" />
+
+  <!-- Coffee/Tea Liquid (optional detail) -->
+  <ellipse cx="32" cy="16" rx="18" ry="6" fill="#5A3A22" />
+
+
+  <!-- Steam (optional decorative, might be too much for favicon) -->
+  <!-- <path d="M25 12 Q24 8 27 6" stroke="#FEFEFE" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M32 14 Q31 10 34 8" stroke="#FEFEFE" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M39 12 Q38 8 41 6" stroke="#FEFEFE" stroke-width="1.5" fill="none" stroke-linecap="round"/> -->
 </svg>
