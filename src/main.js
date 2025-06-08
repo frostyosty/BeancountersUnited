@@ -9,7 +9,7 @@ import './assets/css/theme-default.css';// Default theme (or your active theme C
 // or import specific named exports: `import { getMenu, ... } from './apiService.js'`
 import * as api from './apiService.js';
 import * as auth from './auth.js';     // Handles user authentication, session, login UI
-import * as ui from './ui.js';         // DOM manipulation, modals, theme application, favicon updates
+import * as uiUtils from './ui.js';        // DOM manipulation, modals, theme application, favicon updates
 import * as cart from './cart.js';     // Cart logic
 import * as admin from './admin.js';   // Owner/Manager dashboard rendering
 
@@ -369,9 +369,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Initial cart count update
-    ui.updateCartCount(cart.getItems().reduce((sum, item) => sum + item.quantity, 0));
-    // Listen for cart updates to keep count in sync
+    uiUtils.updateCartCount(cart.getItems().reduce((sum, item) => sum + item.quantity, 0)); // cart.getItems() should also use imported 'cart'
+
     document.addEventListener('cartUpdated', (event) => {
-        ui.updateCartCount(event.detail.cartItems.reduce((sum, item) => sum + item.quantity, 0));
+        uiUtils.updateCartCount(event.detail.cartItems.reduce((sum, item) => sum + item.quantity, 0));
     });
 });
+
+
