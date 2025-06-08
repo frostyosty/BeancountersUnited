@@ -73,5 +73,72 @@ window.addEventListener('click', (event) => {
     }
 });
 
+
+
+export function generateTextFaviconDataUrl(text = 'R', bgColor = '#3498db', textColor = '#ffffff', size = 32) {
+    const firstChar = text.substring(0, 1).toUpperCase();
+    const secondChar = text.length > 1 ? text.substring(1, 2).toUpperCase() : '';
+
+    // Adjust font size and positioning based on number of chars
+    let fontSize = size * 0.6;
+    let yPos = size * 0.65;
+    let xPos = size * 0.5;
+
+    if (secondChar) { // Two characters
+        fontSize = size * 0.45;
+        yPos = size * 0.62;
+    }
+
+    const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+            <rect width="${size}" height="${size}" fill="${bgColor}"/>
+            <text x="${xPos}" y="${yPos}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">
+                ${firstChar}${secondChar}
+            </text>
+        </svg>
+    `.trim();
+    return `data:image/svg+xml;base64,${btoa(svgContent)}`;
+}
+
+/**
+ * Updates the website's favicon.
+ * @param {string} href - The URL or data URL of the new favicon.
+ * @param {string} type - The MIME type (e.g., 'image/svg+xml', 'image/png').
+ */
+export function updateLiveFavicon(href, type = 'image/svg+xml') {
+    let link = document.getElementById('dynamic-favicon');
+    if (!link) {
+        link = document.createElement('link');
+        link.id = 'dynamic-favicon';
+        link.rel = 'icon';
+        document.head.appendChild(link); // Append if somehow missing
+    }
+    link.type = type;
+    link.href = href;
+}
+
+// Function to update the preview image in the admin panel
+// This could also be used to update the actual site favicon for live preview
+export function updateFaviconPreview(settings) { // settings: { type, text, bgColor, textColor, url }
+    const previewImg = document.getElementById('favicon-preview-img');
+    if (!previewImg) return;
+
+    if (settings && settings.type === 'text') {
+        const dataUrl = generateTextFaviconDataUrl(settings.text, settings.bgColor, settings.textColor);
+        previewImg.src = dataUrl;
+        previewImg.style.backgroundColor = ''; // Text favicons have own bg
+    } else if (settings && settings.type === 'image' && settings.url) {
+        previewImg.src = settings.url;
+        previewImg.style.backgroundColor = ''; // Clear background for image
+    } else { // Default or other
+        previewImg.src = '/default-favicon.svg'; // Path to your default SVG
+        previewImg.style.backgroundColor = '';
+    }
+    // Optionally update live site favicon here too for owner to see
+    // updateLiveFavicon(previewImg.src, previewImg.src.startsWith('data:image/svg+xml') ? 'image/svg+xml' : 'image/png');
+}
+
+
+
 // Make ui globally accessible or export as a module
 window.ui = ui;

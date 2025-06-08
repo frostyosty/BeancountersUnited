@@ -1,4 +1,6 @@
 // admin.js
+import * as ui from './ui.js'; 
+
 
 const admin = {
     async renderOwnerDashboard() {
@@ -450,4 +452,101 @@ function getFaviconSettingsHTML(currentFaviconSettings) {
             </div>
         </div>
     `;
+}
+
+
+
+// src/admin.js
+
+// Function to call from renderOwnerDashboard
+async function loadFaviconSettings() {
+    try {
+        const settings = await api.getSiteSettings(); // Your existing function
+        return settings.faviconConfig || { type: 'default' }; // Return default if not set
+    } catch (error) {
+        console.error("Failed to load site settings for favicon:", error);
+        return { type: 'default' };
+    }
+}
+
+
+async function handleSaveFaviconSettings(event) {
+    event.preventDefault();
+    const form = event.target;
+    const faviconType = form.faviconType.value;
+    let newFaviconConfig = { type: faviconType };
+    let imageFile = null;
+
+    if (faviconType === 'text') {
+        newFaviconConfig.text = document.getElementById('favicon-text').value;
+        newFaviconConfig.bgColor = document.getElementById('favicon-text-bg-color').value;
+        newFaviconConfig.textColor = document.getElementById('favicon-text-color').value;
+    } else if (faviconType === 'image') {
+        const imageUploadInput = document.getElementById('favicon-image-upload');
+        if (imageUploadInput.files && imageUploadInput.files[0]) {
+            imageFile = imageUploadInput.files[0];
+            // We'll handle upload in the API for now via base64
+        } else {
+            // If no new image, but type is image, try to keep existing image URL
+            const currentSettings = await loadFaviconSettings(); // Fetch again to be sure
+            if (currentSettings.type === 'image' && currentSettings.url) {
+                newFaviconConfig.url = currentSettings.url;
+            } else {
+                 alert("Please select an image file to upload for the image favicon type.");
+                 return; // Or revert to default/previous type
+            }
+        }
+    }
+    // For 'default', newFaviconConfig is just { type: 'default' }
+
+    try {
+        let payload = { faviconConfig: newFaviconConfig };
+
+        if (imageFile) {
+            // Convert file to base64 to send to API
+            // This is simple but not for large files. Favicons are tiny.
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                payload.faviconImageFileBase64 = e.target.result; // data:image/png;base64,...
+                payload.faviconImageFileName = imageFile.name;
+                
+                const response = await api.updateSiteSettings(payload);
+                if (response.updatedFaviconConfig) { // API should return the processed config, esp. for new image URLs
+                    ui.updateLiveFavicon(
+                        response.updatedFaviconConfig.type === 'image' ? response.updatedFaviconConfig.url :
+                        response.updatedFaviconConfig.type === 'text' ? ui.generateTextFaviconDataUrl(response.updatedFaviconConfig.text, response.updatedFaviconConfig.bgColor, response.updatedFaviconConfig.textColor) :
+                        '/default-favicon.svg'
+                    );
+                     // Also update the preview in the form
+                    ui.updateFaviconPreview(response.updatedFaviconConfig);
+                    const currentImageUrlSpan = document.getElementById('current-favicon-image-url');
+                    if (currentImageUrlSpan && response.updatedFaviconConfig.type === 'image') {
+                        currentImageUrlSpan.textContent = response.updatedFaviconConfig.url;
+                    }
+                }
+                alert('Favicon settings saved!');
+            };
+            reader.onerror = (error) => {
+                 console.error("Error reading image file:", error);
+                 alert("Error processing image file.");
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            // No new image file to upload, just save config
+            const response = await api.updateSiteSettings(payload);
+             if (response.updatedFaviconConfig) {
+                 ui.updateLiveFavicon(
+                    response.updatedFaviconConfig.type === 'image' ? response.updatedFaviconConfig.url :
+                    response.updatedFaviconConfig.type === 'text' ? ui.generateTextFaviconDataUrl(response.updatedFaviconConfig.text, response.updatedFaviconConfig.bgColor, response.updatedFaviconConfig.textColor) :
+                    '/default-favicon.svg'
+                );
+                ui.updateFaviconPreview(response.updatedFaviconConfig); // Also update preview
+             }
+            alert('Favicon settings saved!');
+        }
+
+    } catch (error) {
+        console.error('Failed to save favicon settings:', error);
+        alert(`Error: ${error.message}`);
+    }
 }
