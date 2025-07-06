@@ -1,33 +1,34 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-
-      "config": { "distDir": "public" } 
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
-
-    { "src": "/api/(.*)", "dest": "/api/$1.js" },
-
-
-
-    { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
-
-
-    { "src": "/(.*\\.(?:ico|png|jpg|jpeg|gif|svg|webmanifest|js|css|map))", "dest": "/public/$1" },
-
-
-    { "src": "/(.*)", "dest": "/public/index.html" },
-    { "src": "/api/keep-alive", "dest": "/api/keep-alive.js" }
-  ],
-  "crons": [
     {
-      "path": "/api/keep-alive?secret=zUUR+LDYIsm1cAyvrgJ3/zD/oBL1zmrkkt4bg+1K4G0=",
-      "schedule": "0 5 * * *"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/assets/$1"
+    }, 
+    {
+      "src": "/(.*\\.(?:ico|png|svg|webmanifest))",
+      "dest": "/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
     }
   ]
 }

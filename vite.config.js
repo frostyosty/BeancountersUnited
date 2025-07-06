@@ -1,44 +1,36 @@
-// vite.config.js
-import { defineConfig } from 'vite';
-import legacy from '@vitejs/plugin-legacy'; // For broader browser support with vanilla JS
-
-export default defineConfig({
-  plugins: [
-    legacy({
-      targets: ['defaults', 'not IE 11'], // Or your desired browser support
-    }),
-  ],
-  // We will build into the 'public' folder directly for now
-  // to minimize changes to your Vercel setup.
-  // Vite's default is 'dist', but we can override.
-  build: {
-    outDir: 'public', // Vite will build its output into your existing 'public' folder
-    emptyOutDir: false, // IMPORTANT: Set to false initially if 'public' has other essential files
-                       // that Vite doesn't manage (like your API folder if it was in public).
-                       // HOWEVER, best practice is to let Vite control 'public' completely.
-                       // For a cleaner setup later, you'd make Vite output to 'dist' and
-                       // adjust vercel.json. Let's start with this simpler way.
-    manifest: true, // Generates a manifest.json, useful for Vercel
-    rollupOptions: {
-      // If you have multiple HTML entry points, specify them here
-      // For a single page app (SPA), usually just index.html at root.
-      input: {
-        main: 'index.html' // Assumes index.html is at project root
-      }
-    }
-  },
-  // If your index.html is NOT at root but in, say, /src, then:
-  // root: 'src', // And then build.outDir would be '../public' or '../dist'
-  // For now, let's assume index.html moves to project root.
-
-  // The server proxy is for local `vite dev` server, not directly used by Vercel build
-  // but good to have if you ever run `vite dev` locally.
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000', // When running `vercel dev`
-        changeOrigin: true,
-      }
-    }
-  }
-});
+ export default defineConfig({
+   build: {
+     outDir: 'dist', // **Crucial: Set output directory to 'dist'**
+   },
+   plugins: [
+     VitePWA({
+       registerType: 'autoUpdate',
+       injectRegister: 'auto',
+       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'default-favicon.svg'], // Add your assets
+       manifest: {
+         // **Update these for your restaurant**
+         name: 'My Awesome Restaurant',
+         short_name: 'RestaurantApp',
+         description: 'Order delicious food for pickup.',
+         theme_color: '#e67e22', // Your brand's accent color
+         background_color: '#ecf0f1', // Your brand's background color
+         start_url: '/',
+         display: 'standalone',
+         orientation: 'portrait',
+         icons: [
+           {
+             src: 'pwa-192x192.png', // You'll need to create these icons
+             sizes: '192x192',
+             type: 'image/png',
+           },
+           {
+             src: 'pwa-512x512.png', // You'll need to create these icons
+             sizes: '512x512',
+             type: 'image/png',
+             purpose: 'any maskable',
+           },
+         ],
+       },
+     }),
+   ],
+ });
