@@ -1,4 +1,7 @@
- export default defineConfig({
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
    build: {
      outDir: 'dist', // **Crucial: Set output directory to 'dist'**
    },

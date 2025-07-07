@@ -1,1 +1,1 @@
-git add . && git commit -m "cafe commit new after big change" && git push origin master
+git add . && git commit -m "standard commit for CIB" && git push origin master
