@@ -1,49 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg">
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="site-title-tag">My Awesome Restaurant</title> <!-- Keep this dynamic part -->
-    <!-- CSS will be imported via JS by Vite. Remove old <link> tags for CSS -->
-</head>
-<body>
-    <header>
-        <h1 id="site-title">My Awesome Restaurant</h1>
-        <nav>
-            <a href="#menu">Menu</a>
-            <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
-            <span id="auth-status">
-                <button id="login-button">Login/Sign Up</button>
-            </span>
-            <span id="admin-links" style="display:none;">
-                 | <a href="#owner-dashboard">Owner Dashboard</a>
-                 | <a href="#manager-dashboard">Manager Dashboard</a>
-                 | <button id="logout-button">Logout</button>
-            </span>
-        </nav>
-    </header>
-
-    <main id="app-content">
-        <!-- Content will be dynamically inserted here by your existing JS -->
-        <section id="loading-spinner" style="display:none; text-align:center; padding:20px;">Loading...</section>
-    </main>
-
-    <footer>
-        <p>© <span id="current-year"></span> <span id="site-title-footer">My Awesome Restaurant</span>. All rights reserved.</p>
-    </footer>
-
-    <!-- Modal for Login/Signup, Order Confirmation, etc. -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">×</span>
-            <div id="modal-body"></div>
-        </div>
+  <head>
+    <meta charset="UTF-8" />
+    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mealmates</title>
+    <meta name="description" content="Order delicious food from Mealmates">
+    <meta name="theme-color" content="#e67e22">
+  </head>
+  <body>
+    <div id="app">
+      <div class="initial-loader">
+        <!-- You can put a simple loading spinner SVG or animation here -->
+        <p>Loading Mealmates...</p>
+      </div>
     </div>
-
-
-    <!-- VITE INJECTS YOUR BUNDLED JS HERE. Remove old script tags -->
-    <script type="module" src="/src/main.js"></script> <!-- Vite's entry point -->
-</body>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

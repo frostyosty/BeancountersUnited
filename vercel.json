@@ -21,9 +21,9 @@
     {
       "src": "/assets/(.*)",
       "dest": "/dist/assets/$1"
-    }, 
+    },
     {
-      "src": "/(.*\\.(?:ico|png|svg|webmanifest))",
+      "src": "/(.*\\.(?:ico|png|svg|jpg|jpeg|webmanifest))",
       "dest": "/dist/$1"
     },
     {

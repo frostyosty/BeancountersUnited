@@ -1,34 +1,28 @@
 {
-  "name": "restaurant-project",
+  "name": "mealmates",
+  "private": true,
   "version": "1.0.0",
-  "description": "Restaurant ordering website",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write . --ignore-path .gitignore",
+    "lint": "stylelint \"src/**/*.css\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@libsql/client": "^0.5.x",
-    "@supabase/supabase-js": "^2.50.0"
+    "@supabase/supabase-js": "^2.43.4",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@vitejs/plugin-legacy": "^5.x.x",
+    "prettier": "^3.3.2",
+    "stylelint": "^16.6.1",
+    "stylelint-config-standard": "^36.0.0",
+    "vite": "^5.3.1",
+    "vite-plugin-pwa": "^0.20.0",
+    "postcss": "^8.4.38",
+    "postcss-merge-rules": "^7.0.0",
     "css-declaration-sorter": "^7.2.0",
-    "cssnano": "^7.0.7",
-    "install": "^0.13.0",
-    "npm": "^11.4.2",
-    "postcss": "^8.5.6",
-    "postcss-merge-rules": "^7.0.5",
-    "prettier": "^3.6.2",
-    "stylelint": "^16.21.1",
-    "stylelint-config-standard": "^38.0.0",
-    "vercel": "^32.x",
-    "vite": "^5.x.x",
-    "vite-plugin-pwa": "^1.0.1",
-    "zustand": "^5.0.6"
+    "cssnano": "^7.0.1"
   }
 }

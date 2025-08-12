@@ -1,8 +1,0 @@
-git add . && git commit -m "cafe commit new after big change" && git push origin master
-
-
--- For image storage (if using Supabase Storage)
--- Create a bucket named 'menu-images' in Supabase Storage dashboard.
--- Set bucket access policies:
--- - Public read access: YES (if images are directly linked in <img> tags)
--- - Authenticated users upload/update/delete (or specific roles via API logic proxying storage calls)
