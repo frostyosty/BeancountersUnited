@@ -4,17 +4,18 @@
     <meta charset="UTF-8" />
     <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mealmates</title>
-    <meta name="description" content="Order delicious food from Mealmates">
+    <title>Mealmates</title> <!-- Or your custom name -->
+    <meta name="description" content="Order delicious food from Mealmates.">
     <meta name="theme-color" content="#e67e22">
+    <!-- Vite will inject the link to the bundled CSS here -->
   </head>
   <body>
     <div id="app">
       <div class="initial-loader">
-        <!-- You can put a simple loading spinner SVG or animation here -->
         <p>Loading Mealmates...</p>
       </div>
     </div>
+    <!-- This is the SOURCE entry point. Vite will REPLACE this in the build output. -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
