@@ -36,4 +36,48 @@ export function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// We will add more UI utilities here later, like showModal, setLoading, etc.
+
+/**
+ * Displays a modal with the provided HTML content.
+ * @param {string} htmlContent - HTML to render inside the modal.
+ */
+export function showModal(htmlContent) {
+    // Remove any existing modal first
+    closeModal();
+
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'modal-overlay';
+    modalOverlay.className = 'modal-overlay';
+
+    modalOverlay.innerHTML = `
+        <div class="modal-content">
+            <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+            <div id="modal-body">${htmlContent}</div>
+        </div>
+    `;
+
+    document.body.appendChild(modalOverlay);
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+
+    // Add event listeners
+    const closeBtn = document.getElementById('modal-close-btn');
+    closeBtn.addEventListener('click', closeModal);
+
+    modalOverlay.addEventListener('click', (event) => {
+        // Close if the click is on the overlay itself, not the content
+        if (event.target === modalOverlay) {
+            closeModal();
+        }
+    });
+}
+
+/**
+ * Closes the currently open modal.
+ */
+export function closeModal() {
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.remove();
+    }
+    document.body.style.overflow = 'auto'; // Restore scrolling
+}

@@ -5,11 +5,11 @@ import { useAppStore } from './store/appStore.js';
 
 // Import our feature UI renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderCartPage } from './features/cart/cartUI.js'; // <-- Import cart UI renderer
+import { renderCartPage } from './features/cart/cartUI.js';
+import { renderAuthStatus } from './features/auth/authUI.js'; // <-- Import auth UI renderer
 
 /**
  * Simple hash-based router.
- * It decides which page-rendering function to call based on the URL hash.
  */
 function handleRouteChange() {
     const hash = window.location.hash || '#menu'; // Default to the menu page
@@ -49,8 +49,9 @@ async function main() {
             <header id="main-header">
                 <h1>My Awesome Restaurant</h1>
                 <nav>
-                    <a href="#menu">Menu</a>
-                    <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
+                    <a href="#menu" class="nav-link">Menu</a>
+                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
+                    <div id="auth-status-container"></div>
                 </nav>
             </header>
             <main id="main-content"></main>
@@ -63,11 +64,21 @@ async function main() {
         return;
     }
 
+
+    
     // --- Set up Reactive UI Subscriptions ---
 
-    // Subscriber to re-render the menu page if menu items change
+    // Subscriber to re-render auth status when user logs in/out
     useAppStore.subscribe(
-        (state) => state.menu.items,
+        (state) => state.isAuthenticated,
+        renderAuthStatus, // The function to call on change
+        { fireImmediately: true }
+    );
+
+    // Subscriber to re-render the menu page if the user role changes
+    // (to show/hide admin buttons)
+    useAppStore.subscribe(
+        (state) => state.auth?.profile?.role,
         () => {
             if (window.location.hash === '#menu' || window.location.hash === '') {
                 renderMenuPage();
@@ -75,6 +86,7 @@ async function main() {
         }
     );
 
+    
     // Subscriber to update the cart count in the header
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
@@ -99,17 +111,18 @@ async function main() {
     );
 
 
-    // --- Set up Routing ---
+    // --- Initialize Auth and Routing ---
+    // This MUST come before initial data fetch
+    useAppStore.getState().initializeAuth();
     window.addEventListener('hashchange', handleRouteChange);
 
     // --- Initial Data Fetch and Render ---
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
-    // Fetch the menu data (we don't need to fetch cart data as it's from localStorage)
     await useAppStore.getState().fetchMenu();
 
-    // Call the router to render the correct initial page based on the URL hash
+    // Call the router to render the correct initial page
     handleRouteChange();
 
     console.log("App Initialized and router is active.");

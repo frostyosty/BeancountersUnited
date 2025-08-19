@@ -4,14 +4,15 @@ import { devtools } from 'zustand/middleware';
 
 // Import our slice creators
 import { createMenuSlice } from './menuSlice.js';
-import { createCartSlice } from './cartSlice.js'; // <-- Import the new cart slice
+import { createCartSlice } from './cartSlice.js';
+import { createAuthSlice } from './authSlice.js'; // <-- Import the new auth slice
 
 export const useAppStore = create(
   devtools(
     (...args) => ({
       ...createMenuSlice(...args),
-      ...createCartSlice(...args), // <-- Add the cart slice here
-      // ... Add other slices like createAuthSlice later
+      ...createCartSlice(...args),
+      ...createAuthSlice(...args), // <-- Add the auth slice here
     }),
     { name: "RestaurantAppStore" }
   )
