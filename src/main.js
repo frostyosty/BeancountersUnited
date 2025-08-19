@@ -1,36 +1,36 @@
-// src/main.js - Corrected Orchestrator
+// src/main.js - The main entry point and application orchestrator
 
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 
 // Import our feature UI renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
-
-// A simple placeholder for the cart page renderer
-function renderCartPage() {
-    const mainContent = document.getElementById('main-content');
-    if (mainContent) {
-        mainContent.innerHTML = '<h2>Your Cart</h2><p>This is where your cart items will be displayed.</p>';
-    }
-}
-
+import { renderCartPage } from './features/cart/cartUI.js'; // <-- Import cart UI renderer
 
 /**
- * Simple hash-based router. This is the SINGLE SOURCE OF TRUTH for what page is displayed.
+ * Simple hash-based router.
+ * It decides which page-rendering function to call based on the URL hash.
  */
 function handleRouteChange() {
     const hash = window.location.hash || '#menu'; // Default to the menu page
 
+    // Update nav link styles to show the active page
+    document.querySelectorAll('#main-header nav a').forEach(link => {
+        if (link.getAttribute('href') === hash) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+
     switch (hash) {
         case '#menu':
-            // We call renderMenuPage directly. It will read the latest state from the store.
             renderMenuPage();
             break;
         case '#cart':
-            renderCartPage();
+            renderCartPage(); // <-- Use the real cart page renderer
             break;
         default:
-            // If the hash is something unknown, default to the menu
             renderMenuPage();
             break;
     }
@@ -53,9 +53,7 @@ async function main() {
                     <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
                 </nav>
             </header>
-            <main id="main-content">
-                <!-- Initial state will be set by the router -->
-            </main>
+            <main id="main-content"></main>
             <footer id="main-footer">
                 <p>&copy; ${new Date().getFullYear()} My Awesome Restaurant</p>
             </footer>
@@ -65,35 +63,56 @@ async function main() {
         return;
     }
 
-    // --- Set up Reactive UI Subscriptions (NO fireImmediately) ---
-    // This subscriber's job is to react to subsequent changes, e.g., an owner updating an item.
+    // --- Set up Reactive UI Subscriptions ---
+
+    // Subscriber to re-render the menu page if menu items change
     useAppStore.subscribe(
-        (state) => state.menu.items, // Only listen for changes to the items array
+        (state) => state.menu.items,
         () => {
-            // If the user is on the menu page, re-render it to show the change.
             if (window.location.hash === '#menu' || window.location.hash === '') {
                 renderMenuPage();
             }
         }
     );
 
+    // Subscriber to update the cart count in the header
+    const cartCountSpan = document.getElementById('cart-count');
+    if (cartCountSpan) {
+        useAppStore.subscribe(
+            (state) => state.getTotalItemCount(), // Use the selector from the cart slice
+            (itemCount) => {
+                cartCountSpan.textContent = itemCount;
+            },
+            { fireImmediately: true } // Run once on startup to set initial count
+        );
+    }
+
+    // Subscriber to re-render the cart page if cart items change
+    useAppStore.subscribe(
+        (state) => state.items, // The array of items in the cart slice
+        () => {
+            // Only re-render if the user is currently on the cart page
+            if (window.location.hash === '#cart') {
+                renderCartPage();
+            }
+        }
+    );
+
+
     // --- Set up Routing ---
     window.addEventListener('hashchange', handleRouteChange);
 
     // --- Initial Data Fetch and Render ---
-    // 1. Manually trigger the initial loading state display
     const mainContent = document.getElementById('main-content');
-    if(mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading menu...</div>';
+    if (mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
-    // 2. Fetch the essential data needed for the first page view.
-    // We `await` this so we know the data is in the store before we proceed.
+    // Fetch the menu data (we don't need to fetch cart data as it's from localStorage)
     await useAppStore.getState().fetchMenu();
 
-    // 3. Now that the data is fetched and the store is updated,
-    //    call the router to render the correct initial page.
+    // Call the router to render the correct initial page based on the URL hash
     handleRouteChange();
 
-    console.log("App Initialized and initial page rendered.");
+    console.log("App Initialized and router is active.");
 }
 
 // Start the application

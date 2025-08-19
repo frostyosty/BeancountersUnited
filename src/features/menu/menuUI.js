@@ -127,11 +127,12 @@ function attachMenuEventListeners() {
             const itemId = target.dataset.itemId;
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (menuItem) {
-                // Call the addItem action from our cartSlice (we'll build this next)
-                // For now, let's just log it.
-                console.log(`TODO: Add item to cart:`, menuItem);
-                // useAppStore.getState().cart.addItem(menuItem);
-                uiUtils.showToast(`${menuItem.name} added to cart!`);
+                // --- THIS IS THE UPDATE ---
+                // Call the addItem action from our cartSlice
+                useAppStore.getState().addItem(menuItem);
+                // Show a confirmation toast
+                uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
+                // --- END OF UPDATE ---
             }
         }
 

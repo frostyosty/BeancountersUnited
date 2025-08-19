@@ -105,3 +105,125 @@ main {
 .toast.toast-error {
     background-color: #dc3545; /* A standard red */
 }
+
+
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing styles) ... */
+
+/* --- Cart Page Styles --- */
+.cart-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cart-item:last-child {
+    border-bottom: none;
+}
+
+.cart-item-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+}
+
+.cart-item-details {
+    flex-grow: 1;
+}
+
+.cart-item-name,
+.cart-item-price {
+    margin: 0 0 0.25rem 0;
+}
+
+.cart-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.quantity-btn,
+.remove-item-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    color: var(--text-color);
+}
+
+.remove-item-btn {
+    font-size: 1.5rem;
+    color: var(--secondary-color);
+}
+
+.quantity-input {
+    width: 40px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    padding: 0.5rem 0;
+    font-size: 1rem;
+    background-color: transparent;
+    color: var(--text-color);
+    -moz-appearance: textfield; /* Firefox */
+}
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+.cart-item-subtotal {
+    font-weight: bold;
+    min-width: 70px; /* Align totals */
+    text-align: right;
+}
+
+.cart-summary {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+    text-align: right;
+}
+
+.cart-total {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.button-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.button-primary:hover {
+    opacity: 0.9;
+}
+
+
+
+/* --- Active Navigation Link Style --- */
+#main-header nav a.active {
+    text-decoration: underline;
+    font-weight: bold;
+}
