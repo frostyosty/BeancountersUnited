@@ -60,3 +60,48 @@ main {
     height: 100vh;
     font-size: 1.5rem;
 }
+
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing :root and body styles) ... */
+
+
+/* --- Toast Notifications --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse; /* New toasts appear on top */
+    gap: 10px;
+}
+
+.toast {
+    padding: 15px 20px;
+    border-radius: var(--border-radius, 4px);
+    color: #fff;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-info {
+    background-color: var(--secondary-color, #6c757d);
+}
+
+.toast.toast-success {
+    background-color: #28a745; /* A standard green */
+}
+
+.toast.toast-error {
+    background-color: #dc3545; /* A standard red */
+}
