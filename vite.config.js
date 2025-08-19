@@ -1,3 +1,5 @@
+// vite.config.js
+
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
@@ -15,7 +17,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'default-favicon.svg'],
+      // Ensure all your icon assets are included for caching
+      includeAssets: [
+          'favicon.ico',
+          'apple-touch-icon.png',
+          'default-favicon.svg',
+          'android-chrome-192x192.png', // Added
+          'android-chrome-512x512.png'  // Added
+      ],
       manifest: {
         name: 'Mealmates',
         short_name: 'Mealmates',
@@ -27,12 +36,14 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            // Updated to the standard generator filename
+            src: 'android-chrome-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            // Updated to the standard generator filename
+            src: 'android-chrome-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
