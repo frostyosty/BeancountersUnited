@@ -3,16 +3,12 @@
   "routes": [
     {
       "src": "/assets/(.*)",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      },
+      "headers": { "cache-control": "public, max-age=31536000, immutable" },
       "dest": "/dist/assets/$1"
     },
     {
-      "src": "/(.*\\.(?:ico|png|svg|jpg|jpeg|webmanifest))",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      },
+      "src": "/(.*\\.(?:ico|png|svg|jpg|jpeg|webmanifest|js))",
+      "headers": { "cache-control": "public, max-age=86400" },
       "dest": "/dist/$1"
     },
     {
@@ -20,7 +16,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/dist/index.html"
     }
   ]
 }
