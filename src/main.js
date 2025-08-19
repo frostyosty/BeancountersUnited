@@ -110,7 +110,6 @@ async function main() {
         }
     );
 
-
     // --- Initialize Auth and Routing ---
     // This MUST come before initial data fetch
     useAppStore.getState().initializeAuth();
