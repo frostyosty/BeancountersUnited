@@ -8,14 +8,14 @@ import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js'; // <-- Import auth UI renderer
 
+
 /**
  * Simple hash-based router.
  */
 function handleRouteChange() {
-    const hash = window.location.hash || '#menu'; // Default to the menu page
+    const hash = window.location.hash || '#menu';
 
-    // Update nav link styles to show the active page
-    document.querySelectorAll('#main-header nav a').forEach(link => {
+    document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         if (link.getAttribute('href') === hash) {
             link.classList.add('active');
         } else {
@@ -28,8 +28,9 @@ function handleRouteChange() {
             renderMenuPage();
             break;
         case '#cart':
-            renderCartPage(); // <-- Use the real cart page renderer
+            renderCartPage();
             break;
+        // We'll add #owner-dashboard etc. here later
         default:
             renderMenuPage();
             break;
@@ -64,21 +65,18 @@ async function main() {
         return;
     }
 
-
-    
     // --- Set up Reactive UI Subscriptions ---
 
-    // Subscriber to re-render auth status when user logs in/out
+    // Subscriber for auth status (login button, welcome message, etc.)
     useAppStore.subscribe(
         (state) => state.isAuthenticated,
-        renderAuthStatus, // The function to call on change
+        renderAuthStatus,
         { fireImmediately: true }
     );
 
-    // Subscriber to re-render the menu page if the user role changes
-    // (to show/hide admin buttons)
+    // Subscriber to re-render the menu page if the user role changes (for admin buttons)
     useAppStore.subscribe(
-        (state) => state.auth?.profile?.role,
+        (state) => state.profile?.role, // Listen specifically to the role
         () => {
             if (window.location.hash === '#menu' || window.location.hash === '') {
                 renderMenuPage();
@@ -86,42 +84,42 @@ async function main() {
         }
     );
 
-    
-    // Subscriber to update the cart count in the header
+    // Subscriber for the cart count in the header
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         useAppStore.subscribe(
-            (state) => state.getTotalItemCount(), // Use the selector from the cart slice
+            (state) => state.getTotalItemCount(),
             (itemCount) => {
                 cartCountSpan.textContent = itemCount;
             },
-            { fireImmediately: true } // Run once on startup to set initial count
+            { fireImmediately: true }
         );
     }
 
-    // Subscriber to re-render the cart page if cart items change
+    // Subscriber to re-render the cart page if the cart itself changes
     useAppStore.subscribe(
-        (state) => state.items, // The array of items in the cart slice
+        (state) => state.items,
         () => {
-            // Only re-render if the user is currently on the cart page
             if (window.location.hash === '#cart') {
                 renderCartPage();
             }
         }
     );
 
-    // --- Initialize Auth and Routing ---
-    // This MUST come before initial data fetch
+    // --- Initialize Core Services & Routing ---
+    // This MUST be called to start the session check and set up the Supabase listener.
     useAppStore.getState().initializeAuth();
+
     window.addEventListener('hashchange', handleRouteChange);
 
-    // --- Initial Data Fetch and Render ---
+    // --- Initial Data Fetch and Page Render ---
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
+    // Fetch initial data
     await useAppStore.getState().fetchMenu();
 
-    // Call the router to render the correct initial page
+    // Render the initial page based on the current URL hash
     handleRouteChange();
 
     console.log("App Initialized and router is active.");
