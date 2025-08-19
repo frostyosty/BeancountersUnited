@@ -23,7 +23,7 @@ function handleRouteChange() {
             link.classList.remove('active');
         }
     });
-    
+
     switch (hash) {
         case '#menu':
             renderMenuPage();
@@ -49,7 +49,6 @@ function handleRouteChange() {
             break;
     }
 }
-
 
 /**
  * The main application initialization function.
