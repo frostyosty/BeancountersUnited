@@ -1,37 +1,36 @@
-// src/main.js - The main entry point and application orchestrator
+// src/main.js - Corrected Orchestrator
 
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 
 // Import our feature UI renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
-// We'll create a placeholder for the cart page renderer
+
+// A simple placeholder for the cart page renderer
 function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
-        mainContent.innerHTML = '<h2>Your Cart</h2><p>This is where your cart items will be displayed. This feature is coming soon!</p>';
+        mainContent.innerHTML = '<h2>Your Cart</h2><p>This is where your cart items will be displayed.</p>';
     }
 }
 
 
 /**
- * Simple hash-based router.
- * It decides which page-rendering function to call based on the URL hash.
+ * Simple hash-based router. This is the SINGLE SOURCE OF TRUTH for what page is displayed.
  */
 function handleRouteChange() {
     const hash = window.location.hash || '#menu'; // Default to the menu page
 
-    // Simple router logic
     switch (hash) {
         case '#menu':
+            // We call renderMenuPage directly. It will read the latest state from the store.
             renderMenuPage();
             break;
         case '#cart':
             renderCartPage();
             break;
-        // We will add more cases here later for #checkout, #admin, etc.
         default:
-            // If the hash is something unknown, go to the menu
+            // If the hash is something unknown, default to the menu
             renderMenuPage();
             break;
     }
@@ -54,7 +53,9 @@ async function main() {
                     <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
                 </nav>
             </header>
-            <main id="main-content"></main>
+            <main id="main-content">
+                <!-- Initial state will be set by the router -->
+            </main>
             <footer id="main-footer">
                 <p>&copy; ${new Date().getFullYear()} My Awesome Restaurant</p>
             </footer>
@@ -64,28 +65,35 @@ async function main() {
         return;
     }
 
-    // --- Set up Reactive UI Subscriptions ---
-    // This subscriber re-renders the CURRENTLY ACTIVE page if its data changes.
+    // --- Set up Reactive UI Subscriptions (NO fireImmediately) ---
+    // This subscriber's job is to react to subsequent changes, e.g., an owner updating an item.
     useAppStore.subscribe(
-        (state) => state.menu, // Listen for changes to menu data
+        (state) => state.menu.items, // Only listen for changes to the items array
         () => {
-            // Only re-render the menu page if it's the one currently visible
+            // If the user is on the menu page, re-render it to show the change.
             if (window.location.hash === '#menu' || window.location.hash === '') {
                 renderMenuPage();
             }
-        },
-        { fireImmediately: true }
+        }
     );
 
     // --- Set up Routing ---
     window.addEventListener('hashchange', handleRouteChange);
-    handleRouteChange(); // Manually call it once to render the initial page
 
-    // --- Kick off the initial data fetch ---
-    // We can now fetch data without awaiting it here, the subscriber will handle the loading state UI.
-    useAppStore.getState().fetchMenu();
+    // --- Initial Data Fetch and Render ---
+    // 1. Manually trigger the initial loading state display
+    const mainContent = document.getElementById('main-content');
+    if(mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading menu...</div>';
 
-    console.log("App Initialized and router is active.");
+    // 2. Fetch the essential data needed for the first page view.
+    // We `await` this so we know the data is in the store before we proceed.
+    await useAppStore.getState().fetchMenu();
+
+    // 3. Now that the data is fetched and the store is updated,
+    //    call the router to render the correct initial page.
+    handleRouteChange();
+
+    console.log("App Initialized and initial page rendered.");
 }
 
 // Start the application
