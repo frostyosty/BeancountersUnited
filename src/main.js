@@ -7,13 +7,14 @@ import { useAppStore } from './store/appStore.js';
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js'; // <-- Import auth UI renderer
-
+import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js'; // <-- Import owner dashboard UI
 
 /**
  * Simple hash-based router.
  */
 function handleRouteChange() {
     const hash = window.location.hash || '#menu';
+    const { getUserRole } = useAppStore.getState(); // Get the role selector
 
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         if (link.getAttribute('href') === hash) {
@@ -22,7 +23,7 @@ function handleRouteChange() {
             link.classList.remove('active');
         }
     });
-
+    
     switch (hash) {
         case '#menu':
             renderMenuPage();
@@ -30,12 +31,25 @@ function handleRouteChange() {
         case '#cart':
             renderCartPage();
             break;
-        // We'll add #owner-dashboard etc. here later
+        // --- NEW ROUTE ---
+        case '#owner-dashboard':
+            // Protect the route: only owners or managers can access
+            if (getUserRole() === 'owner' || getUserRole() === 'manager') {
+                renderOwnerDashboard();
+            } else {
+                // If a non-owner tries to access, show an error or redirect
+                document.getElementById('main-content').innerHTML = `
+                    <div class="error-message"><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>
+                `;
+            }
+            break;
+        // --- END NEW ROUTE ---
         default:
             renderMenuPage();
             break;
     }
 }
+
 
 /**
  * The main application initialization function.
