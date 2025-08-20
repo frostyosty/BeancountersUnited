@@ -94,11 +94,11 @@ function attachCartEventListeners() {
     });
 
     const checkoutBtn = document.getElementById('checkout-btn');
-    if (checkoutBtn) {
+if (checkoutBtn) {
         checkoutBtn.addEventListener('click', () => {
-            // Later this will navigate to a #checkout hash
-            console.log('TODO: Navigate to checkout page');
-            alert('Checkout feature coming soon!');
+            // Instead of logging, we now change the URL hash to navigate.
+            // Our router in main.js will detect this change and render the checkout page.
+            window.location.hash = '#checkout';
         });
     }
 }

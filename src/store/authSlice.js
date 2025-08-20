@@ -1,64 +1,48 @@
 // src/store/authSlice.js
 import { supabase } from '@/supabaseClient.js';
-import * as api from '@/services/apiService.js'; // To fetch the user's profile with role
+import * as api from '@/services/apiService.js';
 
-/**
- * Creates a Zustand slice for managing authentication state.
- *
- * @param {Function} set - Zustand's state setter function.
- * @param {Function} get - Zustand's state getter function.
- * @returns {object} The auth slice of the store.
- */
 export const createAuthSlice = (set, get) => ({
     // --- STATE ---
-    user: null,           // The user object from Supabase Auth
-    profile: null,        // The user's profile from our 'profiles' table (contains the role)
-    isLoading: true,      // True during initial session check
-    isAuthenticated: false, // A convenient flag derived from the user object
+    user: null,
+    profile: null,
+    isLoading: true,
+    isAuthenticated: false,
+    // --- NEW STATE FOR IMPERSONATION ---
+    originalUser: null,    // Stores the real user object during impersonation
+    originalProfile: null, // Stores the real profile object (with 'manager' role)
 
     // --- ACTIONS ---
 
-    /**
-     * Checks for an active session on app startup and sets up the auth listener.
-     */
     initializeAuth: () => {
-        // --- 1. Set up the onAuthStateChange listener ---
-        // This is the most important part. It reacts to logins, logouts, etc. in real-time.
         supabase.auth.onAuthStateChange(async (event, session) => {
             console.log(`Auth event: ${event}`);
+
+            // If we are impersonating, don't let the real auth state override it.
+            if (get().originalUser) {
+                return;
+            }
+
             if (session?.user) {
-                // User is logged in. Fetch their profile to get their role.
                 try {
                     const profile = await api.getUserProfile();
                     set({ user: session.user, profile: profile, isAuthenticated: true, isLoading: false }, false, 'auth/session-restored');
                 } catch (error) {
                     console.error("Failed to fetch profile for logged-in user:", error);
-                    // Set user but profile is null, handle this gracefully in the UI
                     set({ user: session.user, profile: null, isAuthenticated: true, isLoading: false }, false, 'auth/profile-fetch-error');
                 }
             } else {
-                // User is logged out or session expired.
                 set({ user: null, profile: null, isAuthenticated: false, isLoading: false }, false, 'auth/no-session');
             }
         });
 
-        // --- 2. Perform an initial session check ---
-        // This resolves the initial `isLoading: true` state.
-        // The onAuthStateChange listener above will handle the result.
-        // We wrap this in a function to be called from main.js
         const checkInitialSession = async () => {
-            // getSession() will trigger the onAuthStateChange listener we just set up.
-            // If there's a session, the listener will fire with 'SIGNED_IN' or 'INITIAL_SESSION'.
-            // If not, it will fire with 'SIGNED_OUT'.
-            const { error } = await supabase.auth.getSession();
-            if (error) {
-                console.error("Error during initial getSession():", error);
-                set({ isLoading: false }, false, 'auth/init-error');
-            }
+            await supabase.auth.getSession();
         };
         checkInitialSession();
     },
 
+    // ... (keep signUp, login, logout actions as they are) ...
     /**
      * Signs up a new user.
      * @param {string} email - The user's email.
@@ -84,23 +68,80 @@ export const createAuthSlice = (set, get) => ({
         return { error };
     },
 
-    /**
-     * Logs the user out.
-     * @returns {Promise<{error: object|null}>} - An object containing a potential error.
-     */
     logout: async () => {
+        // --- UPDATE LOGOUT TO HANDLE IMPERSONATION ---
+        // If we're impersonating, logout should just stop impersonating.
+        if (get().originalUser) {
+            get().stopImpersonating();
+            return { error: null };
+        }
         const { error } = await supabase.auth.signOut();
         if (error) console.error('Logout error:', error);
-        // The onAuthStateChange listener will handle updating the state.
         return { error };
     },
 
-    // --- SELECTORS ---
+    // --- NEW ACTIONS FOR IMPERSONATION ---
+
     /**
-     * A selector to easily get the user's role.
-     * @returns {string} - The user's role ('manager', 'owner', 'customer', or 'guest').
+     * Allows a manager to impersonate a different role.
+     * @param {'owner' | 'customer' | 'guest'} roleToImpersonate - The role to switch to.
      */
+    impersonateRole: (roleToImpersonate) => {
+        const { user, profile, originalUser } = get();
+
+        // Only allow impersonation if the real user is a manager and not already impersonating.
+        if (profile?.role !== 'manager' || originalUser) {
+            return;
+        }
+
+        let impersonatedUser = user;
+        let impersonatedProfile = { ...profile, role: roleToImpersonate };
+
+        if (roleToImpersonate === 'guest') {
+            impersonatedUser = null;
+            impersonatedProfile = null;
+        }
+
+        set({
+            // Store the real user and profile
+            originalUser: user,
+            originalProfile: profile,
+            // Overwrite the current user and profile with the fake ones
+            user: impersonatedUser,
+            profile: impersonatedProfile,
+            isAuthenticated: roleToImpersonate !== 'guest',
+        }, false, `auth/impersonate-${roleToImpersonate}`);
+    },
+
+    /**
+     * Stops impersonation and restores the original manager session.
+     */
+    stopImpersonating: () => {
+        const { originalUser, originalProfile } = get();
+        if (!originalUser) return; // Not impersonating
+
+        set({
+            // Restore the real user and profile
+            user: originalUser,
+            profile: originalProfile,
+            isAuthenticated: true,
+            // Clear the impersonation state
+            originalUser: null,
+            originalProfile: null,
+        }, false, 'auth/stop-impersonating');
+    },
+
+
+    // --- SELECTORS ---
     getUserRole: () => {
         return get().profile?.role || 'guest';
+    },
+
+    // --- NEW SELECTOR FOR IMPERSONATION ---
+    /**
+     * @returns {boolean} - True if currently impersonating another role.
+     */
+    isImpersonating: () => {
+        return !!get().originalUser;
     },
 });

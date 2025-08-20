@@ -1,15 +1,19 @@
+
+
 // src/main.js - The main entry point and application orchestrator
 
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
+import * as api from './services/apiService.js';
+import * as uiUtils from './utils/uiUtils.js';
 
 // Import our feature UI renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
-import { renderAuthStatus } from './features/auth/authUI.js'; // <-- Import auth UI renderer
-import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js'; // <-- Import owner dashboard UI
-
-
+import { renderAuthStatus } from './features/auth/authUI.js';
+import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
+import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
+import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 
 // Add a placeholder for the order confirmation page
 function renderOrderConfirmationPage() {
@@ -38,30 +42,25 @@ function renderOrderConfirmationPage() {
     }
 }
 
-
 /**
  * Simple hash-based router.
  */
 function handleRouteChange() {
     const hash = window.location.hash || '#menu';
-    const { getUserRole } = useAppStore.getState(); // Get the role selector
+    const { getUserRole } = useAppStore.getState();
+    const userRole = getUserRole(); // Get the current user's role
 
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
-        if (link.getAttribute('href') === hash) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
+        link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
 
-     switch (hash) {
+    switch (hash) {
         case '#menu':
             renderMenuPage();
             break;
         case '#cart':
             renderCartPage();
             break;
-        // --- NEW ROUTES ---
         case '#checkout':
             renderCheckoutPage();
             break;
@@ -69,17 +68,19 @@ function handleRouteChange() {
             renderOrderConfirmationPage();
             break;
         case '#owner-dashboard':
-            // Protect the route: only owners or managers can access
-            if (getUserRole() === 'owner' || getUserRole() === 'manager') {
+            if (userRole === 'owner' || userRole === 'manager') {
                 renderOwnerDashboard();
             } else {
-                // If a non-owner tries to access, show an error or redirect
-                document.getElementById('main-content').innerHTML = `
-                    <div class="error-message"><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>
-                `;
+                document.getElementById('main-content').innerHTML = `<div class="error-message"><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>`;
             }
             break;
-        // --- END NEW ROUTE ---
+        case '#manager-dashboard':
+            if (userRole === 'manager') {
+                renderManagerDashboard();
+            } else {
+                document.getElementById('main-content').innerHTML = `<div class="error-message"><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>`;
+            }
+            break;
         default:
             renderMenuPage();
             break;
@@ -87,12 +88,107 @@ function handleRouteChange() {
 }
 
 /**
+ * Fetches global settings and applies them to the UI (title, theme).
+ */
+async function loadAndApplySiteSettings() {
+    try {
+        const settings = await api.getSiteSettings();
+        if (settings) {
+            if (settings.websiteName) {
+                uiUtils.updateSiteTitles(settings.websiteName);
+            }
+            if (settings.themeVariables) {
+                Object.entries(settings.themeVariables).forEach(([varName, value]) => {
+                    uiUtils.updateCssVariable(varName, value);
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Failed to load or apply site settings:", error);
+    }
+}
+
+
+
+
+
+
+
+
+/**
+ * Sets up a "backdoor" for developers to quickly log in as the god user.
+ * It listens for a long press on the 'Menu' nav link.
+ * This is SECURE because the password is read from an environment variable
+ * and is ONLY included in non-production builds.
+ */
+
+
+function setupGodModeTrigger() {
+    // Read the dev mode flag and the password from Vite's environment variables
+    const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
+    const GOD_MODE_PASSWORD = import.meta.env.VITE_GOD_MODE_PASSWORD;
+
+    // --- SECURITY GATE ---
+    // The trigger will only be attached if we are in dev mode AND the password is set.
+    if (!IS_DEV_MODE || !GOD_MODE_PASSWORD) {
+        // In production, GOD_MODE_PASSWORD will be undefined, so this code will not run.
+        return;
+    }
+
+    const menuLink = document.querySelector('nav a[href="#menu"]');
+    if (!menuLink) {
+        console.warn("God mode trigger: Menu link not found.");
+        return;
+    }
+
+    let pressTimer = null;
+
+    const startPress = (event) => {
+        event.preventDefault();
+
+        pressTimer = setTimeout(() => {
+            console.warn("GOD MODE TRIGGER ACTIVATED");
+            const { login } = useAppStore.getState();
+
+            const email = 'austintweed111@gmail.com'; // This is not sensitive information
+            const password = GOD_MODE_PASSWORD;     // <-- Reads the secure password from env vars
+
+            login(email, password).then(({ error }) => {
+                if (error) {
+                    alert(`God Mode Login Failed: ${error.message}`);
+                } else {
+                    console.log("God mode login successful.");
+                }
+            });
+
+        }, 5000); // 5 seconds
+    };
+
+    const cancelPress = () => {
+        clearTimeout(pressTimer);
+    };
+
+    // Add listeners for both mouse and touch events
+    menuLink.addEventListener("mousedown", startPress);
+    menuLink.addEventListener("mouseup", cancelPress);
+    menuLink.addEventListener("mouseleave", cancelPress);
+
+    menuLink.addEventListener("touchstart", startPress, { passive: false });
+    menuLink.addEventListener("touchend", cancelPress);
+    menuLink.addEventListener("touchcancel", cancelPress);
+
+    console.log("%cGod Mode Trigger is active.", "color: orange;");
+}
+
+
+
+
+/**
  * The main application initialization function.
  */
 async function main() {
     console.log("App Initializing...");
 
-    // Create the main app structure inside the #app div.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -116,63 +212,57 @@ async function main() {
 
     // --- Set up Reactive UI Subscriptions ---
 
-    // Subscriber for auth status (login button, welcome message, etc.)
-    useAppStore.subscribe(
+
+
+     useAppStore.subscribe(
         (state) => state.isAuthenticated,
         renderAuthStatus,
         { fireImmediately: true }
     );
-
-    // Subscriber to re-render the menu page if the user role changes (for admin buttons)
-    useAppStore.subscribe(
-        (state) => state.profile?.role, // Listen specifically to the role
+     useAppStore.subscribe(
+        (state) => state.profile?.role,
         () => {
             if (window.location.hash === '#menu' || window.location.hash === '') {
                 renderMenuPage();
             }
         }
     );
-
-    // Subscriber for the cart count in the header
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         useAppStore.subscribe(
             (state) => state.getTotalItemCount(),
-            (itemCount) => {
-                cartCountSpan.textContent = itemCount;
-            },
+            (itemCount) => { cartCountSpan.textContent = itemCount; },
             { fireImmediately: true }
         );
     }
-
-    // Subscriber to re-render the cart page if the cart itself changes
     useAppStore.subscribe(
         (state) => state.items,
         () => {
-            if (window.location.hash === '#cart') {
-                renderCartPage();
-            }
+            if (window.location.hash === '#cart') { renderCartPage(); }
         }
     );
 
-    // --- Initialize Core Services & Routing ---
-    // This MUST be called to start the session check and set up the Supabase listener.
-    useAppStore.getState().initializeAuth();
 
+    // --- Initialize Core Services & Routing ---
+    useAppStore.getState().initializeAuth();
+    initializeImpersonationToolbar(); // <-- INITIALIZE THE TOOLBAR
     window.addEventListener('hashchange', handleRouteChange);
 
     // --- Initial Data Fetch and Page Render ---
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
-    // Fetch initial data
-    await useAppStore.getState().fetchMenu();
+    await Promise.all([
+        useAppStore.getState().fetchMenu(),
+        loadAndApplySiteSettings()
+    ]);
 
-    // Render the initial page based on the current URL hash
     handleRouteChange();
+    // After the app structure is rendered, set up the trigger
+    setupGodModeTrigger();
 
     console.log("App Initialized and router is active.");
 }
 
-// Start the application
+
 main();
