@@ -102,3 +102,106 @@ function attachCartEventListeners() {
         });
     }
 }
+
+
+/**
+ * Renders the checkout page into the main content area.
+ */
+export function renderCheckoutPage() {
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) return;
+
+    const { getCartTotal, isAuthenticated, user } = useAppStore.getState();
+    const total = getCartTotal();
+
+    // Rule: Require login for orders over $10
+    if (total > 10 && !isAuthenticated) {
+        mainContent.innerHTML = `
+            <div class="notice-message">
+                <h2>Login Required</h2>
+                <p>Your order total is over $10.00. Please log in or sign up to continue.</p>
+                <p><em>(We'll bring you right back here after you log in!)</em></p>
+            </div>
+        `;
+        // In a real app, you would pop the login modal here.
+        // For now, this message guides the user. The nav bar still has the login button.
+        return;
+    }
+
+    // Set a minimum pickup time (e.g., 20 minutes from now)
+    const minPickupDateTime = new Date(Date.now() + 20 * 60000);
+    const formattedMinPickup = `${minPickupDateTime.getFullYear()}-${String(minPickupDateTime.getMonth() + 1).padStart(2, '0')}-${String(minPickupDateTime.getDate()).padStart(2, '0')}T${String(minPickupDateTime.getHours()).padStart(2, '0')}:${String(minPickupDateTime.getMinutes()).padStart(2, '0')}`;
+
+    const contentHTML = `
+        <div class="checkout-container">
+            <h2>Checkout</h2>
+            <div class="order-summary">
+                <h3>Your Order</h3>
+                <p>Total: <strong>$${total.toFixed(2)}</strong></p>
+            </div>
+            <form id="checkout-form">
+                <h3>Your Details</h3>
+                <div class="form-group">
+                    <label for="checkout-name">Full Name</label>
+                    <input type="text" id="checkout-name" name="name" required value="${user?.email || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="checkout-email">Email Address</label>
+                    <input type="email" id="checkout-email" name="email" required value="${user?.email || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="checkout-phone">Phone Number (Optional)</label>
+                    <input type="tel" id="checkout-phone" name="phone" placeholder="In case we need to contact you">
+                </div>
+                <h3>Pickup Details</h3>
+                <div class="form-group">
+                    <label for="checkout-pickup-time">Pickup Time</label>
+                    <input type="datetime-local" id="checkout-pickup-time" name="pickupTime" required min="${formattedMinPickup}">
+                </div>
+                <div class="form-group">
+                    <label for="checkout-requests">Special Requests</label>
+                    <textarea id="checkout-requests" name="specialRequests" rows="3"></textarea>
+                </div>
+                <div id="payment-placeholder">
+                    <p><strong>Payment:</strong> For this demo, payment is collected upon pickup.</p>
+                </div>
+                <button type="submit" id="submit-order-btn" class="button-primary">Place Order</button>
+            </form>
+        </div>
+    `;
+    mainContent.innerHTML = contentHTML;
+    document.getElementById('checkout-form').addEventListener('submit', handleCheckoutSubmit);
+}
+
+/**
+ * Handles the submission of the checkout form.
+ * @param {Event} event
+ */
+async function handleCheckoutSubmit(event) {
+    event.preventDefault();
+    const submitBtn = document.getElementById('submit-order-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Placing Order...';
+
+    const formData = new FormData(event.target);
+    const customerDetails = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        pickupTime: formData.get('pickupTime'),
+        specialRequests: formData.get('specialRequests'),
+    };
+
+    const success = await useAppStore.getState().submitOrder(customerDetails);
+
+    if (success) {
+        // Navigate to the confirmation page
+        window.location.hash = '#order-confirmation';
+    } else {
+        // Show an error message
+        const submitError = useAppStore.getState().error;
+        alert(`There was an issue placing your order: ${submitError || 'Please try again.'}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Place Order';
+    }
+}
