@@ -211,6 +211,18 @@ async function main() {
         return;
     }
 
+ // --- DEBUGGING: Inspect our imported modules ---
+    console.log("--- DEBUG START ---");
+    console.log("Inspecting 'api' module:", api);
+    console.log("Is 'api.getSiteSettings' a function?", typeof api?.getSiteSettings);
+    
+    console.log("Inspecting 'uiUtils' module:", uiUtils);
+    console.log("Is 'uiUtils.updateSiteTitles' a function?", typeof uiUtils?.updateSiteTitles);
+    console.log("Is 'uiUtils.updateCssVariable' a function?", typeof uiUtils?.updateCssVariable);
+    console.log("--- DEBUG END ---");
+    // --- END DEBUGGING ---
+
+
     // --- Set up Reactive UI Subscriptions ---
     // These listeners will handle all subsequent updates AFTER the initial render.
     useAppStore.subscribe((state) => state.isAuthenticated, renderAuthStatus);
