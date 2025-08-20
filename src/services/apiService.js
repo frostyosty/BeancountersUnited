@@ -49,4 +49,4 @@ export const deleteMenuItem = (itemId) => request(`/menu?id=${itemId}`, 'DELETE'
 export const getUserProfile = () => request('/user/profile');
 
 // --- Settings API Functions ---
-export const getSiteSettings = () => request('/settings', 'GET'); // << MUST BE EXPORTED
+export const getSiteSettings = () => request('/settings', 'GET');
