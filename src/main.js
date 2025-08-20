@@ -2,6 +2,7 @@
 
 // src/main.js - The main entry point and application orchestrator
 
+import '@/supabaseClient.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import * as api from './services/apiService.js';

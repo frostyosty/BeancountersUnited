@@ -41,13 +41,12 @@ async function request(endpoint, method = 'GET', body = null) {
 
 // --- Menu API Functions ---
 export const getMenu = () => request('/menu');
-// NEW functions for the owner dashboard:
 export const addMenuItem = (itemData) => request('/menu', 'POST', itemData);
 export const updateMenuItem = (itemId, itemData) => request(`/menu?id=${itemId}`, 'PUT', itemData);
 export const deleteMenuItem = (itemId) => request(`/menu?id=${itemId}`, 'DELETE');
 
 // --- User Profile API Functions ---
-// We need this for the auth slice
 export const getUserProfile = () => request('/user/profile');
 
-// We will add more API functions here later (submitOrder, etc.)
+// --- Settings API Functions ---
+export const getSiteSettings = () => request('/settings', 'GET'); // << MUST BE EXPORTED
