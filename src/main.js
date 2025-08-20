@@ -182,13 +182,13 @@ function setupGodModeTrigger() {
 
 
 
-
 /**
  * The main application initialization function.
  */
 async function main() {
     console.log("App Initializing...");
 
+    // Create the main app structure inside the #app div.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -211,58 +211,51 @@ async function main() {
     }
 
     // --- Set up Reactive UI Subscriptions ---
-
-
-
-     useAppStore.subscribe(
-        (state) => state.isAuthenticated,
-        renderAuthStatus,
-        { fireImmediately: true }
-    );
-     useAppStore.subscribe(
-        (state) => state.profile?.role,
-        () => {
-            if (window.location.hash === '#menu' || window.location.hash === '') {
-                renderMenuPage();
-            }
-        }
-    );
+    // These listeners will handle all subsequent updates AFTER the initial render.
+    useAppStore.subscribe((state) => state.isAuthenticated, renderAuthStatus);
+    useAppStore.subscribe((state) => state.profile?.role, () => {
+        if (window.location.hash === '#menu' || window.location.hash === '') { renderMenuPage(); }
+    });
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         useAppStore.subscribe(
             (state) => state.getTotalItemCount(),
-            (itemCount) => { cartCountSpan.textContent = itemCount; },
-            { fireImmediately: true }
+            (itemCount) => { cartCountSpan.textContent = itemCount; }
         );
     }
-    useAppStore.subscribe(
-        (state) => state.items,
-        () => {
-            if (window.location.hash === '#cart') { renderCartPage(); }
-        }
-    );
+    useAppStore.subscribe((state) => state.items, () => {
+        if (window.location.hash === '#cart') { renderCartPage(); }
+    });
 
 
     // --- Initialize Core Services & Routing ---
+    // This starts the Supabase listener.
     useAppStore.getState().initializeAuth();
-    initializeImpersonationToolbar(); // <-- INITIALIZE THE TOOLBAR
+    initializeImpersonationToolbar();
     window.addEventListener('hashchange', handleRouteChange);
 
     // --- Initial Data Fetch and Page Render ---
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
+    // Fetch initial data. The auth slice's `initializeAuth` has already started the session check.
     await Promise.all([
         useAppStore.getState().fetchMenu(),
         loadAndApplySiteSettings()
     ]);
 
+    // --- CRITICAL FIX: Manually render initial state AFTER fetches are complete ---
+    // By this point, initializeAuth has had time to get the initial session.
+    renderAuthStatus(); // Manually render the auth status once.
+    // Manually set the initial cart count once.
+    if (cartCountSpan) {
+        cartCountSpan.textContent = useAppStore.getState().getTotalItemCount();
+    }
+    
+    // Now, call the router to render the correct page content.
     handleRouteChange();
-    // After the app structure is rendered, set up the trigger
-    setupGodModeTrigger();
-
+    
     console.log("App Initialized and router is active.");
 }
-
 
 main();
