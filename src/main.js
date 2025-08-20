@@ -5,9 +5,39 @@ import { useAppStore } from './store/appStore.js';
 
 // Import our feature UI renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderCartPage } from './features/cart/cartUI.js';
+import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js'; // <-- Import auth UI renderer
 import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js'; // <-- Import owner dashboard UI
+
+
+
+// Add a placeholder for the order confirmation page
+function renderOrderConfirmationPage() {
+    const mainContent = document.getElementById('main-content');
+    const { lastSuccessfulOrderId } = useAppStore.getState();
+
+    if (mainContent) {
+        if (lastSuccessfulOrderId) {
+            mainContent.innerHTML = `
+                <div class="confirmation-message">
+                    <h2>Thank You For Your Order!</h2>
+                    <p>Your order has been placed successfully.</p>
+                    <p>Your Order ID is: <strong>${lastSuccessfulOrderId}</strong></p>
+                    <p>It will be ready for pickup at your scheduled time.</p>
+                    <a href="#menu" class="button-link">Place Another Order</a>
+                </div>
+            `;
+        } else {
+            mainContent.innerHTML = `
+                <div class="error-message">
+                    <h2>Something went wrong.</h2>
+                    <p>We couldn't retrieve your order confirmation details. Please check your email or contact us.</p>
+                </div>
+            `;
+        }
+    }
+}
+
 
 /**
  * Simple hash-based router.
@@ -24,14 +54,20 @@ function handleRouteChange() {
         }
     });
 
-    switch (hash) {
+     switch (hash) {
         case '#menu':
             renderMenuPage();
             break;
         case '#cart':
             renderCartPage();
             break;
-        // --- NEW ROUTE ---
+        // --- NEW ROUTES ---
+        case '#checkout':
+            renderCheckoutPage();
+            break;
+        case '#order-confirmation':
+            renderOrderConfirmationPage();
+            break;
         case '#owner-dashboard':
             // Protect the route: only owners or managers can access
             if (getUserRole() === 'owner' || getUserRole() === 'manager') {
