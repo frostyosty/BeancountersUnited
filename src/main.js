@@ -151,7 +151,7 @@ function setupGodModeTrigger() {
             console.warn("GOD MODE TRIGGER ACTIVATED");
             const { login } = useAppStore.getState();
 
-            const email = 'austintweed111@gmail.com'; // This is not sensitive information
+            const email = 'xsi@v.gg'; // This is not sensitive information
             const password = GOD_MODE_PASSWORD;     // <-- Reads the secure password from env vars
 
             login(email, password).then(({ error }) => {

@@ -11,7 +11,6 @@ export const createAuthSlice = (set, get) => ({
     // --- NEW STATE FOR IMPERSONATION ---
     originalUser: null,    // Stores the real user object during impersonation
     originalProfile: null, // Stores the real profile object (with 'manager' role)
-
     // --- ACTIONS ---
 
     initializeAuth: () => {
