@@ -8,43 +8,32 @@ import * as api from '@/services/apiService.js'; // Using the '@' alias for a cl
  * @param {Function} get - Zustand's state getter function.
  * @returns {object} The menu slice of the store.
  */
+
 export const createMenuSlice = (set, get) => ({
-    // --- STATE ---
-    // The initial state for everything related to the menu.
-    menu: {
-        items: [],       // Array to hold the menu items fetched from the API
-        isLoading: true, // True when fetching, false otherwise
-        error: null,     // Holds any error message if fetching fails
-    },
+    items: [],
+    isLoading: true,
+    error: null,
 
-    // --- ACTIONS ---
-    // Actions are functions that can be called from the UI to change the state.
-
-    /**
-     * Fetches menu items from the API and updates the state.
-     */
     fetchMenu: async () => {
-        // Set loading state to true immediately
-        set(state => ({
-            menu: { ...state.menu, isLoading: true, error: null }
-        }), false, 'menu/fetchStart'); // The string is a label for Redux DevTools
+        console.log("!!! MOCK DATA MODE: Bypassing API call.");
+        set((state) => ({ menu: { ...state.menu, isLoading: true, error: null } }));
 
-        try {
-            // Call the API function to get the menu data
-            const menuItems = await api.getMenu();
+        // Simulate a network delay
+        setTimeout(() => {
+            const mockMenuItems = [
+                { id: 'item-1', name: 'Margherita Pizza', description: 'Classic cheese and tomato', price: 12.99, category: 'Pizzas', image_url: '/placeholder-pizza.jpg' },
+                { id: 'item-2', name: 'Cheeseburger', description: 'Juicy beef patty with cheddar cheese', price: 10.50, category: 'Burgers', image_url: '/placeholder-burger.jpg' },
+                { id: 'item-3', name: 'Caesar Salad', description: 'Fresh romaine with Caesar dressing', price: 8.75, category: 'Salads', image_url: '/placeholder-salad.jpg' },
+            ];
+            
+            // Set the state with the mock data
+            set((state) => ({
+                menu: { ...state.menu, items: mockMenuItems, isLoading: false }
+            }), false, 'menu/fetchSuccess-MOCK');
+            
+            console.log("!!! MOCK DATA MODE: Set state to SUCCESS.");
 
-            // On success, update the state with the fetched items
-            set(state => ({
-                menu: { ...state.menu, items: menuItems, isLoading: false }
-            }), false, 'menu/fetchSuccess');
-
-        } catch (error) {
-            console.error("Error fetching menu:", error);
-            // On failure, update the state with the error message
-            set(state => ({
-                menu: { ...state.menu, isLoading: false, error: error.message }
-            }), false, 'menu/fetchError');
-        }
+        }, 500); // Wait 0.5 seconds to simulate loading
     },
 
     /**
