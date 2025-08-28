@@ -494,3 +494,24 @@ th {
 
 
 
+
+
+
+
+#main-content {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    min-height: 300px; /* Give it some space */
+    border: 5px dashed red !important; /* Make it OBVIOUS */
+}
+
+#main-content * {
+    /* Apply styles to everything inside main-content */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: blue !important;
+    border: 1px dotted blue !important;
+}
