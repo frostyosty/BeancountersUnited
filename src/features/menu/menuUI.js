@@ -1,85 +1,40 @@
-// src/features/menu/menuUI.js
+// src/features/menu/menuUI.js - DEBUGGING VERSION
+
 import { useAppStore } from '@/store/appStore.js';
-import * as uiUtils from '@/utils/uiUtils.js';
 
-function createMenuItemHTML(item) {
-    const userRole = useAppStore.getState().auth.getUserRole();
-    const adminControls = `...`; // Your admin controls HTML
-    const godUserControls = `...`; // Your god user controls HTML
+/**
+ * Renders the menu page.
+ * FOR DEBUGGING: This version ignores the store state and just tries to render static text.
+ */
+export function renderMenuPage() {
+    console.log("--- [DEBUG] renderMenuPage() CALLED ---");
 
-    return `
-        <div class="menu-item-card" data-item-id="${item.id}">
-            <img src="${item.image_url || '/placeholder-pizza.jpg'}" alt="${item.name}" class="menu-item-image">
-            <div class="menu-item-content">
-                <h3 class="menu-item-name">${item.name}</h3>
-                <p class="menu-item-description">${item.description}</p>
-                <div class="menu-item-footer">
-                    <p class="menu-item-price">$${parseFloat(item.price).toFixed(2)}</p>
-                    <button class="add-to-cart-btn button-primary" data-item-id="${item.id}">Add to Cart</button>
-                </div>
-                ${(userRole === 'owner' || userRole === 'manager') ? adminControls : ''}
-                ${(userRole === 'manager') ? godUserControls : ''}
-            </div>
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) {
+        console.error("[DEBUG] renderMenuPage: Could not find #main-content element!");
+        return;
+    }
+
+    // Get the state just for logging purposes.
+    const menuState = useAppStore.getState().menu;
+    console.log("[DEBUG] Current menu state is:", menuState);
+
+    // --- THE TEST ---
+    // We are completely ignoring the isLoading, error, and items properties.
+    // We are just trying to render a simple, static piece of HTML.
+    const staticHTML = `
+        <div style="border: 5px solid green; padding: 20px;">
+            <h1>Hello from renderMenuPage!</h1>
+            <p>If you can see this text with a green border, it means this function is working correctly and can write to the DOM.</p>
+            <p>The current loading state is: <strong>${menuState.isLoading}</strong></p>
         </div>
     `;
+
+    console.log("[DEBUG] Setting mainContent.innerHTML with static HTML.");
+    mainContent.innerHTML = staticHTML;
+    console.log("[DEBUG] Set mainContent.innerHTML successfully.");
 }
 
-export function renderMenuPage() {
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
-
-    // Read the nested 'menu' slice from the store.
-    const { items, isLoading, error } = useAppStore.getState().menu;
-
-    if (isLoading) {
-        mainContent.innerHTML = '<div class="loading-spinner">Loading menu...</div>';
-        return;
-    }
-
-    if (error) {
-        mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`;
-        return;
-    }
-
-    if (items.length === 0) {
-        mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
-        return;
-    }
-
-    const itemsByCategory = items.reduce((acc, item) => {
-        const category = item.category || 'Uncategorized';
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(item);
-        return acc;
-    }, {});
-
-    const contentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `
-        <section class="menu-category">
-            <h2 class="category-title">${category}</h2>
-            <div class="menu-items-grid">
-                ${categoryItems.map(createMenuItemHTML).join('')}
-            </div>
-        </section>
-    `).join('');
-
-    mainContent.innerHTML = contentHTML;
-    attachMenuEventListeners();
-}
-
-function attachMenuEventListeners() {
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
-
-    mainContent.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.matches('.add-to-cart-btn')) {
-            const itemId = target.dataset.itemId;
-            const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
-            if (menuItem) {
-                useAppStore.getState().cart.addItem(menuItem);
-                uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
-            }
-        }
-        // ... other listeners for admin buttons
-    });
-}
+// We don't need these for this test, but we'll leave them here to avoid import errors elsewhere.
+function createMenuItemHTML(item) { return ''; }
+function attachMenuEventListeners() {}
