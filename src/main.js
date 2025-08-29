@@ -1,14 +1,12 @@
 // src/main.js
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
+import { supabase, supabaseError } from './supabaseClient.js'; // Import the error state
 import { renderMenuPage } from './features/menu/menuUI.js';
-// Add other renderers as needed
-// import { renderAuthStatus } from './features/auth/authUI.js';
 
 function renderApp() {
-    console.log("--- renderApp() called ---");
-    // renderAuthStatus();
     renderMenuPage();
+    // ... other render calls
 }
 
 console.log("--- main.js script started ---");
@@ -22,13 +20,28 @@ if (appElement) {
     `;
 }
 
-useAppStore.subscribe(renderApp);
-window.addEventListener('hashchange', renderApp); // For routing later
+// --- CRITICAL CHECK ---
+if (supabaseError) {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-message">
+                <h2>Application Configuration Error</h2>
+                <p>The application could not start due to a configuration issue.</p>
+                <p><strong>Details:</strong> ${supabaseError}</p>
+                <p>Please contact the site administrator.</p>
+            </div>
+        `;
+    }
+} else {
+    // Only set up the rest of the app if Supabase initialized correctly.
+    useAppStore.subscribe(renderApp);
+    window.addEventListener('hashchange', renderApp);
 
-// Kick off the data fetch
-useAppStore.getState().menu.fetchMenu();
-// useAppStore.getState().auth.listenToAuthChanges();
+    useAppStore.getState().menu.fetchMenu();
+    // useAppStore.getState().auth.listenToAuthChanges(); // We'll add this back next
 
-// Initial render
-renderApp();
+    renderApp();
+}
+
 console.log("--- main.js script setup finished ---");
