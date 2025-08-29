@@ -1,1 +1,1 @@
-git add . && git commit -m "standard commit for restaurant first savea fter big one" && git push origin master
+git add . && git commit -m "standard commit before this is stable" && git push origin master
