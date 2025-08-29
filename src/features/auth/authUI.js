@@ -2,63 +2,59 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
-/**
- * Renders the authentication status in the header (e.g., "Login" button or "Welcome, User").
- */
 export function renderAuthStatus() {
     const authContainer = document.getElementById('auth-status-container');
     if (!authContainer) return;
 
-    const { isAuthenticated, user, profile, logout } = useAppStore.getState();
-    const userRole = profile?.role || 'guest';
+    const { isAuthenticated, user, profile, isAuthLoading } = useAppStore.getState();
+
+    if (isAuthLoading) {
+        authContainer.innerHTML = `<span>...</span>`;
+        return;
+    }
 
     let contentHTML = '';
 
     if (isAuthenticated) {
-        // --- LOGGED-IN VIEW ---
-        let dashboardLink = '';
+        const userRole = profile?.role || 'customer';
+        let dashboardLinks = '';
         if (userRole === 'owner' || userRole === 'manager') {
-            dashboardLink = `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            dashboardLinks += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
         }
         if (userRole === 'manager') {
-            dashboardLink += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
+            dashboardLinks += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
         }
 
         contentHTML = `
             <div class="user-info">
                 <span>Welcome, ${user.email}</span>
-                ${dashboardLink}
+                ${dashboardLinks}
                 <button id="logout-btn" class="button-secondary">Logout</button>
             </div>
         `;
     } else {
-        // --- LOGGED-OUT VIEW ---
         contentHTML = `
             <button id="login-btn" class="button-primary">Login / Sign Up</button>
         `;
     }
 
     authContainer.innerHTML = contentHTML;
-    attachAuthEventListeners(); // Re-attach listeners to the new buttons
+    attachAuthEventListeners();
 }
 
-/**
- * Attaches event listeners for the auth-related buttons in the header.
- */
 function attachAuthEventListeners() {
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', showLoginModal);
-    }
+    const oldLoginBtn = document.getElementById('login-btn');
+    if (oldLoginBtn) oldLoginBtn.replaceWith(oldLoginBtn.cloneNode(true));
+    document.getElementById('login-btn')?.addEventListener('click', showLoginModal);
 
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await useAppStore.getState().logout();
-            uiUtils.showToast('You have been logged out.', 'info');
-        });
-    }
+    const oldLogoutBtn = document.getElementById('logout-btn');
+    if (oldLogoutBtn) oldLogoutBtn.replaceWith(oldLogoutBtn.cloneNode(true));
+    document.getElementById('logout-btn')?.addEventListener('click', async () => {
+        await useAppStore.getState().logout();
+        uiUtils.showToast('You have been logged out.', 'info');
+    });
 }
+
 
 /**
  * Displays the login/signup modal.
@@ -83,9 +79,8 @@ function showLoginModal() {
             </form>
         </div>
     `;
-    uiUtils.showModal(modalContentHTML); // We need to create/update showModal in uiUtils
+    uiUtils.showModal(modalContentHTML);
 
-    // Attach listener to the form inside the modal
     const authForm = document.getElementById('auth-form');
     if (authForm) {
         authForm.addEventListener('submit', handleAuthFormSubmit);
@@ -94,7 +89,6 @@ function showLoginModal() {
 
 /**
  * Handles the submission of the login/signup form.
- * @param {Event} event - The form submission event.
  */
 async function handleAuthFormSubmit(event) {
     event.preventDefault();
@@ -106,31 +100,26 @@ async function handleAuthFormSubmit(event) {
     messageEl.textContent = 'Processing...';
     messageEl.className = 'auth-message info';
 
-    // First, try to log in
     const { error: loginError } = await login(email, password);
 
     if (loginError) {
-        // If login fails because user doesn't exist, try to sign them up
         if (loginError.message.includes('Invalid login credentials')) {
             messageEl.textContent = 'Account not found. Attempting to sign you up...';
             const { error: signUpError } = await signUp(email, password);
-
             if (signUpError) {
                 messageEl.textContent = `Sign up failed: ${signUpError.message}`;
                 messageEl.className = 'auth-message error';
             } else {
                 messageEl.textContent = 'Success! Please check your email for a confirmation link.';
                 messageEl.className = 'auth-message success';
-                // Don't close modal, let them see the message
             }
         } else {
-            // Handle other login errors (e.g., incorrect password, email not confirmed)
             messageEl.textContent = loginError.message;
             messageEl.className = 'auth-message error';
         }
     } else {
-        // Login was successful
+        // Successful login is handled by the onAuthStateChange listener
         uiUtils.showToast('Login successful!', 'success');
-        uiUtils.closeModal(); // We need to create closeModal in uiUtils
+        uiUtils.closeModal();
     }
 }
