@@ -172,8 +172,6 @@ export function renderCheckoutPage() {
     mainContent.innerHTML = contentHTML;
     document.getElementById('checkout-form').addEventListener('submit', handleCheckoutSubmit);
 }
-
-
 /**
  * Handles the submission of the checkout form.
  * @param {Event} event
