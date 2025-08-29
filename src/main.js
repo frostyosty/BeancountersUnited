@@ -43,5 +43,4 @@ if (supabaseError) {
 
     renderApp();
 }
-
 console.log("--- main.js script setup finished ---");
