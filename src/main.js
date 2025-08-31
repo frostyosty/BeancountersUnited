@@ -3,7 +3,7 @@ import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import { renderMenuPage } from './features/menu/menuUI.js';
 
-console.log("--- main.js script started (Menu Only Test) ---");
+console.log("--- main.js script started (Brute Force Test) ---");
 
 // Render the basic HTML shell
 const appElement = document.getElementById('app');
@@ -15,16 +15,19 @@ if (appElement) {
     `;
 }
 
-// Subscribe to the 'menu' slice. Only re-render if it changes.
-useAppStore.subscribe(
-    (state) => state.menu, // The selector
-    renderMenuPage        // The callback
-);
+// This is the main application function
+async function initializeApp() {
+    // 1. Render the initial loading state
+    renderMenuPage(); // This will show "Loading..." because the initial state is isLoading: true
 
-// Kick off the initial data fetch.
-useAppStore.getState().menu.fetchMenu();
+    // 2. Call the fetch action. This is an async function.
+    // We will `await` it to ensure it is completely finished.
+    console.log("initializeApp: Awaiting fetchMenu()...");
+    await useAppStore.getState().menu.fetchMenu();
+    console.log("initializeApp: fetchMenu() has completed.");
 
-// Perform the initial render.
-renderMenuPage();
-
-console.log("--- main.js script setup finished ---");
+    // 3. Now that the fetch is done and the state is updated,
+    //    call the render function again.
+    console.log("initializeApp: Calling renderMenuPage() with final state.");
+    renderMenuPage();
+}
