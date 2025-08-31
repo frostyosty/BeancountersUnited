@@ -2,12 +2,18 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
+/**
+ * Renders the authentication status in the header (e.g., "Login" button or "Welcome, User").
+ * Reads the latest state from the store and updates the DOM accordingly.
+ */
 export function renderAuthStatus() {
     const authContainer = document.getElementById('auth-status-container');
     if (!authContainer) return;
 
-    const { isAuthenticated, user, profile, isAuthLoading } = useAppStore.getState();
+    // Read properties directly from the flat store state
+    const { isAuthenticated, user, profile, isAuthLoading, getUserRole } = useAppStore.getState();
 
+    // If we're still performing the initial check, show a minimal loading state.
     if (isAuthLoading) {
         authContainer.innerHTML = `<span>...</span>`;
         return;
@@ -16,8 +22,10 @@ export function renderAuthStatus() {
     let contentHTML = '';
 
     if (isAuthenticated) {
-        const userRole = profile?.role || 'customer';
+        // --- LOGGED-IN VIEW ---
+        const userRole = getUserRole(); // Use the selector to get the role
         let dashboardLinks = '';
+
         if (userRole === 'owner' || userRole === 'manager') {
             dashboardLinks += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
         }
@@ -33,6 +41,7 @@ export function renderAuthStatus() {
             </div>
         `;
     } else {
+        // --- LOGGED-OUT VIEW ---
         contentHTML = `
             <button id="login-btn" class="button-primary">Login / Sign Up</button>
         `;
@@ -42,19 +51,28 @@ export function renderAuthStatus() {
     attachAuthEventListeners();
 }
 
+/**
+ * Attaches event listeners for the auth-related buttons.
+ * This function is idempotent (safe to call multiple times) by cloning nodes to remove old listeners.
+ */
 function attachAuthEventListeners() {
-    const oldLoginBtn = document.getElementById('login-btn');
-    if (oldLoginBtn) oldLoginBtn.replaceWith(oldLoginBtn.cloneNode(true));
-    document.getElementById('login-btn')?.addEventListener('click', showLoginModal);
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        const newLoginBtn = loginBtn.cloneNode(true);
+        loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
+        newLoginBtn.addEventListener('click', showLoginModal);
+    }
 
-    const oldLogoutBtn = document.getElementById('logout-btn');
-    if (oldLogoutBtn) oldLogoutBtn.replaceWith(oldLogoutBtn.cloneNode(true));
-    document.getElementById('logout-btn')?.addEventListener('click', async () => {
-        await useAppStore.getState().logout();
-        uiUtils.showToast('You have been logged out.', 'info');
-    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        newLogoutBtn.addEventListener('click', async () => {
+            await useAppStore.getState().logout();
+            uiUtils.showToast('You have been logged out.', 'info');
+        });
+    }
 }
-
 
 /**
  * Displays the login/signup modal.
@@ -118,7 +136,8 @@ async function handleAuthFormSubmit(event) {
             messageEl.className = 'auth-message error';
         }
     } else {
-        // Successful login is handled by the onAuthStateChange listener
+        // Successful login is handled by the onAuthStateChange listener which will
+        // update the state and trigger a re-render via the subscriber in main.js.
         uiUtils.showToast('Login successful!', 'success');
         uiUtils.closeModal();
     }

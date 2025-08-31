@@ -3,15 +3,15 @@ import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAuthSlice = (set, get) => ({
-    // State properties are at the top level
+    // State properties for auth
     user: null,
     profile: null,
     isAuthLoading: true,
     isAuthenticated: false,
     authError: null,
-    // We will re-add impersonation later, let's get the core working first
+    // We will add impersonation state back later
 
-    // This is the ONLY initialization function needed.
+    // Action to set up the auth listener
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
             console.log(`Auth event: ${event}`);
@@ -24,30 +24,24 @@ export const createAuthSlice = (set, get) => ({
                     set({ user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: "Failed to fetch profile" });
                 }
             } else {
-                // No session, user is logged out.
                 set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
             }
         });
     },
 
+    // Actions for login/signup/logout
     login: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) console.error('Login error:', error);
-        return { error }; // The listener will handle the state change
+        return { error }; // The listener handles the state change on success
     },
-
     signUp: async (email, password) => {
         const { error } = await supabase.auth.signUp({ email, password });
-        if (error) console.error('Sign up error:', error);
         return { error };
     },
-
     logout: async () => {
         const { error } = await supabase.auth.signOut();
-        if (error) console.error('Logout error:', error);
         return { error };
     },
-
     getUserRole: () => {
         return get().profile?.role || 'guest';
     },
