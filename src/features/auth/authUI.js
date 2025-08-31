@@ -11,7 +11,7 @@ export function renderAuthStatus() {
     if (!authContainer) return;
 
     // Read properties directly from the flat store state
-    const { isAuthenticated, user, profile, isAuthLoading, getUserRole } = useAppStore.getState();
+    const { isAuthenticated, user, isAuthLoading } = useAppStore.getState();
 
     // If we're still performing the initial check, show a minimal loading state.
     if (isAuthLoading) {
