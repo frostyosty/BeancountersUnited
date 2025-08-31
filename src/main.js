@@ -1,109 +1,48 @@
 // src/main.js
 import './assets/css/style.css';
+import { supabase, supabaseError } from './supabaseClient.js'; // Import both
 import { useAppStore } from './store/appStore.js';
-
-// Import all our feature renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderCartPage } from './features/cart/cartUI.js';
-import { renderAuthStatus } from './features/auth/authUI.js';
-// Import dashboard renderers as we build them
-// import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
-
-/**
- * This is our single, simple "re-render" function. It reads the LATEST state
- * from the store every time it runs and updates the entire app.
- */
-function renderApp() {
-    console.log("--- renderApp() called ---");
-
-    // 1. Render persistent UI components that are always visible.
-    renderAuthStatus();
-
-    const cartCountSpan = document.getElementById('cart-count');
-    if (cartCountSpan) {
-        // Use a try-catch in case the cart slice hasn't been added back yet
-        try {
-            cartCountSpan.textContent = useAppStore.getState().getTotalItemCount();
-        } catch (e) {
-            cartCountSpan.textContent = '0'; // Default if cart slice isn't ready
-        }
-    }
-
-    // 2. Act as a router to render the main content area.
-    const hash = window.location.hash || '#menu';
-
-    // Style the active navigation link
-    document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
-        if (link.getAttribute('href') === hash) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
-    });
-
-    // Render the correct page based on the hash
-    switch(hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-        case '#cart':
-            renderCartPage();
-            break;
-        // Add more routes here for checkout, dashboards, etc.
-        default:
-            renderMenuPage(); // Default to the menu
-            break;
-    }
-}
-
-// --- Application Start ---
 
 console.log("--- main.js script started ---");
 
-// 1. Render the static HTML shell.
 const appElement = document.getElementById('app');
 if (appElement) {
-    appElement.innerHTML = `
-        <header id="main-header">
-            <h1>Mealmates</h1>
-            <nav>
-                <a href="#menu" class="nav-link">Menu</a>
-                <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                <div id="auth-status-container"></div>
-            </nav>
-        </header>
-        <main id="main-content"></main>
-        <footer id="main-footer"><p>&copy; 2024 Mealmates</p></footer>
-    `;
+    appElement.innerHTML = `<main id="main-content"></main>`;
 }
+const mainContent = document.getElementById('main-content');
 
-// 2. Set up a SINGLE, powerful subscriber.
-// This guarantees that any state change will trigger a full UI update.
-useAppStore.subscribe(renderApp);
+// --- CRITICAL CHECK ---
+if (supabaseError) {
+    mainContent.innerHTML = `
+        <div class="error-message" style="border-color: red; background-color: #fff0f0; padding: 20px;">
+            <h2 style="color: red;">Application Start Failed</h2>
+            <p><strong>Error:</strong> ${supabaseError}</p>
+        </div>
+    `;
+} else {
+    // Only run the app if Supabase initialized correctly
+    console.log("Supabase client initialized successfully. Starting app...");
+    
+    // Render initial shell
+    mainContent.innerHTML = `
+        <header id="main-header"><h1>Mealmates</h1></header>
+        <div id="page-content">Loading...</div>
+        <footer id="main-footer"><p>&copy; 2024</p></footer>
+    `;
 
-// 3. Set up listeners for user interaction.
-window.addEventListener('hashchange', renderApp);
-
-// Add a navigation handler to control link clicks.
-document.body.addEventListener('click', (e) => {
-    // Find the closest parent link with a hash
-    const navLink = e.target.closest('a[href^="#"]');
-    if (navLink) {
-        e.preventDefault();
-        const newHash = navLink.getAttribute('href');
-        if (window.location.hash !== newHash) {
-            window.location.hash = newHash;
+    // A simplified render function for this test
+    function renderApp() {
+        const { isMenuLoading } = useAppStore.getState();
+        const pageContent = document.getElementById('page-content');
+        if (isMenuLoading) {
+            pageContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
+        } else {
+            renderMenuPage(); // Call the real renderer
         }
     }
-});
 
-// 4. Kick off the initial asynchronous actions.
-// "Fire and forget" - the subscriber will handle the UI updates when they complete.
-useAppStore.getState().listenToAuthChanges();
-useAppStore.getState().fetchMenu();
-
-// 5. Perform the very first render.
-// This will correctly show the initial "Loading..." states.
-renderApp();
-
-console.log("--- main.js script setup finished ---");
+    useAppStore.subscribe(renderApp);
+    useAppStore.getState().fetchMenu();
+    renderApp();
+}
