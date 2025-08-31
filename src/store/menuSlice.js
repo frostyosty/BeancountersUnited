@@ -2,20 +2,22 @@
 import * as api from '@/services/apiService.js';
 
 export const createMenuSlice = (set, get) => ({
-    menuItems: [],
-    isMenuLoading: true,
-    menuError: null,
+    items: [],
+    isLoading: true,
+    error: null,
 
     fetchMenu: async () => {
-        console.log("!!! fetchMenu action started.");
-        set({ isMenuLoading: true, menuError: null });
+        console.log("--- menuSlice.fetchMenu() called ---");
+        // Update the 'menu' part of the state
+        set(state => ({ menu: { ...state.menu, isLoading: true, error: null } }));
         try {
-            const items = await api.getMenu();
-            console.log("!!! fetchMenu got items:", items);
-            set({ menuItems: items, isMenuLoading: false });
+            const menuItems = await api.getMenu();
+            console.log("--- menuSlice.fetchMenu() SUCCESS ---", menuItems);
+            // Update the 'menu' part of the state with the data
+            set(state => ({ menu: { ...state.menu, items: menuItems, isLoading: false } }));
         } catch (error) {
-            console.error("!!! fetchMenu FAILED:", error);
-            set({ isMenuLoading: false, menuError: error.message });
+            console.error("--- menuSlice.fetchMenu() FAILED ---", error);
+            set(state => ({ menu: { ...state.menu, isLoading: false, error: error.message } }));
         }
     },
 });

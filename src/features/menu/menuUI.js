@@ -1,40 +1,32 @@
-// src/features/menu/menuUI.js - DEBUGGING VERSION
-
+// src/features/menu/menuUI.js
 import { useAppStore } from '@/store/appStore.js';
 
-/**
- * Renders the menu page.
- * FOR DEBUGGING: This version ignores the store state and just tries to render static text.
- */
 export function renderMenuPage() {
-    console.log("--- [DEBUG] renderMenuPage() CALLED ---");
-
     const mainContent = document.getElementById('main-content');
-    if (!mainContent) {
-        console.error("[DEBUG] renderMenuPage: Could not find #main-content element!");
+    if (!mainContent) return;
+
+    // Read state from the 'menu' namespace
+    const { items, isLoading, error } = useAppStore.getState().menu;
+
+    if (isLoading) {
+        mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
+        return;
+    }
+    if (error) {
+        mainContent.innerHTML = `<div class="error-message">Error: ${error}</div>`;
+        return;
+    }
+    if (items.length === 0) {
+        mainContent.innerHTML = `<div class="empty-state">The menu is empty.</div>`;
         return;
     }
 
-    // Get the state just for logging purposes.
-    const menuState = useAppStore.getState().menu;
-    console.log("[DEBUG] Current menu state is:", menuState);
-
-    // --- THE TEST ---
-    // We are completely ignoring the isLoading, error, and items properties.
-    // We are just trying to render a simple, static piece of HTML.
-    const staticHTML = `
-        <div style="border: 5px solid green; padding: 20px;">
-            <h1>Hello from renderMenuPage!</h1>
-            <p>If you can see this text with a green border, it means this function is working correctly and can write to the DOM.</p>
-            <p>The current loading state is: <strong>${menuState.isLoading}</strong></p>
+    const menuHTML = items.map(item => `
+        <div class="menu-item-card" style="border: 1px solid green; padding: 10px; margin: 5px;">
+            <h3>${item.name}</h3>
+            <p>${item.description}</p>
+            <p><strong>$${parseFloat(item.price).toFixed(2)}</strong></p>
         </div>
-    `;
-
-    console.log("[DEBUG] Setting mainContent.innerHTML with static HTML.");
-    mainContent.innerHTML = staticHTML;
-    console.log("[DEBUG] Set mainContent.innerHTML successfully.");
+    `).join('');
+    mainContent.innerHTML = `<div class="menu-items-grid">${menuHTML}</div>`;
 }
-
-// We don't need these for this test, but we'll leave them here to avoid import errors elsewhere.
-function createMenuItemHTML(item) { return ''; }
-function attachMenuEventListeners() {}
