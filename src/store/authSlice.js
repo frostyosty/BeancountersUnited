@@ -3,34 +3,30 @@ import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAuthSlice = (set, get) => ({
-    // State properties for auth
     user: null,
     profile: null,
-    isAuthLoading: true, // Start in a loading state
+    isAuthLoading: true,
     isAuthenticated: false,
-    authError: null,
-    // We'll add impersonation back later
 
-    // This is the ONLY initialization function needed.
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`Auth event: ${event}`);
+            console.log(`Auth Event in Slice: ${event}`);
             if (session?.user) {
                 try {
+                    console.log("Attempting to call api.getUserProfile()...");
                     const profile = await api.getUserProfile();
-                    // --- CORRECT, FLAT set() CALL ---
+                    console.log("Successfully fetched profile:", profile);
                     set({ user: session.user, profile, isAuthenticated: true, isAuthLoading: false });
                 } catch (error) {
-                    console.error("Failed to fetch profile:", error);
-                    set({ user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: "Failed to fetch profile" });
+                    console.error("Failed to fetch profile in slice:", error);
+                    set({ user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false });
                 }
             } else {
-                // --- CORRECT, FLAT set() CALL ---
-                // No session, user is logged out.
                 set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
             }
         });
     },
+    
 
     // --- The rest of the actions use the simple `set` pattern too ---
     login: async (email, password) => {
