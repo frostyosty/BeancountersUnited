@@ -26,7 +26,6 @@ export const createAuthSlice = (set, get) => ({
             }
         });
     },
-    
 
     // --- The rest of the actions use the simple `set` pattern too ---
     login: async (email, password) => {
