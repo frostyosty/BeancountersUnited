@@ -122,7 +122,7 @@ export function renderMenuPage() {
                 </div>
             </section>
         `).join('');
-
+        
         mainContent.innerHTML = contentHTML;
         attachMenuEventListeners();
 

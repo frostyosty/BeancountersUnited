@@ -1,6 +1,7 @@
 // src/main.js
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
+import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 
 // Import all our feature renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -86,10 +87,12 @@ document.body.addEventListener('click', (e) => {
 });
 
 // Kick off initial asynchronous actions
-useAppStore.getState().auth.listenToAuthChanges(); // CORRECT
-useAppStore.getState().menu.fetchMenu()
 
-// Perform the very first render
+useAppStore.getState().auth.listenToAuthChanges();
+useAppStore.getState().menu.fetchMenu();
+initializeImpersonationToolbar(); // <-- Add this call
+
+// --- INITIAL RENDER ---
 renderApp();
 
 console.log("--- main.js script setup finished ---");
