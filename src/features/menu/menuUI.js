@@ -8,7 +8,7 @@ export function renderMenuPage() {
         console.error("renderMenuPage: #main-content element not found!");
         return;
     }
-
+    
     const { menuItems, isMenuLoading, menuError } = useAppStore.getState();
     console.log("renderMenuPage: Rendering with state:", { isMenuLoading, menuError, itemCount: menuItems.length });
 
