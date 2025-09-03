@@ -7,6 +7,7 @@ import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js';
 
+
 /**
  * This is our single, simple "re-render" function. It reads the LATEST state
  * from the store every time it runs and updates the entire app.

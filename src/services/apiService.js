@@ -36,5 +36,7 @@ export const getMenu = () => request('/menu');
 // Protected endpoints will need the token passed to them.
 export const getUserProfile = (token) => request('/user/profile', 'GET', null, token);
 
-// ... Add other API functions here, passing the token if they are protected.
-// export const addMenuItem = (itemData, token) => request('/menu', 'POST', itemData, token);
+
+
+// Update submitOrder to accept and pass the token
+export const submitOrder = (orderData, token) => request('/orders', 'POST', orderData, token);
