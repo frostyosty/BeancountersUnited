@@ -4,34 +4,24 @@ const getInitialState = () => {
     try {
         const savedCart = localStorage.getItem('restaurantCart');
         return savedCart ? JSON.parse(savedCart) : [];
-    } catch (error) {
-        console.error("Could not parse cart from localStorage:", error);
-        return [];
-    }
+    } catch (error) { return []; }
 };
 
 export const createCartSlice = (set, get) => ({
-    // --- STATE ---
     cartItems: getInitialState(),
 
-    // --- INTERNAL HELPER ---
     _saveToLocalStorage: () => {
         try {
             localStorage.setItem('restaurantCart', JSON.stringify(get().cartItems));
-        } catch (error) {
-            console.error("Could not save cart to localStorage:", error);
-        }
+        } catch (error) { /* handle error */ }
     },
 
-    // --- ACTIONS ---
     addItem: (itemToAdd) => {
         const currentItems = get().cartItems;
         const existingItem = currentItems.find(i => i.id === itemToAdd.id);
         let newItems;
         if (existingItem) {
-            newItems = currentItems.map(i =>
-                i.id === itemToAdd.id ? { ...i, quantity: i.quantity + 1 } : i
-            );
+            newItems = currentItems.map(i => i.id === itemToAdd.id ? { ...i, quantity: i.quantity + 1 } : i);
         } else {
             newItems = [...currentItems, { ...itemToAdd, quantity: 1 }];
         }
@@ -44,7 +34,7 @@ export const createCartSlice = (set, get) => ({
         set({ cartItems: newItems });
         get()._saveToLocalStorage();
     },
-
+    
     updateItemQuantity: (itemId, newQuantity) => {
         const quantity = Math.max(0, newQuantity);
         if (quantity === 0) {
@@ -63,7 +53,6 @@ export const createCartSlice = (set, get) => ({
         get()._saveToLocalStorage();
     },
 
-    // --- SELECTORS ---
     getCartItemCount: () => {
         return get().cartItems.reduce((total, item) => total + item.quantity, 0);
     },
