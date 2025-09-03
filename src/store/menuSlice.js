@@ -7,12 +7,15 @@ export const createMenuSlice = (set, get) => ({
     menuError: null,
 
     fetchMenu: async () => {
+        console.log("--- menuSlice: fetchMenu() CALLED ---");
         set({ isMenuLoading: true, menuError: null });
         try {
             const items = await api.getMenu();
+            console.log("--- menuSlice: fetchMenu() SUCCESS, received items:", items);
             set({ menuItems: items, isMenuLoading: false });
         } catch (error) {
-            set({ menuError: error.message, isMenuLoading: false });
+            console.error("--- menuSlice: fetchMenu() FAILED ---", error);
+            set({ menuItems: [], isMenuLoading: false, menuError: error.message });
         }
     },
 });

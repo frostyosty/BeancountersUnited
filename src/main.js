@@ -1,55 +1,30 @@
-// src/main.js
+// src/main.js - MENU ONLY TEST
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
-import * as api from './services/apiService.js'; // Needed for the listener
-import { supabase } from './supabaseClient.js'; // Import supabase client
 import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderAuthStatus } from './features/auth/authUI.js';
 
-// Make supabase globally accessible for simplicity in other modules if needed
-window.supabase = supabase;
+console.log("--- main.js script started (Menu Only Test) ---");
 
-function renderApp() {
-    // renderAuthStatus();
-    renderMenuPage();
-}
-
-console.log("--- main.js script started ---");
-
+// --- Render the basic HTML shell ---
 const appElement = document.getElementById('app');
 if (appElement) {
     appElement.innerHTML = `
         <header id="main-header"><h1>Mealmates</h1></header>
         <main id="main-content"></main>
+        <footer id="main-footer"><p>&copy; 2024</p></footer>
     `;
 }
 
-// --- SETUP THE AUTH LISTENER HERE ---
-// This is the core of the fix. The listener lives in main.js.
-if (supabase) {
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`Auth Event in main.js: ${event}`);
-        let profile = null;
-        if (session?.user) {
-            try {
-                profile = await api.getUserProfile();
-            } catch (e) {
-                console.error("Failed to fetch profile in main.js listener", e);
-            }
-        }
-        // Call the simple setter action in our store
-        useAppStore.getState()._setAuthState(session, profile);
-    });
-}
-// --- END LISTENER SETUP ---
+// --- SUBSCRIBER ---
+// We subscribe to the entire store. When menu data arrives, this will fire.
+useAppStore.subscribe(renderMenuPage);
 
-// Subscribe to ALL state changes.
-useAppStore.subscribe(renderApp);
-
-// Kick off the initial menu fetch.
+// --- KICK OFF INITIAL ACTIONS ---
+// We only call the action to fetch the menu.
 useAppStore.getState().fetchMenu();
 
-// Perform the initial render.
-renderApp();
+// --- INITIAL RENDER ---
+// We call renderMenuPage() once to show the initial "Loading..." state.
+renderMenuPage();
 
 console.log("--- main.js script setup finished ---");
