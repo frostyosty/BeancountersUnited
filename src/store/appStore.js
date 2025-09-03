@@ -3,14 +3,14 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createMenuSlice } from './menuSlice.js';
 import { createAuthSlice } from './authSlice.js';
-import { createCartSlice } from './cartSlice.js'; // <-- Import the cart slice
+import { createCartSlice } from './cartSlice.js';
 
 export const useAppStore = create(
   devtools(
     (set, get) => ({
-      ...createMenuSlice(set, get),
-      ...createAuthSlice(set, get),
-      ...createCartSlice(set, get), // <-- Add the cart slice to the store
+      menu: createMenuSlice(set, get),
+      auth: createAuthSlice(set, get),
+      cart: createCartSlice(set, get),
     }),
     { name: "RestaurantAppStore" }
   )

@@ -16,9 +16,9 @@ function renderApp() {
     // Render persistent UI components
     renderAuthStatus();
 
-    const cartCountSpan = document.getElementById('cart-count');
+const { getCartItemCount } = useAppStore.getState().cart; // Get from namespace
     if (cartCountSpan) {
-        cartCountSpan.textContent = useAppStore.getState().getCartItemCount();
+        cartCountSpan.textContent = getCartItemCount();
     }
 
     // Act as a router to render the main content area
@@ -78,8 +78,8 @@ document.body.addEventListener('click', (e) => {
 });
 
 // Kick off initial asynchronous actions
-useAppStore.getState().listenToAuthChanges();
-useAppStore.getState().fetchMenu();
+useAppStore.getState().menu.fetchMenu();
+useAppStore.getState().auth.listenToAuthChanges();
 
 // Perform the very first render
 renderApp();
