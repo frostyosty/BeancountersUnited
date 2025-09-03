@@ -1,12 +1,54 @@
 // src/main.js
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
+
+// Import all our feature renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
+import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js';
 
-console.log("--- main.js script started (Auth Integration Test) ---");
+/**
+ * This is our single, simple "re-render" function.
+ */
+function renderApp() {
+    console.log("--- renderApp() called ---");
 
-// Render the basic HTML shell
+    // Render persistent UI components
+    renderAuthStatus();
+
+    const cartCountSpan = document.getElementById('cart-count');
+    if (cartCountSpan) {
+        cartCountSpan.textContent = useAppStore.getState().getCartItemCount();
+    }
+
+    // Act as a router to render the main content area
+    const hash = window.location.hash || '#menu';
+
+    // Style the active navigation link
+    document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
+        link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
+    });
+
+    // Render the correct page based on the hash
+    switch(hash) {
+        case '#menu':
+            renderMenuPage();
+            break;
+        case '#cart':
+            renderCartPage();
+            break;
+        // Add more routes here
+        default:
+            renderMenuPage();
+            break;
+    }
+}
+
+// --- Application Start ---
+
+console.log("--- main.js script started ---");
+
+// Render the static HTML shell.
 const appElement = document.getElementById('app');
 if (appElement) {
     appElement.innerHTML = `
@@ -14,41 +56,32 @@ if (appElement) {
             <h1>Mealmates</h1>
             <nav>
                 <a href="#menu" class="nav-link">Menu</a>
+                <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                 <div id="auth-status-container"></div>
             </nav>
         </header>
         <main id="main-content"></main>
-        <footer id="main-footer"><p>&copy; 2024</p></footer>
+        <footer id="main-footer"><p>&copy; 2024 Mealmates</p></footer>
     `;
 }
 
-/**
- * This is our single "re-render" function.
- * It's called on any state change.
- */
-function renderApp() {
-    console.log("--- renderApp() called ---");
-    // Render all components
-    renderAuthStatus();
-    renderMenuPage();
-}
-
-// --- SUBSCRIBER ---
-// Subscribe to ALL state changes. When anything in the store changes, re-render the app.
+// Set up listeners
 useAppStore.subscribe(renderApp);
+window.addEventListener('hashchange', renderApp);
+document.body.addEventListener('click', (e) => {
+    const navLink = e.target.closest('a[href^="#"]');
+    if (navLink) {
+        e.preventDefault();
+        const newHash = navLink.getAttribute('href');
+        if (window.location.hash !== newHash) window.location.hash = newHash;
+    }
+});
 
-
-// --- KICK OFF INITIAL ACTIONS ---
-// "Fire and forget" - the subscriber will handle the UI updates when they complete.
-console.log("main.js: Kicking off listenToAuthChanges()...");
+// Kick off initial asynchronous actions
 useAppStore.getState().listenToAuthChanges();
-
-console.log("main.js: Kicking off fetchMenu()...");
 useAppStore.getState().fetchMenu();
 
-// --- INITIAL RENDER ---
-// Perform the very first render to show the initial "Loading..." states.
-console.log("main.js: Performing initial renderApp() call.");
+// Perform the very first render
 renderApp();
 
 console.log("--- main.js script setup finished ---");

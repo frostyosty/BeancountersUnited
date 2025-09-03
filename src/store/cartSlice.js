@@ -1,18 +1,20 @@
 // src/store/cartSlice.js
 
-/**
- * Creates a Zustand slice for managing shopping cart state.
- *
- * @param {Function} set - Zustand's state setter function.
- * @param {Function} get - Zustand's state getter function.
- * @returns {object} The cart slice of the store.
- */
+const getInitialState = () => {
+    try {
+        const savedCart = localStorage.getItem('restaurantCart');
+        return savedCart ? JSON.parse(savedCart) : [];
+    } catch (error) {
+        console.error("Could not parse cart from localStorage:", error);
+        return [];
+    }
+};
 
 export const createCartSlice = (set, get) => ({
     // --- STATE ---
     cartItems: getInitialState(),
 
-    // --- INTERNAL HELPERS ---
+    // --- INTERNAL HELPER ---
     _saveToLocalStorage: () => {
         try {
             localStorage.setItem('restaurantCart', JSON.stringify(get().cartItems));
@@ -25,7 +27,6 @@ export const createCartSlice = (set, get) => ({
     addItem: (itemToAdd) => {
         const currentItems = get().cartItems;
         const existingItem = currentItems.find(i => i.id === itemToAdd.id);
-
         let newItems;
         if (existingItem) {
             newItems = currentItems.map(i =>
@@ -34,7 +35,6 @@ export const createCartSlice = (set, get) => ({
         } else {
             newItems = [...currentItems, { ...itemToAdd, quantity: 1 }];
         }
-        
         set({ cartItems: newItems });
         get()._saveToLocalStorage();
     },
@@ -44,15 +44,13 @@ export const createCartSlice = (set, get) => ({
         set({ cartItems: newItems });
         get()._saveToLocalStorage();
     },
-    
-    updateItemQuantity: (itemId, newQuantity) => {
-        const quantity = Math.max(0, newQuantity); // Prevent negative numbers
 
+    updateItemQuantity: (itemId, newQuantity) => {
+        const quantity = Math.max(0, newQuantity);
         if (quantity === 0) {
-            get().removeItem(itemId); // Use existing action to remove
+            get().removeItem(itemId);
             return;
         }
-
         const newItems = get().cartItems.map(item =>
             item.id === itemId ? { ...item, quantity: quantity } : item
         );
@@ -66,7 +64,6 @@ export const createCartSlice = (set, get) => ({
     },
 
     // --- SELECTORS ---
-    // Selectors compute derived data from state
     getCartItemCount: () => {
         return get().cartItems.reduce((total, item) => total + item.quantity, 0);
     },
