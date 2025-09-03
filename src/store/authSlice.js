@@ -1,39 +1,37 @@
 // src/store/authSlice.js
+import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
-// This slice is now "pure". It only defines state and actions.
-// It doesn't "do" anything on its own.
 export const createAuthSlice = (set, get) => ({
+    // State properties for auth
     user: null,
     profile: null,
     isAuthLoading: true,
     isAuthenticated: false,
     authError: null,
 
-    // NEW ACTION: A simple setter for when the auth state changes.
-    // This will be called from our listener in main.js
-    _setAuthState: (session, profile) => {
-        if (session?.user) {
-            set({ user: session.user, profile, isAuthenticated: true, isAuthLoading: false });
-        } else {
-            set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
-        }
+    // Action to set up the auth listener
+    listenToAuthChanges: () => {
+        console.log("--- authSlice: Attaching onAuthStateChange listener ---");
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`--- authSlice: onAuthStateChange event received: ${event} ---`);
+            
+            if (session?.user) {
+                console.log(`authSlice: Session found for user ${session.user.id}. Fetching profile...`);
+                try {
+                    const profile = await api.getUserProfile();
+                    console.log("authSlice: Profile fetched successfully:", profile);
+                    set({ user: session.user, profile, isAuthenticated: true, isAuthLoading: false });
+                } catch (error) {
+                    console.error("authSlice: Failed to fetch profile:", error);
+                    set({ user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: "Failed to fetch profile" });
+                }
+            } else {
+                console.log("authSlice: No session found. Setting user to null.");
+                set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
+            }
+        });
     },
 
-    // The rest of the actions are fine, as they are called by user interaction.
-    login: async (email, password) => {
-        const { error } = await window.supabase.auth.signInWithPassword({ email, password });
-        return { error };
-    },
-    signUp: async (email, password) => {
-        const { error } = await window.supabase.auth.signUp({ email, password });
-        return { error };
-    },
-    logout: async () => {
-        await window.supabase.auth.signOut();
-        return { error: null };
-    },
-    getUserRole: () => {
-        return get().profile?.role || 'guest';
-    },
+    // We will add login/logout actions back in the next step
 });
