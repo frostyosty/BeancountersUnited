@@ -80,4 +80,27 @@ if (appElement) {
 // This guarantees that any state change will trigger a full UI update.
 useAppStore.subscribe(renderApp);
 
-// 3. Set up listeners for user interac
+// 3. Set up listeners for user interaction.
+window.addEventListener('hashchange', renderApp);
+
+document.body.addEventListener('click', (e) => {
+    const navLink = e.target.closest('a[href^="#"]');
+    if (navLink) {
+        e.preventDefault();
+        const newHash = navLink.getAttribute('href');
+        if (window.location.hash !== newHash) {
+            window.location.hash = newHash;
+        }
+    }
+});
+
+// 4. Kick off the initial asynchronous actions.
+// "Fire and forget" - the subscriber will handle the UI updates when they complete.
+useAppStore.getState().auth.listenToAuthChanges();
+useAppStore.getState().menu.fetchMenu();
+
+// 5. Perform the very first render.
+// This will correctly show the initial "Loading..." states.
+renderApp();
+
+console.log("--- main.js script setup finished ---");
