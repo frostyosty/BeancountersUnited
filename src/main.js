@@ -19,11 +19,9 @@ function renderApp() {
 
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
-        // Use a try-catch as a safeguard
         try {
-            cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+            cartCountSpan.textContent = useAppStore.getState().getCartItemCount();
         } catch (e) {
-            // This might happen if cartSlice isn't loaded yet, default to 0
             cartCountSpan.textContent = '0';
         }
     }
@@ -31,7 +29,6 @@ function renderApp() {
     // 2. Act as a router to render the main content area.
     const hash = window.location.hash || '#menu';
 
-    // Style the active navigation link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         if (link.getAttribute('href') === hash) {
             link.classList.add('active');
@@ -40,7 +37,6 @@ function renderApp() {
         }
     });
 
-    // Render the correct page based on the hash
     switch(hash) {
         case '#menu':
             renderMenuPage();
@@ -48,9 +44,9 @@ function renderApp() {
         case '#cart':
             renderCartPage();
             break;
-        // Add more routes here for checkout, dashboards, etc.
+        // Add more routes here
         default:
-            renderMenuPage(); // Default to the menu
+            renderMenuPage();
             break;
     }
 }
@@ -59,7 +55,6 @@ function renderApp() {
 
 console.log("--- main.js script started ---");
 
-// 1. Render the static HTML shell.
 const appElement = document.getElementById('app');
 if (appElement) {
     appElement.innerHTML = `
@@ -76,11 +71,8 @@ if (appElement) {
     `;
 }
 
-// 2. Set up a SINGLE, powerful subscriber.
-// This guarantees that any state change will trigger a full UI update.
+// Set up listeners
 useAppStore.subscribe(renderApp);
-
-// 3. Set up listeners for user interaction.
 window.addEventListener('hashchange', renderApp);
 
 document.body.addEventListener('click', (e) => {
@@ -88,19 +80,15 @@ document.body.addEventListener('click', (e) => {
     if (navLink) {
         e.preventDefault();
         const newHash = navLink.getAttribute('href');
-        if (window.location.hash !== newHash) {
-            window.location.hash = newHash;
-        }
+        if (window.location.hash !== newHash) window.location.hash = newHash;
     }
 });
 
-// 4. Kick off the initial asynchronous actions.
-// "Fire and forget" - the subscriber will handle the UI updates when they complete.
-useAppStore.getState().auth.listenToAuthChanges();
-useAppStore.getState().menu.fetchMenu();
+// Kick off initial asynchronous actions
+useAppStore.getState().listenToAuthChanges();
+useAppStore.getState().fetchMenu();
 
-// 5. Perform the very first render.
-// This will correctly show the initial "Loading..." states.
+// Perform the very first render
 renderApp();
 
 console.log("--- main.js script setup finished ---");
