@@ -1,142 +1,97 @@
-// src/features/menu/menuUI.js
+// src/features/menu/menuUI.js - HEAVY DEBUGGING VERSION
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
-// --- HELPER FUNCTIONS (DEFINED AS CONSTANTS) ---
-
-/**
- * Generates the HTML for a single menu item card.
- */
+// We are defining this FIRST and ensuring it's a simple, unbreakable function for the test.
 const createMenuItemHTML = (item) => {
-    const { getUserRole } = useAppStore.getState();
-    const userRole = getUserRole();
-
-    const ownerControls = `
-        <div class="item-admin-controls" style="margin-top: 10px; display: flex; gap: 10px;">
-            <button class="button-secondary edit-item-btn" data-item-id="${item.id}">Edit Details</button>
-        </div>
-    `;
-    const godUserControls = `
-        <button class="button-danger delete-item-btn" data-item-id="${item.id}">Delete</button>
-    `;
-    let adminControlsHTML = '';
-    if (userRole === 'owner' || userRole === 'manager') {
-        adminControlsHTML = ownerControls;
-    }
-    if (userRole === 'manager') {
-        adminControlsHTML = adminControlsHTML.replace('</div>', `${godUserControls}</div>`);
-    }
-
-    return `
-        <div class="menu-item-card" data-item-id="${item.id}">
-            <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" class="menu-item-image">
-            <div class="menu-item-content">
-                <h3 class="menu-item-name">${item.name}</h3>
-                <p class="menu-item-description">${item.description}</p>
-                <div class="menu-item-footer">
-                    <p class="menu-item-price">$${parseFloat(item.price).toFixed(2)}</p>
-                    <button class="add-to-cart-btn button-primary" data-item-id="${item.id}">Add to Cart</button>
-                </div>
-                ${adminControlsHTML}
-            </div>
-        </div>
-    `;
-};
-
-/**
- * Attaches event listeners for interactive elements on the menu page.
- */
-
-/**
- * Attaches event listeners for interactive elements on the menu page.
- */
-const attachMenuEventListeners = () => {
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
-
-    mainContent.addEventListener('click', (event) => {
-        // ... (Your existing event listener logic is perfect and does not need to change)
-        const target = event.target;
-        const addToCartButton = target.closest('.add-to-cart-btn');
-        if (addToCartButton) {
-            const itemId = addToCartButton.dataset.itemId;
-            const menuItem = useAppStore.getState().menuItems.find(i => i.id === itemId);
-            if (menuItem) {
-                useAppStore.getState().addItem(menuItem);
-                uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
-            }
-        }
-
-        if (editItemButton) {
-            const itemId = editItemButton.dataset.itemId;
-            console.log(`TODO: Show item details edit modal for item ID: ${itemId}`);
-            // Later this will call uiUtils.showModal(...) with the edit form
-            alert(`Editing item ${itemId} - Feature coming soon!`);
-            return;
-        }
-
-        if (deleteItemButton) {
-            const itemId = deleteItemButton.dataset.itemId;
-            const menuItem = useAppStore.getState().menuItems.find(i => i.id === itemId);
-            if (confirm(`Are you sure you want to permanently delete "${menuItem.name}"?`)) {
-                console.log(`TODO: Call API to delete item ID: ${itemId}`);
-                alert(`Deleting item ${itemId} - Feature coming soon!`);
-            }
-            return;
-        }
-    });
+    // This function must be error-proof for our test.
+    const name = item?.name || 'Unnamed Item';
+    const price = item?.price !== undefined ? parseFloat(item.price).toFixed(2) : 'N/A';
+    return `<div style="border:1px solid limegreen; padding:5px; margin:5px;">Item: ${name} - Price: $${price}</div>`;
 };
 
 
-
-
-
-
-// --- EXPORTED RENDER FUNCTION ---
-/**
- * Renders the entire menu page into the main content area.
- */
 export function renderMenuPage() {
+    console.log("--- renderMenuPage() CALLED ---");
     const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
+    if (!mainContent) {
+        console.error("DEBUG: #main-content NOT FOUND. Aborting render.");
+        return;
+    }
 
     const { menuItems, isMenuLoading, menuError } = useAppStore.getState();
 
     if (isMenuLoading) {
-        mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
+        mainContent.innerHTML = `<div class="loading-spinner">Loading menu... (isMenuLoading is true)</div>`;
         return;
     }
     if (menuError) {
-        mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${menuError}</p></div>`;
+        mainContent.innerHTML = `<div class="error-message">Error: ${menuError}</div>`;
+        return;
+    }
+    if (!Array.isArray(menuItems)) {
+        mainContent.innerHTML = `<div class="error-message">CRITICAL ERROR: menuItems is not an array!</div>`;
+        console.error("DEBUG: menuItems is not an array. Value:", menuItems);
         return;
     }
     if (menuItems.length === 0) {
-        mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
+        mainContent.innerHTML = `<div class="empty-state">Menu is empty. (items.length is 0)</div>`;
         return;
     }
 
+    // If we reach this point, we have a valid, non-empty array of menuItems.
+    console.log(`DEBUG: Attempting to render SUCCESS state with ${menuItems.length} items.`);
+
     try {
+        // --- BREAKDOWN STEP 1: Grouping ---
+        console.log("DEBUG STEP 1: Starting to group items by category...");
         const itemsByCategory = menuItems.reduce((acc, item) => {
             const category = item.category || 'Uncategorized';
             if (!acc[category]) acc[category] = [];
             acc[category].push(item);
             return acc;
         }, {});
+        console.log("DEBUG STEP 1: Grouping successful. Categories found:", Object.keys(itemsByCategory));
 
-        const contentHTML = Object.entries(itemsByCategory).map(([category, items]) => `
-            <section class="menu-category" id="category-${category.toLowerCase().replace(/\s+/g, '-')}">
-                <h2 class="category-title">${category}</h2>
-                <div class="menu-items-grid">
-                    ${items.map(createMenuItemHTML).join('')}
-                </div>
-            </section>
-        `).join('');
+        // --- BREAKDOWN STEP 2: Mapping Categories ---
+        console.log("DEBUG STEP 2: Starting to map categories to HTML sections...");
+        const categorySections = Object.entries(itemsByCategory).map(([category, items]) => {
+            console.log(`DEBUG: Mapping category "${category}" which has ${items.length} items.`);
+            
+            // --- BREAKDOWN STEP 3: Mapping Items within a Category ---
+            if (!Array.isArray(items)) {
+                console.error(`CRITICAL ERROR: The value for category "${category}" is not an array! Value:`, items);
+                return '<div>Error: Items for this category were not in a list.</div>';
+            }
+            console.log(`DEBUG: Mapping ${items.length} items for category "${category}"...`);
+            
+            // This is the line that the original error pointed to.
+            const itemsHTML = items.map(createMenuItemHTML).join('');
+            
+            console.log(`DEBUG: Successfully mapped items for category "${category}".`);
 
-        mainContent.innerHTML = contentHTML;
-        attachMenuEventListeners();
+            return `
+                <section class="menu-category">
+                    <h2 class="category-title">${category}</h2>
+                    <div class="menu-items-grid">
+                        ${itemsHTML}
+                    </div>
+                </section>
+            `;
+        });
+        console.log("DEBUG STEP 2: Mapping categories successful.");
+
+        // --- BREAKDOWN STEP 4: Joining HTML ---
+        console.log("DEBUG STEP 4: Joining final HTML string...");
+        const finalHTML = categorySections.join('');
+        console.log("DEBUG STEP 4: Final HTML length:", finalHTML.length);
+
+        // --- FINAL RENDER ---
+        mainContent.innerHTML = finalHTML;
+        // attachMenuEventListeners(); // Commented out for this test to reduce variables.
 
     } catch (error) {
-        console.error("Error while building menu HTML:", error);
-        mainContent.innerHTML = `<div class="error-message"><h2>There was a problem displaying the menu.</h2></div>`;
+        console.error("!!! CRITICAL ERROR during HTML generation in renderMenuPage:", error);
+        mainContent.innerHTML = `<div class="error-message"><h2>A critical error occurred while displaying the menu.</h2></div>`;
     }
 }
