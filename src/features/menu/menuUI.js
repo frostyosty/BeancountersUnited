@@ -2,12 +2,12 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
+// --- HELPER FUNCTIONS (DEFINED AS CONSTANTS) ---
 
 /**
  * Generates the HTML for a single menu item card.
- * This function is defined FIRST to prevent hoisting issues.
  */
-function createMenuItemHTML(item) {
+const createMenuItemHTML = (item) => {
     const { getUserRole } = useAppStore.getState();
     const userRole = getUserRole();
 
@@ -41,20 +41,23 @@ function createMenuItemHTML(item) {
             </div>
         </div>
     `;
-}
+};
 
 /**
  * Attaches event listeners for interactive elements on the menu page.
  */
-function attachMenuEventListeners() {
+
+/**
+ * Attaches event listeners for interactive elements on the menu page.
+ */
+const attachMenuEventListeners = () => {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Use a single event listener with delegation
- mainContent.addEventListener('click', (event) => {
+    mainContent.addEventListener('click', (event) => {
+        // ... (Your existing event listener logic is perfect and does not need to change)
         const target = event.target;
         const addToCartButton = target.closest('.add-to-cart-btn');
-
         if (addToCartButton) {
             const itemId = addToCartButton.dataset.itemId;
             const menuItem = useAppStore.getState().menuItems.find(i => i.id === itemId);
@@ -62,7 +65,6 @@ function attachMenuEventListeners() {
                 useAppStore.getState().addItem(menuItem);
                 uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
             }
-            return; // Stop further processing
         }
 
         if (editItemButton) {
@@ -83,16 +85,16 @@ function attachMenuEventListeners() {
             return;
         }
     });
-}
+};
 
 
 
 
 
 
+// --- EXPORTED RENDER FUNCTION ---
 /**
  * Renders the entire menu page into the main content area.
- * This is the only EXPORTED function.
  */
 export function renderMenuPage() {
     const mainContent = document.getElementById('main-content');
@@ -138,4 +140,3 @@ export function renderMenuPage() {
         mainContent.innerHTML = `<div class="error-message"><h2>There was a problem displaying the menu.</h2></div>`;
     }
 }
-
