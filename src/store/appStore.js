@@ -10,8 +10,8 @@ export const useAppStore = create(
     (set, get) => ({
       ...createMenuSlice(set, get),
       ...createAuthSlice(set, get),
-      ...createCartSlice(set, get), // <-- Add the slice creator here
-    }),
+    //   ...createCartSlice(set, get), // <-- Add the slice creator here
+   }),
     { name: "RestaurantAppStore" }
   )
 );
