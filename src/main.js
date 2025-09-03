@@ -85,8 +85,8 @@ document.body.addEventListener('click', (e) => {
 });
 
 // Kick off initial asynchronous actions
-useAppStore.getState().listenToAuthChanges();
-useAppStore.getState().fetchMenu();
+useAppStore.getState().auth.listenToAuthChanges(); // CORRECT
+useAppStore.getState().menu.fetchMenu()
 
 // Perform the very first render
 renderApp();
