@@ -46,7 +46,6 @@ useAppStore.getState().listenToAuthChanges();
 console.log("main.js: Kicking off fetchMenu()...");
 useAppStore.getState().fetchMenu();
 
-
 // --- INITIAL RENDER ---
 // Perform the very first render to show the initial "Loading..." states.
 console.log("main.js: Performing initial renderApp() call.");

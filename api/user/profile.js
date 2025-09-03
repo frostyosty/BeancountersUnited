@@ -1,32 +1,33 @@
-// api/user/profile.js - VERBOSE DEBUGGING
+// api/user/profile.js
 import { getUserFromRequest } from '../_db.js';
 
 export default async function handler(req, res) {
-    console.log("--- [API /api/user/profile] Handler started ---");
-    console.log(`[API /api/user/profile] Request Method: ${req.method}`);
-
     if (req.method !== 'GET') {
         res.setHeader('Allow', ['GET']);
         return res.status(405).end('Method Not Allowed');
     }
 
-    console.log("[API /api/user/profile] Calling getUserFromRequest helper...");
-    const { user, profile, error } = await getUserFromRequest(req);
-    console.log("[API /api/user/profile] Returned from getUserFromRequest helper.");
-    console.log("[API /api/user/profile] Helper Result - User:", user ? { id: user.id, email: user.email } : null);
-    console.log("[API /api/user/profile] Helper Result - Profile:", profile);
-    console.log("[API /api/user/profile] Helper Result - Error:", error);
+    try {
+        const { user, profile, error: authError } = await getUserFromRequest(req);
 
-    if (error || !user) {
-        console.error("[API /api/user/profile] Authorization failed. Sending 401 response.");
-        return res.status(401).json({ error: error?.message || 'Unauthorized' });
+        if (authError || !user) {
+            // This is a client error (bad token), so 401 Unauthorized
+            console.warn("Unauthorized attempt to get profile:", authError?.message);
+            return res.status(401).json({ error: authError?.message || 'Unauthorized' });
+        }
+
+        if (!profile) {
+            // The user is real, but they don't have a profile row. This is a 404 Not Found.
+            console.warn(`User ${user.id} is authenticated but has no profile.`);
+            return res.status(404).json({ error: 'Profile not found for this user.' });
+        }
+
+        // Success! Return the profile data.
+        return res.status(200).json(profile);
+
+    } catch (e) {
+        // This catches unexpected server errors
+        console.error("CRITICAL ERROR in /api/user/profile:", e);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    if (!profile) {
-        console.warn("[API /api/user/profile] User is authenticated, but no profile found. Sending 404 response.");
-        return res.status(404).json({ error: 'Profile not found for this user.' });
-    }
-
-    console.log("[API /api/user/profile] Successfully found profile. Sending 200 OK response.");
-    res.status(200).json(profile);
 }
