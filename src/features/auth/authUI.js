@@ -1,21 +1,13 @@
 // src/features/auth/authUI.js
 import { useAppStore } from '@/store/appStore.js';
-// We will add back uiUtils and login/signup logic in the next step.
-// For now, we just want to render the status.
+import * as uiUtils from '@/utils/uiUtils.js';
 
-/**
- * Renders the authentication status in the header.
- */
 export function renderAuthStatus() {
-    console.log("--- renderAuthStatus() CALLED ---");
     const authContainer = document.getElementById('auth-status-container');
-    if (!authContainer) {
-        console.warn("renderAuthStatus: #auth-status-container not found.");
-        return;
-    };
+    if (!authContainer) return;
 
-    const { isAuthenticated, user, isAuthLoading } = useAppStore.getState();
-    console.log("renderAuthStatus: Rendering with state:", { isAuthenticated, isAuthLoading });
+    const { isAuthenticated, user, profile, isAuthLoading, getUserRole } = useAppStore.getState().auth;
+     console.log("renderAuthStatus: Rendering with state:", { isAuthenticated, isAuthLoading });
 
     if (isAuthLoading) {
         authContainer.innerHTML = `<span>...</span>`;
@@ -29,4 +21,11 @@ export function renderAuthStatus() {
     }
 
     // We will add event listeners back later.
+}
+
+async function handleAuthFormSubmit(event) {
+    // ...
+    // Correctly get actions from the 'auth' namespace
+    const { login, signUp } = useAppStore.getState().auth;
+    // ...
 }

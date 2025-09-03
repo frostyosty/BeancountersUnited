@@ -2,34 +2,24 @@
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 
-// Import all our feature renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js';
 
-/**
- * This is our single, simple "re-render" function.
- */
+// --- RENDER FUNCTION & ROUTER ---
 function renderApp() {
-    console.log("--- renderApp() called ---");
-
-    // Render persistent UI components
     renderAuthStatus();
 
-const { getCartItemCount } = useAppStore.getState().cart; // Get from namespace
+    const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
-        cartCountSpan.textContent = getCartItemCount();
+        cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
     }
 
-    // Act as a router to render the main content area
     const hash = window.location.hash || '#menu';
-
-    // Style the active navigation link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
 
-    // Render the correct page based on the hash
     switch(hash) {
         case '#menu':
             renderMenuPage();
@@ -37,18 +27,15 @@ const { getCartItemCount } = useAppStore.getState().cart; // Get from namespace
         case '#cart':
             renderCartPage();
             break;
-        // Add more routes here
         default:
             renderMenuPage();
             break;
     }
 }
 
-// --- Application Start ---
-
+// --- APPLICATION START ---
 console.log("--- main.js script started ---");
 
-// Render the static HTML shell.
 const appElement = document.getElementById('app');
 if (appElement) {
     appElement.innerHTML = `
@@ -65,9 +52,10 @@ if (appElement) {
     `;
 }
 
-// Set up listeners
+// --- LISTENERS ---
 useAppStore.subscribe(renderApp);
 window.addEventListener('hashchange', renderApp);
+
 document.body.addEventListener('click', (e) => {
     const navLink = e.target.closest('a[href^="#"]');
     if (navLink) {
@@ -77,11 +65,9 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// Kick off initial asynchronous actions
-useAppStore.getState().menu.fetchMenu();
+// --- INITIAL ACTIONS & RENDER ---
 useAppStore.getState().auth.listenToAuthChanges();
-
-// Perform the very first render
+useAppStore.getState().menu.fetchMenu();
 renderApp();
 
 console.log("--- main.js script setup finished ---");

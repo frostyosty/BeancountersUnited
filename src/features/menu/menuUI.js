@@ -3,9 +3,8 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
 const createMenuItemHTML = (item) => {
-    // Get the selector function from the auth slice
     const { getUserRole } = useAppStore.getState().auth;
-    const userRole = getUserRole(); // Call the selector to get the role
+    const userRole = getUserRole();
 
     // Define the HTML for the owner's controls
     const ownerControls = `
@@ -62,7 +61,7 @@ const attachMenuEventListeners = () => {
         // Use .closest() to find the button or card even if an inner element (like text) is clicked
         const menuItemCard = target.closest('.menu-item-card');
         if (!menuItemCard) return; // Exit if the click was not inside a menu item card
-        
+
         const itemId = menuItemCard.dataset.itemId;
 
         // Handle "Add to Cart" button clicks
@@ -73,14 +72,14 @@ const attachMenuEventListeners = () => {
                 uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
             }
         }
-        
+
         // Handle "Edit" button clicks (for owners/managers)
         else if (target.closest('.edit-item-btn')) {
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             console.log(`TODO: Show item details edit modal for item:`, menuItem);
             alert(`Editing "${menuItem.name}" - Feature coming soon!`);
         }
-        
+
         // Handle "Delete" button clicks (for managers only)
         else if (target.closest('.delete-item-btn')) {
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
@@ -102,24 +101,22 @@ export function renderMenuPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
+    // Correctly read from the 'menu' namespace
     const { items, isLoading, error } = useAppStore.getState().menu;
 
     if (isLoading) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
         return;
     }
-    if (error) {
+    else if (error) {
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`;
         return;
     }
-    if (items.length === 0) {
+    else if (items.length === 0) {
         mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
         return;
     }
-
-    try {
-        // --- THE BUG IS FIXED HERE ---
-        // We are using the `items` variable that we destructured from the store.
+    else {
         const itemsByCategory = items.reduce((acc, item) => {
             const category = item.category || 'Uncategorized';
             if (!acc[category]) acc[category] = [];
@@ -127,19 +124,8 @@ export function renderMenuPage() {
             return acc;
         }, {});
 
-        const contentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `
-            <section class="menu-category">
-                <h2 class="category-title">${category}</h2>
-                <div class="menu-items-grid">
-                    ${categoryItems.map(createMenuItemHTML).join('')}
-                </div>
-            </section>
-        `).join('');
-
+        const contentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `...`).join('');
         mainContent.innerHTML = contentHTML;
         attachMenuEventListeners();
-    } catch (e) {
-        console.error("Error building menu HTML:", e);
-        mainContent.innerHTML = `<div class="error-message">Error displaying menu.</div>`;
     }
 }
