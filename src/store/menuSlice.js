@@ -1,10 +1,7 @@
 // src/store/menuSlice.js
 import * as api from '@/services/apiService.js';
-
-export const createMenuSlice = (set, get) => ({
-    items: [],
-    isLoading: true,
-    error: null,
+export const createMenuSlice = (set) => ({
+    items: [], isLoading: true, error: null,
     fetchMenu: async () => {
         set(state => ({ menu: { ...state.menu, isLoading: true, error: null } }));
         try {

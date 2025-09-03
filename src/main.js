@@ -20,7 +20,7 @@ function renderApp() {
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
-            cartCountSpan.textContent = useAppStore.getState().getCartItemCount();
+                    cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
         } catch (e) {
             cartCountSpan.textContent = '0';
         }

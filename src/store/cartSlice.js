@@ -9,32 +9,15 @@ const getInitialState = () => {
         return [];
     }
 };
-
 export const createCartSlice = (set, get) => ({
-    // --- STATE ---
-    items: getInitialState(),
-
-    // --- INTERNAL HELPER ---
-    _saveToLocalStorage: () => {
-        try {
-            localStorage.setItem('restaurantCart', JSON.stringify(get().cart.items));
-        } catch (error) {
-            console.error("Could not save cart to localStorage:", error);
-        }
-    },
-
-    // --- ACTIONS ---
+    items: JSON.parse(localStorage.getItem('restaurantCart')) || [],
+    _saveToLocalStorage: () => localStorage.setItem('restaurantCart', JSON.stringify(get().cart.items)),
     addItem: (itemToAdd) => {
         const currentItems = get().cart.items;
         const existingItem = currentItems.find(i => i.id === itemToAdd.id);
-        let newItems;
-        if (existingItem) {
-            newItems = currentItems.map(i =>
-                i.id === itemToAdd.id ? { ...i, quantity: i.quantity + 1 } : i
-            );
-        } else {
-            newItems = [...currentItems, { ...itemToAdd, quantity: 1 }];
-        }
+        let newItems = existingItem
+            ? currentItems.map(i => i.id === itemToAdd.id ? { ...i, quantity: i.quantity + 1 } : i)
+            : [...currentItems, { ...itemToAdd, quantity: 1 }];
         set(state => ({ cart: { ...state.cart, items: newItems } }));
         get().cart._saveToLocalStorage();
     },
@@ -63,13 +46,6 @@ export const createCartSlice = (set, get) => ({
         get().cart._saveToLocalStorage();
     },
 
-    // --- SELECTORS (THIS IS THE FIX) ---
-    // Selectors compute derived data from state. They need to be defined here.
-    getTotalItemCount: () => {
-        return get().cart.items.reduce((total, item) => total + item.quantity, 0);
-    },
-
-    getCartTotal: () => {
-        return get().cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-    },
+    getTotalItemCount: () => get().cart.items.reduce((total, item) => total + item.quantity, 0),
+    getCartTotal: () => get().cart.items.reduce((total, item) => total + (item.price * item.quantity), 0),
 });

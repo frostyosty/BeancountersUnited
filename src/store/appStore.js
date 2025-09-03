@@ -15,5 +15,3 @@ export const useAppStore = create(
     { name: "RestaurantAppStore" }
   )
 );
-
-window.useAppStore = useAppStore;
