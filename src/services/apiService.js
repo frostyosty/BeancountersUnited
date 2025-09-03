@@ -3,7 +3,7 @@ import { supabase } from '@/supabaseClient.js';
 
 /**
  * Generic request handler for API calls.
- * This is a more robust version that handles auth tokens.
+ * This version is "pure" - it only gets the session token when it's needed.
  * @param {string} endpoint - The API endpoint (e.g., '/menu').
  * @param {string} [method='GET'] - HTTP method.
  * @param {object|null} [body=null] - Request body for POST, PUT.
@@ -11,8 +11,10 @@ import { supabase } from '@/supabaseClient.js';
  */
 async function request(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
-    const { data: { session } } = await supabase.auth.getSession();
 
+    // Get the session token INSIDE the function, right before the request.
+    // This avoids top-level await and ensures we always have the freshest token.
+    const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
     }
@@ -28,10 +30,7 @@ async function request(endpoint, method = 'GET', body = null) {
             const errorData = await response.json().catch(() => ({ message: response.statusText }));
             throw new Error(errorData.message || `API request failed with status ${response.status}`);
         }
-        // Handle 204 No Content for DELETE requests
-        if (response.status === 204) {
-            return null;
-        }
+        if (response.status === 204) return null;
         return await response.json();
     } catch (error) {
         console.error(`API Error for ${method} ${endpoint}:`, error);
@@ -41,12 +40,13 @@ async function request(endpoint, method = 'GET', body = null) {
 
 // --- Menu API Functions ---
 export const getMenu = () => request('/menu');
-export const addMenuItem = (itemData) => request('/menu', 'POST', itemData);
-export const updateMenuItem = (itemId, itemData) => request(`/menu?id=${itemId}`, 'PUT', itemData);
-export const deleteMenuItem = (itemId) => request(`/menu?id=${itemId}`, 'DELETE');
 
 // --- User Profile API Functions ---
 export const getUserProfile = () => request('/user/profile');
 
-// --- Settings API Functions ---
-export const getSiteSettings = () => request('/settings', 'GET');
+// --- Add other API functions here as we build them ---
+// export const addMenuItem = (itemData) => request('/menu', 'POST', itemData);
+// export const updateMenuItem = (itemId, itemData) => request(`/menu?id=${itemId}`, 'PUT', itemData);
+// export const deleteMenuItem = (itemId) => request(`/menu?id=${itemId}`, 'DELETE');
+// export const submitOrder = (orderData) => request('/orders', 'POST', orderData);
+// export const getSiteSettings = () => request('/settings', 'GET');
