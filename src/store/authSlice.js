@@ -1,48 +1,38 @@
 // src/store/authSlice.js
-import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
+// This slice is now "pure". It only defines state and actions.
+// It doesn't "do" anything on its own.
 export const createAuthSlice = (set, get) => ({
     user: null,
     profile: null,
     isAuthLoading: true,
     isAuthenticated: false,
+    authError: null,
 
-    listenToAuthChanges: () => {
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`Auth Event in Slice: ${event}`);
-            if (session?.user) {
-                try {
-                    console.log("Attempting to call api.getUserProfile()...");
-                    const profile = await api.getUserProfile();
-                    console.log("Successfully fetched profile:", profile);
-                    set({ user: session.user, profile, isAuthenticated: true, isAuthLoading: false });
-                } catch (error) {
-                    console.error("Failed to fetch profile in slice:", error);
-                    set({ user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false });
-                }
-            } else {
-                set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
-            }
-        });
+    // NEW ACTION: A simple setter for when the auth state changes.
+    // This will be called from our listener in main.js
+    _setAuthState: (session, profile) => {
+        if (session?.user) {
+            set({ user: session.user, profile, isAuthenticated: true, isAuthLoading: false });
+        } else {
+            set({ user: null, profile: null, isAuthenticated: false, isAuthLoading: false });
+        }
     },
 
-    // --- The rest of the actions use the simple `set` pattern too ---
+    // The rest of the actions are fine, as they are called by user interaction.
     login: async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error }; // The listener above will handle the state change on success
-    },
-
-    signUp: async (email, password) => {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await window.supabase.auth.signInWithPassword({ email, password });
         return { error };
     },
-
-    logout: async () => {
-        const { error } = await supabase.auth.signOut();
-        return { error }; // Listener handles the state change
+    signUp: async (email, password) => {
+        const { error } = await window.supabase.auth.signUp({ email, password });
+        return { error };
     },
-
+    logout: async () => {
+        await window.supabase.auth.signOut();
+        return { error: null };
+    },
     getUserRole: () => {
         return get().profile?.role || 'guest';
     },
