@@ -10,7 +10,7 @@ import { renderAuthStatus } from './features/auth/authUI.js';
 window.supabase = supabase;
 
 function renderApp() {
-    renderAuthStatus();
+    // renderAuthStatus();
     renderMenuPage();
 }
 
