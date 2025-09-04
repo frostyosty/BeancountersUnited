@@ -1,61 +1,24 @@
 // src/main.js
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
-import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
-
-// Import all our feature renderers
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus } from './features/auth/authUI.js';
+import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 
-
-/**
- * This is our single, simple "re-render" function. It reads the LATEST state
- * from the store every time it runs and updates the entire app.
- */
 function renderApp() {
-    console.log("--- renderApp() called ---");
-
-    // 1. Render persistent UI components that are always visible.
     renderAuthStatus();
-
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
-        try {
-                    cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        } catch (e) {
-            cartCountSpan.textContent = '0';
-        }
+        cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
     }
-
-    // 2. Act as a router to render the main content area.
     const hash = window.location.hash || '#menu';
-
-    document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
-        if (link.getAttribute('href') === hash) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
-    });
-
     switch(hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-        case '#cart':
-            renderCartPage();
-            break;
-        // Add more routes here
-        default:
-            renderMenuPage();
-            break;
+        case '#menu': renderMenuPage(); break;
+        case '#cart': renderCartPage(); break;
+        default: renderMenuPage(); break;
     }
 }
-
-// --- Application Start ---
-
-console.log("--- main.js script started ---");
 
 const appElement = document.getElementById('app');
 if (appElement) {
@@ -73,11 +36,8 @@ if (appElement) {
     `;
 }
 
-
-// Set up listeners
 useAppStore.subscribe(renderApp);
 window.addEventListener('hashchange', renderApp);
-
 document.body.addEventListener('click', (e) => {
     const navLink = e.target.closest('a[href^="#"]');
     if (navLink) {
@@ -87,33 +47,15 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// Kick off initial asynchronous actions
-
-
-
-setupGodModeTrigger();
-// --- INITIAL RENDER ---
-renderApp();
-
-
-// --- KICK OFF INITIAL ACTIONS ---
-console.log("main.js: ABOUT TO CALL listenToAuthChanges.");
-console.log("main.js: Current state of get().auth:", useAppStore.getState().auth);
-console.log("main.js: Is get().auth.isImpersonating a function?", typeof useAppStore.getState().auth.isImpersonating);
+// Kick off initial actions
 useAppStore.getState().auth.listenToAuthChanges();
-
-console.log("main.js: ABOUT TO CALL fetchMenu.");
 useAppStore.getState().menu.fetchMenu();
+initializeImpersonationToolbar();
+setupGodModeTrigger(); // Your trigger
+renderApp(); // Initial render
 
-
-console.log("--- main.js script setup finished ---");
-
-
-// TODO: remove before real world impl
-/**
- * Sets up a "backdoor" for developers to quickly log in/out as the god user.
- */
 function setupGodModeTrigger() {
+    
     const triggerElement = document.getElementById('main-header');
     if (!triggerElement) return;
 
