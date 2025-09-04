@@ -8,35 +8,43 @@ import { useAppStore } from '@/store/appStore.js';
 export function initializeImpersonationToolbar() {
     // This subscriber will dynamically render the toolbar based on the auth state.
     useAppStore.subscribe(
+        // The selector: we need the REAL profile to decide if the toolbar should show at all.
+        // And the CURRENT profile to know what role is being impersonated.
         (state) => ({
-            // We select the REAL role to decide if the toolbar should show at all.
-            realRole: state.auth.originalProfile?.role || state.auth.profile?.role,
+            realProfile: state.auth.originalProfile || state.auth.profile,
+            currentProfile: state.auth.profile,
             isImpersonating: state.auth.isImpersonating(),
-            currentRole: state.auth.profile?.role || 'guest',
         }),
-        ({ realRole, isImpersonating, currentRole }) => {
-            renderToolbar(realRole, isImpersonating, currentRole);
+        ({ realProfile, currentProfile, isImpersonating }) => {
+            renderToolbar(realProfile, currentProfile, isImpersonating);
         },
-        { fireImmediately: true }
+        { fireImmediately: true } // Run once on startup
     );
 }
 
-function renderToolbar(realRole, isImpersonating, currentRole) {
+/**
+ * Renders or removes the toolbar based on the user's real role.
+ */
+function renderToolbar(realProfile, currentProfile, isImpersonating) {
     let toolbar = document.getElementById('god-mode-toolbar');
+    const realRole = realProfile?.role;
+    const currentRole = currentProfile?.role || 'guest';
 
-    // SECURITY GATE: Only the 'manager' (God User) should ever see this toolbar.
+    // --- SECURITY GATE: Only the 'manager' (God User) should ever see this toolbar. ---
     if (realRole !== 'manager') {
         if (toolbar) toolbar.remove();
-        document.body.style.paddingBottom = '0';
+        document.body.style.paddingBottom = '0'; // Reset padding
         return;
     }
 
+    // If the toolbar doesn't exist, create it.
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'god-mode-toolbar';
         document.body.appendChild(toolbar);
-        document.body.style.paddingBottom = '60px'; // Prevent content from being hidden
-        attachToolbarListeners(toolbar); // Attach listener only once
+        // Add padding to the bottom of the body so the toolbar doesn't cover content.
+        document.body.style.paddingBottom = '60px';
+        attachToolbarListeners(toolbar);
     }
 
     const stopButtonHTML = isImpersonating ? `
@@ -62,6 +70,9 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
     `;
 }
 
+/**
+ * Attaches event listeners to the toolbar buttons.
+ */
 function attachToolbarListeners(toolbar) {
     toolbar.addEventListener('click', (event) => {
         const target = event.target;
