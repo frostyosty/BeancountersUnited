@@ -1,19 +1,14 @@
 // src/services/apiService.js
 
-// This function is now simpler and has no dependencies on the supabase client.
 async function request(endpoint, method = 'GET', body = null, token = null) {
     const headers = { 'Content-Type': 'application/json' };
-
-    // If a token is provided, add the Authorization header.
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-
     const config = { method, headers };
     if (body) {
         config.body = JSON.stringify(body);
     }
-
     try {
         const response = await fetch(`/api${endpoint}`, config);
         if (!response.ok) {
@@ -29,23 +24,12 @@ async function request(endpoint, method = 'GET', body = null, token = null) {
 }
 
 // --- Menu API Functions ---
-// Public endpoints don't need a token.
 export const getMenu = () => request('/menu');
 
 // --- User Profile API Functions ---
-// Protected endpoints will need the token passed to them.
 export const getUserProfile = (token) => request('/user/profile', 'GET', null, token);
 
-
-
-// Update submitOrder to accept and pass the token
-export const submitOrder = (orderData, token) => request('/orders', 'POST', orderData, token);
-
-
-
-// --- NEW AUTH API FUNCTION ---
-// This function doesn't need to pass a token, since it's for logging in.
-export const login = (email, password) => {
-    // We call our own backend endpoint, not Supabase directly.
-    return request('/auth/login', 'POST', { email, password });
-};
+// --- AUTH API FUNCTIONS ---
+// These call OUR backend, not Supabase directly.
+export const loginViaApi = (email, password) => request('/auth/login', 'POST', { email, password });
+export const signUpViaApi = (email, password) => request('/auth/signup', 'POST', { email, password });

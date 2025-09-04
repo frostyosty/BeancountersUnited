@@ -28,46 +28,33 @@ export const createAuthSlice = (set, get) => ({
     },
 
     signUp: async (email, password) => {
-        const { error } = await supabase.auth.signUp({ email, password });
-        return { error };
+        return await api.signUpViaApi(email, password);
     },
+
     login: async (email, password) => {
-        console.log(`[authSlice] Calling supabase.auth.signInWithPassword for ${email}`);
-        // It calls the client-side Supabase function directly.
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) console.error('Login error:', error);
-        return { error }; // The listener handles success.
+        try {
+            // Call our own backend API
+            const { session, user } = await api.loginViaApi(email, password);
+
+            if (session) {
+                // If our API returns a session, manually set it in the client.
+                // This will trigger the onAuthStateChange listener and log the user in.
+                const { error } = await supabase.auth.setSession({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                });
+                if (error) return { error };
+                return { error: null }; // Success
+            }
+            return { error: { message: "Login failed." } };
+        } catch (error) {
+            return { error };
+        }
     },
 
     logout: async () => {
-        if (get().auth.isImpersonating()) {
-            get().auth.stopImpersonating();
-            return { error: null };
-        }
-        await supabase.auth.signOut();
-        return { error: null };
+        return await supabase.auth.signOut();
     },
 
-    // --- Impersonation Actions ---
-    impersonateRole: (roleToImpersonate) => {
-        const { user, profile, originalUser } = get().auth;
-        if (profile?.role !== 'manager' || originalUser) return;
-        let impersonatedUser = user;
-        let impersonatedProfile = { ...profile, role: roleToImpersonate };
-        if (roleToImpersonate === 'guest') {
-            impersonatedUser = null;
-            impersonatedProfile = null;
-        }
-        set(state => ({ auth: { ...state.auth, originalUser: user, originalProfile: profile, user: impersonatedUser, profile: impersonatedProfile, isAuthenticated: roleToImpersonate !== 'guest' } }));
-    },
-
-    stopImpersonating: () => {
-        const { originalUser, originalProfile } = get().auth;
-        if (!originalUser) return;
-        set(state => ({ auth: { ...state.auth, user: originalUser, profile: originalProfile, isAuthenticated: true, originalUser: null, originalProfile: null } }));
-    },
-
-    // --- Selectors ---
-    getUserRole: () => get().auth.profile?.role || 'guest',
-    isImpersonating: () => !!get().auth.originalUser,
+    getUserRole: () => get().profile?.role || 'guest',
 });
