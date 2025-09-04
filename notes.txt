@@ -1,1 +1,7 @@
-After running this, you will have a user with email god@mode.dev and password password123 who has the manager role.
+user with email god@mode.dev and password password123 -> manager role 
+
+
+when production:
+
+make sure to turn this off
+make sure to put on confirm email in supabase

@@ -36,25 +36,35 @@ export const createAuthSlice = (set, get) => ({
     /**
      * Logs in an existing user.
      */
-    login: async (email, password) => {
-        console.log(`--- [authSlice] login() action CALLED for email: ${email} ---`);
-        if (!email || !password) {
-            console.error("[authSlice] Login failed: Email or password is missing.");
-            return { error: { message: "Email and password are required." } };
-        }
-        
-        console.log("[authSlice] Calling supabase.auth.signInWithPassword...");
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+ login: async (email, password) => {
+        try {
+            // --- THE FIX ---
+            // Call our own backend API instead of the Supabase client directly.
+            const { session, user } = await api.login(email, password);
 
-        if (error) {
-            console.error("[authSlice] supabase.auth.signInWithPassword returned an ERROR:", error);
-        } else {
-            console.log("[authSlice] supabase.auth.signInWithPassword was SUCCESSFUL. Data:", data);
+            if (session) {
+                // If our API returns a session, manually set it in the client.
+                // This will trigger the onAuthStateChange listener and log the user in.
+                const { error } = await supabase.auth.setSession({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                });
+                if (error) {
+                    // Handle the unlikely event that setSession fails
+                    console.error("Failed to set session on client:", error);
+                    return { error };
+                }
+                // Return no error on success. The listener will handle the rest.
+                return { error: null };
+            } else {
+                return { error: { message: 'Invalid login credentials.' } };
+            }
+        } catch (error) {
+            // This catches network errors or 401/500 errors from our own API.
+            console.error('Login action failed:', error);
+            return { error };
         }
-        // The onAuthStateChange listener will handle the successful state change.
-        return { error };
     },
-
     /**
      * Signs up a new user.
      */

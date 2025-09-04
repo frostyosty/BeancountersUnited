@@ -40,3 +40,12 @@ export const getUserProfile = (token) => request('/user/profile', 'GET', null, t
 
 // Update submitOrder to accept and pass the token
 export const submitOrder = (orderData, token) => request('/orders', 'POST', orderData, token);
+
+
+
+// --- NEW AUTH API FUNCTION ---
+// This function doesn't need to pass a token, since it's for logging in.
+export const login = (email, password) => {
+    // We call our own backend endpoint, not Supabase directly.
+    return request('/auth/login', 'POST', { email, password });
+};
