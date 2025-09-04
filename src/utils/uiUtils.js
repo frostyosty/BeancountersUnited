@@ -6,14 +6,34 @@
  * @param {string} [type='info'] - The type of toast ('info', 'success', 'error').
  * @param {number} [duration=3000] - How long to display the toast in milliseconds.
  */
-export function showToast(message, type = 'info', duration = 3000) {
-    // Check if a toast container exists, if not, create it.
+
+/**
+ * Displays a short-lived notification message (a "toast").
+ * This version is customizable via the settings stored in our Zustand store.
+ *
+ * @param {string} message - The message to display.
+ * @param {string} [type='info'] - The type of toast ('info', 'success', 'error').
+ * @param {number} [overrideDuration] - Optional duration to override the default.
+ */
+export function showToast(message, type = 'info', overrideDuration = null) {
+    // --- THE CUSTOMIZATION "HOOK" ---
+    // We will get the toast settings from our store. A manager can change these later.
+    // For now, we'll use sensible defaults.
+    const settings = useAppStore.getState().siteSettings?.toast || {};
+    const duration = overrideDuration || settings.duration || 3000;
+    const position = settings.position || 'bottom-right'; // e.g., 'bottom-right', 'top-center'
+    // --- END HOOK ---
+
     let toastContainer = document.getElementById('toast-container');
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
         document.body.appendChild(toastContainer);
     }
+    
+    // Apply position styles
+    toastContainer.className = `toast-container-${position}`;
+
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -24,15 +44,12 @@ export function showToast(message, type = 'info', duration = 3000) {
     // Animate in
     setTimeout(() => {
         toast.classList.add('show');
-    }, 100); // Small delay to allow CSS transition
+    }, 100);
 
     // Set timeout to remove the toast
     setTimeout(() => {
         toast.classList.remove('show');
-        // Remove the element from DOM after transition ends
-        toast.addEventListener('transitionend', () => {
-            toast.remove();
-        });
+        toast.addEventListener('transitionend', () => toast.remove());
     }, duration);
 }
 

@@ -146,51 +146,48 @@ main {
     font-size: 1.5rem;
 }
 
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing :root and body styles) ... */
-
-
 /* --- Toast Notifications --- */
 #toast-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
     z-index: 9999;
     display: flex;
-    flex-direction: column-reverse; /* New toasts appear on top */
+    flex-direction: column;
     gap: 10px;
+    width: 300px;
 }
+
+/* Position classes that will be set by the JS */
+.toast-container-bottom-right { bottom: 20px; right: 20px; align-items: flex-end; }
+.toast-container-bottom-center { bottom: 20px; left: 50%; transform: translateX(-50%); align-items: center; }
+.toast-container-top-right { top: 20px; right: 20px; align-items: flex-end; }
+.toast-container-top-center { top: 20px; left: 50%; transform: translateX(-50%); align-items: center; }
+
 
 .toast {
     padding: 15px 20px;
     border-radius: var(--border-radius, 4px);
     color: #fff;
     font-size: 0.9rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 0.3s ease, transform 0.3s ease;
+    width: 100%;
 }
+.toast-container-top-right .toast,
+.toast-container-top-center .toast {
+    transform: translateY(-20px);
+}
+
 
 .toast.show {
     opacity: 1;
     transform: translateY(0);
 }
 
-.toast.toast-info {
-    background-color: var(--secondary-color, #6c757d);
-}
-
-.toast.toast-success {
-    background-color: #28a745; /* A standard green */
-}
-
-.toast.toast-error {
-    background-color: #dc3545; /* A standard red */
-}
-
+.toast.toast-info { background-color: var(--secondary-color, #6c757d); }
+.toast.toast-success { background-color: #28a745; }
+.toast.toast-error { background-color: #dc3545; }
 
 
 

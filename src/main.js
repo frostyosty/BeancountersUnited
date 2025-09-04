@@ -127,7 +127,6 @@ function setupGodModeTrigger() {
         clearTimeout(clickTimer);
         clearTimeout(longPressTimer);
         clickCount = 0;
-
         const { login, logout, user } = useAppStore.getState().auth;
         const godUserEmail = 'god@mode.dev';
 
