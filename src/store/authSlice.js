@@ -3,26 +3,25 @@ import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAuthSlice = (set, get) => ({
-    // --- STATE ---
-    user: null,
-    profile: null,
-    isAuthLoading: true,
-    isAuthenticated: false,
-    authError: null,
-    // --- Impersonation State ---
-    originalUser: null,
-    originalProfile: null,
-
-    // --- ACTIONS ---
+    // State
+    user: null, profile: null, isAuthLoading: true, isAuthenticated: false,
+    authError: null, originalUser: null, originalProfile: null,
 
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
-            // Use the selector to check if we are impersonating.
-            // if (get().auth.isImpersonating()) {
-            //     console.log("Impersonating, ignoring auth state change event.");
-            //     return;
-            // }
-            console.log("authSlice: Impersonation check temporarily disabled for debugging.");
+            console.log(`Auth event: ${event}`);
+            
+            // --- THE ROBUST FIX ---
+            // We check the state *directly* from the get() function.
+            // We know from our logs that this function exists.
+            const isCurrentlyImpersonating = get().isImpersonating();
+
+            if (isCurrentlyImpersonating) {
+                console.log("Impersonating, ignoring auth state change event.");
+                return;
+            }
+            // --- END FIX ---
+
             if (session?.user) {
                 try {
                     const profile = await api.getUserProfile(session.access_token);
@@ -35,6 +34,7 @@ export const createAuthSlice = (set, get) => ({
             }
         });
     },
+
 
     // Signs up a new user.
     signUp: async (email, password) => {
@@ -49,49 +49,33 @@ export const createAuthSlice = (set, get) => ({
     },
 
      logout: async () => {
-        // If impersonating, logout just stops impersonating.
-        if (get().auth.isImpersonating()) {
-            get().auth.stopImpersonating();
+        if (get().isImpersonating()) {
+            get().stopImpersonating();
             return { error: null };
         }
         await supabase.auth.signOut();
         return { error: null };
     },
 
-    // --- Impersonation Actions (THE MISSING PIECES) ---
-
+    // --- Impersonation Actions ---
     impersonateRole: (roleToImpersonate) => {
         const { user, profile, originalUser } = get().auth;
         if (profile?.role !== 'manager' || originalUser) return;
-
         let impersonatedUser = user;
         let impersonatedProfile = { ...profile, role: roleToImpersonate };
-
         if (roleToImpersonate === 'guest') {
             impersonatedUser = null;
             impersonatedProfile = null;
         }
-        set(state => ({
-            auth: { ...state.auth, originalUser: user, originalProfile: profile, user: impersonatedUser, profile: impersonatedProfile, isAuthenticated: roleToImpersonate !== 'guest' }
-        }), false, `auth/impersonate-${roleToImpersonate}`);
+        set(state => ({ auth: { ...state.auth, originalUser: user, originalProfile: profile, user: impersonatedUser, profile: impersonatedProfile, isAuthenticated: roleToImpersonate !== 'guest' } }));
     },
-
     stopImpersonating: () => {
         const { originalUser, originalProfile } = get();
         if (!originalUser) return;
-
-        set(state => ({
-            auth: { ...state.auth, user: originalUser, profile: originalProfile, isAuthenticated: true, originalUser: null, originalProfile: null }
-        }), false, 'auth/stop-impersonating');
+        set(state => ({ auth: { ...state.auth, user: originalUser, profile: originalProfile, isAuthenticated: true, originalUser: null, originalProfile: null } }));
     },
 
-    // --- SELECTORS ---
-    getUserRole: () => {
-        return get().auth.profile?.role || 'guest';
-    },
-
-    // The missing selector function
-    isImpersonating: () => {
-        return !!get().auth.originalUser;
-    },
+    // --- Selectors ---
+    getUserRole: () => get().auth.profile?.role || 'guest',
+    isImpersonating: () => !!get().auth.originalUser,
 });
