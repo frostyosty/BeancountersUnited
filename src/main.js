@@ -122,32 +122,33 @@ function setupGodModeTrigger() {
     let longPressTimer = null;
     const longPressDuration = 3000;
 
-    const toggleGodMode = () => {
-        // Prevent any other timers from firing
+   const toggleGodMode = async () => {
         clearTimeout(clickTimer);
         clearTimeout(longPressTimer);
         clickCount = 0;
+
         const { login, logout, user } = useAppStore.getState().auth;
         const godUserEmail = 'god@mode.dev';
 
-        // Check if the currently logged-in user is the god user
         if (user?.email === godUserEmail) {
-            // If yes, log out.
             console.warn("GOD MODE TRIGGER: Deactivating...");
-            logout().then(() => {
-                alert("God Mode Deactivated.");
-            });
+            await logout();
+            alert("God Mode Deactivated.");
         } else {
-            // If no, or if logged out, log in.
             console.warn("GOD MODE TRIGGER: Activating...");
+            // If already logged in as someone else, log them out first.
+            if (user) {
+                await logout();
+                // Brief delay to allow logout state to process
+                await new Promise(res => setTimeout(res, 500));
+            }
             const password = 'password123';
-            login(godUserEmail, password).then(({ error }) => {
-                if (error) {
-                    alert(`God Mode Login Failed: ${error.message}`);
-                } else {
-                    alert("God Mode Activated!");
-                }
-            });
+            const { error } = await login(godUserEmail, password);
+            if (error) {
+                alert(`God Mode Login Failed: ${error.message}`);
+            } else {
+                alert("God Mode Activated!");
+            }
         }
     };
 

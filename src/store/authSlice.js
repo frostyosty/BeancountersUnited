@@ -33,6 +33,7 @@ export const createAuthSlice = (set, get) => ({
         });
     },
 
+    
     /**
      * Logs in an existing user.
      */
@@ -65,6 +66,7 @@ export const createAuthSlice = (set, get) => ({
             return { error };
         }
     },
+
     /**
      * Signs up a new user.
      */
