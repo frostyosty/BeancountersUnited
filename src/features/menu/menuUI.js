@@ -2,6 +2,11 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
+
+// This is a small piece of state local to the menu feature
+let activeCategory = 'All'; // Default to showing all categories
+
+
 /**
  * Generates the HTML for a single menu item card.
  * This helper function reads the current user role to show/hide admin controls.
@@ -101,33 +106,84 @@ export function renderMenuPage() {
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`;
         return;
     }
+
+
     if (items.length === 0) {
         mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
         return;
     }
 
-    try {
-        const itemsByCategory = items.reduce((acc, item) => {
-            const category = item.category || 'Uncategorized';
-            if (!acc[category]) acc[category] = [];
-            acc[category].push(item);
-            return acc;
-        }, {});
 
-        const contentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `
-            <section class="menu-category">
-                <h2 class="category-title">${category}</h2>
-                <div class="menu-items-grid">
-                    ${categoryItems.map(createMenuItemHTML).join('')}
-                </div>
-            </section>
-        `).join('');
-        
-        mainContent.innerHTML = contentHTML;
-        attachMenuEventListeners();
 
-    } catch (e) {
-        console.error("Error building full menu HTML:", e);
-        mainContent.innerHTML = `<div class="error-message">Error displaying the menu.</div>`;
-    }
+    // 1. Get all unique categories from the menu data
+    const categories = ['All', ...new Set(items.map(item => item.category || 'Uncategorized'))];
+
+    // 2. Build the HTML for the tab buttons
+    const tabsHTML = categories.map(category => `
+        <button
+            class="sub-tab-button ${category === activeCategory ? 'active' : ''}"
+            data-category="${category}">
+            ${category}
+        </button>
+    `).join('');
+
+    // 3. Filter the items to be displayed based on the active category
+    const filteredItems = activeCategory === 'All'
+        ? items
+        : items.filter(item => (item.category || 'Uncategorized') === activeCategory);
+
+    // 4. Group the *filtered* items by category for rendering
+    const itemsByCategory = filteredItems.reduce((acc, item) => {
+        const category = item.category || 'Uncategorized';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(item);
+        return acc;
+    }, {});
+
+    // --- END NEW LOGIC ---
+
+    const menuContentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `
+        <section class="menu-category">
+            <h2 class="category-title">${category}</h2>
+            <div class="menu-items-grid">
+                ${categoryItems.map(createMenuItemHTML).join('')}
+            </div>
+        </section>
+    `).join('');
+
+    // Assemble the final page HTML
+    mainContent.innerHTML = `
+        <div class="menu-header">
+            <h2>Our Menu</h2>
+            <div class="sub-tabs-container">
+                ${tabsHTML}
+            </div>
+        </div>
+        ${items.length === 0 ? `<div class="empty-state"><h2>Our menu is currently empty</h2></div>` : menuContentHTML}
+    `;
+
+    attachMenuEventListeners();
+    attachCategoryTabListeners(); // Attach listeners for our new tabs
+}
+
+
+
+
+/**
+ * Attaches event listeners for the category filter tabs.
+ */
+function attachCategoryTabListeners() {
+    const tabsContainer = document.querySelector('.sub-tabs-container');
+    if (!tabsContainer) return;
+
+    tabsContainer.addEventListener('click', (event) => {
+        if (event.target.matches('.sub-tab-button')) {
+            const newCategory = event.target.dataset.category;
+            if (newCategory !== activeCategory) {
+                activeCategory = newCategory;
+                // Re-render the entire menu page to reflect the new filter
+                renderMenuPage();
+            }
+        }
+    });
 }
