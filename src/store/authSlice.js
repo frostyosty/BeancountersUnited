@@ -1,44 +1,58 @@
-// src/store/authSlice.js
+// src/store/authSlice.js - VERBOSE DEBUGGING
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAuthSlice = (set, get) => ({
-    /**
-     * This is the state for the authentication slice.
-     * It includes properties for the current user, their profile,
-     * loading status, and the state needed for god mode impersonation.
-     */
-    user: null,
-    profile: null,
-    isAuthLoading: true,
-    isAuthenticated: false,
-    authError: null,
-    originalUser: null,
-    originalProfile: null,
+    // ... (State properties are fine)
+    user: null, profile: null, isAuthLoading: true, isAuthenticated: false,
+    authError: null, originalUser: null, originalProfile: null,
 
-    /**
-     * This is the main listener for Supabase auth events. It handles all
-     * session updates (login, logout, token refresh, initial state).
-     */
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
-            // This check now works because isImpersonating() is defined below.
+            console.log(`--- [authSlice] Auth event received: ${event} ---`);
+            
             if (get().auth.isImpersonating()) {
-                return; // Do not process real auth events while impersonating
+                console.log("[authSlice] Impersonating, ignoring event.");
+                return;
             }
 
             if (session?.user) {
+                console.log(`[authSlice] Session found for user ${session.user.id}. Attempting to fetch profile...`);
                 try {
                     const profile = await api.getUserProfile(session.access_token);
+                    console.log("[authSlice] Profile fetched successfully:", profile);
                     set(state => ({ auth: { ...state.auth, user: session.user, profile, isAuthenticated: true, isAuthLoading: false } }));
                 } catch (error) {
-                    console.error("Failed to fetch profile:", error);
-                    set(state => ({ auth: { ...state.auth, user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: "Failed to fetch profile" } }));
+                    console.error("[authSlice] FAILED to fetch profile:", error);
+                    set(state => ({ auth: { ...state.auth, user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: error.message } }));
                 }
             } else {
+                console.log("[authSlice] No session found. Setting user to null.");
                 set(state => ({ auth: { ...state.auth, user: null, profile: null, isAuthenticated: false, isAuthLoading: false } }));
             }
         });
+    },
+
+    /**
+     * Logs in an existing user.
+     */
+    login: async (email, password) => {
+        console.log(`--- [authSlice] login() action CALLED for email: ${email} ---`);
+        if (!email || !password) {
+            console.error("[authSlice] Login failed: Email or password is missing.");
+            return { error: { message: "Email and password are required." } };
+        }
+        
+        console.log("[authSlice] Calling supabase.auth.signInWithPassword...");
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            console.error("[authSlice] supabase.auth.signInWithPassword returned an ERROR:", error);
+        } else {
+            console.log("[authSlice] supabase.auth.signInWithPassword was SUCCESSFUL. Data:", data);
+        }
+        // The onAuthStateChange listener will handle the successful state change.
+        return { error };
     },
 
     /**
@@ -49,13 +63,6 @@ export const createAuthSlice = (set, get) => ({
         return { error };
     },
 
-    /**
-     * Logs in an existing user.
-     */
-    login: async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error };
-    },
 
     /**
      * Logs out the current user or stops impersonating.
