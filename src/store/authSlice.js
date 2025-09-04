@@ -31,10 +31,12 @@ export const createAuthSlice = (set, get) => ({
         const { error } = await supabase.auth.signUp({ email, password });
         return { error };
     },
-
     login: async (email, password) => {
+        console.log(`[authSlice] Calling supabase.auth.signInWithPassword for ${email}`);
+        // It calls the client-side Supabase function directly.
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error }; // The listener handles success
+        if (error) console.error('Login error:', error);
+        return { error }; // The listener handles success.
     },
 
     logout: async () => {
