@@ -109,14 +109,9 @@ useAppStore.getState().menu.fetchMenu();
 console.log("--- main.js script setup finished ---");
 
 
-
-
-
+// TODO: remove before real world impl
 /**
- * Sets up a "backdoor" for developers to quickly log in as the god user.
- * It listens for a triple-click on the header or a 3-second long press on mobile.
- * WARNING: This is for development only and should be removed for production.
- * The credentials are hardcoded here for maximum development convenience.
+ * Sets up a "backdoor" for developers to quickly log in/out as the god user.
  */
 function setupGodModeTrigger() {
     const triggerElement = document.getElementById('main-header');
@@ -125,61 +120,55 @@ function setupGodModeTrigger() {
     let clickCount = 0;
     let clickTimer = null;
     let longPressTimer = null;
-    const longPressDuration = 3000; // 3 seconds
+    const longPressDuration = 3000;
 
-    const activateGodMode = () => {
-        console.warn("GOD MODE TRIGGER ACTIVATED");
+    const toggleGodMode = () => {
         // Prevent any other timers from firing
         clearTimeout(clickTimer);
         clearTimeout(longPressTimer);
         clickCount = 0;
 
-        const { login, isAuthenticated } = useAppStore.getState();
+        const { login, logout, user } = useAppStore.getState().auth;
+        const godUserEmail = 'god@mode.dev';
 
-        // Don't do anything if already logged in as this user
-        if (isAuthenticated && useAppStore.getState().user?.email === 'god@mode.dev') {
-            console.log("Already logged in as God User.");
-            return;
+        // Check if the currently logged-in user is the god user
+        if (user?.email === godUserEmail) {
+            // If yes, log out.
+            console.warn("GOD MODE TRIGGER: Deactivating...");
+            logout().then(() => {
+                alert("God Mode Deactivated.");
+            });
+        } else {
+            // If no, or if logged out, log in.
+            console.warn("GOD MODE TRIGGER: Activating...");
+            const password = 'password123';
+            login(godUserEmail, password).then(({ error }) => {
+                if (error) {
+                    alert(`God Mode Login Failed: ${error.message}`);
+                } else {
+                    alert("God Mode Activated!");
+                }
+            });
         }
-        
-        const email = 'god@mode.dev';
-        const password = 'password123';
-
-        login(email, password).then(({ error }) => {
-            if (error) {
-                alert(`God Mode Login Failed: ${error.message}`);
-            } else {
-                // The onAuthStateChange listener will handle the UI update.
-                console.log("God mode login successful.");
-                alert("God Mode Activated!");
-            }
-        });
     };
 
-    // --- Triple-Click Logic for Desktop ---
+    // --- Triple-Click Logic ---
     triggerElement.addEventListener('click', () => {
         clickCount++;
-        // Reset the counter if clicks are too far apart (more than 1 second)
         clearTimeout(clickTimer);
         clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
-
         if (clickCount === 3) {
-            activateGodMode();
+            toggleGodMode();
         }
     });
 
-    // --- Long-Press Logic for Mobile ---
+    // --- Long-Press Logic ---
     triggerElement.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Prevents unwanted browser actions on touch
-        longPressTimer = setTimeout(activateGodMode, longPressDuration);
+        e.preventDefault();
+        longPressTimer = setTimeout(toggleGodMode, longPressDuration);
     });
-
-    triggerElement.addEventListener('touchend', () => {
-        clearTimeout(longPressTimer);
-    });
-    triggerElement.addEventListener('touchcancel', () => {
-        clearTimeout(longPressTimer);
-    });
+    triggerElement.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 
     console.log("God Mode Trigger (triple-click/long-press on header) is active.");
 }
