@@ -556,3 +556,21 @@ th {
     border-color: var(--primary-color);
     font-weight: bold;
 }
+
+
+/* --- Side-by-Side Auth Modal Styles --- */
+.auth-modal-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.auth-form-section {
+    flex: 1;
+}
+
+.auth-divider {
+    width: 1px;
+    background-color: var(--border-color);
+    align-self: stretch;
+}

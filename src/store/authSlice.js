@@ -3,14 +3,15 @@ import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAuthSlice = (set, get) => ({
+    // State
     user: null,
     profile: null,
     isAuthLoading: true,
     isAuthenticated: false,
-    authError: null,
     originalUser: null,
     originalProfile: null,
 
+    // Actions
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
             if (get().auth.isImpersonating()) return;
@@ -19,7 +20,7 @@ export const createAuthSlice = (set, get) => ({
                     const profile = await api.getUserProfile(session.access_token);
                     set(state => ({ auth: { ...state.auth, user: session.user, profile, isAuthenticated: true, isAuthLoading: false } }));
                 } catch (error) {
-                    set(state => ({ auth: { ...state.auth, user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: error.message } }));
+                    set(state => ({ auth: { ...state.auth, user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false } }));
                 }
             } else {
                 set(state => ({ auth: { ...state.auth, user: null, profile: null, isAuthenticated: false, isAuthLoading: false } }));
@@ -28,23 +29,20 @@ export const createAuthSlice = (set, get) => ({
     },
 
     signUp: async (email, password) => {
+        // Calls our backend API
         return await api.signUpViaApi(email, password);
     },
 
     login: async (email, password) => {
+        // Calls our backend API and sets the session on the client
         try {
-            // Call our own backend API
-            const { session, user } = await api.loginViaApi(email, password);
-
+            const { session } = await api.loginViaApi(email, password);
             if (session) {
-                // If our API returns a session, manually set it in the client.
-                // This will trigger the onAuthStateChange listener and log the user in.
-                const { error } = await supabase.auth.setSession({
+                await supabase.auth.setSession({
                     access_token: session.access_token,
                     refresh_token: session.refresh_token,
                 });
-                if (error) return { error };
-                return { error: null }; // Success
+                return { error: null };
             }
             return { error: { message: "Login failed." } };
         } catch (error) {
@@ -53,8 +51,40 @@ export const createAuthSlice = (set, get) => ({
     },
 
     logout: async () => {
-        return await supabase.auth.signOut();
+        // If impersonating, just stop. Otherwise, do a real logout.
+        if (get().auth.isImpersonating()) {
+            get().auth.stopImpersonating();
+            return;
+        }
+        await supabase.auth.signOut();
     },
 
-    getUserRole: () => get().profile?.role || 'guest',
+    // --- IMPERSONATION ACTIONS ---
+    impersonateRole: (roleToImpersonate) => {
+        const { user, profile, isImpersonating } = get().auth;
+        if (profile?.role !== 'manager' || isImpersonating()) return;
+
+        let impersonatedUser = user;
+        let impersonatedProfile = { ...profile, role: roleToImpersonate };
+
+        if (roleToImpersonate === 'guest') {
+            impersonatedUser = null;
+            impersonatedProfile = null;
+        }
+        set(state => ({
+            auth: { ...state.auth, originalUser: user, originalProfile: profile, user: impersonatedUser, profile: impersonatedProfile, isAuthenticated: roleToImpersonate !== 'guest' }
+        }));
+    },
+
+    stopImpersonating: () => {
+        const { originalUser, originalProfile } = get().auth;
+        if (!originalUser) return;
+        set(state => ({
+            auth: { ...state.auth, user: originalUser, profile: originalProfile, isAuthenticated: true, originalUser: null, originalProfile: null }
+        }));
+    },
+
+    // --- SELECTORS ---
+    getUserRole: () => get().auth.profile?.role || 'guest',
+    isImpersonating: () => !!get().auth.originalUser,
 });
