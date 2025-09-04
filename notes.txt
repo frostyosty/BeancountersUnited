@@ -1,0 +1,1 @@
+After running this, you will have a user with email god@mode.dev and password password123 who has the manager role.
