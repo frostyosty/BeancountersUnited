@@ -57,34 +57,38 @@ function renderPageContent() {
 
 // --- Setup Functions ---
 
+
 function setupNavigationAndInteractions() {
-    // Use event delegation on the body for all major clicks
+    console.log("[Setup] Attaching main click listener to document.body");
+
     document.body.addEventListener('click', (e) => {
-        const target = e.target; // For convenience
+        console.log("[Click Handler] Click detected on:", e.target);
 
         // --- Handle Modal Triggers First ---
-        if (target.matches('#login-signup-btn')) {
-            e.stopPropagation(); // Stop the event from bubbling to the header
+        if (e.target.matches('#login-signup-btn')) {
+            console.log("[Click Handler] Matched #login-signup-btn. Opening modal.");
             showLoginSignupModal();
-            return; // Action handled, exit the function
+            return; // Action handled
         }
-        if (target.matches('#logout-btn')) {
-            e.stopPropagation(); // Stop the event from bubbling to the header
+        if (e.target.matches('#logout-btn')) {
+            console.log("[Click Handler] Matched #logout-btn. Logging out.");
             useAppStore.getState().auth.logout();
-            return; // Action handled, exit the function
+            return; // Action handled
         }
 
         // --- Then, handle Navigation Links ---
-        const navLink = target.closest('a[href^="#"]');
+        const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
-            e.preventDefault();
-            e.stopPropagation(); // Stop the event from bubbling to the header
+            console.log("[Click Handler] Matched a nav link:", navLink.getAttribute('href'));
+            e.preventDefault(); // Only prevent default if we're handling it
             const newHash = navLink.getAttribute('href');
             if (window.location.hash !== newHash) {
                 window.location.hash = newHash;
             }
-            return; // Action handled, exit the function
+            return; // Action handled
         }
+        
+        console.log("[Click Handler] Click did not match any known actions.");
     });
 }
 
