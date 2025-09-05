@@ -60,22 +60,30 @@ function renderPageContent() {
 function setupNavigationAndInteractions() {
     // Use event delegation on the body for all major clicks
     document.body.addEventListener('click', (e) => {
-        const navLink = e.target.closest('a[href^="#"]');
+        const target = e.target; // For convenience
+
+        // --- Handle Modal Triggers First ---
+        if (target.matches('#login-signup-btn')) {
+            e.stopPropagation(); // Stop the event from bubbling to the header
+            showLoginSignupModal();
+            return; // Action handled, exit the function
+        }
+        if (target.matches('#logout-btn')) {
+            e.stopPropagation(); // Stop the event from bubbling to the header
+            useAppStore.getState().auth.logout();
+            return; // Action handled, exit the function
+        }
+
+        // --- Then, handle Navigation Links ---
+        const navLink = target.closest('a[href^="#"]');
         if (navLink) {
             e.preventDefault();
+            e.stopPropagation(); // Stop the event from bubbling to the header
             const newHash = navLink.getAttribute('href');
-            if (window.location.hash !== newHash) window.location.hash = newHash;
-            return; // Stop processing
-        }
-
-        if (e.target.matches('#login-signup-btn')) {
-            showLoginSignupModal();
-            return;
-        }
-
-        if (e.target.matches('#logout-btn')) {
-            useAppStore.getState().auth.logout();
-            return;
+            if (window.location.hash !== newHash) {
+                window.location.hash = newHash;
+            }
+            return; // Action handled, exit the function
         }
     });
 }
