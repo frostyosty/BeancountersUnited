@@ -42,10 +42,58 @@ export function renderAuthStatus() {
     // The main render loop handles re-attaching listeners implicitly now.
 }
 
-// --- Event Handlers (Not exported, attached by main.js) ---
 
 
 
+/**
+ * Displays a modal with side-by-side Login and Sign Up forms.
+ * It is EXPORTED so main.js can import and use it.
+ */
+export function showLoginSignupModal() {
+    const modalContentHTML = `
+        <div class="auth-modal-container">
+            <div class="auth-form-section">
+                <h2>Login</h2>
+                <form id="login-form" novalidate>
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" name="email" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" name="password" required autocomplete="current-password">
+                    </div>
+                    <p id="login-message" class="auth-message"></p>
+                    <div class="form-actions">
+                        <button type="submit" class="button-primary">Login</button>
+                    </div>
+                </form>
+            </div>
+            <div class="auth-divider"></div>
+            <div class="auth-form-section">
+                <h2>Sign Up</h2>
+                <form id="signup-form" novalidate>
+                     <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" name="email" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password (min. 6 characters)</label>
+                        <input type="password" id="signup-password" name="password" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <p id="signup-message" class="auth-message"></p>
+                    <div class="form-actions">
+                        <button type="submit" class="button-secondary">Sign Up</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    uiUtils.showModal(modalContentHTML);
+
+    document.getElementById('login-form')?.addEventListener('submit', handleLoginFormSubmit);
+    document.getElementById('signup-form')?.addEventListener('submit', handleSignupFormSubmit);
+}
 
 
 /**
