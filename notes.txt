@@ -13,3 +13,21 @@ when offering feedback, please bear in mind the following types of errors you mi
 3. You might have assumed a database entry was made that was not.
 
 Please be aware of these errors and consider them before offering drastic measures.
+
+
+
+
+
+
+SELECT
+  p.id,
+  p.role,
+  p.full_name,
+  p.email AS profile_email,
+  u.email AS auth_email,
+  u.created_at,
+  u.email_confirmed_at
+FROM
+  public.profiles AS p
+JOIN
+  auth.users AS u ON p.id = u.id;

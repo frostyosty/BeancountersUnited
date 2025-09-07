@@ -70,7 +70,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'god@mode.dev';
+        const godUserEmail = 'manager@mealmates.dev';
 
         if (user?.email === godUserEmail) {
             await logout();
