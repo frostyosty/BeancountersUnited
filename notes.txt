@@ -1,4 +1,4 @@
-user with email god@mode.dev and password password123 -> manager role 
+user with email manager@mealmates.dev and password password123 -> manager role 
 
 
 when production:
