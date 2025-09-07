@@ -2,93 +2,56 @@
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 
-// --- Feature UI Imports ---
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 
-// --- State Variables ---
 let isAppInitialized = false;
 
-// --- Render & Router Functions ---
-
 function renderApp() {
-    // This is the main render loop, called on any state or route change.
     renderAuthStatus();
-    renderPageContent(); // This will render the main content based on the route
-    
+    renderPageContent();
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        } catch (e) {
-            cartCountSpan.textContent = '0';
-        }
+        } catch (e) { cartCountSpan.textContent = '0'; }
     }
 }
 
 function renderPageContent() {
     const hash = window.location.hash || '#menu';
-    
-    // Style the active navigation link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
-        if (link.getAttribute('href') === hash) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
+        link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
-
     switch (hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-        case '#cart':
-            renderCartPage();
-            break;
-        // Add more routes here for dashboards, checkout, etc.
-        default:
-            renderMenuPage();
-            break;
+        case '#menu': renderMenuPage(); break;
+        case '#cart': renderCartPage(); break;
+        default: renderMenuPage(); break;
     }
 }
 
-
-// --- Setup Functions ---
-
-
-function setupNavigationAndInteractions() {
-    console.log("[Setup] Attaching main click listener to document.body");
-
+function setupInteractions() {
     document.body.addEventListener('click', (e) => {
-        console.log("[Click Handler] Click detected on:", e.target);
-
-        // --- Handle Modal Triggers First ---
-        if (e.target.matches('#login-signup-btn')) {
-            console.log("[Click Handler] Matched #login-signup-btn. Opening modal.");
+        // --- THIS IS THE FIX ---
+        // We now check for the correct button IDs from authUI.js
+        if (e.target.matches('#login-btn') || e.target.matches('#signup-btn')) {
             showLoginSignupModal();
-            return; // Action handled
+            return;
         }
         if (e.target.matches('#logout-btn')) {
-            console.log("[Click Handler] Matched #logout-btn. Logging out.");
             useAppStore.getState().auth.logout();
-            return; // Action handled
+            return;
         }
+        // --- END FIX ---
 
-        // --- Then, handle Navigation Links ---
         const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
-            console.log("[Click Handler] Matched a nav link:", navLink.getAttribute('href'));
-            e.preventDefault(); // Only prevent default if we're handling it
+            e.preventDefault();
             const newHash = navLink.getAttribute('href');
-            if (window.location.hash !== newHash) {
-                window.location.hash = newHash;
-            }
-            return; // Action handled
+            if (window.location.hash !== newHash) window.location.hash = newHash;
         }
-        
-        console.log("[Click Handler] Click did not match any known actions.");
     });
 }
 
@@ -142,13 +105,10 @@ function setupGodModeTrigger() {
     triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 }
 
-// --- Main Application Initialization ---
-
 function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
-    console.log("--- main() started ---");
-
+    
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -161,28 +121,20 @@ function main() {
                 </nav>
             </header>
             <main id="main-content"></main>
-            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+            <footer id="main-footer"><p>&copy; 2024</p></footer>
         `;
     }
 
-    // 1. Set up listeners
     useAppStore.subscribe(renderApp);
-    window.addEventListener('hashchange', renderPageContent); // Route on hash change
-    setupNavigationAndInteractions(); // Handle all clicks
+    window.addEventListener('hashchange', renderPageContent);
+    setupInteractions();
     
-    // 2. Kick off initial actions
     useAppStore.getState().auth.listenToAuthChanges();
     useAppStore.getState().menu.fetchMenu();
     
-    // 3. Initialize UI modules
     initializeImpersonationToolbar();
     setupGodModeTrigger();
-
-    // 4. Perform the first render
     renderApp();
-    
-    console.log("--- main.js script setup finished ---");
 }
 
-// Start the application
 main();
