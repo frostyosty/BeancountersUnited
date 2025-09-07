@@ -8,32 +8,37 @@ import { useAppStore } from '@/store/appStore.js';
 export function initializeImpersonationToolbar() {
     // This subscriber will dynamically render the toolbar based on the auth state.
     useAppStore.subscribe(
-        // The selector: we need the REAL profile to decide if the toolbar should show at all.
-        // And the CURRENT profile to know what role is being impersonated.
         (state) => ({
+            // THE FIX: We select the REAL profile to decide if the toolbar should show at all.
+            // If we are impersonating, originalProfile holds the real one. If not, profile does.
             realProfile: state.auth.originalProfile || state.auth.profile,
-            currentProfile: state.auth.profile,
             isImpersonating: state.auth.isImpersonating(),
+            currentRole: state.auth.profile?.role || 'guest',
         }),
-        ({ realProfile, currentProfile, isImpersonating }) => {
-            renderToolbar(realProfile, currentProfile, isImpersonating);
+        ({ realProfile, isImpersonating, currentRole }) => {
+            // We pass the real profile's role to the render function.
+            renderToolbar(realProfile?.role, isImpersonating, currentRole);
         },
-        { fireImmediately: true } // Run once on startup
+        { fireImmediately: true }
     );
 }
 
 /**
- * Renders or removes the toolbar based on the user's real role.
+ * Renders or removes the toolbar based on the user's REAL role.
+ * @param {'manager'|'owner'|'customer'|'guest'} realRole - The true role of the logged-in user.
+ * @param {boolean} isImpersonating - Whether impersonation is active.
+ * @param {string} currentRole - The currently displayed role.
  */
-function renderToolbar(realProfile, currentProfile, isImpersonating) {
+function renderToolbar(realRole, isImpersonating, currentRole) {
     let toolbar = document.getElementById('god-mode-toolbar');
-    const realRole = realProfile?.role;
-    const currentRole = currentProfile?.role || 'guest';
 
-    // --- SECURITY GATE: Only the 'manager' (God User) should ever see this toolbar. ---
+    // --- SECURITY GATE: Only render the toolbar if the REAL user is a manager ---
     if (realRole !== 'manager') {
-        if (toolbar) toolbar.remove();
-        document.body.style.paddingBottom = '0'; // Reset padding
+        if (toolbar) toolbar.remove(); // If it exists for some reason, remove it.
+        // Reset body padding if the toolbar is removed
+        if (document.body.style.paddingBottom) {
+            document.body.style.paddingBottom = '';
+        }
         return;
     }
 
@@ -71,11 +76,12 @@ function renderToolbar(realProfile, currentProfile, isImpersonating) {
 }
 
 /**
- * Attaches event listeners to the toolbar buttons.
+ * Attaches event listeners to the toolbar buttons. Only needs to be called once.
  */
 function attachToolbarListeners(toolbar) {
     toolbar.addEventListener('click', (event) => {
         const target = event.target;
+        // Get the actions from the correct namespace in the store
         const { impersonateRole, stopImpersonating } = useAppStore.getState().auth;
 
         if (target.matches('[data-role]')) {

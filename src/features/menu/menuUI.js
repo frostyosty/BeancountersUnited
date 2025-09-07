@@ -12,23 +12,29 @@ let activeCategory = 'All'; // Default to showing all categories
  * This helper function reads the current user role to show/hide admin controls.
  */
 const createMenuItemHTML = (item) => {
+    // Get the selector from the correct namespace
     const { getUserRole } = useAppStore.getState().auth;
-    const userRole = getUserRole();
+    const userRole = getUserRole(); // This will reflect the IMPERSONATED role
 
+    // Define the HTML for the owner's controls
     const ownerControls = `
         <div class="item-admin-controls">
             <button class="button-secondary edit-item-btn" data-item-id="${item.id}">Edit</button>
         </div>
     `;
+    // Define the HTML for the god user's additional controls
     const godUserControls = `
         <button class="button-danger delete-item-btn" data-item-id="${item.id}">Delete</button>
     `;
     let adminControlsHTML = '';
 
+    // If the currently viewed role is owner or manager, show owner controls
     if (userRole === 'owner' || userRole === 'manager') {
         adminControlsHTML = ownerControls;
     }
+    // If the currently viewed role is manager, add the god user controls
     if (userRole === 'manager') {
+        // A simple but effective way to add the button
         adminControlsHTML = adminControlsHTML.replace('</div>', ` ${godUserControls}</div>`);
     }
 
