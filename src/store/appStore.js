@@ -28,7 +28,7 @@ export const useAppStore = create(
       checkout: createCheckoutSlice(set, get),
       admin: createAdminSlice(set, get),
             orderHistory: createOrderHistorySlice(set, get),
-    }),
+        };
     },
     { name: "RestaurantAppStore" }
   )
@@ -36,3 +36,4 @@ export const useAppStore = create(
 
 console.log("--- [3] appStore.js: END ---");
 window.useAppStore = useAppStore;
+
