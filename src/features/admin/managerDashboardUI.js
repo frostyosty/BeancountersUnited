@@ -34,14 +34,14 @@ function showEditUserModal(user) {
             </div>
         </form>
     `;
-uiUtils.showModal(modalContentHTML);
+    uiUtils.showModal(modalContentHTML);
 
     document.getElementById('edit-user-form').addEventListener('submit', (event) => {
         event.preventDefault();
         const newRole = document.getElementById('user-role').value;
         const isVerifiedBuyer = document.getElementById('is-verified-buyer').checked;
         const canSeeOrderHistory = document.getElementById('can-see-order-history').checked; // <-- Get new value
-        
+
         // Call the updated store action
         useAppStore.getState().admin.updateUserRole(user.id, newRole, isVerifiedBuyer, canSeeOrderHistory);
         uiUtils.closeModal();
@@ -124,14 +124,23 @@ export async function renderManagerDashboard() {
 
     const { users, isLoadingUsers, error: userError } = useAppStore.getState().admin;
     const { settings, error: settingsError } = useAppStore.getState().siteSettings;
-    
+    // Get the current owner settings from the database, provide defaults
+    const ownerSettings = settings.ownerPermissions || {
+        canEditTheme: true,
+        canEditCategories: true,
+        canEditMenuLayout: true // Placeholder for your future drag-and-drop feature
+    };
+
+
     if (userError || settingsError) {
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load dashboard data</h2><p>${userError || settingsError}</p></div>`;
         return;
     }
 
+
+
     // --- Prepare HTML chunks ---
-const userTableRows = users.map(user => `
+    const userTableRows = users.map(user => `
         <tr data-user-id="${user.id}">
             <td>${user.email}</td>
                         <td>${user.full_name || 'N/A'}</td>
@@ -194,8 +203,60 @@ const userTableRows = users.map(user => `
                 <h3>Theme Customizer</h3>
                 ${themeControlsHTML}
             </section>
+            <!-- NEW: Owner Permissions Section -->
+            <section class="dashboard-section">
+                <h3>Owner Dashboard Permissions</h3>
+                <p>Choose which customization features are available to Restaurant Owners.</p>
+                <form id="owner-permissions-form">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="canEditTheme" ${ownerSettings.canEditTheme ? 'checked' : ''}>
+                            Allow owners to edit theme colors.
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="canEditCategories" ${ownerSettings.canEditCategories ? 'checked' : ''}>
+                            Allow owners to manage menu categories.
+                        </label>
+                    </div>
+                    <!-- Add more toggles here as you build more owner features -->
+                    <div class="form-actions">
+                        <button type="submit" class="button-primary">Save Owner Permissions</button>
+                    </div>
+                </form>
+            </section>
         </div>
     `;
 
     attachManagerDashboardListeners();
+}
+
+
+
+
+/**
+ * NEW: Gathers and saves the owner permission settings.
+ * @param {HTMLFormElement} form
+ */
+async function handleOwnerPermissionsSave(form) {
+    const saveButton = form.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+    
+    // Checkboxes only appear in FormData if they are checked. We need to handle both cases.
+    const permissions = {
+        canEditTheme: form.canEditTheme.checked,
+        canEditCategories: form.canEditCategories.checked,
+    };
+
+    try {
+        await api.updateSiteSettings({ ownerPermissions: permissions });
+        uiUtils.showToast('Owner permissions saved!', 'success');
+    } catch (error) {
+        // Handle error
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Owner Permissions';
+    }
 }
