@@ -843,3 +843,36 @@ th {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+
+/* --- Image Uploader (Owner Dashboard) --- */
+.image-upload-group {
+    margin-top: 1rem;
+}
+#image-preview {
+    max-width: 150px;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+/* Hide the default file input */
+#item-image-upload {
+    display: none;
+}
+/* Style the label as a button */
+.image-upload-group label.button-secondary {
+    display: inline-block;
+    cursor: pointer;
+    margin-right: 10px;
+}
+#image-upload-filename {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}

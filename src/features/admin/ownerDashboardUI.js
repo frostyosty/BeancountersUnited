@@ -19,11 +19,23 @@ function showMenuItemModal(item = null) {
         <h3>${modalTitle}</h3>
         <form id="menu-item-form">
             <input type="hidden" name="id" value="${isEditing ? item.id : ''}">
-            <div class="form-group"><label for="item-name">Name</label><input type="text" id="item-name" name="name" value="${isEditing ? item.name : ''}" required></div>
+            <div class="form-group">
+                <label for="item-name">Name</label>
+                <input type="text" id="item-name" name="name" value="${isEditing ? item.name : ''}" required>
+            </div>
             <div class="form-group"><label for="item-description">Description</label><textarea id="item-description" name="description">${isEditing ? (item.description || '') : ''}</textarea></div>
             <div class="form-group"><label for="item-price">Price</label><input type="number" id="item-price" name="price" step="0.01" value="${isEditing ? item.price : ''}" required></div>
             <div class="form-group"><label for="item-category">Category</label><select id="item-category" name="category">${categoryOptions}</select></div>
-            <div class="form-group"><label for="item-image-url">Image URL</label><input type="text" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}"></div>
+             <div class="form-group image-upload-group">
+                <label>Item Image</label>
+                <img id="image-preview" src="${item?.image_url || '/placeholder-coffee.jpg'}" alt="Image preview" />
+                <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp">
+                <label for="item-image-upload" class="button-secondary">Choose File</label>
+                <span id="image-upload-filename">No file selected.</span>
+                <input type="hidden" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}">
+                <div id="image-upload-progress" style="display: none;">Uploading...</div>
+            </div>
+
             <div class="form-actions-split">
                 ${isEditing ? `<button type="button" id="delete-item-btn-modal" class="button-danger">Delete Item</button>` : '<div></div>'}
                 <button type="submit" class="button-primary">${isEditing ? 'Save Changes' : 'Create Item'}</button>
@@ -32,34 +44,88 @@ function showMenuItemModal(item = null) {
     `;
     uiUtils.showModal(modalContentHTML);
 
+    // Attach listener to the new file input
+    const imageUploadInput = document.getElementById('item-image-upload');
+    const imagePreview = document.getElementById('image-preview');
+    const imageFilenameSpan = document.getElementById('image-upload-filename');
+
+    imageUploadInput.addEventListener('change', () => {
+        const file = imageUploadInput.files[0];
+        if (file) {
+            // Show a local preview of the image instantly
+            imagePreview.src = URL.createObjectURL(file);
+            imageFilenameSpan.textContent = file.name;
+        }
+    });
+
     document.getElementById('menu-item-form')?.addEventListener('submit', handleMenuItemFormSubmit);
     if (isEditing) {
         document.getElementById('delete-item-btn-modal')?.addEventListener('click', () => handleDeleteMenuItem(item.id, item.name));
     }
 }
 
+
+/**
+ * Handles the submission of the add/edit menu item form, now with image upload logic.
+ */
 async function handleMenuItemFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const submitButton = form.querySelector('button[type="submit"]');
     submitButton.disabled = true;
-    const itemData = Object.fromEntries(new FormData(form).entries());
+    submitButton.textContent = 'Saving...';
+    
+    const formData = new FormData(form);
+    const itemData = Object.fromEntries(formData.entries());
+    const imageFile = itemData.imageFile; // Get the file from the form data
     const isEditing = !!itemData.id;
     const { fetchMenu } = useAppStore.getState().menu;
 
     try {
+        // --- NEW IMAGE UPLOAD LOGIC ---
+        // If a new file was selected, upload it first.
+        if (imageFile && imageFile.size > 0) {
+            const progressIndicator = document.getElementById('image-upload-progress');
+            progressIndicator.style.display = 'block';
+
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            const filePath = `public/${fileName}`; // Folder inside the bucket
+
+            // Upload the file to the 'menu-images' bucket
+            const { error: uploadError } = await supabase.storage
+                .from('menu-images')
+                .upload(filePath, imageFile);
+
+            if (uploadError) {
+                throw new Error(`Image upload failed: ${uploadError.message}`);
+            }
+
+            // Get the public URL of the successfully uploaded file
+            const { data: { publicUrl } } = supabase.storage
+                .from('menu-images')
+                .getPublicUrl(filePath);
+
+            // Update the image_url in our data object to be saved to the database
+            itemData.image_url = publicUrl;
+            progressIndicator.style.display = 'none';
+        }
+        // --- END UPLOAD LOGIC ---
+
         if (isEditing) {
             await api.updateMenuItem(itemData.id, itemData);
-            uiUtils.showToast('Item updated!', 'success');
+            uiUtils.showToast('Item updated successfully!', 'success');
         } else {
-            await api.addMenuItem(itemData);
-            uiUtils.showToast('Item added!', 'success');
+            // For new items, generate a temporary ID on client-side or get from DB response
+            const newItem = await api.addMenuItem(itemData);
+            uiUtils.showToast('Item added successfully!', 'success');
         }
         uiUtils.closeModal();
-        await fetchMenu();
+        await fetchMenu(); // Re-fetch menu to show all changes
     } catch (error) {
         alert(`Error: ${error.message}`);
         submitButton.disabled = false;
+        submitButton.textContent = isEditing ? 'Save Changes' : 'Create Item';
     }
 }
 
@@ -109,10 +175,44 @@ async function handleThemeSettingsSave() {
     saveButton.disabled = false;
 }
 
+
+/**
+ * NEW: Handles saving the business details form.
+ * @param {HTMLFormElement} form
+ */
+async function handleBusinessDetailsSave(form) {
+    const saveButton = form.querySelector('button[type="submit"]');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+    
+    const formData = new FormData(form);
+    const detailsToUpdate = Object.fromEntries(formData.entries()); // { restaurantPhoneNumber: '...' }
+
+    try {
+        await useAppStore.getState().siteSettings.updateSiteSettings(detailsToUpdate);
+        uiUtils.showToast('Business details saved!', 'success');
+    } catch (error) {
+        // The slice handles optimistic revert, so just show a message
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Details';
+    }
+}
+
+
 function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
-
+    
+    // --- Event Delegation for all clicks and submits ---
+    dashboardContainer.addEventListener('submit', (event) => {
+        // --- NEW: Handle Business Details Form Submission ---
+        if (event.target.matches('#business-details-form')) {
+            event.preventDefault();
+            handleBusinessDetailsSave(event.target);
+        }
+        // --- End New ---
+    });
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
         if (target.matches('#add-new-item-btn') || target.closest('.edit-item-btn-table')) {
@@ -170,10 +270,11 @@ function attachOwnerDashboardListeners() {
 // --- EXPORTED RENDER FUNCTION ---
 
 export function renderOwnerDashboard() {
-    const mainContent = document.getElementById('main-content');
+const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
     const { settings, isLoading, error } = useAppStore.getState().siteSettings;
+
     if (isLoading) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
         return;
@@ -221,6 +322,23 @@ export function renderOwnerDashboard() {
     mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>Owner Dashboard</h2>
+
+            <!-- NEW: Business Details Section -->
+            <section class="dashboard-section">
+                <h3>Business Details</h3>
+                <form id="business-details-form">
+                    <div class="form-group">
+                        <label for="phone-number">Public Phone Number</label>
+                        <input type="tel" id="phone-number" name="restaurantPhoneNumber" 
+                               value="${settings.restaurantPhoneNumber || ''}" 
+                               placeholder="e.g., +1-555-123-4567">
+                        <small>This number will be used for the "click-to-call" icon in the header.</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="button-primary">Save Details</button>
+                    </div>
+                </form>
+            </section>
             
             <section class="dashboard-section">
                 <h3>Menu Management</h3>
