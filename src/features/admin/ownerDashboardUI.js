@@ -3,9 +3,13 @@ import { useAppStore } from '@/store/appStore.js';
 import * as api from '@/services/apiService.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import Sortable from 'sortablejs';
+import { supabase } from '@/supabaseClient.js';
 
 // --- HELPER FUNCTIONS FOR THIS MODULE ---
 
+/**
+ * Shows a modal to add or edit a menu item, now with a rich image uploader.
+ */
 function showMenuItemModal(item = null) {
     const isEditing = item !== null;
     const modalTitle = isEditing ? `Edit "${item.name}"` : 'Add New Menu Item';
@@ -26,15 +30,17 @@ function showMenuItemModal(item = null) {
             <div class="form-group"><label for="item-description">Description</label><textarea id="item-description" name="description">${isEditing ? (item.description || '') : ''}</textarea></div>
             <div class="form-group"><label for="item-price">Price</label><input type="number" id="item-price" name="price" step="0.01" value="${isEditing ? item.price : ''}" required></div>
             <div class="form-group"><label for="item-category">Category</label><select id="item-category" name="category">${categoryOptions}</select></div>
-             <div class="form-group image-upload-group">
+             <!-- === NEW IMAGE UPLOAD SECTION === -->
+            <div class="form-group image-upload-group">
                 <label>Item Image</label>
                 <img id="image-preview" src="${item?.image_url || '/placeholder-coffee.jpg'}" alt="Image preview" />
-                <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp">
+                <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp" class="visually-hidden">
                 <label for="item-image-upload" class="button-secondary">Choose File</label>
-                <span id="image-upload-filename">No file selected.</span>
+                <span id="image-upload-filename">No new file selected.</span>
                 <input type="hidden" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}">
-                <div id="image-upload-progress" style="display: none;">Uploading...</div>
+                <div id="image-upload-progress" class="progress-bar" style="display: none;"><div class="progress-bar-inner"></div></div>
             </div>
+            <!-- === END NEW SECTION === -->
 
             <div class="form-actions-split">
                 ${isEditing ? `<button type="button" id="delete-item-btn-modal" class="button-danger">Delete Item</button>` : '<div></div>'}
@@ -44,17 +50,13 @@ function showMenuItemModal(item = null) {
     `;
     uiUtils.showModal(modalContentHTML);
 
-    // Attach listener to the new file input
+    // Attach listener to the new file input for live preview
     const imageUploadInput = document.getElementById('item-image-upload');
-    const imagePreview = document.getElementById('image-preview');
-    const imageFilenameSpan = document.getElementById('image-upload-filename');
-
     imageUploadInput.addEventListener('change', () => {
         const file = imageUploadInput.files[0];
         if (file) {
-            // Show a local preview of the image instantly
-            imagePreview.src = URL.createObjectURL(file);
-            imageFilenameSpan.textContent = file.name;
+            document.getElementById('image-preview').src = URL.createObjectURL(file);
+            document.getElementById('image-upload-filename').textContent = file.name;
         }
     });
 
@@ -65,8 +67,9 @@ function showMenuItemModal(item = null) {
 }
 
 
+
 /**
- * Handles the submission of the add/edit menu item form, now with image upload logic.
+ * Handles form submission, now with client-side image upload logic.
  */
 async function handleMenuItemFormSubmit(event) {
     event.preventDefault();
@@ -74,41 +77,38 @@ async function handleMenuItemFormSubmit(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.textContent = 'Saving...';
-    
-    const formData = new FormData(form);
-    const itemData = Object.fromEntries(formData.entries());
-    const imageFile = itemData.imageFile; // Get the file from the form data
+
+    const itemData = Object.fromEntries(new FormData(form).entries());
+    const imageFile = itemData.imageFile;
     const isEditing = !!itemData.id;
     const { fetchMenu } = useAppStore.getState().menu;
 
     try {
-        // --- NEW IMAGE UPLOAD LOGIC ---
-        // If a new file was selected, upload it first.
+        // --- NEW UPLOAD LOGIC ---
         if (imageFile && imageFile.size > 0) {
             const progressIndicator = document.getElementById('image-upload-progress');
             progressIndicator.style.display = 'block';
 
             const fileExt = imageFile.name.split('.').pop();
             const fileName = `${Date.now()}.${fileExt}`;
-            const filePath = `public/${fileName}`; // Folder inside the bucket
+            const filePath = `public/${fileName}`;
 
-            // Upload the file to the 'menu-images' bucket
+            // Upload directly to Supabase Storage from the client
             const { error: uploadError } = await supabase.storage
                 .from('menu-images')
-                .upload(filePath, imageFile);
+                .upload(filePath, imageFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
-            if (uploadError) {
-                throw new Error(`Image upload failed: ${uploadError.message}`);
-            }
+            if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
 
-            // Get the public URL of the successfully uploaded file
+            // Get the public URL of the uploaded file
             const { data: { publicUrl } } = supabase.storage
                 .from('menu-images')
                 .getPublicUrl(filePath);
 
-            // Update the image_url in our data object to be saved to the database
-            itemData.image_url = publicUrl;
-            progressIndicator.style.display = 'none';
+            itemData.image_url = publicUrl; // Set the URL to be saved in the database
         }
         // --- END UPLOAD LOGIC ---
 
@@ -116,18 +116,20 @@ async function handleMenuItemFormSubmit(event) {
             await api.updateMenuItem(itemData.id, itemData);
             uiUtils.showToast('Item updated successfully!', 'success');
         } else {
-            // For new items, generate a temporary ID on client-side or get from DB response
-            const newItem = await api.addMenuItem(itemData);
+            await api.addMenuItem(itemData);
             uiUtils.showToast('Item added successfully!', 'success');
         }
         uiUtils.closeModal();
-        await fetchMenu(); // Re-fetch menu to show all changes
+        await fetchMenu();
     } catch (error) {
         alert(`Error: ${error.message}`);
         submitButton.disabled = false;
         submitButton.textContent = isEditing ? 'Save Changes' : 'Create Item';
     }
 }
+
+
+
 
 async function handleDeleteMenuItem(itemId, itemName) {
     if (!confirm(`Are you sure you want to delete "${itemName}"?`)) return;

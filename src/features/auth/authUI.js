@@ -17,23 +17,33 @@ export function renderAuthStatus() {
         return;
     }
 
-    if (isAuthenticated) {
+if (isAuthenticated) {
         const userRole = profile?.role || 'customer';
         let dashboardLinks = '';
+
+        // Add dashboard links based on role
         if (userRole === 'owner' || userRole === 'manager') {
-            dashboardLinks = `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            dashboardLinks += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
         }
         if (userRole === 'manager') {
             dashboardLinks += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
         }
+
+        // The user's email and the new "Order History" link are always shown for logged-in users.
         authContainer.innerHTML = `
             <div class="user-info">
                 <span>${user.email}</span>
+                <a href="#order-history" class="nav-link">Order History</a>
                 ${dashboardLinks}
                 <button id="logout-btn" class="button-secondary">Logout</button>
             </div>
         `;
     } else {
+        // This part remains the same for logged-out users
+    //     authContainer.innerHTML = `
+    //         <button id="login-signup-btn" class="button-primary">Login / Sign Up</button>
+    //     `;
+    // }
         authContainer.innerHTML = `
             <button id="login-btn" class="button-primary">Login</button>
             <button id="signup-btn" class="button-secondary">Sign Up</button>

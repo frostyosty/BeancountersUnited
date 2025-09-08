@@ -876,3 +876,162 @@ th {
     font-size: 0.9rem;
     color: var(--secondary-color);
 }
+
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing styles) ... */
+
+/* --- Click-to-Call Phone Icon --- */
+.phone-icon {
+    display: flex; /* Will be set to 'flex' by JS when active */
+    align-items: center;
+    justify-content: center;
+    margin-left: 1rem;
+    color: var(--primary-color);
+    transition: transform 0.2s ease;
+}
+
+.phone-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.phone-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Hide the phone icon on the checkout page.
+   We can do this with a body class that our router will set. */
+body.on-checkout-page #phone-icon-link {
+    display: none;
+}
+
+
+/* In /src/assets/css/style.css */
+
+/* --- User Management Table (Manager Dashboard) --- */
+.role-badge {
+    padding: 0.2em 0.6em;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border-radius: 999px;
+    color: white;
+}
+.role-customer { background-color: var(--secondary-color); }
+.role-owner { background-color: #007bff; }
+.role-manager { background-color: #dc3545; }
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing styles) ... */
+
+/* --- Image Uploader (Owner Dashboard Modal) --- */
+.image-upload-group {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+#image-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: block;
+    margin-bottom: 1rem;
+}
+
+/* Visually hide the default file input but keep it accessible */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Style the label to look like a button */
+.image-upload-group label.button-secondary {
+    display: inline-block;
+    cursor: pointer;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+#image-upload-filename {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    vertical-align: middle;
+}
+
+.progress-bar {
+    width: 100%;
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+    overflow: hidden;
+}
+
+.progress-bar-inner {
+    height: 10px;
+    width: 100%; /* For an indeterminate loader */
+    background-color: var(--primary-color);
+    /* Basic indeterminate animation */
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
+
+
+
+/* In /src/assets/css/style.css */
+
+/* --- Order History Page --- */
+.order-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.order-history-card {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem 1.5rem;
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.order-card-header h4, .order-card-header p {
+    margin: 0;
+}
+
+.order-card-items {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+.order-card-items li {
+    padding: 0.25rem 0;
+}
+
+.order-card-actions {
+    text-align: right;
+}

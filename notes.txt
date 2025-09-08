@@ -11,8 +11,10 @@ when offering feedback, please bear in mind the following types of errors you mi
 1. You might be out of sync with the latest iteration of a file or have your wires crossed etc.
 2. You might have assumed a function was made that was not.
 3. You might have assumed a database entry was made that was not.
+4. You might assign scope incorrectly e.g. clearCart(); instead of get().cart.clearCart(); resulting in access issues.
+You have an unfortunate tendency to forget scoping specificities.
 
-Please be aware of these errors and consider them before offering drastic measures.
+Please be aware of these shortcomings and consider them before offering drastic measures.
 
 
 

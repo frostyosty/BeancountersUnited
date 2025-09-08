@@ -26,6 +26,9 @@ async function request(endpoint, method = 'GET', body = null, token = null) {
 // --- Menu API Functions ---
 export const getMenu = () => request('/menu');
 
+
+export const getOrderHistory = (token) => request('/user/orders', 'GET', null, token);
+
 // --- User Profile API Functions ---
 export const getUserProfile = (token) => request('/user/profile', 'GET', null, token);
 
@@ -34,6 +37,9 @@ export const getUserProfile = (token) => request('/user/profile', 'GET', null, t
 export const loginViaApi = (email, password) => request('/auth/login', 'POST', { email, password });
 export const signUpViaApi = (email, password) => request('/auth/signup', 'POST', { email, password });
 
+
+export const listAllUsers = (token) => request('/user/manage', 'GET', null, token);
+export const updateUser = (userId, newRole, isVerifiedBuyer, token) => request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer }, token);
 
 
 // --- Settings API Functions ---
