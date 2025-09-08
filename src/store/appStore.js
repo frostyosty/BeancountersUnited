@@ -2,6 +2,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+console.log("--- [3] appStore.js: START ---");
+
 // Import all slice creators
 import { createMenuSlice } from './menuSlice.js';
 import { createAuthSlice } from './authSlice.js';
@@ -13,9 +15,12 @@ import { createOrderHistorySlice } from './orderHistorySlice.js'; // <-- Import
 
 
 
+
 export const useAppStore = create(
   devtools(
-    (set, get) => ({
+    (set, get) => {
+        console.log("--- [3.1] appStore.js: Zustand create() function is running. ---");
+        return {
       menu: createMenuSlice(set, get),
       auth: createAuthSlice(set, get),
       cart: createCartSlice(set, get),
@@ -24,6 +29,10 @@ export const useAppStore = create(
       admin: createAdminSlice(set, get),
             orderHistory: createOrderHistorySlice(set, get),
     }),
+    },
     { name: "RestaurantAppStore" }
   )
 );
+
+console.log("--- [3] appStore.js: END ---");
+window.useAppStore = useAppStore;

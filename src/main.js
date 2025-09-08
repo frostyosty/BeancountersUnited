@@ -1,4 +1,5 @@
 // src/main.js
+console.log("--- [4] main.js: START ---");
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
@@ -12,7 +13,7 @@ import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
 import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
 import * as uiUtils from './utils/uiUtils.js'; // Make sure this is imported if not already
 
-
+console.log("--- [4] main.js: All modules imported. ---");
 let isAppInitialized = false;
 
 function renderApp() {
@@ -160,6 +161,7 @@ function setupGodModeTrigger() {
  * The main application initialization function.
  */
 function main() {
+    console.log("--- [5] main.js: main() CALLED ---");
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");

@@ -1,5 +1,5 @@
 // src/services/apiService.js
-
+console.log("--- [2] apiService.js: START ---");
 async function request(endpoint, method = 'GET', body = null, token = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
@@ -53,3 +53,5 @@ export const getSiteSettings = () => request('/settings', 'GET');
 
 // Only authenticated users (owners/managers) can update settings
 export const updateSiteSettings = (settingsData, token) => request('/settings', 'PUT', settingsData, token);
+
+console.log("--- [2] apiService.js: END ---");
