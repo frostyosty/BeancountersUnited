@@ -638,3 +638,103 @@ th {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
 }
+
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing styles) ... */
+
+/* --- Menu Category Tabs (Public Page) --- */
+.menu-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sub-tabs-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.sub-tab-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 999px; /* Pill shape */
+    color: var(--secondary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sub-tab-button:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.sub-tab-button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    font-weight: bold;
+}
+
+/* --- Category Manager (Owner Dashboard) --- */
+#category-manager {
+    margin-top: 1.5rem;
+}
+
+#category-list {
+    list-style: none;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.category-list-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.category-list-item:last-child { border-bottom: none; }
+
+.drag-handle {
+    cursor: grab;
+    margin-right: 1rem;
+    color: var(--secondary-color);
+    font-size: 1.2rem;
+}
+.drag-handle:active { cursor: grabbing; }
+
+.category-name {
+    flex-grow: 1;
+}
+
+.category-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.button-secondary.small,
+.button-danger.small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.add-category-form {
+    margin-top: 1rem;
+    display: flex;
+    gap: 10px;
+}
+
+#new-category-name {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}

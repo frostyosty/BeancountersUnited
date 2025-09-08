@@ -98,6 +98,9 @@ const attachMenuEventListeners = () => {
 /**
  * Renders the entire menu page into the main content area.
  */
+/**
+ * Renders the entire menu page, now with owner-configurable category tabs and order.
+ */
 export function renderMenuPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -113,19 +116,16 @@ export function renderMenuPage() {
         return;
     }
 
+    // --- NEW LOGIC: Use the category selector from the settings slice ---
+    const { getMenuCategories } = useAppStore.getState().siteSettings;
+    const orderedCategories = getMenuCategories();
 
-    if (items.length === 0) {
-        mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
-        return;
-    }
+    // The selector handles the fallback. If menuCategories isn't set in the DB,
+    // it will return a sorted list of categories found in the menu items.
+    const categoriesForTabs = ['All', ...orderedCategories];
 
-
-
-    // 1. Get all unique categories from the menu data
-    const categories = ['All', ...new Set(items.map(item => item.category || 'Uncategorized'))];
-
-    // 2. Build the HTML for the tab buttons
-    const tabsHTML = categories.map(category => `
+    // Build the HTML for the tab buttons, marking the active one.
+    const tabsHTML = categoriesForTabs.map(category => `
         <button
             class="sub-tab-button ${category === activeCategory ? 'active' : ''}"
             data-category="${category}">
@@ -133,12 +133,12 @@ export function renderMenuPage() {
         </button>
     `).join('');
 
-    // 3. Filter the items to be displayed based on the active category
+    // Filter the items to be displayed based on the active category.
     const filteredItems = activeCategory === 'All'
         ? items
         : items.filter(item => (item.category || 'Uncategorized') === activeCategory);
-
-    // 4. Group the *filtered* items by category for rendering
+    
+    // Group the *filtered* items by category for rendering.
     const itemsByCategory = filteredItems.reduce((acc, item) => {
         const category = item.category || 'Uncategorized';
         if (!acc[category]) acc[category] = [];
@@ -146,16 +146,21 @@ export function renderMenuPage() {
         return acc;
     }, {});
 
-    // --- END NEW LOGIC ---
+    // Create a sorted list of categories to render based on the owner's preferred order.
+    // This ensures the sections on the page match the owner's drag-and-drop order.
+    const sortedCategoryKeys = orderedCategories.filter(cat => itemsByCategory[cat]);
 
-    const menuContentHTML = Object.entries(itemsByCategory).map(([category, categoryItems]) => `
-        <section class="menu-category">
-            <h2 class="category-title">${category}</h2>
-            <div class="menu-items-grid">
-                ${categoryItems.map(createMenuItemHTML).join('')}
-            </div>
-        </section>
-    `).join('');
+    const menuContentHTML = sortedCategoryKeys.map(category => {
+        const categoryItems = itemsByCategory[category];
+        return `
+            <section class="menu-category">
+                <h2 class="category-title">${category}</h2>
+                <div class="menu-items-grid">
+                    ${categoryItems.map(createMenuItemHTML).join('')}
+                </div>
+            </section>
+        `;
+    }).join('');
 
     // Assemble the final page HTML
     mainContent.innerHTML = `
@@ -182,14 +187,22 @@ function attachCategoryTabListeners() {
     const tabsContainer = document.querySelector('.sub-tabs-container');
     if (!tabsContainer) return;
 
+    // Use a flag to prevent attaching the same listener multiple times
+    if (tabsContainer.dataset.listenerAttached === 'true') return;
+
     tabsContainer.addEventListener('click', (event) => {
         if (event.target.matches('.sub-tab-button')) {
             const newCategory = event.target.dataset.category;
             if (newCategory !== activeCategory) {
                 activeCategory = newCategory;
-                // Re-render the entire menu page to reflect the new filter
+                // Re-render the entire menu page to reflect the new filter.
+                // Our main `renderApp` subscriber will handle this if we were using a more
+                // complex state for the active filter, but for this simple case, a direct
+                // call is fine and immediate.
                 renderMenuPage();
             }
         }
     });
+
+    tabsContainer.dataset.listenerAttached = 'true';
 }
