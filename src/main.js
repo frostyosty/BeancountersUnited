@@ -7,6 +7,11 @@ import { renderCartPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 
+// --- Add new imports at the top ---
+import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
+import * as uiUtils from './utils/uiUtils.js'; // Make sure this is imported if not already
+
+
 let isAppInitialized = false;
 
 function renderApp() {
@@ -21,14 +26,34 @@ function renderApp() {
 }
 
 function renderPageContent() {
-    const hash = window.location.hash || '#menu';
+const hash = window.location.hash || '#menu';
+    const { getUserRole } = useAppStore.getState().auth; // Get from auth namespace
+    const userRole = getUserRole();
+
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
-    switch (hash) {
-        case '#menu': renderMenuPage(); break;
-        case '#cart': renderCartPage(); break;
-        default: renderMenuPage(); break;
+    switch(hash) {
+        case '#menu':
+            renderMenuPage();
+            break;
+        case '#cart':
+            renderCartPage();
+            break;
+        // --- ADD THIS NEW ROUTE ---
+        case '#owner-dashboard':
+            if (userRole === 'owner' || userRole === 'manager') {
+                renderOwnerDashboard();
+            } else {
+                document.getElementById('main-content').innerHTML = `
+                    <div class="error-message"><h2>Access Denied</h2></div>
+                `;
+            }
+            break;
+        // --- END NEW ROUTE ---
+        default:
+            renderMenuPage();
+            break;
     }
 }
 
@@ -105,10 +130,13 @@ function setupGodModeTrigger() {
     triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 }
 
+
 function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
-    
+    console.log("--- main() started ---");
+
+    // 1. Render the static HTML shell immediately.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -121,20 +149,46 @@ function main() {
                 </nav>
             </header>
             <main id="main-content"></main>
-            <footer id="main-footer"><p>&copy; 2024</p></footer>
+            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
         `;
     }
 
-    useAppStore.subscribe(renderApp);
-    window.addEventListener('hashchange', renderPageContent);
-    setupInteractions();
+    // 2. Set up ALL your state subscribers. This is their logical home.
+    useAppStore.subscribe(renderApp); // The main "brute-force" renderer
     
+    // Subscriber to apply theme variables when they are loaded from the DB
+    useAppStore.subscribe(
+        (state) => state.siteSettings.settings.themeVariables,
+        (themeVariables) => {
+            if (themeVariables) {
+                console.log("Applying saved theme from database...", themeVariables);
+                for (const [varName, value] of Object.entries(themeVariables)) {
+                    uiUtils.updateCssVariable(varName, value);
+                }
+            }
+        }
+    );
+    // Add any other specific subscribers here...
+
+
+    // 3. Set up listeners for user interaction.
+    window.addEventListener('hashchange', renderPageContent);
+    setupNavigationAndInteractions();
+
+    // 4. Kick off initial asynchronous actions.
     useAppStore.getState().auth.listenToAuthChanges();
     useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
     
+    // 5. Initialize UI modules that need it.
     initializeImpersonationToolbar();
     setupGodModeTrigger();
+
+    // 6. Perform the first render.
     renderApp();
+    
+    console.log("--- main.js script setup finished ---");
 }
+
 
 main();

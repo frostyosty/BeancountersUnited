@@ -1,10 +1,6 @@
 // src/store/appStore.js
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-
-import { createMenuSlice } from './menuSlice.js';
-import { createAuthSlice } from './authSlice.js';
-import { createCartSlice } from './cartSlice.js';
+// ... (imports)
+import { createSiteSettingsSlice } from './siteSettingsSlice.js'; // <-- Import
 
 export const useAppStore = create(
   devtools(
@@ -12,7 +8,7 @@ export const useAppStore = create(
       menu: createMenuSlice(set, get),
       auth: createAuthSlice(set, get),
       cart: createCartSlice(set, get),
-      // Add other slices like checkout here later
+      siteSettings: createSiteSettingsSlice(set, get), // <-- Add the new slice
     }),
     { name: "RestaurantAppStore" }
   )

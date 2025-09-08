@@ -33,3 +33,12 @@ export const getUserProfile = (token) => request('/user/profile', 'GET', null, t
 // These call OUR backend, not Supabase directly.
 export const loginViaApi = (email, password) => request('/auth/login', 'POST', { email, password });
 export const signUpViaApi = (email, password) => request('/auth/signup', 'POST', { email, password });
+
+
+
+// --- Settings API Functions ---
+// Anyone can read the settings
+export const getSiteSettings = () => request('/settings', 'GET');
+
+// Only authenticated users (owners/managers) can update settings
+export const updateSiteSettings = (settingsData, token) => request('/settings', 'PUT', settingsData, token);

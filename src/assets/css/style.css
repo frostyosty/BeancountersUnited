@@ -574,3 +574,67 @@ th {
     background-color: var(--border-color);
     align-self: stretch;
 }
+
+
+
+/* src/assets/css/style.css */
+/* ... (keep all your existing styles) ... */
+
+/* --- Category Manager (Owner Dashboard) --- */
+#category-manager {
+    margin-top: 1.5rem;
+}
+
+#category-list {
+    list-style: none;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.category-list-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-list-item:last-child {
+    border-bottom: none;
+}
+
+.drag-handle {
+    cursor: grab;
+    margin-right: 1rem;
+    color: var(--secondary-color);
+    font-family: monospace; /* Makes the handle look more uniform */
+}
+
+.category-name {
+    flex-grow: 1;
+}
+
+.category-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.button-secondary.small,
+.button-danger.small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.add-category-form {
+    margin-top: 1rem;
+    display: flex;
+    gap: 10px;
+}
+
+#new-category-name {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
