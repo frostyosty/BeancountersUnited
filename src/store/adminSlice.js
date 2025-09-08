@@ -22,17 +22,20 @@ export const createAdminSlice = (set, get) => ({
         }
     },
 
-    updateUserRole: async (userId, newRole, isVerifiedBuyer) => {
-        // Optimistic update
+     updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
         const originalUsers = get().admin.users;
-        const updatedUsers = originalUsers.map(u => u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer } : u);
+        // Optimistically update the local state with the new value
+        const updatedUsers = originalUsers.map(u => 
+            u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory } : u
+        );
         set(state => ({ admin: { ...state.admin, users: updatedUsers } }));
 
         try {
             const { data: { session } } = await window.supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            await api.updateUser(userId, newRole, isVerifiedBuyer, session.access_token);
+            // Pass the new value to the API service
+            await api.updateUser(userId, newRole, isVerifiedBuyer, canSeeOrderHistory, session.access_token);
         } catch (error) {
             console.error("Failed to update user:", error);
             // Revert on failure

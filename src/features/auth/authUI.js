@@ -17,7 +17,19 @@ export function renderAuthStatus() {
         return;
     }
 
-if (isAuthenticated) {
+    if (isAuthenticated) {
+        const orderHistoryLink = profile.can_see_order_history
+            ? `<a href="#order-history" class="nav-link">Order History</a>`
+            : '';
+
+        contentHTML = `
+            <div class="user-info">
+                <span>${user.email}</span>
+                ${orderHistoryLink}
+                ${dashboardLinks}
+                <button id="logout-btn" class="button-secondary">Logout</button>
+            </div>
+        `;
         const userRole = profile?.role || 'customer';
         let dashboardLinks = '';
 
@@ -40,10 +52,11 @@ if (isAuthenticated) {
         `;
     } else {
         // This part remains the same for logged-out users
-    //     authContainer.innerHTML = `
-    //         <button id="login-signup-btn" class="button-primary">Login / Sign Up</button>
-    //     `;
-    // }
+        //     authContainer.innerHTML = `
+        //         <button id="login-signup-btn" class="button-primary">Login / Sign Up</button>
+        //     `;
+        // }
+
         authContainer.innerHTML = `
             <button id="login-btn" class="button-primary">Login</button>
             <button id="signup-btn" class="button-secondary">Sign Up</button>

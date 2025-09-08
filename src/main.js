@@ -246,25 +246,49 @@ function main() {
 
 
 
-// --- NEW HELPER FUNCTION FOR HAMBURGER ---
+// In /src/main.js
+
+// ... (keep all imports and other functions as they are)
+
+/**
+ * Sets up the hamburger menu, now with dynamic content based on God User settings.
+ */
 function setupHamburgerMenu() {
     const hamburgerBtn = document.getElementById('hamburger-btn');
     const mobileMenuPanel = document.getElementById('mobile-menu-panel');
-    const mainContent = document.getElementById('main-content'); // To close menu on content click
-
-    if (!hamburgerBtn || !mobileMenuPanel) return;
-
-    // The content of the mobile menu will be the same as our main nav for now
-    // Later, this can be made configurable by the God User
+    const mainContent = document.getElementById('main-content');
     const mobileNavContainer = document.getElementById('mobile-nav-links');
-    const desktopNav = document.querySelector('#main-header nav');
-    if (mobileNavContainer && desktopNav) {
-        // Simple clone for now. A more robust solution would build this from a config object.
-        const navLinks = desktopNav.querySelectorAll('a.nav-link');
-        navLinks.forEach(link => {
-            mobileNavContainer.appendChild(link.cloneNode(true));
-        });
-    }
+
+    if (!hamburgerBtn || !mobileMenuPanel || !mainContent || !mobileNavContainer) return;
+
+    // This function will be called to build/rebuild the menu content
+    const buildMobileMenu = () => {
+        // Get the configuration from our siteSettingsSlice
+        const { getHamburgerMenuConfig, getMenuCategories } = useAppStore.getState().siteSettings;
+        const config = getHamburgerMenuConfig();
+        
+        let navHTML = '';
+
+        if (config === 'categories') {
+            console.log("Building hamburger menu with: Menu Categories");
+            const categories = getMenuCategories();
+            // Create a link for 'All' items, plus each category
+            const allLink = `<a href="#menu" class="nav-link" data-category-filter="All">All Items</a>`;
+            navHTML = allLink + categories.map(cat => 
+                `<a href="#menu" class="nav-link" data-category-filter="${cat}">${cat}</a>`
+            ).join('');
+        } else { // Default to 'main-nav'
+            console.log("Building hamburger menu with: Main Nav Links");
+            const desktopNav = document.querySelector('#main-header nav');
+            // Clone the main nav links (Menu, Cart, etc.)
+            const navLinks = desktopNav.querySelectorAll('a.nav-link');
+            navLinks.forEach(link => {
+                navHTML += link.outerHTML;
+            });
+        }
+        
+        mobileNavContainer.innerHTML = navHTML;
+    };
 
     const toggleMenu = () => {
         hamburgerBtn.classList.toggle('open');
@@ -272,14 +296,32 @@ function setupHamburgerMenu() {
     };
 
     hamburgerBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent click from bubbling to other listeners
+        e.stopPropagation();
+        // Rebuild the menu every time it's opened to ensure it's up-to-date
+        if (!mobileMenuPanel.classList.contains('open')) {
+            buildMobileMenu();
+        }
         toggleMenu();
     });
 
-    // Close menu if a link is clicked
+    // Listener for the panel itself to handle clicks
     mobileMenuPanel.addEventListener('click', (e) => {
-        if (e.target.matches('a.nav-link')) {
-            toggleMenu();
+        const link = e.target.closest('a.nav-link');
+        if (link) {
+            const categoryFilter = link.dataset.categoryFilter;
+            if (categoryFilter) {
+                // This is a category filter link. We need to set the filter and navigate.
+                // We'll use the 'window.activeMenuCategory' variable from menuUI.js
+                window.activeMenuCategory = categoryFilter;
+                // Ensure we navigate to the menu page
+                if (window.location.hash !== '#menu') {
+                    window.location.hash = '#menu';
+                } else {
+                    // If already on the menu, just re-render it
+                    useAppStore.getState().menu.fetchMenu().then(renderMenuPage);
+                }
+            }
+            toggleMenu(); // Close menu after any link click
         }
     });
 

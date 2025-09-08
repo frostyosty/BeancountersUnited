@@ -4,7 +4,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 
 
 // This is a small piece of state local to the menu feature
-let activeCategory = 'All'; // Default to showing all categories
+activeCategory = window.activeMenuCategory || activeCategory || 'All';
 
 
 /**

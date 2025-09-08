@@ -39,8 +39,13 @@ export const signUpViaApi = (email, password) => request('/auth/signup', 'POST',
 
 
 export const listAllUsers = (token) => request('/user/manage', 'GET', null, token);
-export const updateUser = (userId, newRole, isVerifiedBuyer, token) => request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer }, token);
+export const updateUser = (userId, newRole, isVerifiedBuyer, canSeeOrderHistory, token) => {
+    return request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer, canSeeOrderHistory }, token);
+};
 
+export const addMenuItem = (itemData, token) => request('/menu', 'POST', itemData, token);
+export const updateMenuItem = (itemId, itemData, token) => request(`/menu?id=${itemId}`, 'PUT', itemData, token);
+export const deleteMenuItem = (itemId, token) => request(`/menu?id=${itemId}`, 'DELETE', null, token);
 
 // --- Settings API Functions ---
 // Anyone can read the settings

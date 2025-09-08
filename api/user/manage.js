@@ -1,7 +1,6 @@
-// /api/users/manage.js
 import { supabaseAdmin, getUserFromRequest } from '../_db.js';
+
 export default async function handler(req, res) {
-    // --- Security Check: This entire endpoint is for Managers only ---
     const { profile } = await getUserFromRequest(req);
     if (profile?.role !== 'manager') {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to manage users.' });
@@ -9,26 +8,31 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
         try {
+            // Include the new 'can_see_order_history' column in the select
             const { data, error } = await supabaseAdmin
-                .from('users') // Assumes a view on auth.users
-                .select(`id, email, created_at, last_sign_in_at, profiles ( role, full_name, is_verified_buyer )`);
+                .from('profiles')
+                .select(`id, email, role, full_name, is_verified_buyer, can_see_order_history, users(created_at, last_sign_in_at)`);
+            
             if (error) throw error;
             
-            const formattedData = data.map(u => ({
-                ...u,
-                ...(Array.isArray(u.profiles) && u.profiles.length > 0 ? u.profiles[0] : { role: 'customer', full_name: '', is_verified_buyer: false })
+            // Flatten the data
+            const formattedData = data.map(p => ({
+                id: p.id, email: p.email, role: p.role, full_name: p.full_name,
+                is_verified_buyer: p.is_verified_buyer,
+                can_see_order_history: p.can_see_order_history, // Add the new field
+                created_at: p.users.created_at, last_sign_in_at: p.users.last_sign_in_at
             }));
+            
             return res.status(200).json(formattedData);
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
     }
 
-
     if (req.method === 'PUT') {
-        // --- Update a user's role ---
         try {
-            const { userId, newRole, isVerifiedBuyer } = req.body;
+            // Add the new field to the update logic
+            const { userId, newRole, isVerifiedBuyer, canSeeOrderHistory } = req.body;
             const validRoles = ['customer', 'owner', 'manager'];
 
             if (!userId || !validRoles.includes(newRole)) {
@@ -44,9 +48,13 @@ export default async function handler(req, res) {
                  }
             }
 
-            const { data, error } = await supabaseAdmin
+             const { data, error } = await supabaseAdmin
                 .from('profiles')
-                .update({ role: newRole, is_verified_buyer: isVerifiedBuyer })
+                .update({ 
+                    role: newRole, 
+                    is_verified_buyer: isVerifiedBuyer,
+                    can_see_order_history: canSeeOrderHistory // Add the new field to the update
+                })
                 .eq('id', userId)
                 .select()
                 .single();
@@ -55,7 +63,6 @@ export default async function handler(req, res) {
             
             return res.status(200).json(data);
         } catch (error) {
-            console.error("Error updating user role:", error);
             return res.status(500).json({ error: error.message });
         }
     }

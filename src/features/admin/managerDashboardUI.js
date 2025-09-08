@@ -23,31 +23,45 @@ function showEditUserModal(user) {
                     Verified Buyer Status
                 </label>
             </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="can-see-order-history" name="canSeeOrderHistory" ${user.can_see_order_history ? 'checked' : ''}>
+                    Enable "Order History" Tab
+                </label>
+            </div>
             <div class="form-actions">
                 <button type="submit" class="button-primary">Save Changes</button>
             </div>
         </form>
     `;
-    uiUtils.showModal(modalContentHTML);
+uiUtils.showModal(modalContentHTML);
+
     document.getElementById('edit-user-form').addEventListener('submit', (event) => {
         event.preventDefault();
         const newRole = document.getElementById('user-role').value;
         const isVerifiedBuyer = document.getElementById('is-verified-buyer').checked;
-        useAppStore.getState().admin.updateUserRole(user.id, newRole, isVerifiedBuyer);
+        const canSeeOrderHistory = document.getElementById('can-see-order-history').checked; // <-- Get new value
+        
+        // Call the updated store action
+        useAppStore.getState().admin.updateUserRole(user.id, newRole, isVerifiedBuyer, canSeeOrderHistory);
         uiUtils.closeModal();
     });
 }
 
+
 async function handleGlobalSettingsSave(event) {
     event.preventDefault();
-    const websiteName = document.getElementById('website-name').value;
-    if (!websiteName) return;
+    const form = event.target;
+    const websiteName = form.websiteName.value;
+    const hamburgerMenuContent = form.hamburgerMenuContent.value;
+
     try {
-        await api.updateSiteSettings({ websiteName });
-        uiUtils.updateSiteTitles(websiteName);
-        uiUtils.showToast('Website name updated!', 'success');
+        // We can now save multiple settings at once
+        await api.updateSiteSettings({ websiteName, hamburgerMenuContent });
+        uiUtils.updateSiteTitles(websiteName); // Still update title live
+        uiUtils.showToast('Global settings updated!', 'success');
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        alert(`Error saving settings: ${error.message}`);
     }
 }
 
@@ -117,12 +131,13 @@ export async function renderManagerDashboard() {
     }
 
     // --- Prepare HTML chunks ---
-    const userTableRows = users.map(user => `
+const userTableRows = users.map(user => `
         <tr data-user-id="${user.id}">
             <td>${user.email}</td>
-            <td>${user.full_name || 'N/A'}</td>
+                        <td>${user.full_name || 'N/A'}</td>
             <td><span class="role-badge role-${user.role}">${user.role}</span></td>
             <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
+            <td>${user.can_see_order_history ? 'Yes' : 'No'}</td> <!-- NEW COLUMN -->
             <td>${new Date(user.created_at).toLocaleDateString()}</td>
             <td><button class="button-secondary small edit-user-btn">Edit</button></td>
         </tr>
@@ -140,7 +155,7 @@ export async function renderManagerDashboard() {
                 <div class="table-wrapper">
                     <table>
                         <thead>
-                            <tr><th>Email</th><th>Full Name</th><th>Role</th><th>Verified Buyer</th><th>Joined</th><th>Actions</th></tr>
+                            <tr><th>Email</th><th>Full Name</th><th>Role</th><th>Verified Buyer</th><th>Can Re-order?</th><th>Joined</th><th>Actions</th></tr>
                         </thead>
                         <tbody>${isLoadingUsers ? `<tr><td colspan="6">Loading...</td></tr>` : userTableRows}</tbody>
                     </table>
@@ -156,6 +171,21 @@ export async function renderManagerDashboard() {
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="button-primary">Save Site Name</button>
+                    </div>
+                </form><div class="form-group">
+                        <label>Hamburger Menu Content</label>
+                        <div>
+                            <input type="radio" id="hamburger-main-nav" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig === 'main-nav' ? 'checked' : ''}>
+                            <label for="hamburger-main-nav">Show Main Nav Links (Menu, Cart)</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="hamburger-categories" name="hamburgerMenuContent" value="categories" ${hamburgerConfig === 'categories' ? 'checked' : ''}>
+                            <label for="hamburger-categories">Show Menu Categories (for filtering)</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="button-primary">Save Site Settings</button>
                     </div>
                 </form>
             </section>

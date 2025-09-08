@@ -51,5 +51,13 @@ export const createSiteSettingsSlice = (set, get) => ({
         // Otherwise, generate a unique, sorted list from the menu items themselves.
         const dynamicCategories = [...new Set(menuItems.map(item => item.category || 'Uncategorized'))];
         return dynamicCategories.sort();
+    },
+    /**
+     * Gets the configuration for the hamburger menu content.
+     * Defaults to 'main-nav' if not set.
+     * @returns {'main-nav' | 'categories'}
+     */
+    getHamburgerMenuConfig: () => {
+        return get().siteSettings.settings.hamburgerMenuContent || 'main-nav';
     }
 });
