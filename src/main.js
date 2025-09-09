@@ -19,27 +19,28 @@ let isAppInitialized = false;
 
 function renderApp() {
     console.log("--- renderApp() called ---");
+
+    // 1. Render persistent UI components that are always visible.
     renderAuthStatus();
 
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        } catch (e) { cartCountSpan.textContent = '0'; }
+        } catch (e) {
+            cartCountSpan.textContent = '0';
+        }
     }
-}
 
-function renderPageContent() {
+    // 2. Act as a router to render the main content area.
     const hash = window.location.hash || '#menu';
-    document.body.className = `page-${hash.substring(1) || 'menu'}`;
-    const { getUserRole } = useAppStore.getState().auth;
-    const userRole = getUserRole();
-
-    // Re-style the active nav link every time the route changes
+    
+    // Style the active nav link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
 
+    // Render the correct page based on the hash
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#cart': renderCartPage(); break;
@@ -63,6 +64,7 @@ function renderPageContent() {
         default: renderMenuPage(); break;
     }
 }
+
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
@@ -139,7 +141,7 @@ function setupHamburgerMenu() {
         // Get the configuration from our siteSettingsSlice
         const { getHamburgerMenuConfig, getMenuCategories } = useAppStore.getState().siteSettings;
         const config = getHamburgerMenuConfig();
-        
+
         let navHTML = '';
 
         if (config === 'categories') {
@@ -147,7 +149,7 @@ function setupHamburgerMenu() {
             const categories = getMenuCategories();
             // Create a link for 'All' items, plus each category
             const allLink = `<a href="#menu" class="nav-link" data-category-filter="All">All Items</a>`;
-            navHTML = allLink + categories.map(cat => 
+            navHTML = allLink + categories.map(cat =>
                 `<a href="#menu" class="nav-link" data-category-filter="${cat}">${cat}</a>`
             ).join('');
         } else { // Default to 'main-nav'
@@ -159,7 +161,7 @@ function setupHamburgerMenu() {
                 navHTML += link.outerHTML;
             });
         }
-        
+
         mobileNavContainer.innerHTML = navHTML;
     };
 
@@ -178,21 +180,21 @@ function setupHamburgerMenu() {
     });
 
     // Listener for the panel itself to handle clicks
-mobileMenuPanel.addEventListener('click', (e) => {
-    const link = e.target.closest('a.nav-link');
-    if (link) {
-        const categoryFilter = link.dataset.categoryFilter;
-        if (categoryFilter) {
-            // Call the action from the uiSlice
-            useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
-            
-            if (window.location.hash !== '#menu') {
-                window.location.hash = '#menu';
+    mobileMenuPanel.addEventListener('click', (e) => {
+        const link = e.target.closest('a.nav-link');
+        if (link) {
+            const categoryFilter = link.dataset.categoryFilter;
+            if (categoryFilter) {
+                // Call the action from the uiSlice
+                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
+
+                if (window.location.hash !== '#menu') {
+                    window.location.hash = '#menu';
+                }
             }
+            toggleMenu();
         }
-        toggleMenu();
-    }
-});
+    });
     // Close menu if user clicks on the main content area
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) {
@@ -230,14 +232,13 @@ async function loadAndApplySiteSettings() {
 }
 
 
-
-// In src/main.js
 async function main() {
+    // Initialization guard to prevent running twice
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");
 
-    // 1. Render static shell
+    // 1. Render the static HTML shell immediately.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -247,32 +248,46 @@ async function main() {
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                     <div id="auth-status-container"></div>
+                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </a>
+                    <button id="hamburger-btn" class="hamburger-button">
+                        <span></span><span></span><span></span>
+                    </button>
                 </nav>
             </header>
             <main id="main-content"></main>
             <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+            <div id="mobile-menu-panel" class="mobile-menu-panel">
+                <nav id="mobile-nav-links"></nav>
+            </div>
         `;
     }
 
-    // 2. Set up a SINGLE subscriber that will handle ALL updates.
+    // 2. Set up a SINGLE subscriber to handle ALL UI updates.
+    // This is the core of the reactive system.
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderPageContent);
+    window.addEventListener('hashchange', renderApp); // Re-render on navigation
     setupNavigationAndInteractions();
 
-    // 4. Perform the FIRST render to show initial loading states.
-    renderApp();
-    
-    // 5. Kick off all initial asynchronous actions.
-    // We "fire and forget". The subscriber will do the rest.
+    // 4. Kick off initial asynchronous actions.
+    // These run in the background. The subscriber will update the UI when they complete.
     useAppStore.getState().auth.listenToAuthChanges();
+    useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
+    
+    // 5. Initialize UI modules that need to attach listeners.
     initializeImpersonationToolbar();
     setupGodModeTrigger();
-    await loadAndApplySiteSettings(); // Wait for settings for branding
-    useAppStore.getState().menu.fetchMenu(); // Fire off menu fetch
+    setupHamburgerMenu();
 
+    // 6. Perform the very first render.
+    // This will show the initial "Loading..." states correctly.
+    renderApp();
+    
     console.log("--- main() finished ---");
 }
-
-main();
