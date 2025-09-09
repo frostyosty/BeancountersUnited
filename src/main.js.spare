@@ -17,6 +17,7 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 let isAppInitialized = false;
 
 function renderApp() {
+    console.log("--- 999. Starting renderApp ---");
     renderAuthStatus();
     renderPageContent();
     const cartCountSpan = document.getElementById('cart-count');
@@ -261,36 +262,27 @@ async function main() {
     }
 
     // 2. Set up subscribers that will react to state changes later
-    useAppStore.subscribe(renderApp);
-    useAppStore.subscribe(
-        (state) => state.siteSettings.settings.themeVariables,
-        (themeVariables) => {
-            if (themeVariables) {
-                console.log("Applying saved theme from database...", themeVariables);
-                for (const [varName, value] of Object.entries(themeVariables)) {
-                    uiUtils.updateCssVariable(varName, value);
-                }
-            }
-        }
-    );
+ // This subscriber ONLY listens for auth changes and updates the header.
+    useAppStore.subscribe(state => state.auth, renderAuthStatus);
 
-    useAppStore.subscribe(
-        (state) => state.siteSettings.settings.restaurantPhoneNumber,
-        (phoneNumber) => {
-            const phoneLink = document.getElementById('phone-icon-link');
-            if (phoneLink) {
-                if (phoneNumber) {
-                    // Set the correct 'tel:' link and make the icon visible
-                    phoneLink.href = `tel:${phoneNumber}`;
-                    phoneLink.style.display = 'flex';
-                } else {
-                    // Hide the icon if no phone number is set
-                    phoneLink.style.display = 'none';
-                }
-            }
-        },
-        { fireImmediately: true } // Run once on startup
-    );
+    // This subscriber ONLY listens for menu changes and updates the main content.
+    useAppStore.subscribe(state => state.menu, () => {
+        if (window.location.hash === '#menu' || window.location.hash === '') {
+            renderMenuPage();
+        }
+    });
+
+    // This subscriber ONLY listens for cart changes.
+    useAppStore.subscribe(state => state.cart.items, () => {
+        const cartCountSpan = document.getElementById('cart-count');
+        if (cartCountSpan) {
+            cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+        }
+        if (window.location.hash === '#cart') {
+            renderCartPage();
+        }
+    });
+
     // 3. Set up listeners for user interaction
     window.addEventListener('hashchange', renderPageContent);
     setupNavigationAndInteractions();

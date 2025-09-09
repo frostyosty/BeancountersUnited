@@ -16,10 +16,11 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 // --- State and Render Logic ---
 let isAppInitialized = false;
 
+
 function renderApp() {
-    console.log("--- 999. Starting renderApp ---");
+    console.log("--- renderApp() called ---");
     renderAuthStatus();
-    renderPageContent();
+
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
@@ -34,6 +35,7 @@ function renderPageContent() {
     const { getUserRole } = useAppStore.getState().auth;
     const userRole = getUserRole();
 
+    // Re-style the active nav link every time the route changes
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
@@ -239,7 +241,7 @@ async function main() {
     isAppInitialized = true;
     console.log("--- main() started ---");
 
-    // 1. Render the static HTML shell
+    // 1. Render the static HTML shell.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -249,65 +251,42 @@ async function main() {
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                     <div id="auth-status-container"></div>
-                                        <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                        </svg>
-                    </a>
+                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">...</a>
                 </nav>
             </header>
             <main id="main-content"></main>
             <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+            <div id="mobile-menu-panel" class="mobile-menu-panel">
+                <nav id="mobile-nav-links"></nav>
+            </div>
         `;
     }
 
-    // 2. Set up subscribers that will react to state changes later
-    useAppStore.subscribe(renderApp);// --- 2. SET UP TARGETED SUBSCRIBERS ---
-    // This subscriber ONLY listens for auth changes and updates the header.
-    useAppStore.subscribe(state => state.auth, renderAuthStatus);
+    // 2. Set up a SINGLE subscriber that will handle ALL future updates.
+    useAppStore.subscribe(renderApp);
 
-    // This subscriber ONLY listens for menu changes and updates the main content.
-    useAppStore.subscribe(state => state.menu, () => {
-        if (window.location.hash === '#menu' || window.location.hash === '') {
-            renderMenuPage();
-        }
-    });
-
-    // This subscriber ONLY listens for cart changes.
-    useAppStore.subscribe(state => state.cart.items, () => {
-        const cartCountSpan = document.getElementById('cart-count');
-        if (cartCountSpan) {
-            cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        }
-        if (window.location.hash === '#cart') {
-            renderCartPage();
-        }
-    });
-
-    // 3. Set up listeners for user interaction
+    // 3. Set up listeners for user interaction.
     window.addEventListener('hashchange', renderPageContent);
     setupNavigationAndInteractions();
 
-    // 4. Initialize background services
-    useAppStore.getState().auth.listenToAuthChanges(); // This just starts the listener, it's ok
+    // 4. Initialize background services and UI modules.
+    useAppStore.getState().auth.listenToAuthChanges();
     initializeImpersonationToolbar();
     setupGodModeTrigger();
     setupHamburgerMenu();
 
-    // 5. Perform the explicit, awaited data fetching
-    console.log("main: Awaiting loadAndApplySiteSettings()...");
-    await loadAndApplySiteSettings();
-    console.log("main: FINISHED loadAndApplySiteSettings().");
+    // 5. Perform the explicit, awaited data fetching for the INITIAL load.
+    console.log("main: Awaiting initial data fetches...");
+    await Promise.all([
+        loadAndApplySiteSettings(),
+        useAppStore.getState().menu.fetchMenu()
+    ]);
+    console.log("main: Initial data fetches complete.");
 
-    console.log("main: Awaiting menu.fetchMenu()...");
-    await useAppStore.getState().menu.fetchMenu();
-    console.log("main: FINISHED menu.fetchMenu().");
-
-    // 6. Now that all critical data is loaded, perform the first full render
+    // 6. Now that all critical data is loaded, perform the first full render.
     renderApp();
     
     console.log("--- main() finished ---");
 }
-
 // Start the application
 main();
