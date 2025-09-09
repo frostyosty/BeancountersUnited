@@ -1,36 +1,19 @@
-
 // src/main.js
-console.log("--- [4] main.js: START ---");
-
 import './assets/css/style.css';
-console.log("--- [4.1] main.js: Imported CSS ---");
 import { useAppStore } from './store/appStore.js';
-console.log("--- [4.2] main.js: Imported appStore ---");
+import * as api from './services/apiService.js';
+import * as uiUtils from './utils/uiUtils.js';
+
+// --- Import ALL REAL feature modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
-console.log("--- [4.3] main.js: Imported menuUI ---");
-
-
-// --- DEBUGGING: All UI imports now point to a single, safe dummy file ---
-// import {
-//     renderMenuPage,
-//     renderCartPage,
-//     renderAuthStatus,
-//     showLoginSignupModal,
-//     renderOwnerDashboard,
-//     renderManagerDashboard,
-//     initializeImpersonationToolbar
-// } from './_DUMMY_UI.js';
-
-import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
-import { renderCartPage } from './features/cart/cartUI.js';
+import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
-import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
-import { renderManagerDashboard } from './features/admin/managerDashboardUI.js'; // <-- Import
-
 import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
-import * as uiUtils from './utils/uiUtils.js'; // Make sure this is imported if not already
+import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
+import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
+import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
-console.log("--- [4] main.js: All modules imported. ---");
+// --- State and Render Logic ---
 let isAppInitialized = false;
 
 function renderApp() {
@@ -46,80 +29,48 @@ function renderApp() {
 
 function renderPageContent() {
     const hash = window.location.hash || '#menu';
-
-    // --- NEW: Add a class to the body based on the current page ---
-    // This allows for page-specific CSS rules.
-    document.body.classList.toggle('on-checkout-page', hash === '#checkout');
-    // --- End New ---
-
-    const { getUserRole } = useAppStore.getState().auth; // Get from auth namespace
+    document.body.className = `page-${hash.substring(1) || 'menu'}`;
+    const { getUserRole } = useAppStore.getState().auth;
     const userRole = getUserRole();
 
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
+
     switch (hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-        case '#cart':
-            renderCartPage();
-            break;
-case '#order-history':
-            // This is a protected route, only for logged-in users
+        case '#menu': renderMenuPage(); break;
+        case '#cart': renderCartPage(); break;
+        case '#checkout': renderCheckoutPage(); break;
+        case '#order-confirmation': renderOrderConfirmationPage(); break;
+        case '#order-history':
             if (useAppStore.getState().auth.isAuthenticated) {
                 renderOrderHistoryPage();
-            } else {
-                // If not logged in, redirect to the menu
-                window.location.hash = '#menu';
-            }
+            } else { window.location.hash = '#menu'; }
             break;
-            
-        // --- ADD THIS NEW ROUTE ---
         case '#owner-dashboard':
             if (userRole === 'owner' || userRole === 'manager') {
                 renderOwnerDashboard();
-            } else {
-                document.getElementById('main-content').innerHTML = `
-                    <div class="error-message"><h2>Access Denied</h2></div>
-                `;
-            }
+            } else { window.location.hash = '#menu'; }
             break;
         case '#manager-dashboard':
-            // Only the 'manager' can access
             if (userRole === 'manager') {
                 renderManagerDashboard();
-            } else {
-                mainContent.innerHTML = `<div class="error-message"><h2>Access Denied</h2></div>`;
-            }
+            } else { window.location.hash = '#menu'; }
             break;
-
-        default:
-            renderMenuPage();
-            break;
+        default: renderMenuPage(); break;
     }
 }
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
-        // --- THIS IS THE FIX ---
-        // We now check for the correct button IDs from authUI.js
-        if (e.target.matches('#login-btn') || e.target.matches('#signup-btn')) {
-            showLoginSignupModal();
-            return;
-        }
-        if (e.target.matches('#logout-btn')) {
-            useAppStore.getState().auth.logout();
-            return;
-        }
-        // --- END FIX ---
-
         const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
             e.preventDefault();
             const newHash = navLink.getAttribute('href');
             if (window.location.hash !== newHash) window.location.hash = newHash;
         }
+        if (e.target.matches('#login-signup-btn')) { showLoginSignupModal(); }
+        if (e.target.matches('#logout-btn')) { useAppStore.getState().auth.logout(); }
     });
 }
 
@@ -172,100 +123,6 @@ function setupGodModeTrigger() {
     triggerElement.addEventListener('touchend', () => clearTimeout(longPressTimer));
     triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 }
-
-
-/**
- * The main application initialization function.
- */
-function main() {
-    console.log("--- [5] main.js: main() CALLED ---");
-    if (isAppInitialized) return;
-    isAppInitialized = true;
-    console.log("--- main() started ---");
-
-    const appElement = document.getElementById('app');
-    if (appElement) {
-        // --- UPDATED SHELL WITH PHONE ICON PLACEHOLDER ---
-        appElement.innerHTML = `
-            <header id="main-header">
-                <h1>Mealmates</h1>
-                <nav>
-                    <a href="#menu" class="nav-link">Menu</a>
-                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                    <div id="auth-status-container"></div>
-                    <!-- This link will be hidden by default and made visible by JS -->
-                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                        </svg>
-                    </a>
-                </nav>
-            </header>
-            <main id="main-content"></main>
-            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
-        `;
-    }
-
-
-    // 2. Set up ALL your state subscribers. This is their logical home.
-    useAppStore.subscribe(renderApp); // The main "brute-force" renderer
-
-    // Subscriber to apply theme variables when they are loaded from the DB
-    useAppStore.subscribe(
-        (state) => state.siteSettings.settings.themeVariables,
-        (themeVariables) => {
-            if (themeVariables) {
-                console.log("Applying saved theme from database...", themeVariables);
-                for (const [varName, value] of Object.entries(themeVariables)) {
-                    uiUtils.updateCssVariable(varName, value);
-                }
-            }
-        }
-    );
-
-    useAppStore.subscribe(
-        (state) => state.siteSettings.settings.restaurantPhoneNumber,
-        (phoneNumber) => {
-            const phoneLink = document.getElementById('phone-icon-link');
-            if (phoneLink) {
-                if (phoneNumber) {
-                    // Set the correct 'tel:' link and make the icon visible
-                    phoneLink.href = `tel:${phoneNumber}`;
-                    phoneLink.style.display = 'flex';
-                } else {
-                    // Hide the icon if no phone number is set
-                    phoneLink.style.display = 'none';
-                }
-            }
-        },
-        { fireImmediately: true } // Run once on startup
-    );
-
-    // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderPageContent);
-    setupNavigationAndInteractions();
-
-    // Kick off initial asynchronous actions
-    useAppStore.getState().auth.listenToAuthChanges();
-    useAppStore.getState().menu.fetchMenu();
-    useAppStore.getState().siteSettings.fetchSiteSettings();
-
-    initializeImpersonationToolbar();
-    setupGodModeTrigger();
-
-    // --- NEW: Attach listener for the hamburger menu ---
-    setupHamburgerMenu();
-
-    // Perform the very first render
-    renderApp();
-
-    console.log("--- main.js script setup finished ---");
-}
-
-
-/**
- * Sets up the hamburger menu, now with dynamic content based on God User settings.
- */
 function setupHamburgerMenu() {
     const hamburgerBtn = document.getElementById('hamburger-btn');
     const mobileMenuPanel = document.getElementById('mobile-menu-panel');
@@ -344,6 +201,119 @@ function setupHamburgerMenu() {
             toggleMenu();
         }
     });
+}
+/**
+ * Fetches global settings from the API and applies them to the UI.
+ * This includes the website name and any custom theme variables.
+ */
+async function loadAndApplySiteSettings() {
+    console.log("main.js: Fetching and applying site settings...");
+    try {
+        // This function is in apiService.js and calls GET /api/settings
+        const settings = await api.getSiteSettings();
+
+        if (settings) {
+            // Apply the Website Name
+            if (settings.websiteName) {
+                uiUtils.updateSiteTitles(settings.websiteName);
+            }
+
+            // Apply custom theme colors (CSS Variables)
+            if (settings.themeVariables && typeof settings.themeVariables === 'object') {
+                console.log("Applying saved theme from database:", settings.themeVariables);
+                for (const [varName, value] of Object.entries(settings.themeVariables)) {
+                    uiUtils.updateCssVariable(varName, value);
+                }
+            }
+
+            // Apply the phone number for the click-to-call icon
+            // This is handled by a separate subscriber, but we could also do it here.
+            // For now, we'll let the subscriber handle it to keep this focused.
+        }
+    } catch (error) {
+        console.error("Failed to load or apply site settings:", error);
+        // If settings fail to load, the app will just use the default CSS values.
+    }
+}
+
+
+// --- Main Application Initialization ---
+async function main() {
+    if (isAppInitialized) return;
+    isAppInitialized = true;
+
+    const appElement = document.getElementById('app');
+    if (appElement) {
+        appElement.innerHTML = `
+            <header id="main-header">
+                <h1>Mealmates</h1>
+                <nav>
+                    <a href="#menu" class="nav-link">Menu</a>
+                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
+                    <div id="auth-status-container"></div>
+                    <!-- This link will be hidden by default and made visible by JS -->
+                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </a>
+                </nav>
+            </header>
+            <main id="main-content"></main>
+            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+        `;
+    }
+
+    // Set up subscribers
+    useAppStore.subscribe(renderApp);
+    useAppStore.subscribe(
+        (state) => state.siteSettings.settings.themeVariables,
+        (themeVariables) => {
+            if (themeVariables) {
+                console.log("Applying saved theme from database...", themeVariables);
+                for (const [varName, value] of Object.entries(themeVariables)) {
+                    uiUtils.updateCssVariable(varName, value);
+                }
+            }
+        }
+    );
+
+    useAppStore.subscribe(
+        (state) => state.siteSettings.settings.restaurantPhoneNumber,
+        (phoneNumber) => {
+            const phoneLink = document.getElementById('phone-icon-link');
+            if (phoneLink) {
+                if (phoneNumber) {
+                    // Set the correct 'tel:' link and make the icon visible
+                    phoneLink.href = `tel:${phoneNumber}`;
+                    phoneLink.style.display = 'flex';
+                } else {
+                    // Hide the icon if no phone number is set
+                    phoneLink.style.display = 'none';
+                }
+            }
+        },
+        { fireImmediately: true } // Run once on startup
+    );
+
+    // Set up listeners
+    window.addEventListener('hashchange', renderPageContent);
+    setupNavigationAndInteractions();
+
+    // Kick off initial actions
+    useAppStore.getState().auth.listenToAuthChanges();
+    useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
+    
+    // Initialize UI modules
+    initializeImpersonationToolbar();
+    setupGodModeTrigger();
+    setupHamburgerMenu();
+// Call this function here
+    await loadAndApplySiteSettings(); 
+
+    // Perform the first render
+    renderApp();
 }
 
 main();
