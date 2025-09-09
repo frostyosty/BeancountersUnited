@@ -4,8 +4,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 
 
 // This is a small piece of state local to the menu feature
-activeCategory = window.activeMenuCategory || activeCategory || 'All';
-
+let activeCategory = 'All';
 
 /**
  * Generates the HTML for a single menu item card.
@@ -102,6 +101,7 @@ const attachMenuEventListeners = () => {
  * Renders the entire menu page, now with owner-configurable category tabs and order.
  */
 export function renderMenuPage() {
+    activeCategory = window.activeMenuCategory || activeCategory; // Safely update the variable here
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
@@ -191,17 +191,12 @@ function attachCategoryTabListeners() {
     if (tabsContainer.dataset.listenerAttached === 'true') return;
 
     tabsContainer.addEventListener('click', (event) => {
-        if (event.target.matches('.sub-tab-button')) {
-            const newCategory = event.target.dataset.category;
-            if (newCategory !== activeCategory) {
-                activeCategory = newCategory;
-                // Re-render the entire menu page to reflect the new filter.
-                // Our main `renderApp` subscriber will handle this if we were using a more
-                // complex state for the active filter, but for this simple case, a direct
-                // call is fine and immediate.
-                renderMenuPage();
-            }
-        }
+    if (event.target.matches('.sub-tab-button')) {
+        const newCategory = event.target.dataset.category;
+        activeCategory = newCategory; // Safely update the variable here
+        window.activeMenuCategory = newCategory;
+        renderMenuPage();
+    }
     });
 
     tabsContainer.dataset.listenerAttached = 'true';
