@@ -236,12 +236,13 @@ async function loadAndApplySiteSettings() {
 
 
 
+// In src/main.js
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");
 
-    // 1. Render the static HTML shell.
+    // 1. Render static shell
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -251,42 +252,34 @@ async function main() {
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                     <div id="auth-status-container"></div>
-                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">...</a>
                 </nav>
             </header>
             <main id="main-content"></main>
             <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
-            <div id="mobile-menu-panel" class="mobile-menu-panel">
-                <nav id="mobile-nav-links"></nav>
-            </div>
         `;
     }
 
-    // 2. Set up a SINGLE subscriber that will handle ALL future updates.
+    // 2. Set up a SINGLE subscriber that will handle ALL updates.
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
     window.addEventListener('hashchange', renderPageContent);
     setupNavigationAndInteractions();
 
-    // 4. Initialize background services and UI modules.
+    // 4. Perform the FIRST render to show initial loading states.
+    renderApp();
+    
+    // 5. Kick off all initial asynchronous actions.
+    // We "fire and forget". The subscriber will do the rest.
     useAppStore.getState().auth.listenToAuthChanges();
     initializeImpersonationToolbar();
     setupGodModeTrigger();
-    setupHamburgerMenu();
+    await loadAndApplySiteSettings(); // Wait for settings for branding
+    useAppStore.getState().menu.fetchMenu(); // Fire off menu fetch
 
-    // 5. Perform the explicit, awaited data fetching for the INITIAL load.
-    console.log("main: Awaiting initial data fetches...");
-    await Promise.all([
-        loadAndApplySiteSettings(),
-        useAppStore.getState().menu.fetchMenu()
-    ]);
-    console.log("main: Initial data fetches complete.");
-
-    // 6. Now that all critical data is loaded, perform the first full render.
-    renderApp();
-    
     console.log("--- main() finished ---");
 }
+
+main();
 // Start the application
 main();
