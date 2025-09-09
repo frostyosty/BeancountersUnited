@@ -5,14 +5,14 @@ console.log("--- [4] main.js: START ---");
 import './assets/css/style.css';
 console.log("--- [4.1] main.js: Imported CSS ---");
 
-import * as uiUtils from './utils/uiUtils.js';
+
 import { renderMenuPage } from './features/menu/menuUI.js'; // Add the next import
 
-// import { useAppStore } from './store/appStore.js';
-// console.log("--- [4.2] main.js: Imported appStore ---");
+import { useAppStore } from './store/appStore.js';
+console.log("--- [4.2] main.js: Imported appStore ---");
 
-// import { renderMenuPage } from './features/menu/menuUI.js';
-// console.log("--- [4.3] main.js: Imported menuUI ---");
+import { renderMenuPage } from './features/menu/menuUI.js';
+console.log("--- [4.3] main.js: Imported menuUI ---");
 
 
 // --- DEBUGGING: All UI imports now point to a single, safe dummy file ---
