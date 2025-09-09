@@ -10,9 +10,17 @@ console.log("--- [4.2] main.js: Imported appStore ---");
 import { renderMenuPage } from './features/menu/menuUI.js';
 console.log("--- [4.3] main.js: Imported menuUI ---");
 
-// We have temporarily REMOVED all other UI imports.
 
-
+// --- DEBUGGING: All UI imports now point to a single, safe dummy file ---
+import {
+    renderMenuPage,
+    renderCartPage,
+    renderAuthStatus,
+    showLoginSignupModal,
+    renderOwnerDashboard,
+    renderManagerDashboard,
+    initializeImpersonationToolbar
+} from './_DUMMY_UI.js';
 
 // import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
 // import { renderCartPage } from './features/cart/cartUI.js';
