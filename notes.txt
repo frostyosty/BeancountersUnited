@@ -6,7 +6,7 @@ when production:
 make sure to turn this off
 make sure to put on confirm email in supabase
 
-when offering feedback, please bear in mind the following types of errors you might encounter as an AI:
+when offering feedback, please bear in mind the following types of shortcomings you might encounter as an AI:
 
 1. You might be out of sync with the latest iteration of a file or have your wires crossed etc.
 2. You might have assumed a function was made that was not.
@@ -16,7 +16,8 @@ You have an unfortunate tendency to forget scoping specificities.
 
 Please be aware of these shortcomings and consider them before offering drastic measures.
 
-
+You also rarely ask for files to analyse as your not programmed desire more information unless absolutely necessary.
+If you would like to see a file, ask.
 
 
 
