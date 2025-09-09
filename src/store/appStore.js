@@ -12,6 +12,7 @@ import { createSiteSettingsSlice } from './siteSettingsSlice.js';
 import { createCheckoutSlice } from './checkoutSlice.js';
 import { createAdminSlice } from './adminSlice.js';
 import { createOrderHistorySlice } from './orderHistorySlice.js'; // <-- Import
+import { createUiSlice } from './uiSlice.js'; // The last one we added
 
 
 
