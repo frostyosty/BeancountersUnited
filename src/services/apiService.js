@@ -1,6 +1,7 @@
 // src/services/apiService.js
 console.log("--- [2] apiService.js: START ---");
 async function request(endpoint, method = 'GET', body = null, token = null) {
+    console.log(`--- apiService.request CALLED for endpoint: ${endpoint} ---`);
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -10,15 +11,21 @@ async function request(endpoint, method = 'GET', body = null, token = null) {
         config.body = JSON.stringify(body);
     }
     try {
+        console.log(`apiService: Sending fetch request to /api${endpoint}`);
         const response = await fetch(`/api${endpoint}`, config);
+        console.log(`apiService: Received response for ${endpoint}. Status: ${response.status}`);
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: response.statusText }));
             throw new Error(errorData.message || `API request failed with status ${response.status}`);
         }
-        if (response.status === 204) return null;
-        return await response.json();
+        
+        const data = await response.json();
+        console.log(`apiService: Successfully parsed JSON for ${endpoint}.`);
+        return data;
+
     } catch (error) {
-        console.error(`API Error for ${method} ${endpoint}:`, error);
+        console.error(`--- apiService.request FAILED for ${endpoint} ---`, error);
         throw error;
     }
 }

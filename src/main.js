@@ -207,32 +207,27 @@ function setupHamburgerMenu() {
  * This includes the website name and any custom theme variables.
  */
 async function loadAndApplySiteSettings() {
-    console.log("main.js: Fetching and applying site settings...");
+    console.log("--- 1. Starting loadAndApplySiteSettings ---");
     try {
-        // This function is in apiService.js and calls GET /api/settings
+        console.log("--- 2. Calling api.getSiteSettings() ---");
         const settings = await api.getSiteSettings();
+        console.log("--- 3. api.getSiteSettings() FINISHED. Received:", settings);
 
         if (settings) {
-            // Apply the Website Name
             if (settings.websiteName) {
+                console.log("--- 4a. Applying websiteName:", settings.websiteName);
                 uiUtils.updateSiteTitles(settings.websiteName);
             }
-
-            // Apply custom theme colors (CSS Variables)
-            if (settings.themeVariables && typeof settings.themeVariables === 'object') {
-                console.log("Applying saved theme from database:", settings.themeVariables);
-                for (const [varName, value] of Object.entries(settings.themeVariables)) {
+            if (settings.themeVariables) {
+                console.log("--- 4b. Applying themeVariables:", settings.themeVariables);
+                Object.entries(settings.themeVariables).forEach(([varName, value]) => {
                     uiUtils.updateCssVariable(varName, value);
-                }
+                });
             }
-
-            // Apply the phone number for the click-to-call icon
-            // This is handled by a separate subscriber, but we could also do it here.
-            // For now, we'll let the subscriber handle it to keep this focused.
         }
+        console.log("--- 5. Finished applying settings ---");
     } catch (error) {
-        console.error("Failed to load or apply site settings:", error);
-        // If settings fail to load, the app will just use the default CSS values.
+        console.error("--- X. CRITICAL ERROR in loadAndApplySiteSettings ---", error);
     }
 }
 
