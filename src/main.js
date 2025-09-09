@@ -4,7 +4,8 @@ console.log("--- main.js: SCRIPT STARTED ---");
 
 import './assets/css/style.css';
 console.log("--- main.js: CSS imported.");
-
+import { useAppStore } from './store/appStore.js';
+console.log("--- main.js: appStore imported.");
 // We are not importing any other modules yet.
 
 function main() {
