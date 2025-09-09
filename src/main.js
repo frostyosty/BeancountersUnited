@@ -178,26 +178,21 @@ function setupHamburgerMenu() {
     });
 
     // Listener for the panel itself to handle clicks
-    mobileMenuPanel.addEventListener('click', (e) => {
-        const link = e.target.closest('a.nav-link');
-        if (link) {
-            const categoryFilter = link.dataset.categoryFilter;
-            if (categoryFilter) {
-                // This is a category filter link. We need to set the filter and navigate.
-                // We'll use the 'window.activeMenuCategory' variable from menuUI.js
-                window.activeMenuCategory = categoryFilter;
-                // Ensure we navigate to the menu page
-                if (window.location.hash !== '#menu') {
-                    window.location.hash = '#menu';
-                } else {
-                    // If already on the menu, just re-render it
-                    useAppStore.getState().menu.fetchMenu().then(renderMenuPage);
-                }
+mobileMenuPanel.addEventListener('click', (e) => {
+    const link = e.target.closest('a.nav-link');
+    if (link) {
+        const categoryFilter = link.dataset.categoryFilter;
+        if (categoryFilter) {
+            // Call the action from the uiSlice
+            useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
+            
+            if (window.location.hash !== '#menu') {
+                window.location.hash = '#menu';
             }
-            toggleMenu(); // Close menu after any link click
         }
-    });
-
+        toggleMenu();
+    }
+});
     // Close menu if user clicks on the main content area
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) {

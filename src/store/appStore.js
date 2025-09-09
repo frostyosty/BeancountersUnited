@@ -28,6 +28,8 @@ export const useAppStore = create(
       checkout: createCheckoutSlice(set, get),
       admin: createAdminSlice(set, get),
             orderHistory: createOrderHistorySlice(set, get),
+                  ui: createUiSlice(set, get), // Add the new UI slice
+    
         };
     },
     { name: "RestaurantAppStore" }

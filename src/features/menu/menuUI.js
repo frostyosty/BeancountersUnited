@@ -95,9 +95,6 @@ const attachMenuEventListeners = () => {
 };
 
 /**
- * Renders the entire menu page into the main content area.
- */
-/**
  * Renders the entire menu page, now with owner-configurable category tabs and order.
  */
 export function renderMenuPage() {
@@ -119,6 +116,7 @@ export function renderMenuPage() {
 
     // --- NEW LOGIC: Use the category selector from the settings slice ---
     const { getMenuCategories } = useAppStore.getState().siteSettings;
+        const { activeMenuCategory } = useAppStore.getState().ui; // Get active category from the UI slice
     const orderedCategories = getMenuCategories();
 
     // The selector handles the fallback. If menuCategories isn't set in the DB,
@@ -126,19 +124,17 @@ export function renderMenuPage() {
     const categoriesForTabs = ['All', ...orderedCategories];
         console.log("renderMenuPage about to build html");
     // Build the HTML for the tab buttons, marking the active one.
-    const tabsHTML = categoriesForTabs.map(category => `
+const tabsHTML = categoriesForTabs.map(category => `
         <button
-            class="sub-tab-button ${category === activeCategory ? 'active' : ''}"
+            class="sub-tab-button ${category === activeMenuCategory ? 'active' : ''}"
             data-category="${category}">
             ${category}
         </button>
     `).join('');
 
-    // Filter the items to be displayed based on the active category.
-    const filteredItems = activeCategory === 'All'
+    const filteredItems = activeMenuCategory === 'All'
         ? items
-        : items.filter(item => (item.category || 'Uncategorized') === activeCategory);
-
+        : items.filter(item => (item.category || 'Uncategorized') === activeMenuCategory);
     // Group the *filtered* items by category for rendering.
     const itemsByCategory = filteredItems.reduce((acc, item) => {
         const category = item.category || 'Uncategorized';
@@ -189,17 +185,12 @@ function attachCategoryTabListeners() {
     const tabsContainer = document.querySelector('.sub-tabs-container');
     if (!tabsContainer) return;
 
-    // Use a flag to prevent attaching the same listener multiple times
-    if (tabsContainer.dataset.listenerAttached === 'true') return;
-
+    // Use a new listener that calls the store action
     tabsContainer.addEventListener('click', (event) => {
         if (event.target.matches('.sub-tab-button')) {
             const newCategory = event.target.dataset.category;
-            activeCategory = newCategory; // Safely update the variable here
-            window.activeMenuCategory = newCategory;
-            renderMenuPage();
+            // Call the action from the uiSlice to change the state
+            useAppStore.getState().ui.setActiveMenuCategory(newCategory);
         }
     });
-
-    tabsContainer.dataset.listenerAttached = 'true';
 }
