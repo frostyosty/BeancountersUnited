@@ -6,6 +6,8 @@ import './assets/css/style.css';
 console.log("--- main.js: CSS imported.");
 import { useAppStore } from './store/appStore.js';
 console.log("--- main.js: appStore imported.");
+import * as uiUtils from './utils/uiUtils.js';
+console.log("--- main.js: uiUtils imported.");
 // We are not importing any other modules yet.
 
 function main() {
