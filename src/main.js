@@ -85,7 +85,7 @@ async function main() {
 
     // 3. Set up listeners for user interaction
     window.addEventListener('hashchange', renderPageContent);
-    // ... setupNavigationAndInteractions() if needed
+    setupNavigationAndInteractions();
 
     // 4. Kick off initial data fetches
     useAppStore.getState().auth.listenToAuthChanges();
@@ -99,3 +99,16 @@ async function main() {
 }
 
 main();
+
+function setupNavigationAndInteractions() {
+    document.body.addEventListener('click', (e) => {
+        const navLink = e.target.closest('a[href^="#"]');
+        if (navLink) {
+            e.preventDefault();
+            const newHash = navLink.getAttribute('href');
+            if (window.location.hash !== newHash) window.location.hash = newHash;
+        }
+        if (e.target.matches('#login-signup-btn')) { showLoginSignupModal(); }
+        if (e.target.matches('#logout-btn')) { useAppStore.getState().auth.logout(); }
+    });
+}
