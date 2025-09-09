@@ -4,6 +4,9 @@ console.log("--- [4] main.js: START ---");
 import './assets/css/style.css';
 console.log("--- [4.1] main.js: Imported CSS ---");
 
+import * as uiUtils from './utils/uiUtils.js';
+import { renderMenuPage } from './features/menu/menuUI.js'; // Add the next import
+
 // import { useAppStore } from './store/appStore.js';
 // console.log("--- [4.2] main.js: Imported appStore ---");
 
@@ -263,12 +266,6 @@ function main() {
     console.log("--- main.js script setup finished ---");
 }
 
-
-
-
-// In /src/main.js
-
-// ... (keep all imports and other functions as they are)
 
 /**
  * Sets up the hamburger menu, now with dynamic content based on God User settings.
