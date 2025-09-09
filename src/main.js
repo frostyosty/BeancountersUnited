@@ -281,5 +281,3 @@ async function main() {
 }
 
 main();
-// Start the application
-main();
