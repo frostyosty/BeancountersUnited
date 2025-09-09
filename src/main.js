@@ -12,6 +12,20 @@ console.log("--- main.js: uiUtils imported.");
 import { renderMenuPage } from './features/menu/menuUI.js';
 console.log("--- main.js: renderMenuPage imported.");
 
+import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
+console.log("--- main.js: renderOrderHistoryPage imported.");
+import { renderCartPage } from './features/cart/cartUI.js';
+console.log("--- main.js: renderCartPage imported.");
+import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
+console.log("--- main.js: renderAuthStatus imported.");
+import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
+console.log("--- main.js: initializeImpersonationToolbar imported.");
+import { renderManagerDashboard } from './features/admin/managerDashboardUI.js'; // <-- Import
+console.log("--- main.js: renderManagerDashboard imported.");
+import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
+console.log("--- main.js: renderOwnerDashboard imported.");
+
+
 function main() {
     console.log("--- main.js: main() CALLED ---");
 

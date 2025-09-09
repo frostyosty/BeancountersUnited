@@ -67,7 +67,7 @@ const attachMenuEventListeners = () => {
         const target = event.target;
         const menuItemCard = target.closest('.menu-item-card');
         if (!menuItemCard) return;
-        
+
         const itemId = menuItemCard.dataset.itemId;
 
         if (target.closest('.add-to-cart-btn')) {
@@ -77,12 +77,12 @@ const attachMenuEventListeners = () => {
                 uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
             }
         }
-        
+
         else if (target.closest('.edit-item-btn')) {
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             alert(`Editing "${menuItem.name}" - Feature coming soon!`);
         }
-        
+
         else if (target.closest('.delete-item-btn')) {
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (confirm(`Are you sure you want to delete "${menuItem.name}"?`)) {
@@ -137,7 +137,7 @@ export function renderMenuPage() {
     const filteredItems = activeCategory === 'All'
         ? items
         : items.filter(item => (item.category || 'Uncategorized') === activeCategory);
-    
+
     // Group the *filtered* items by category for rendering.
     const itemsByCategory = filteredItems.reduce((acc, item) => {
         const category = item.category || 'Uncategorized';
@@ -191,12 +191,12 @@ function attachCategoryTabListeners() {
     if (tabsContainer.dataset.listenerAttached === 'true') return;
 
     tabsContainer.addEventListener('click', (event) => {
-    if (event.target.matches('.sub-tab-button')) {
-        const newCategory = event.target.dataset.category;
-        activeCategory = newCategory; // Safely update the variable here
-        window.activeMenuCategory = newCategory;
-        renderMenuPage();
-    }
+        if (event.target.matches('.sub-tab-button')) {
+            const newCategory = event.target.dataset.category;
+            activeCategory = newCategory; // Safely update the variable here
+            window.activeMenuCategory = newCategory;
+            renderMenuPage();
+        }
     });
 
     tabsContainer.dataset.listenerAttached = 'true';
