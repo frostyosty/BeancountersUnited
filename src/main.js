@@ -232,11 +232,13 @@ async function loadAndApplySiteSettings() {
 }
 
 
-// --- Main Application Initialization ---
+
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
+    console.log("--- main() started ---");
 
+    // 1. Render the static HTML shell
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -246,8 +248,7 @@ async function main() {
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                     <div id="auth-status-container"></div>
-                    <!-- This link will be hidden by default and made visible by JS -->
-                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
+                                        <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                             <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
                         </svg>
@@ -259,7 +260,7 @@ async function main() {
         `;
     }
 
-    // Set up subscribers
+    // 2. Set up subscribers that will react to state changes later
     useAppStore.subscribe(renderApp);
     useAppStore.subscribe(
         (state) => state.siteSettings.settings.themeVariables,
@@ -290,25 +291,30 @@ async function main() {
         },
         { fireImmediately: true } // Run once on startup
     );
-
-    // Set up listeners
+    // 3. Set up listeners for user interaction
     window.addEventListener('hashchange', renderPageContent);
     setupNavigationAndInteractions();
 
-    // Kick off initial actions
-    useAppStore.getState().auth.listenToAuthChanges();
-    useAppStore.getState().menu.fetchMenu();
-    useAppStore.getState().siteSettings.fetchSiteSettings();
-    
-    // Initialize UI modules
+    // 4. Initialize background services
+    useAppStore.getState().auth.listenToAuthChanges(); // This just starts the listener, it's ok
     initializeImpersonationToolbar();
     setupGodModeTrigger();
     setupHamburgerMenu();
-// Call this function here
-    await loadAndApplySiteSettings(); 
 
-    // Perform the first render
+    // 5. Perform the explicit, awaited data fetching
+    console.log("main: Awaiting loadAndApplySiteSettings()...");
+    await loadAndApplySiteSettings();
+    console.log("main: FINISHED loadAndApplySiteSettings().");
+
+    console.log("main: Awaiting menu.fetchMenu()...");
+    await useAppStore.getState().menu.fetchMenu();
+    console.log("main: FINISHED menu.fetchMenu().");
+
+    // 6. Now that all critical data is loaded, perform the first full render
     renderApp();
+    
+    console.log("--- main() finished ---");
 }
 
+// Start the application
 main();
