@@ -101,6 +101,7 @@ const attachMenuEventListeners = () => {
  * Renders the entire menu page, now with owner-configurable category tabs and order.
  */
 export function renderMenuPage() {
+        console.log("renderMenuPage started...");
     activeCategory = window.activeMenuCategory || activeCategory; // Safely update the variable here
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -123,7 +124,7 @@ export function renderMenuPage() {
     // The selector handles the fallback. If menuCategories isn't set in the DB,
     // it will return a sorted list of categories found in the menu items.
     const categoriesForTabs = ['All', ...orderedCategories];
-
+        console.log("renderMenuPage about to build html");
     // Build the HTML for the tab buttons, marking the active one.
     const tabsHTML = categoriesForTabs.map(category => `
         <button
@@ -161,7 +162,7 @@ export function renderMenuPage() {
             </section>
         `;
     }).join('');
-
+        console.log("renderMenuPage instantiating html...");
     // Assemble the final page HTML
     mainContent.innerHTML = `
         <div class="menu-header">
@@ -172,9 +173,10 @@ export function renderMenuPage() {
         </div>
         ${items.length === 0 ? `<div class="empty-state"><h2>Our menu is currently empty</h2></div>` : menuContentHTML}
     `;
-
+        console.log("renderMenuPage finished making html");
     attachMenuEventListeners();
     attachCategoryTabListeners(); // Attach listeners for our new tabs
+        console.log("renderMenuPage fnished");
 }
 
 
