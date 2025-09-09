@@ -1,17 +1,30 @@
 // src/main.js
 console.log("--- [4] main.js: START ---");
-import './assets/css/style.css';
-import { useAppStore } from './store/appStore.js';
-import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
-import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderCartPage } from './features/cart/cartUI.js';
-import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
-import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
-import { renderManagerDashboard } from './features/admin/managerDashboardUI.js'; // <-- Import
 
-// --- Add new imports at the top ---
-import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
-import * as uiUtils from './utils/uiUtils.js'; // Make sure this is imported if not already
+import './assets/css/style.css';
+console.log("--- [4.1] main.js: Imported CSS ---");
+
+import { useAppStore } from './store/appStore.js';
+console.log("--- [4.2] main.js: Imported appStore ---");
+
+import { renderMenuPage } from './features/menu/menuUI.js';
+console.log("--- [4.3] main.js: Imported menuUI ---");
+
+// We have temporarily REMOVED all other UI imports.
+
+
+// import './assets/css/style.css';
+// import { useAppStore } from './store/appStore.js';
+// import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js'; // <-- Import
+// import { renderMenuPage } from './features/menu/menuUI.js';
+// import { renderCartPage } from './features/cart/cartUI.js';
+// import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
+// import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
+// import { renderManagerDashboard } from './features/admin/managerDashboardUI.js'; // <-- Import
+
+// // --- Add new imports at the top ---
+// import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
+// import * as uiUtils from './utils/uiUtils.js'; // Make sure this is imported if not already
 
 console.log("--- [4] main.js: All modules imported. ---");
 let isAppInitialized = false;
