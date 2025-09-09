@@ -9,8 +9,7 @@ console.log("--- main.js: appStore imported.");
 import * as uiUtils from './utils/uiUtils.js';
 console.log("--- main.js: uiUtils imported.");
 // We are not importing any other modules yet.
-import { renderMenuPage } from './features/menu/menuUI.js';
-console.log("--- main.js: uiUtils imported.");
+
 
 function main() {
     console.log("--- main.js: main() CALLED ---");
