@@ -320,28 +320,26 @@ async function main() {
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderApp); // Call the main render loop on nav
+    window.addEventListener('hashchange', renderApp); // Re-render on navigation
     setupNavigationAndInteractions();
-    // 4. Perform the very first render.
-    // This will correctly show the initial "Loading..." states.
-    renderApp();
-    
-    // 5. Kick off all initial asynchronous actions.
-    // NOW that the UI is rendered and the subscriber is listening, we fetch data.
+
+    // 4. Kick off initial asynchronous actions.
+    // These run in the background. The subscriber will update the UI when they complete.
     useAppStore.getState().auth.listenToAuthChanges();
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
-    
 
-        initializeImpersonationToolbar();
+    // 5. Initialize UI modules that need to attach listeners.
+    initializeImpersonationToolbar();
     setupGodModeTrigger();
     setupHamburgerMenu();
+
+    // 6. Perform the very first render.
+    // This will show the initial "Loading..." states correctly.
+    renderApp();
 
     console.log("--- main() finished ---");
 }
 
-
-
-
-
+main();
 
