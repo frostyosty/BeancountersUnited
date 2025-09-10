@@ -97,33 +97,47 @@ const attachMenuEventListeners = () => {
 /**
  * Renders the entire menu page, now with owner-configurable category tabs and order.
  */
+
+
 export function renderMenuPage() {
-        console.log("renderMenuPage started...");
-    activeCategory = window.activeMenuCategory || activeCategory; // Safely update the variable here
+    console.log("--- 1. renderMenuPage() CALLED ---");
+
     const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
+    if (!mainContent) {
+        console.error("renderMenuPage: EXIT - #main-content not found.");
+        return;
+    }
 
     const { items, isLoading, error } = useAppStore.getState().menu;
+    console.log("--- 2. renderMenuPage: Reading state ---", { isLoading, hasError: !!error, itemCount: items.length });
 
     if (isLoading) {
+        console.log("--- 3a. renderMenuPage: Rendering LOADING state ---");
         mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
         return;
     }
     if (error) {
+        console.log("--- 3b. renderMenuPage: Rendering ERROR state ---");
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`;
         return;
     }
+    if (items.length === 0) {
+        console.log("--- 3c. renderMenuPage: Rendering EMPTY state ---");
+        mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`;
+        return;
+    }
 
-    // --- NEW LOGIC: Use the category selector from the settings slice ---
-    const { getMenuCategories } = useAppStore.getState().siteSettings;
-        const { activeMenuCategory } = useAppStore.getState().ui; // Get active category from the UI slice
-    const orderedCategories = getMenuCategories();
+    // If we get here, we are in the SUCCESS state.
+    console.log("--- 4. renderMenuPage: Preparing to render SUCCESS state ---");
 
-    // The selector handles the fallback. If menuCategories isn't set in the DB,
-    // it will return a sorted list of categories found in the menu items.
-    const categoriesForTabs = ['All', ...orderedCategories];
-        console.log("renderMenuPage about to build html");
-    // Build the HTML for the tab buttons, marking the active one.
+    try {
+        const { getMenuCategories } = useAppStore.getState().siteSettings;
+        const orderedCategories = getMenuCategories();
+        console.log("--- 5. Got categories:", orderedCategories);
+
+        let activeCategory = window.activeMenuCategory || 'All';
+        const categoriesForTabs = ['All', ...orderedCategories];
+
 const tabsHTML = categoriesForTabs.map(category => `
         <button
             class="sub-tab-button ${category === activeMenuCategory ? 'active' : ''}"
@@ -131,51 +145,54 @@ const tabsHTML = categoriesForTabs.map(category => `
             ${category}
         </button>
     `).join('');
+        const filteredItems = activeCategory === 'All'
+            ? items
+            : items.filter(item => (item.category || 'Uncategorized') === activeCategory);
+        console.log(`--- 6. Filtered down to ${filteredItems.length} items for category "${activeCategory}"`);
 
-    const filteredItems = activeMenuCategory === 'All'
-        ? items
-        : items.filter(item => (item.category || 'Uncategorized') === activeMenuCategory);
-    // Group the *filtered* items by category for rendering.
-    const itemsByCategory = filteredItems.reduce((acc, item) => {
-        const category = item.category || 'Uncategorized';
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(item);
-        return acc;
-    }, {});
+        const itemsByCategory = filteredItems.reduce((acc, item) => {
+            const category = item.category || 'Uncategorized';
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(item);
+            return acc;
+        }, {});
+        console.log("--- 7. Grouped items by category.");
 
-    // Create a sorted list of categories to render based on the owner's preferred order.
-    // This ensures the sections on the page match the owner's drag-and-drop order.
-    const sortedCategoryKeys = orderedCategories.filter(cat => itemsByCategory[cat]);
+        const sortedCategoryKeys = orderedCategories.filter(cat => itemsByCategory[cat]);
+        console.log("--- 8. Created sorted key list for rendering:", sortedCategoryKeys);
 
-    const menuContentHTML = sortedCategoryKeys.map(category => {
-        const categoryItems = itemsByCategory[category];
-        return `
-            <section class="menu-category">
-                <h2 class="category-title">${category}</h2>
-                <div class="menu-items-grid">
-                    ${categoryItems.map(createMenuItemHTML).join('')}
-                </div>
-            </section>
-        `;
-    }).join('');
-        console.log("renderMenuPage instantiating html...");
-    // Assemble the final page HTML
-    mainContent.innerHTML = `
-        <div class="menu-header">
-            <h2>Our Menu</h2>
-            <div class="sub-tabs-container">
-                ${tabsHTML}
+        const menuContentHTML = sortedCategoryKeys.map(category => {
+            const categoryItems = itemsByCategory[category];
+            // This is the only place left for the error to hide.
+            const itemsHTML = categoryItems.map(createMenuItemHTML).join('');
+            return `
+                <section class="menu-category">
+                    <h2 class="category-title">${category}</h2>
+                    <div class="menu-items-grid">${itemsHTML}</div>
+                </section>
+            `;
+        }).join('');
+        console.log("--- 9. Successfully generated final HTML. Length:", menuContentHTML.length);
+
+        const finalHTML = `
+            <div class="menu-header">
+                <h2>Our Menu</h2>
+                <div class="sub-tabs-container">${tabsHTML}</div>
             </div>
-        </div>
-        ${items.length === 0 ? `<div class="empty-state"><h2>Our menu is currently empty</h2></div>` : menuContentHTML}
-    `;
-        console.log("renderMenuPage finished making html");
-    attachMenuEventListeners();
-    attachCategoryTabListeners(); // Attach listeners for our new tabs
-        console.log("renderMenuPage fnished");
+            ${menuContentHTML}
+        `;
+
+        mainContent.innerHTML = finalHTML;
+        console.log("--- 10. SUCCESSFULLY SET innerHTML ---");
+        
+        attachMenuEventListeners();
+        attachCategoryTabListeners();
+
+    } catch (e) {
+        console.error("--- X. CRITICAL RENDER ERROR in renderMenuPage ---", e);
+        mainContent.innerHTML = `<div class="error-message">A critical error occurred while rendering the menu. Check the console.</div>`;
+    }
 }
-
-
 
 
 /**
