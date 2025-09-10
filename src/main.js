@@ -79,7 +79,8 @@ function renderPageContent() {
             console.log("Switching to #cart, calling renderCartPage()");
             renderCartPage(); break;
         case '#checkout': 
-        console.log("Switching to #checkout, calling rendercheckoutpage()"); renderCheckoutPage(); break;
+        console.log("Switching to #checkout, calling rendercheckoutpage()");
+        renderCheckoutPage(); break;
         case '#order-confirmation': 
         console.log("Switching to #checkout, calling rendercheckoutpage()");
         renderOrderConfirmationPage(); break;
@@ -337,7 +338,7 @@ async function main() {
     // 6. Perform the very first render.
     // This will show the initial "Loading..." states correctly.
     renderApp();
-
+renderMenuPage();
     console.log("--- main() finished ---");
 }
 
