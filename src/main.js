@@ -321,7 +321,7 @@ async function main() {
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderApp); // Re-render on navigation
+    // window.addEventListener('hashchange', renderApp); // Re-render on navigation
     setupNavigationAndInteractions();
 
     // 4. Kick off initial asynchronous actions.
