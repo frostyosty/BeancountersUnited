@@ -15,31 +15,48 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
 // --- State and Render Logic ---
 let isAppInitialized = false;
-
+// In /src/main.js
 
 function renderApp() {
     console.log("--- renderApp() called ---");
+
+    // 1. Render persistent UI components that are always visible.
     renderAuthStatus();
 
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        } catch (e) { cartCountSpan.textContent = '0'; }
+        } catch (e) {
+            // --- THIS IS THE FIX ---
+            cartCountSpan.textContent = '0'; // Corrected variable name
+            // --- END OF FIX ---
+        }
     }
+
+    // 2. Call the router to render the main content area.
+    renderPageContent();
 }
 
 function renderPageContent() {
+    console.log("--- renderPageContent() called ---");
     const hash = window.location.hash || '#menu';
-    document.body.className = `page-${hash.substring(1) || 'menu'}`;
-    const { getUserRole } = useAppStore.getState().auth;
-    const userRole = getUserRole();
 
-    // Re-style the active nav link every time the route changes
+    console.log("DEBUG: Getting auth slice...");
+    const authSlice = useAppStore.getState().auth;
+    console.log("DEBUG: Auth slice retrieved. Does it have getUserRole?", typeof authSlice?.getUserRole);
+    
+    // This is the line that is likely failing
+    const userRole = authSlice.getUserRole();
+    console.log("DEBUG: User role is:", userRole);
+
+    console.log("DEBUG: Styling nav links...");
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
+    console.log("DEBUG: Nav links styled.");
 
+    console.log("--- about to engage in the switch stuff ---");
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#cart': renderCartPage(); break;
@@ -139,7 +156,7 @@ function setupHamburgerMenu() {
         // Get the configuration from our siteSettingsSlice
         const { getHamburgerMenuConfig, getMenuCategories } = useAppStore.getState().siteSettings;
         const config = getHamburgerMenuConfig();
-        
+
         let navHTML = '';
 
         if (config === 'categories') {
@@ -147,7 +164,7 @@ function setupHamburgerMenu() {
             const categories = getMenuCategories();
             // Create a link for 'All' items, plus each category
             const allLink = `<a href="#menu" class="nav-link" data-category-filter="All">All Items</a>`;
-            navHTML = allLink + categories.map(cat => 
+            navHTML = allLink + categories.map(cat =>
                 `<a href="#menu" class="nav-link" data-category-filter="${cat}">${cat}</a>`
             ).join('');
         } else { // Default to 'main-nav'
@@ -159,7 +176,7 @@ function setupHamburgerMenu() {
                 navHTML += link.outerHTML;
             });
         }
-        
+
         mobileNavContainer.innerHTML = navHTML;
     };
 
@@ -183,21 +200,16 @@ function setupHamburgerMenu() {
         if (link) {
             const categoryFilter = link.dataset.categoryFilter;
             if (categoryFilter) {
-                // This is a category filter link. We need to set the filter and navigate.
-                // We'll use the 'window.activeMenuCategory' variable from menuUI.js
-                window.activeMenuCategory = categoryFilter;
-                // Ensure we navigate to the menu page
+                // Call the action from the uiSlice
+                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
+
                 if (window.location.hash !== '#menu') {
                     window.location.hash = '#menu';
-                } else {
-                    // If already on the menu, just re-render it
-                    useAppStore.getState().menu.fetchMenu().then(renderMenuPage);
                 }
             }
-            toggleMenu(); // Close menu after any link click
+            toggleMenu();
         }
     });
-
     // Close menu if user clicks on the main content area
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) {
@@ -235,13 +247,13 @@ async function loadAndApplySiteSettings() {
 }
 
 
-
 async function main() {
+    // Initialization guard to prevent running twice
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");
 
-    // 1. Render the static HTML shell.
+    // 1. Render the static HTML shell immediately.
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -251,7 +263,14 @@ async function main() {
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
                     <div id="auth-status-container"></div>
-                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">...</a>
+                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </a>
+                    <button id="hamburger-btn" class="hamburger-button">
+                        <span></span><span></span><span></span>
+                    </button>
                 </nav>
             </header>
             <main id="main-content"></main>
@@ -262,31 +281,31 @@ async function main() {
         `;
     }
 
-    // 2. Set up a SINGLE subscriber that will handle ALL future updates.
+    // 2. Set up a SINGLE subscriber to handle ALL UI updates.
+    // This is the core of the reactive system.
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderPageContent);
+    window.addEventListener('hashchange', renderApp); // Re-render on navigation
     setupNavigationAndInteractions();
 
-    // 4. Initialize background services and UI modules.
+    // 4. Kick off initial asynchronous actions.
+    // These run in the background. The subscriber will update the UI when they complete.
     useAppStore.getState().auth.listenToAuthChanges();
+    useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
+    
+    // 5. Initialize UI modules that need to attach listeners.
     initializeImpersonationToolbar();
     setupGodModeTrigger();
     setupHamburgerMenu();
 
-    // 5. Perform the explicit, awaited data fetching for the INITIAL load.
-    console.log("main: Awaiting initial data fetches...");
-    await Promise.all([
-        loadAndApplySiteSettings(),
-        useAppStore.getState().menu.fetchMenu()
-    ]);
-    console.log("main: Initial data fetches complete.");
-
-    // 6. Now that all critical data is loaded, perform the first full render.
+    // 6. Perform the very first render.
+    // This will show the initial "Loading..." states correctly.
     renderApp();
     
     console.log("--- main() finished ---");
 }
-// Start the application
+
 main();
+
