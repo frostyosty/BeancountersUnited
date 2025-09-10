@@ -2,17 +2,27 @@
 import { useAppStore } from '@/store/appStore.js';
 
 /**
- * Renders the shopping cart page into the main content area.
+ * Renders the shopping cart page. This function is now "defensive".
  */
-
-
 export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    const { cartItems, getCartTotal } = useAppStore.getState();
+    // --- DEFENSIVE CHECK ---
+    // First, check if the entire 'cart' slice exists in the store.
+    const cartSlice = useAppStore.getState().cart;
+    if (!cartSlice) {
+        // This can happen on the very first render cycle.
+        // It's safe to show a loading state and wait for the next render.
+        mainContent.innerHTML = `<div class="loading-spinner">Initializing cart...</div>`;
+        return;
+    }
+    // --- END CHECK ---
 
-    if (cartItems.length === 0) {
+    // Now it's safe to destructure properties and call selectors.
+    const { items, getCartTotal } = cartSlice;
+
+    if (items.length === 0) {
         mainContent.innerHTML = `
             <div class="empty-state">
                 <h2>Your Cart is Empty</h2>
@@ -22,9 +32,9 @@ export function renderCartPage() {
         return;
     }
 
-    const cartItemsHTML = cartItems.map(item => `
+    const cartItemsHTML = items.map(item => `
         <div class="cart-item" data-item-id="${item.id}">
-            <img src="${item.image_url || '/placeholder-pizza.jpg'}" alt="${item.name}" class="cart-item-image">
+            <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" class="cart-item-image">
             <div class="cart-item-details">
                 <h4 class="cart-item-name">${item.name}</h4>
                 <p class="cart-item-price">$${parseFloat(item.price).toFixed(2)}</p>
@@ -52,22 +62,20 @@ export function renderCartPage() {
     attachCartEventListeners();
 }
 
-/**
- * Attaches event listeners for the interactive elements on the cart page.
- */
 function attachCartEventListeners() {
     const cartContainer = document.querySelector('.cart-items-container');
     if (!cartContainer) return;
+    
+    // Use a flag to prevent attaching the listener more than once
+    if (cartContainer.dataset.listenersAttached) return;
 
-    const { updateItemQuantity, removeItem } = useAppStore.getState();
-
-    // Use a single event listener with delegation for performance
     cartContainer.addEventListener('click', (event) => {
         const target = event.target;
         const itemId = target.closest('[data-item-id]')?.dataset.itemId;
         if (!itemId) return;
 
-        const currentItem = useAppStore.getState().cartItems.find(i => i.id === itemId);
+        const { updateItemQuantity, removeItem } = useAppStore.getState().cart;
+        const currentItem = useAppStore.getState().cart.items.find(i => i.id === itemId);
         if (!currentItem) return;
 
         if (target.matches('.increase-qty')) {
@@ -79,6 +87,7 @@ function attachCartEventListeners() {
         }
     });
 
+
     cartContainer.addEventListener('change', (event) => {
         const target = event.target;
         if (target.matches('.quantity-input')) {
@@ -89,8 +98,9 @@ function attachCartEventListeners() {
             }
         }
     });
-}
 
+    cartContainer.dataset.listenersAttached = 'true';
+}
 
 /**
  * Renders the checkout page into the main content area.
@@ -158,29 +168,4 @@ export function renderCheckoutPage() {
         </div>
     `;
     document.getElementById('checkout-form').addEventListener('submit', handleCheckoutSubmit);
-}
-
-/**
- * Handles the submission of the checkout form.
- */
-async function handleCheckoutSubmit(event) {
-    event.preventDefault();
-    const submitBtn = document.getElementById('submit-order-btn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Placing Order...';
-
-    const formData = new FormData(event.target);
-    const customerDetails = Object.fromEntries(formData.entries());
-
-    const success = await useAppStore.getState().checkout.submitOrder(customerDetails);
-
-    if (success) {
-        // Navigate to the confirmation page
-        window.location.hash = '#order-confirmation';
-    } else {
-        const submitError = useAppStore.getState().checkout.checkoutError;
-        alert(`There was an issue placing your order: ${submitError || 'Please try again.'}`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Place Order';
-    }
 }
