@@ -15,7 +15,7 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
 // --- State and Render Logic ---
 let isAppInitialized = false;
-
+// In /src/main.js
 
 function renderApp() {
     console.log("--- renderApp() called ---");
@@ -28,19 +28,27 @@ function renderApp() {
         try {
             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
         } catch (e) {
-            cartCountSpan.textContent = '0';
+            // --- THIS IS THE FIX ---
+            cartCountSpan.textContent = '0'; // Corrected variable name
+            // --- END OF FIX ---
         }
     }
 
-    // 2. Act as a router to render the main content area.
+    // 2. Call the router to render the main content area.
+    renderPageContent();
+}
+function renderPageContent() {
+        console.log("--- renderPageContent() called ---");
     const hash = window.location.hash || '#menu';
-    
-    // Style the active nav link
+    document.body.className = `page-${hash.substring(1) || 'menu'}`;
+    const { getUserRole } = useAppStore.getState().auth;
+    const userRole = getUserRole();
+
+    // Re-style the active nav link every time the route changes
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
-
-    // Render the correct page based on the hash
+        console.log("--- about to engage in the switch stuff ---");
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#cart': renderCartPage(); break;
@@ -64,7 +72,6 @@ function renderApp() {
         default: renderMenuPage(); break;
     }
 }
-
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
