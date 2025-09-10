@@ -1035,3 +1035,11 @@ body.on-checkout-page #phone-icon-link {
 .order-card-actions {
     text-align: right;
 }
+
+
+
+.mobile-auth-section {
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+}

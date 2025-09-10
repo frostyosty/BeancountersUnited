@@ -193,7 +193,10 @@ function setupHamburgerMenu() {
                 navHTML += link.outerHTML;
             });
         }
-
+        const authContainer = document.getElementById('auth-status-container');
+        if (authContainer) {
+            mobileNavContainer.innerHTML += `<div class="mobile-auth-section">${authContainer.innerHTML}</div>`;
+        }
         mobileNavContainer.innerHTML = navHTML;
     };
 
