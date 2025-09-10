@@ -98,21 +98,26 @@ const attachMenuEventListeners = () => {
  * Renders the entire menu page, now with owner-configurable category tabs and order.
  */
 
-
 export function renderMenuPage() {
-    console.log("--- 1. renderMenuPage() CALLED ---");
-
+        console.log("--- 1. renderMenuPage() CALLED ---");
     const mainContent = document.getElementById('main-content');
-    if (!mainContent) {
-        console.error("renderMenuPage: EXIT - #main-content not found.");
+    if (!mainContent) return;
+console.log("renderMenuPage() defensive check started");
+    // --- DEFENSIVE CHECK ---
+    // First, check if the entire 'menu' slice exists.
+    const menuSlice = useAppStore.getState().menu;
+    if (!menuSlice) {
+        // This can happen during the first few milliseconds of startup.
+        // It's safe to just show loading and wait for the next render.
+        mainContent.innerHTML = `<div class="loading-spinner">Initializing menu...</div>`;
         return;
     }
-
-    const { items, isLoading, error } = useAppStore.getState().menu;
-    console.log("--- 2. renderMenuPage: Reading state ---", { isLoading, hasError: !!error, itemCount: items.length });
-
+    // --- END CHECK ---
+console.log("renderMenuPage() destrucutring about to begin");
+    // Now it's safe to destructure the properties.
+    const { items, isLoading, error } = menuSlice;
+console.log("renderMenuPage() isLoading about to begin");
     if (isLoading) {
-        console.log("--- 3a. renderMenuPage: Rendering LOADING state ---");
         mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
         return;
     }

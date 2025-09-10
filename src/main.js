@@ -62,7 +62,7 @@ function renderPageContent() {
     console.log("DEBUG: Getting auth slice...");
     const authSlice = useAppStore.getState().auth;
     console.log("DEBUG: Auth slice retrieved. Does it have getUserRole?", typeof authSlice?.getUserRole);
-    
+
     // This is the line that is likely failing
     const userRole = authSlice.getUserRole();
     console.log("DEBUG: User role is:", userRole);
@@ -75,24 +75,42 @@ function renderPageContent() {
 
     console.log("--- about to engage in the switch stuff ---");
     switch (hash) {
-        case '#menu': renderMenuPage(); break;
-        case '#cart': renderCartPage(); break;
-        case '#checkout': renderCheckoutPage(); break;
-        case '#order-confirmation': renderOrderConfirmationPage(); break;
+        case '#menu':
+            console.log("Switching to #menu, calling renderMenuPage()");
+            renderMenuPage();
+            break;
+        case '#cart':
+            console.log("Switching to #cart, calling renderCartPage()");
+            renderCartPage(); break;
+        case '#checkout': 
+        console.log("Switching to #checkout, calling rendercheckoutpage()"); renderCheckoutPage(); break;
+        case '#order-confirmation': 
+        console.log("Switching to #checkout, calling rendercheckoutpage()");
+        renderOrderConfirmationPage(); break;
         case '#order-history':
+            console.log("about to check order-history getstate");
             if (useAppStore.getState().auth.isAuthenticated) {
+                            console.log("Switching calling renderorderhistorypage()");
                 renderOrderHistoryPage();
-            } else { window.location.hash = '#menu'; }
+            } else { 
+                               console.log("Switching to menu via order history reject");
+                window.location.hash = '#menu'; }
             break;
         case '#owner-dashboard':
             if (userRole === 'owner' || userRole === 'manager') {
+                               console.log("Switching to owner/manager only()");
                 renderOwnerDashboard();
-            } else { window.location.hash = '#menu'; }
+            } else {
+                console.log("Switching to menu via  owner reject");
+                window.location.hash = '#menu'; }
             break;
         case '#manager-dashboard':
             if (userRole === 'manager') {
+                                               console.log("Switching to manager only()");
                 renderManagerDashboard();
-            } else { window.location.hash = '#menu'; }
+            } else { 
+                                console.log("Switching to menu via manager reject");
+                window.location.hash = '#menu'; }
             break;
         default: renderMenuPage(); break;
     }
@@ -314,7 +332,7 @@ async function main() {
     useAppStore.getState().auth.listenToAuthChanges();
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
-    
+
     // 5. Initialize UI modules that need to attach listeners.
     initializeImpersonationToolbar();
     setupGodModeTrigger();
@@ -323,7 +341,7 @@ async function main() {
     // 6. Perform the very first render.
     // This will show the initial "Loading..." states correctly.
     renderApp();
-    
+
     console.log("--- main() finished ---");
 }
 

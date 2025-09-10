@@ -9,13 +9,20 @@ import * as uiUtils from '@/utils/uiUtils.js';
 export function renderAuthStatus() {
     const authContainer = document.getElementById('auth-status-container');
     if (!authContainer) return;
+    
+    // --- DEFENSIVE CHECK ---
+    const authSlice = useAppStore.getState().auth;
+    if (!authSlice) {
+        authContainer.innerHTML = `<span>...</span>`;
+        return;
+    }
+    // --- END CHECK ---
 
-    const { isAuthenticated, user, profile, isAuthLoading } = useAppStore.getState().auth;
+    const { isAuthenticated, user, profile, isAuthLoading } = authSlice;
     if (isAuthLoading) {
         authContainer.innerHTML = `<span>...</span>`;
         return;
     }
-
     if (isAuthenticated) {
         // --- THIS IS THE FIX ---
         // We add a check to ensure `profile` is not null before using it.
