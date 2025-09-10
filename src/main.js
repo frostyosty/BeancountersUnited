@@ -37,18 +37,26 @@ function renderApp() {
     // 2. Call the router to render the main content area.
     renderPageContent();
 }
-function renderPageContent() {
-        console.log("--- renderPageContent() called ---");
-    const hash = window.location.hash || '#menu';
-    document.body.className = `page-${hash.substring(1) || 'menu'}`;
-    const { getUserRole } = useAppStore.getState().auth;
-    const userRole = getUserRole();
 
-    // Re-style the active nav link every time the route changes
+function renderPageContent() {
+    console.log("--- renderPageContent() called ---");
+    const hash = window.location.hash || '#menu';
+
+    console.log("DEBUG: Getting auth slice...");
+    const authSlice = useAppStore.getState().auth;
+    console.log("DEBUG: Auth slice retrieved. Does it have getUserRole?", typeof authSlice?.getUserRole);
+    
+    // This is the line that is likely failing
+    const userRole = authSlice.getUserRole();
+    console.log("DEBUG: User role is:", userRole);
+
+    console.log("DEBUG: Styling nav links...");
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
-        console.log("--- about to engage in the switch stuff ---");
+    console.log("DEBUG: Nav links styled.");
+
+    console.log("--- about to engage in the switch stuff ---");
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#cart': renderCartPage(); break;
