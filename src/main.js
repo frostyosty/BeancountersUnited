@@ -291,3 +291,6 @@ async function main() {
     
     console.log("--- main() finished ---");
 }
+
+main();
+
