@@ -34,25 +34,21 @@ function renderOrderConfirmationPage() {
 
 
 
+
+// This is our single, simple "re-render" function.
 function renderApp() {
     console.log("--- renderApp() called ---");
-
-    // 1. Render persistent UI components that are always visible.
     renderAuthStatus();
-
+    renderPageContent(); // This renders the main content based on the route
+    
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
         try {
             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
         } catch (e) {
-            // --- THIS IS THE FIX ---
-            cartCountSpan.textContent = '0'; // Corrected variable name
-            // --- END OF FIX ---
+            cartCountSpan.textContent = '0';
         }
     }
-
-    // 2. Call the router to render the main content area.
-    renderPageContent();
 }
 
 function renderPageContent() {
@@ -324,26 +320,18 @@ async function main() {
     useAppStore.subscribe(renderApp);
 
     // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderApp); // Re-render on navigation
-    setupNavigationAndInteractions();
+    window.addEventListener('hashchange', renderApp); // Call the main render loop on nav
+    // setupNavigationAndInteractions(); // We can add this back later for preventDefault etc.
 
-    // 4. Kick off initial asynchronous actions.
-    // These run in the background. The subscriber will update the UI when they complete.
+    // 4. Perform the very first render.
+    // This will correctly show the initial "Loading..." states.
+    renderApp();
+    
+    // 5. Kick off all initial asynchronous actions.
+    // NOW that the UI is rendered and the subscriber is listening, we fetch data.
     useAppStore.getState().auth.listenToAuthChanges();
     useAppStore.getState().menu.fetchMenu();
-    useAppStore.getState().siteSettings.fetchSiteSettings();
-
-    // 5. Initialize UI modules that need to attach listeners.
-    initializeImpersonationToolbar();
-    setupGodModeTrigger();
-    setupHamburgerMenu();
-
-    // 6. Perform the very first render.
-    // This will show the initial "Loading..." states correctly.
-    renderApp();
-
+    // useAppStore.getState().siteSettings.fetchSiteSettings();
+    
     console.log("--- main() finished ---");
 }
-
-main();
-
