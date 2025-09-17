@@ -1,3 +1,90 @@
+// src/features/menu/menuUI.js - BULLETPROOF DEBUGGING VERSION
+import { useAppStore } from '@/store/appStore.js';
+
+// No other imports needed for this simple test.
+
+/**
+ * The ONLY exported function.
+ */
+export function renderMenuPage() {
+    console.log("--- 1. renderMenuPage() CALLED ---");
+
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) {
+        console.error("!!! FAIL at Step 1: #main-content element not found. Aborting render.");
+        return;
+    }
+    console.log("--- 2. #main-content element found successfully.");
+
+    // --- Defensive Check for the store slice ---
+    const menuSlice = useAppStore.getState().menu;
+    if (!menuSlice) {
+        mainContent.innerHTML = `<div class="error-message">CRITICAL: Menu slice not found in store.</div>`;
+        console.error("!!! FAIL at Step 2: 'menu' slice is undefined in the store.");
+        return;
+    }
+    console.log("--- 3. 'menu' slice found in store.");
+
+    const { items, isLoading, error } = menuSlice;
+
+    if (isLoading) {
+        console.log("--- 4a. Rendering LOADING state.");
+        mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
+        return;
+    }
+
+    if (error) {
+        console.log("--- 4b. Rendering ERROR state.");
+        mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`;
+        return;
+    }
+
+    if (!Array.isArray(items)) {
+        console.error("!!! FAIL at Step 4c: menu.items is NOT an array. Value:", items);
+        mainContent.innerHTML = `<div class="error-message"><h2>Data Error</h2><p>The menu data received is not in the correct format.</p></div>`;
+        return;
+    }
+
+    // If we reach this point, we have a valid array of items.
+    console.log(`--- 5. Rendering SUCCESS state with ${items.length} items.`);
+
+    try {
+        // --- RADICALLY SIMPLIFIED RENDER LOGIC ---
+        const simplifiedMenuHTML = items.map(item => {
+            const name = item?.name || 'Unnamed Item';
+            const price = item?.price !== undefined ? parseFloat(item.price).toFixed(2) : 'N/A';
+            return `<li style="border: 1px dotted blue; margin: 5px; padding: 5px;">${name} - $${price}</li>`;
+        }).join('');
+
+        const finalHTML = `
+            <div style="border: 3px solid green; padding: 10px;">
+                <h2>Menu (Debug View)</h2>
+                <ul>
+                    ${simplifiedMenuHTML}
+                </ul>
+            </div>
+        `;
+
+        console.log("--- 6. Successfully generated simplified HTML. Setting innerHTML now.");
+        mainContent.innerHTML = finalHTML;
+        console.log("--- 7. SUCCESSFULLY RENDERED MENU ---");
+
+    } catch (e) {
+        console.error("--- X. CRITICAL ERROR during the simple .map() render ---", e);
+        mainContent.innerHTML = `<div class="error-message">A critical rendering error occurred. Check the console.</div>`;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
