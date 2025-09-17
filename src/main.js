@@ -35,21 +35,21 @@ function renderOrderConfirmationPage() {
 
 
 
-// This is our single, simple "re-render" function.
-function renderApp() {
-    console.log("--- renderApp() called ---");
-    renderAuthStatus();
-    renderPageContent(); // This renders the main content based on the route
+// // This is our single, simple "re-render" function.
+// function renderApp() {
+//     console.log("--- renderApp() called ---");
+//     renderAuthStatus();
+//     renderPageContent(); // This renders the main content based on the route
     
-    const cartCountSpan = document.getElementById('cart-count');
-    if (cartCountSpan) {
-        try {
-            cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-        } catch (e) {
-            cartCountSpan.textContent = '0';
-        }
-    }
-}
+//     const cartCountSpan = document.getElementById('cart-count');
+//     if (cartCountSpan) {
+//         try {
+//             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+//         } catch (e) {
+//             cartCountSpan.textContent = '0';
+//         }
+//     }
+// }
 
 function renderPageContent() {
     console.log("--- renderPageContent() called ---");
@@ -353,42 +353,33 @@ async function loadAndApplySiteSettings() {
 
 
 
-
-console.log("--- main.js script started (Level 2) ---");
-
-async function main() {
-    console.log("--- main() CALLED ---");
-
-    // 1. Render the static shell
-    const appElement = document.getElementById('app');
-    if (appElement) {
-        appElement.innerHTML = `
-            <header id="main-header"><h1>Mealmates</h1></header>
-            <main id="main-content">
-                <div class="loading-spinner">Initializing Store and API...</div>
-            </main>
-            <footer id="main-footer"><p>&copy; 2024</p></footer>
-        `;
-    }
-
-    // 2. Set up a simple subscriber to log ALL state changes.
-    // This is our window into what the store is doing.
-    useAppStore.subscribe((state) => {
-        console.log("--- ZUSTAND STATE CHANGED ---");
-        console.log("New isMenuLoading state:", state.isMenuLoading);
-        console.log("New menuItems count:", state.menuItems.length);
-    });
-
-    // 3. Kick off the menu fetch.
-    console.log("main(): Kicking off fetchMenu()...");
-    await useAppStore.getState().fetchMenu();
-    console.log("main(): fetchMenu() has completed.");
-
-    // 4. Manually log the final state to be sure.
-    console.log("--- FINAL STATE AFTER FETCH ---");
-    console.log(useAppStore.getState());
+// The one and only function that draws our app
+function renderApp() {
+    console.log("--- renderApp() CALLED ---");
+    // We will add auth and cart back here later.
+    // For now, it only renders the menu.
+    renderMenuPage();
 }
 
-main();
+// --- Application Start ---
+console.log("--- main.js script started ---");
+
+// 1. Render the static shell
+const appElement = document.getElementById('app');
+if (appElement) {
+    appElement.innerHTML = `
+        <header id="main-header"><h1>Mealmates</h1></header>
+        <main id="main-content"></main>
+    `;
+}
+
+// 2. Set up the subscriber. This will fire when the state changes.
+useAppStore.subscribe(renderApp);
+
+// 3. Kick off the fetch. This runs in the background.
+useAppStore.getState().fetchMenu();
+
+// 4. Perform the initial render. This will show the "Loading..." state.
+renderApp();
 
 console.log("--- main.js script setup finished ---");
