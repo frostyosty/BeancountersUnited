@@ -1043,3 +1043,46 @@ body.on-checkout-page #phone-icon-link {
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border-color);
 }
+
+
+
+
+/* In /src/assets/css/style.css */
+
+@media (max-width: 768px) {
+    /* --- Header & Nav on Mobile --- */
+    #main-header nav {
+        flex-wrap: wrap; /* Allow items to wrap to the next line */
+        height: auto; /* Allow header to grow */
+        padding: 10px 0;
+    }
+
+    /* Hide the desktop nav links */
+    #main-header nav a.nav-link {
+        display: none;
+    }
+    
+    /* Show the hamburger button */
+    .hamburger-button {
+        display: block;
+        order: 3; /* Move it to the end */
+        margin-left: auto; /* Push it to the far right */
+    }
+
+    #main-header h1 {
+        margin-right: 0; /* Remove the auto margin */
+    }
+    
+    /* --- THIS IS THE FIX --- */
+    /* Make the auth container take up the full width on the next line */
+    #main-header nav #auth-status-container {
+        display: block; /* Make it visible */
+        flex-basis: 100%; /* Take up the full width */
+        order: 4; /* Ensure it's on the second line */
+        text-align: center; /* Center the buttons */
+        margin-top: 10px;
+    }
+    /* --- END FIX --- */
+    
+    /* ... (Keep your other mobile styles for the menu panel, modal, etc.) ... */
+}
