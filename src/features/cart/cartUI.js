@@ -8,6 +8,7 @@ export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
+
     // --- DEFENSIVE CHECK ---
     // First, check if the entire 'cart' slice exists in the store.
     const cartSlice = useAppStore.getState().cart;

@@ -1,17 +1,34 @@
-// api/_db.js - VERBOSE DEBUGGING
+// /api/_db.js
 import { createClient } from '@supabase/supabase-js';
+import fetch from 'node-fetch'; // We will explicitly use node-fetch
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !serviceKey) {
-    console.error("CRITICAL ERROR IN _db.js: Supabase server-side environment variables are not set.");
     throw new Error("Supabase server-side credentials are not configured.");
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-console.log("--- [API _db.js] Module loaded, supabaseAdmin client created. ---");
+// Custom fetch with logging
+const customFetch = async (url, options = {}) => {
+    console.log(`[API _db.js] Making outbound fetch request to: ${url}`);
+    try {
+        const response = await fetch(url, options);
+        console.log(`[API _db.js] Received response from: ${url}, Status: ${response.status}`);
+        return response;
+    } catch (error) {
+        console.error(`[API _db.js] CRITICAL FETCH ERROR for ${url}:`, error);
+        throw error;
+    }
+};
 
+
+export const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+    // We provide our custom fetch implementation to the Supabase client
+    global: {
+        fetch: customFetch,
+    },
+});
 
 export async function getUserFromRequest(req) {
     console.log("--- [API _db.js] getUserFromRequest() started ---");
