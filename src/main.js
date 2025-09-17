@@ -354,12 +354,6 @@ async function loadAndApplySiteSettings() {
 
 
 
-// src/main.js
-import './assets/css/style.css';
-import { useAppStore } from './store/appStore.js';
-import { renderMenuPage } from './features/menu/menuUI.js';
-import { renderCartPage } from './features/cart/cartUI.js';
-import { renderAuthStatus } from './features/auth/authUI.js';
 
 // --- RENDER FUNCTIONS ---
 // These functions are now "pure". They just draw what they are told.
