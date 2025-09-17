@@ -337,8 +337,8 @@ async function main() {
 
     // 6. Perform the very first render.
     // This will show the initial "Loading..." states correctly.
-    renderApp();
-// renderMenuPage();
+    // renderApp();
+renderMenuPage();
     console.log("--- main() finished ---");
 }
 
