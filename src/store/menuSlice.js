@@ -2,20 +2,27 @@
 import * as api from '@/services/apiService.js';
 
 export const createMenuSlice = (set, get) => ({
-    // These are the top-level state properties
-    menuItems: [],
-    isMenuLoading: true,
-    menuError: null,
+    // --- STATE for the 'menu' slice ---
+    items: [],
+    isLoading: true,
+    error: null,
 
+    // --- ACTIONS for the 'menu' slice ---
     fetchMenu: async () => {
-        // Set the top-level properties
-        set({ isMenuLoading: true, menuError: null });
+        // This set call correctly updates properties within its own slice
+        set(state => ({
+            menu: { ...state.menu, isLoading: true, error: null }
+        }));
         try {
-            const items = await api.getMenu();
-            // Set the top-level properties
-            set({ menuItems: items, isMenuLoading: false });
+            const menuItems = await api.getMenu();
+            // This set call correctly updates properties within its own slice
+            set(state => ({
+                menu: { ...state.menu, items: menuItems, isLoading: false }
+            }));
         } catch (error) {
-            set({ menuError: error.message, isMenuLoading: false });
+            set(state => ({
+                menu: { ...state.menu, isLoading: false, error: error.message }
+            }));
         }
     },
 });
