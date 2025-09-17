@@ -355,87 +355,49 @@ async function loadAndApplySiteSettings() {
 
 
 
-// --- RENDER FUNCTIONS ---
-// These functions are now "pure". They just draw what they are told.
+console.log("--- main.js script started (Hello World Test) ---");
 
-function renderHeader() {
-    renderAuthStatus();
-    const cartCountSpan = document.getElementById('cart-count');
-    if (cartCountSpan) {
-        cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-    }
-}
-
-function renderPage() {
-    const hash = window.location.hash || '#menu';
-    switch (hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-        case '#cart':
-            renderCartPage();
-            break;
-        default:
-            renderMenuPage();
-            break;
-    }
-}
-
-// --- APPLICATION STARTUP ---
+// This is the only function.
 function main() {
-    console.log("--- main.js started ---");
-
-    // 1. Render the static shell
+    console.log("--- main() CALLED ---");
+    
+    // 1. Find the #app element.
     const appElement = document.getElementById('app');
-    if (appElement) {
-        appElement.innerHTML = `
-            <header id="main-header">
-                <h1>Mealmates</h1>
-                <nav>
-                    <a href="#menu" class="nav-link">Menu</a>
-                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                    <div id="auth-status-container"></div>
-                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                        </svg>
-                    </a>
-                    <button id="hamburger-btn" class="hamburger-button">
-                        <span></span><span></span><span></span>
-                    </button>
-                </nav>
-            </header>
-            <main id="main-content"></main>
-            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
-            <div id="mobile-menu-panel" class="mobile-menu-panel">
-                <nav id="mobile-nav-links"></nav>
-            </div>
-        `;
+    if (!appElement) {
+        console.error("CRITICAL: #app element not found!");
+        return;
+    }
+    
+    // 2. Render the basic HTML shell.
+    appElement.innerHTML = `
+        <header id="main-header">
+            <h1>Mealmates</h1>
+        </header>
+        <main id="main-content" style="border: 5px dashed red; min-height: 200px;"></main>
+        <footer id="main-footer">
+            <p>&copy; 2024</p>
+        </footer>
+    `;
+    console.log("HTML shell has been rendered.");
+
+    // 3. Find the #main-content element we just created.
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) {
+        console.error("CRITICAL: #main-content could not be found after rendering shell!");
+        return;
     }
 
-    // 2. Set up a subscriber for STATE changes.
-    // It ONLY renders the parts of the UI that depend on state.
-    useAppStore.subscribe(() => {
-        console.log("Zustand state changed. Re-rendering components.");
-        renderHeader();
-        renderPage(); // Re-render the current page to reflect new data
-    });
-
-    // 3. Set up a listener for ROUTE changes.
-    // It ONLY renders the main content area.
-    window.addEventListener('hashchange', renderPage);
-    
-    // setupNavigationAndInteractions(); // We can add this back later
-
-    // 4. Kick off initial data fetches.
-    useAppStore.getState().auth.listenToAuthChanges();
-    useAppStore.getState().menu.fetchMenu();
-    
-    // 5. Perform the initial render.
-    renderHeader();
-    renderPage();
-    
-    console.log("--- main.js finished setup ---");
+    // 4. Directly set its innerHTML to our test message.
+    mainContent.innerHTML = `
+        <div style="padding: 20px; border: 5px solid green;">
+            <h2>Hello, World!</h2>
+            <p>If you can see this green-bordered box, it means JavaScript is running and can modify the DOM.</p>
+        </div>
+    `;
+    console.log("Successfully set 'Hello World' content.");
 }
 
+// Run the main function.
 main();
+
+console.log("--- main.js script finished ---");
