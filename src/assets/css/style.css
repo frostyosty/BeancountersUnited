@@ -1073,7 +1073,6 @@ body.on-checkout-page #phone-icon-link {
         margin-right: 0; /* Remove the auto margin */
     }
     
-    /* --- THIS IS THE FIX --- */
     /* Make the auth container take up the full width on the next line */
     #main-header nav #auth-status-container {
         display: block; /* Make it visible */
@@ -1082,7 +1081,5 @@ body.on-checkout-page #phone-icon-link {
         text-align: center; /* Center the buttons */
         margin-top: 10px;
     }
-    /* --- END FIX --- */
-    
-    /* ... (Keep your other mobile styles for the menu panel, modal, etc.) ... */
+
 }
