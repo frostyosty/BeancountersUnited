@@ -287,7 +287,7 @@ async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");
-
+    
     // 1. Render the static HTML shell immediately.
     const appElement = document.getElementById('app');
     if (appElement) {

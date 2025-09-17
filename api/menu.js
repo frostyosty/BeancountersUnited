@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     console.log("--- [API /api/menu] Handler started ---");
     console.log(`[API /api/menu] Request Method: ${req.method}`);
 
-    if (req.method ===main 'GET') {
+    if (req.method === 'GET') {
         try {
             console.log("[API /api/menu] Attempting to connect to Supabase and query 'menu_items' table...");
 
