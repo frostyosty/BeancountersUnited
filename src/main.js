@@ -35,21 +35,21 @@ function renderOrderConfirmationPage() {
 
 
 
-// // This is our single, simple "re-render" function.
-// function renderApp() {
-//     console.log("--- renderApp() called ---");
-//     renderAuthStatus();
-//     renderPageContent(); // This renders the main content based on the route
+// This is our single, simple "re-render" function.
+function renderApp() {
+    console.log("--- renderApp() called ---");
+    renderAuthStatus();
+    renderPageContent(); // This renders the main content based on the route
     
-//     const cartCountSpan = document.getElementById('cart-count');
-//     if (cartCountSpan) {
-//         try {
-//             cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-//         } catch (e) {
-//             cartCountSpan.textContent = '0';
-//         }
-//     }
-// }
+    const cartCountSpan = document.getElementById('cart-count');
+    if (cartCountSpan) {
+        try {
+            cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+        } catch (e) {
+            cartCountSpan.textContent = '0';
+        }
+    }
+}
 
 function renderPageContent() {
     console.log("--- renderPageContent() called ---");
@@ -282,104 +282,72 @@ async function loadAndApplySiteSettings() {
 }
 
 
-// async function main() {
-//     // Initialization guard to prevent running twice
-//     if (isAppInitialized) return;
-//     isAppInitialized = true;
-//     console.log("--- main() started ---");
+async function main() {
+    // Initialization guard to prevent running twice
+    if (isAppInitialized) return;
+    isAppInitialized = true;
+    console.log("--- main() started ---");
 
-//     // 1. Render the static HTML shell immediately.
-//     const appElement = document.getElementById('app');
-//     if (appElement) {
-//         appElement.innerHTML = `
-//             <header id="main-header">
-//                 <h1>Mealmates</h1>
-//                 <nav>
-//                     <a href="#menu" class="nav-link">Menu</a>
-//                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-//                     <div id="auth-status-container"></div>
-//                     <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
-//                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-//                             <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-//                         </svg>
-//                     </a>
-//                     <button id="hamburger-btn" class="hamburger-button">
-//                         <span></span><span></span><span></span>
-//                     </button>
-//                 </nav>
-//             </header>
-//             <main id="main-content"></main>
-//             <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
-//             <div id="mobile-menu-panel" class="mobile-menu-panel">
-//                 <nav id="mobile-nav-links"></nav>
-//             </div>
-//         `;
-//     }
+    // 1. Render the static HTML shell immediately.
+    const appElement = document.getElementById('app');
+    if (appElement) {
+        appElement.innerHTML = `
+            <header id="main-header">
+                <h1>Mealmates</h1>
+                <nav>
+                    <a href="#menu" class="nav-link">Menu</a>
+                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
+                    <div id="auth-status-container"></div>
+                    <a id="phone-icon-link" class="phone-icon" href="#" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </a>
+                    <button id="hamburger-btn" class="hamburger-button">
+                        <span></span><span></span><span></span>
+                    </button>
+                </nav>
+            </header>
+            <main id="main-content"></main>
+            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+            <div id="mobile-menu-panel" class="mobile-menu-panel">
+                <nav id="mobile-nav-links"></nav>
+            </div>
+        `;
+    }
 
-//     // 2. Set up a SINGLE subscriber to handle ALL UI updates.
-//     // This is the core of the reactive system.
-//     useAppStore.subscribe(renderApp);
+    // 2. Set up a SINGLE subscriber to handle ALL UI updates.
+    // This is the core of the reactive system.
+    useAppStore.subscribe(renderApp);
 
-//     // 3. Set up listeners for user interaction.
-//     // window.addEventListener('hashchange', renderApp); // Re-render on navigation
-//     setupNavigationAndInteractions();
+    // 3. Set up listeners for user interaction.
+    // window.addEventListener('hashchange', renderApp); // Re-render on navigation
+    setupNavigationAndInteractions();
 
-//     // 4. Kick off initial asynchronous actions.
-//     // These run in the background. The subscriber will update the UI when they complete.
-//     useAppStore.getState().auth.listenToAuthChanges();
-//     useAppStore.getState().menu.fetchMenu();
-//     useAppStore.getState().siteSettings.fetchSiteSettings();
+    // 4. Kick off initial asynchronous actions.
+    // These run in the background. The subscriber will update the UI when they complete.
+    useAppStore.getState().auth.listenToAuthChanges();
+    useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
 
-//     // 5. Initialize UI modules that need to attach listeners.
-//     initializeImpersonationToolbar();
-//     setupGodModeTrigger();
-//     setupHamburgerMenu();
+    // 5. Initialize UI modules that need to attach listeners.
+    initializeImpersonationToolbar();
+    setupGodModeTrigger();
+    setupHamburgerMenu();
 
-//     // 6. Perform the very first render.
-//     // This will show the initial "Loading..." states correctly.
-//     // renderApp();
-// renderMenuPage();
-//     console.log("--- main() finished ---");
-// }
-
-// main();
-
-
-
-
-
-
-
-
-
-
-// The one and only function that draws our app
-function renderApp() {
-    console.log("--- renderApp() CALLED ---");
-    // We will add auth and cart back here later.
-    // For now, it only renders the menu.
-    renderMenuPage();
+    // 6. Perform the very first render.
+    // This will show the initial "Loading..." states correctly.
+    // renderApp();
+renderMenuPage();
+    console.log("--- main() finished ---");
 }
 
-// --- Application Start ---
-console.log("--- main.js script started ---");
+main();
 
-// 1. Render the static shell
-const appElement = document.getElementById('app');
-if (appElement) {
-    appElement.innerHTML = `
-        <header id="main-header"><h1>Mealmates</h1></header>
-        <main id="main-content"></main>
-    `;
-}
 
-// 2. Set up the subscriber. This will fire when the state changes.
-useAppStore.subscribe(renderApp);
 
-// 3. Kick off the fetch. This runs in the background.
-useAppStore.getState().fetchMenu();
 
-// 4. Perform the initial render. This will show the "Loading..." state.
-renderApp();
 
-console.log("--- main.js script setup finished ---");
+
+
+
