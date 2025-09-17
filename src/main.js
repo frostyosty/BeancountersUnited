@@ -354,50 +354,41 @@ async function loadAndApplySiteSettings() {
 
 
 
+console.log("--- main.js script started (Level 2) ---");
 
-console.log("--- main.js script started (Hello World Test) ---");
-
-// This is the only function.
-function main() {
+async function main() {
     console.log("--- main() CALLED ---");
-    
-    // 1. Find the #app element.
+
+    // 1. Render the static shell
     const appElement = document.getElementById('app');
-    if (!appElement) {
-        console.error("CRITICAL: #app element not found!");
-        return;
-    }
-    
-    // 2. Render the basic HTML shell.
-    appElement.innerHTML = `
-        <header id="main-header">
-            <h1>Mealmates</h1>
-        </header>
-        <main id="main-content" style="border: 5px dashed red; min-height: 200px;"></main>
-        <footer id="main-footer">
-            <p>&copy; 2024</p>
-        </footer>
-    `;
-    console.log("HTML shell has been rendered.");
-
-    // 3. Find the #main-content element we just created.
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) {
-        console.error("CRITICAL: #main-content could not be found after rendering shell!");
-        return;
+    if (appElement) {
+        appElement.innerHTML = `
+            <header id="main-header"><h1>Mealmates</h1></header>
+            <main id="main-content">
+                <div class="loading-spinner">Initializing Store and API...</div>
+            </main>
+            <footer id="main-footer"><p>&copy; 2024</p></footer>
+        `;
     }
 
-    // 4. Directly set its innerHTML to our test message.
-    mainContent.innerHTML = `
-        <div style="padding: 20px; border: 5px solid green;">
-            <h2>Hello, World!</h2>
-            <p>If you can see this green-bordered box, it means JavaScript is running and can modify the DOM.</p>
-        </div>
-    `;
-    console.log("Successfully set 'Hello World' content.");
+    // 2. Set up a simple subscriber to log ALL state changes.
+    // This is our window into what the store is doing.
+    useAppStore.subscribe((state) => {
+        console.log("--- ZUSTAND STATE CHANGED ---");
+        console.log("New isMenuLoading state:", state.isMenuLoading);
+        console.log("New menuItems count:", state.menuItems.length);
+    });
+
+    // 3. Kick off the menu fetch.
+    console.log("main(): Kicking off fetchMenu()...");
+    await useAppStore.getState().fetchMenu();
+    console.log("main(): fetchMenu() has completed.");
+
+    // 4. Manually log the final state to be sure.
+    console.log("--- FINAL STATE AFTER FETCH ---");
+    console.log(useAppStore.getState());
 }
 
-// Run the main function.
 main();
 
-console.log("--- main.js script finished ---");
+console.log("--- main.js script setup finished ---");
