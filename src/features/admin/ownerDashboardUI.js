@@ -61,7 +61,7 @@ async function handleMenuItemFormSubmit(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.textContent = 'Saving...';
-    
+
     const itemData = Object.fromEntries(new FormData(form).entries());
     const imageFile = itemData.imageFile;
     const isEditing = !!itemData.id;
@@ -154,7 +154,7 @@ async function handleBusinessDetailsSave(form) {
     const saveButton = form.querySelector('button[type="submit"]');
     saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
-    
+
     const formData = new FormData(form);
     const detailsToUpdate = Object.fromEntries(formData.entries()); // { restaurantPhoneNumber: '...' }
 
@@ -173,7 +173,7 @@ async function handleBusinessDetailsSave(form) {
 function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
-    
+
     // --- Event Delegation for all clicks and submits ---
     dashboardContainer.addEventListener('submit', (event) => {
         // --- NEW: Handle Business Details Form Submission ---
@@ -246,7 +246,7 @@ export function renderOwnerDashboard() {
 
 
     const { items: menuItems } = useAppStore.getState().menu;
-const { settings, isLoading, error } = useAppStore.getState().siteSettings;
+    const { settings, isLoading, error } = useAppStore.getState().siteSettings;
     const ownerPermissions = settings.ownerPermissions || {
         canEditTheme: true,
         canEditCategories: true,
@@ -256,7 +256,7 @@ const { settings, isLoading, error } = useAppStore.getState().siteSettings;
 
 
 
-        if (isLoading) {
+    if (isLoading) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
         return;
     }
@@ -270,12 +270,12 @@ const { settings, isLoading, error } = useAppStore.getState().siteSettings;
     const themeControlsHTML = ownerPermissions.canEditTheme
         ? uiUtils.getThemeControlsHTML(settings.themeVariables || {})
         : '';
-    
+
     const menuLayoutHTML = ownerPermissions.canEditCategories
         ? getMenuLayoutHTML()
         : '';
 
-const menuItemsTableRows = menuItems.map(item => `
+    const menuItemsTableRows = menuItems.map(item => `
         <tr data-item-id="${item.id}">
             <td>${item.name}</td>
             <td>${item.category || 'N/A'}</td>
@@ -284,7 +284,7 @@ const menuItemsTableRows = menuItems.map(item => `
         </tr>
     `).join('');
 
-        mainContent.innerHTML = `
+    mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>Owner Dashboard</h2>
             
