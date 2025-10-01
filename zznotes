@@ -1,1 +1,1 @@
-git add . && git commit -m "trying to fix as main too corrupted" && git push origin master
+git add . && git commit -m "working now apart from god mode" && git push origin master
