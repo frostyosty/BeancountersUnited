@@ -20,18 +20,18 @@ import { createUiSlice } from './uiSlice.js'; // The last one we added
 export const useAppStore = create(
   devtools(
     (set, get) => {
-        console.log("--- [3.1] appStore.js: Zustand create() function is running. ---");
-        return {
-      menu: createMenuSlice(set, get),
-      auth: createAuthSlice(set, get),
-      cart: createCartSlice(set, get),
-      siteSettings: createSiteSettingsSlice(set, get),
-      checkout: createCheckoutSlice(set, get),
-      admin: createAdminSlice(set, get),
-            orderHistory: createOrderHistorySlice(set, get),
-                  ui: createUiSlice(set, get), // Add the new UI slice
-    
-        };
+      console.log("--- [3.1] appStore.js: Zustand create() function is running. ---");
+      return {
+        menu: createMenuSlice(set, get),
+        auth: createAuthSlice(set, get),
+        cart: createCartSlice(set, get),
+        siteSettings: createSiteSettingsSlice(set, get),
+        checkout: createCheckoutSlice(set, get),
+        admin: createAdminSlice(set, get),
+        orderHistory: createOrderHistorySlice(set, get),
+        ui: createUiSlice(set, get), // Add the new UI slice
+
+      };
     },
     { name: "RestaurantAppStore" }
   )

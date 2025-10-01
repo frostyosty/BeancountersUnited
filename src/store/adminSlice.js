@@ -15,7 +15,6 @@ export const createAdminSlice = (set, get) => ({
         if (isLoadingUsers || users.length > 0) {
             return; // Return immediately, DO NOT set state again.
         }
-
         // --- THIS IS THE CRITICAL FIX ---
         // We now set the loading state BEFORE the async part,
         // but only if we are actually going to fetch.

@@ -77,12 +77,20 @@ async function handleThemeSettingsSave() {
         alert(`Error: ${error.message}`);
     }
 }
-
 function attachManagerDashboardListeners() {
-    const dashboardContainer = document.querySelector('.dashboard-container');
-    if (!dashboardContainer || dashboardContainer.dataset.listenersAttached) return;
+    const mainContent = document.getElementById('main-content');
+    
+    // Safety check to prevent adding the listener more than once
+    if (mainContent.dataset.managerListenersAttached === 'true') {
+        return;
+    }
 
-    dashboardContainer.addEventListener('click', (event) => {
+    console.log("[managerUI] Attaching delegated event listeners to main-content.");
+
+    mainContent.addEventListener('click', (event) => {
+        // Only act if the dashboard is currently rendered
+        if (!document.querySelector('#global-settings-form')) return;
+
         if (event.target.closest('.edit-user-btn')) {
             const userId = event.target.closest('tr').dataset.userId;
             const user = useAppStore.getState().admin.users.find(u => u.id === userId);
@@ -93,19 +101,30 @@ function attachManagerDashboardListeners() {
         }
     });
 
-    dashboardContainer.addEventListener('submit', (event) => {
+    mainContent.addEventListener('submit', (event) => {
+        // Only act if the dashboard is currently rendered
+        if (!document.querySelector('#global-settings-form')) return;
+
         if (event.target.matches('#global-settings-form')) {
             handleGlobalSettingsSave(event);
         }
+        if (event.target.matches('#owner-permissions-form')) {
+            event.preventDefault(); // Prevent default form submission
+            handleOwnerPermissionsSave(event.target);
+        }
     });
 
-    dashboardContainer.addEventListener('input', (event) => {
+    mainContent.addEventListener('input', (event) => {
+        // Only act if the dashboard is currently rendered
+        if (!document.querySelector('#global-settings-form')) return;
+
         if (event.target.matches('[data-css-var]')) {
             uiUtils.updateCssVariable(event.target.dataset.cssVar, event.target.value);
         }
     });
 
-    dashboardContainer.dataset.listenersAttached = 'true';
+    // Mark the stable parent element so we never attach these listeners again.
+    mainContent.dataset.managerListenersAttached = 'true';
 }
 
 // --- MAIN RENDER FUNCTION ---
