@@ -110,43 +110,49 @@ function attachManagerDashboardListeners() {
 
 // --- MAIN RENDER FUNCTION ---
 
-export async function renderManagerDashboard() {
+
+export function renderManagerDashboard() {
+    console.log("--- 1. renderManagerDashboard() CALLED ---");
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    mainContent.innerHTML = `<div class="loading-spinner">Loading God Mode Dashboard...</div>`;
+    // --- THIS IS THE NEW REACTIVE PATTERN ---
 
-    // Fetch all necessary data concurrently
-    await Promise.all([
-        useAppStore.getState().admin.fetchAllUsers(),
-        useAppStore.getState().siteSettings.fetchSiteSettings()
-    ]);
+    // 1. Immediately request the data. The store will prevent duplicate fetches.
+    // We do not 'await' it here. We let it run in the background.
+    useAppStore.getState().admin.fetchAllUsers();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
 
+    // 2. Get the CURRENT state from the store.
     const { users, isLoadingUsers, error: userError } = useAppStore.getState().admin;
-    const { settings, error: settingsError } = useAppStore.getState().siteSettings;
-    // Get the current owner settings from the database, provide defaults
-    const ownerSettings = settings.ownerPermissions || {
-        canEditTheme: true,
-        canEditCategories: true,
-        canEditMenuLayout: true // Placeholder for your future drag-and-drop feature
-    };
+    const { settings, isLoading: isLoadingSettings, error: settingsError } = useAppStore.getState().siteSettings;
 
+    console.log("--- 2. Current State ---", { isLoadingUsers, isLoadingSettings, userCount: users.length });
 
+    // 3. Render loading or error states first (Guard Clauses).
+    if (isLoadingUsers || isLoadingSettings) {
+        console.log("--- 3. Rendering LOADING state ---");
+        mainContent.innerHTML = `<div class="loading-spinner">Loading God Mode Dashboard...</div>`;
+        return;
+    }
     if (userError || settingsError) {
+        console.log("--- 3. Rendering ERROR state ---", { userError, settingsError });
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load dashboard data</h2><p>${userError || settingsError}</p></div>`;
         return;
     }
 
+    // 4. If we get here, data is ready. Prepare the HTML.
+    console.log("--- 4. Data is loaded, preparing to render HTML ---");
+    const ownerSettings = settings.ownerPermissions || {};
+    const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
 
-
-    // --- Prepare HTML chunks ---
     const userTableRows = users.map(user => `
         <tr data-user-id="${user.id}">
             <td>${user.email}</td>
-                        <td>${user.full_name || 'N/A'}</td>
+            <td>${user.full_name || 'N/A'}</td>
             <td><span class="role-badge role-${user.role}">${user.role}</span></td>
             <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
-            <td>${user.can_see_order_history ? 'Yes' : 'No'}</td> <!-- NEW COLUMN -->
+            <td>${user.can_see_order_history ? 'Yes' : 'No'}</td>
             <td>${new Date(user.created_at).toLocaleDateString()}</td>
             <td><button class="button-secondary small edit-user-btn">Edit</button></td>
         </tr>
@@ -154,11 +160,10 @@ export async function renderManagerDashboard() {
 
     const themeControlsHTML = uiUtils.getThemeControlsHTML(settings.themeVariables || {});
 
-    // --- Assemble Final HTML ---
+    // 5. Assemble and render the final HTML.
     mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>God Mode Dashboard</h2>
-
             <section class="dashboard-section">
                 <h3>User Management</h3>
                 <div class="table-wrapper">
@@ -166,7 +171,7 @@ export async function renderManagerDashboard() {
                         <thead>
                             <tr><th>Email</th><th>Full Name</th><th>Role</th><th>Verified Buyer</th><th>Can Re-order?</th><th>Joined</th><th>Actions</th></tr>
                         </thead>
-                        <tbody>${isLoadingUsers ? `<tr><td colspan="6">Loading...</td></tr>` : userTableRows}</tbody>
+                        <tbody>${userTableRows}</tbody>
                     </table>
                 </div>
             </section>
@@ -178,10 +183,7 @@ export async function renderManagerDashboard() {
                         <label for="website-name">Website Name</label>
                         <input type="text" id="website-name" name="websiteName" value="${settings.websiteName || 'Mealmates'}">
                     </div>
-                    <div class="form-actions">
-                        <button type="submit" class="button-primary">Save Site Name</button>
-                    </div>
-                </form><div class="form-group">
+                     <div class="form-group">
                         <label>Hamburger Menu Content</label>
                         <div>
                             <input type="radio" id="hamburger-main-nav" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig === 'main-nav' ? 'checked' : ''}>
@@ -192,35 +194,26 @@ export async function renderManagerDashboard() {
                             <label for="hamburger-categories">Show Menu Categories (for filtering)</label>
                         </div>
                     </div>
-                    
                     <div class="form-actions">
                         <button type="submit" class="button-primary">Save Site Settings</button>
                     </div>
                 </form>
             </section>
-            
+
             <section class="dashboard-section">
                 <h3>Theme Customizer</h3>
                 ${themeControlsHTML}
             </section>
-            <!-- NEW: Owner Permissions Section -->
+
             <section class="dashboard-section">
                 <h3>Owner Dashboard Permissions</h3>
-                <p>Choose which customization features are available to Restaurant Owners.</p>
                 <form id="owner-permissions-form">
                     <div class="form-group">
-                        <label>
-                            <input type="checkbox" name="canEditTheme" ${ownerSettings.canEditTheme ? 'checked' : ''}>
-                            Allow owners to edit theme colors.
-                        </label>
+                        <label><input type="checkbox" name="canEditTheme" ${ownerSettings.canEditTheme ? 'checked' : ''}> Allow owners to edit theme colors.</label>
                     </div>
                     <div class="form-group">
-                        <label>
-                            <input type="checkbox" name="canEditCategories" ${ownerSettings.canEditCategories ? 'checked' : ''}>
-                            Allow owners to manage menu categories.
-                        </label>
+                        <label><input type="checkbox" name="canEditCategories" ${ownerSettings.canEditCategories ? 'checked' : ''}> Allow owners to manage menu categories.</label>
                     </div>
-                    <!-- Add more toggles here as you build more owner features -->
                     <div class="form-actions">
                         <button type="submit" class="button-primary">Save Owner Permissions</button>
                     </div>
@@ -229,6 +222,7 @@ export async function renderManagerDashboard() {
         </div>
     `;
 
+    console.log("--- 6. ManagerDashboard: SUCCESSFULLY rendered. Attaching listeners... ---");
     attachManagerDashboardListeners();
 }
 
