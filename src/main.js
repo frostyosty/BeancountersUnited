@@ -33,13 +33,9 @@ function renderOrderConfirmationPage() {
 }
 
 
-
-
-// This is our single, simple "re-render" function.
-function renderApp() {
-    console.log("--- renderApp() called ---");
-    renderAuthStatus();
-    renderPageContent(); // This renders the main content based on the route
+// This function ONLY updates persistent elements like the header and cart count.
+function renderPersistentUI() {
+    renderAuthStatus(); // Renders login/logout, dashboard links, etc.
     
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
@@ -51,63 +47,33 @@ function renderApp() {
     }
 }
 
+// This function ONLY renders the main page content based on the URL hash.
+// It is NOT affected by minor state changes.
 function renderPageContent() {
-    console.log("--- renderPageContent() called ---");
     const hash = window.location.hash || '#menu';
+    const { getUserRole, isAuthenticated } = useAppStore.getState().auth;
+    const userRole = getUserRole();
 
-    console.log("DEBUG: Getting auth slice...");
-    const authSlice = useAppStore.getState().auth;
-    console.log("DEBUG: Auth slice retrieved. Does it have getUserRole?", typeof authSlice?.getUserRole);
-
-    // This is the line that is likely failing
-    const userRole = authSlice.getUserRole();
-    console.log("DEBUG: User role is:", userRole);
-
-    console.log("DEBUG: Styling nav links...");
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
-    console.log("DEBUG: Nav links styled.");
 
-    console.log("--- about to engage in the switch stuff ---");
     switch (hash) {
-        case '#menu':
-            console.log("Switching to #menu, calling renderMenuPage()");
-            renderMenuPage();
-            break;
-        case '#cart':
-            console.log("Switching to #cart, calling renderCartPage()");
-            renderCartPage(); break;
-        case '#checkout': 
-        console.log("Switching to #checkout, calling rendercheckoutpage()");
-        renderCheckoutPage(); break;
-        case '#order-confirmation': 
-        console.log("Switching to #checkout, calling rendercheckoutpage()");
-        renderOrderConfirmationPage(); break;
+        case '#menu': renderMenuPage(); break;
+        case '#cart': renderCartPage(); break;
+        case '#checkout': renderCheckoutPage(); break;
+        case '#order-confirmation': renderOrderConfirmationPage(); break;
         case '#order-history':
-            console.log("about to check order-history getstate");
-            if (useAppStore.getState().auth.isAuthenticated) {
-                            console.log("Switching calling renderorderhistorypage()");
-                renderOrderHistoryPage();
-            } else { 
-                               console.log("Switching to menu via order history reject");
-                window.location.hash = '#menu'; }
+            if (isAuthenticated) { renderOrderHistoryPage(); }
+            else { window.location.hash = '#menu'; }
             break;
         case '#owner-dashboard':
-            if (userRole === 'owner' || userRole === 'manager') {
-                               console.log("Switching to owner/manager only()");
-                renderOwnerDashboard();
-            } else {
-                console.log("Switching to menu via  owner reject");
-                window.location.hash = '#menu'; }
+            if (userRole === 'owner' || userRole === 'manager') { renderOwnerDashboard(); }
+            else { window.location.hash = '#menu'; }
             break;
         case '#manager-dashboard':
-            if (userRole === 'manager') {
-                                               console.log("Switching to manager only()");
-                renderManagerDashboard();
-            } else { 
-                                console.log("Switching to menu via manager reject");
-                window.location.hash = '#menu'; }
+            if (userRole === 'manager') { renderManagerDashboard(); }
+            else { window.location.hash = '#menu'; }
             break;
         default: renderMenuPage(); break;
     }
@@ -316,12 +282,17 @@ async function main() {
         `;
     }
 
-    // 2. Set up a SINGLE subscriber to handle ALL UI updates.
-    // This is the core of the reactive system.
-    useAppStore.subscribe(renderApp);
+// 2. Set up smart subscribers and listeners.
+    
+    // This subscriber ONLY updates the persistent UI (header).
+    // It listens for auth changes and cart changes, which affect the header.
+    useAppStore.subscribe(
+        (state) => ({ isAuthenticated: state.auth.isAuthenticated, cartItems: state.cart.items }),
+        renderPersistentUI
+    );
 
-    // 3. Set up listeners for user interaction.
-    window.addEventListener('hashchange', renderApp); // Re-render on navigation
+    // This listener ONLY re-renders the main page content when the URL hash changes.
+    window.addEventListener('hashchange', renderPageContent);
     setupNavigationAndInteractions();
 
     // 4. Kick off initial asynchronous actions.

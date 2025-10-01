@@ -1,4 +1,6 @@
 // src/features/admin/managerDashboardUI.js
+
+// effectively god mode
 import { useAppStore } from '@/store/appStore.js';
 import * as api from '@/services/apiService.js'; // Needed for direct API calls
 import * as uiUtils from '@/utils/uiUtils.js';
