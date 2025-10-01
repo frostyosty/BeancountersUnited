@@ -8,23 +8,22 @@ export const createAdminSlice = (set, get) => ({
     error: null,
 
     // --- ACTIONS ---
- fetchAllUsers: async () => {
-        // --- THIS IS THE FIX ---
-        // 1. Get the current state of the admin slice.
+    fetchAllUsers: async () => {
         const { isLoadingUsers, users } = get().admin;
 
-        // 2. Safety Check: If we are already loading, or if the user list is already populated, do nothing.
+        // Safety Check: If already loading or data exists, do nothing.
         if (isLoadingUsers || users.length > 0) {
-            console.log("Skipping fetchAllUsers: already loading or data already exists.");
-            return;
+            return; // Return immediately, DO NOT set state again.
         }
-        // --- END OF FIX ---
+
+        // --- THIS IS THE CRITICAL FIX ---
+        // We now set the loading state BEFORE the async part,
+        // but only if we are actually going to fetch.
+        set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
 
         console.log("Fetching all users from API...");
-        set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
         try {
-            // No need to get the token here, the apiService should handle it.
-            const userList = await api.listAllUsers(); // Simplified call
+            const userList = await api.listAllUsers();
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
         } catch (error) {
             console.error("Failed to fetch all users:", error);
@@ -33,10 +32,10 @@ export const createAdminSlice = (set, get) => ({
     },
 
 
-     updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
+    updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
         const originalUsers = get().admin.users;
         // Optimistically update the local state with the new value
-        const updatedUsers = originalUsers.map(u => 
+        const updatedUsers = originalUsers.map(u =>
             u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory } : u
         );
         set(state => ({ admin: { ...state.admin, users: updatedUsers } }));
