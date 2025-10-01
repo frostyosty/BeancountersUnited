@@ -9,27 +9,15 @@ import * as uiUtils from '@/utils/uiUtils.js';
 export function renderAuthStatus() {
     const authContainer = document.getElementById('auth-status-container');
     if (!authContainer) return;
-    
-    // --- DEFENSIVE CHECK ---
-    const authSlice = useAppStore.getState().auth;
-    if (!authSlice) {
-        authContainer.innerHTML = `<span>...</span>`;
-        return;
-    }
-    // --- END CHECK ---
 
-    const { isAuthenticated, user, profile, isAuthLoading } = authSlice;
+    const { isAuthenticated, user, profile, isAuthLoading } = useAppStore.getState().auth;
+    let newHTML = ''; // <-- We will calculate the new HTML first
+
     if (isAuthLoading) {
-        authContainer.innerHTML = `<span>...</span>`;
-        return;
-    }
-    if (isAuthenticated) {
-        // --- THIS IS THE FIX ---
-        // We add a check to ensure `profile` is not null before using it.
+        newHTML = `<span>...</span>`;
+    } else if (isAuthenticated) {
         const userRole = profile?.role || 'customer';
-        const canSeeHistory = profile?.can_see_order_history || false; // Default to false if profile is loading
-        // --- END OF FIX ---
-
+        const canSeeHistory = profile?.can_see_order_history || false;
         let dashboardLinks = '';
         if (userRole === 'owner' || userRole === 'manager') {
             dashboardLinks += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
@@ -37,11 +25,9 @@ export function renderAuthStatus() {
         if (userRole === 'manager') {
             dashboardLinks += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
         }
-        
-        // Only show the link if the profile is loaded AND the flag is true
         const orderHistoryLink = profile && canSeeHistory ? `<a href="#order-history" class="nav-link">Order History</a>` : '';
 
-        authContainer.innerHTML = `
+        newHTML = `
             <div class="user-info">
                 <span>${user.email}</span>
                 ${orderHistoryLink}
@@ -50,15 +36,20 @@ export function renderAuthStatus() {
             </div>
         `;
     } else {
-
-        authContainer.innerHTML = `
-            <button id="login-btn" class="button-primary">Login</button>
-            <button id="signup-btn" class="button-secondary">Sign Up</button>
-        `;
+        // NOTE: Your previous code had two separate buttons. 
+        // A single "Login / Sign Up" button that opens the modal is a more common pattern.
+        // I am using the version from our more recent main.js files.
+        newHTML = `<button id="login-signup-btn" class="button-primary">Login / Sign Up</button>`;
     }
-    // The main render loop handles re-attaching listeners implicitly now.
-}
 
+    // --- THIS IS THE FIX ---
+    // Only update the DOM if the content has actually changed.
+    // This prevents unnecessary re-renders and solves the "lingering ..." bug.
+    if (authContainer.innerHTML !== newHTML) {
+        authContainer.innerHTML = newHTML;
+    }
+    // --- END OF FIX ---
+}
 
 
 
