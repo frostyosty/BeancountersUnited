@@ -8,19 +8,30 @@ export const createAdminSlice = (set, get) => ({
     error: null,
 
     // --- ACTIONS ---
-    fetchAllUsers: async () => {
+ fetchAllUsers: async () => {
+        // --- THIS IS THE FIX ---
+        // 1. Get the current state of the admin slice.
+        const { isLoadingUsers, users } = get().admin;
+
+        // 2. Safety Check: If we are already loading, or if the user list is already populated, do nothing.
+        if (isLoadingUsers || users.length > 0) {
+            console.log("Skipping fetchAllUsers: already loading or data already exists.");
+            return;
+        }
+        // --- END OF FIX ---
+
+        console.log("Fetching all users from API...");
         set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
         try {
-            const { data: { session } } = await window.supabase.auth.getSession();
-            if (!session) throw new Error("Not authenticated");
-
-            const userList = await api.listAllUsers(session.access_token);
+            // No need to get the token here, the apiService should handle it.
+            const userList = await api.listAllUsers(); // Simplified call
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
         } catch (error) {
             console.error("Failed to fetch all users:", error);
             set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }), false, 'admin/fetchUsersError');
         }
     },
+
 
      updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
         const originalUsers = get().admin.users;
