@@ -30,7 +30,7 @@ function renderOrderConfirmationPage() {
 function renderPersistentUI() {
     // 1. Render the desktop auth status (Login/Logout, Dashboard links)
     renderAuthStatus();
-    
+
     // 2. Render the desktop cart count
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) {
@@ -172,7 +172,7 @@ function setupHamburgerMenu() {
         } else {
             authSectionHTML = `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
         }
-        
+
         const newHTML = navHTML + authSectionHTML;
         // Make it idempotent to prevent loops
         if (mobileNavContainer.innerHTML !== newHTML) {
@@ -195,7 +195,7 @@ function setupHamburgerMenu() {
             toggleMenu();
         }
     });
-    
+
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) {
             toggleMenu();
@@ -207,7 +207,7 @@ async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("--- main() started ---");
-    
+
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -231,16 +231,16 @@ async function main() {
 
 
 
-        // 2. Set up smart subscribers and listeners.
-            
+    // 2. Set up smart subscribers and listeners.
+
     // This subscriber ONLY updates the persistent UI (header).
     // It now listens to the loading status as well.
     useAppStore.subscribe(
         // --- THIS IS THE FIX ---
-        (state) => ({ 
-            isAuthLoading: state.auth.isAuthLoading, 
-            isAuthenticated: state.auth.isAuthenticated, 
-            cartItems: state.cart.items 
+        (state) => ({
+            isAuthLoading: state.auth.isAuthLoading,
+            isAuthenticated: state.auth.isAuthenticated,
+            cartItems: state.cart.items
         }),
         // --- END OF FIX ---
         renderPersistentUI
@@ -249,8 +249,17 @@ async function main() {
     // This listener ONLY re-renders the main page content when the URL hash changes.
     window.addEventListener('hashchange', renderPageContent);
 
+    // This subscriber specifically watches for when the menu is done loading.
+    useAppStore.subscribe(
+        (state) => state.menu.isLoading,
+        (isLoading) => {
+            // If loading is FINISHED and we are still on the menu page, re-render the content.
+            if (!isLoading && (window.location.hash === '#menu' || window.location.hash === '')) {
+                renderPageContent();
+            }
+        }
+    );
 
-    
     // Set up other listeners
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
