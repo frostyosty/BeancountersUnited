@@ -279,10 +279,7 @@ async function main() {
             console.log("%c[App Sub] Header UI state changed. Re-rendering.", "color: blue;");
             renderPersistentUI(); // This was missing from my previous snippet
 
-            // --- ADD THIS LINE ---
-            // If a loading flag just turned false, it's safe to re-render the page content
-            renderPageContent();
-            // --- END ADD ---
+
 
             previousUIState = currentUIState;
         }
