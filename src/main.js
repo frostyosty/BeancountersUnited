@@ -1,6 +1,7 @@
 // src/main.js (FINAL ARCHITECTURE)
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
+import { hideInitialLoader } from './utils/uiUtils.js';
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -276,7 +277,18 @@ async function main() {
     
     // The header will be rendered by its subscriber as soon as the auth state settles.
     
+ // Perform the very first renders
+    console.log("[App] Performing initial render...");
+    renderPageContent();
+    
     console.log("[App] Main initialization finished.");
+
+    // --- THIS IS THE FIX ---
+    // Wait a brief moment for the first paint, then hide the initial loader.
+    setTimeout(() => {
+        uiUtils.hideInitialLoader();
+    }, 200); // 200ms is a safe delay
+    // --- END OF FIX ---
 }
 
 main();

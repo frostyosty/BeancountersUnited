@@ -2,7 +2,7 @@
 
 /* Define CSS variables for theming in the :root */
 :root {
-    --primary-color: #e67e22;
+    --primary-color: #4d2909;
     --secondary-color: #6c757d;
     --background-color: #ffffff;
     --surface-color: #f8f9fa;
@@ -14,7 +14,7 @@
 
 /* Example of a dark theme override, toggled by a class on the <html> element */
 html.dark {
-    --primary-color: #f9826c; /* A lighter orange for dark mode */
+    --primary-color: #fa3a18; /* A lighter orange for dark mode */
     --secondary-color: #8c96a2;
     --background-color: #121212;
     --surface-color: #1e1e1e;

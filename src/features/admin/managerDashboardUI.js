@@ -141,13 +141,22 @@ export function renderManagerDashboard() {
 
     // 1. Immediately request the data. The store will prevent duplicate fetches.
     // We do not 'await' it here. We let it run in the background.
-    useAppStore.getState().admin.fetchAllUsers();
+     useAppStore.getState().admin.fetchAllUsers();
     useAppStore.getState().siteSettings.fetchSiteSettings();
-
-    // 2. Get the CURRENT state from the store.
+    
     const { users, isLoadingUsers, error: userError } = useAppStore.getState().admin;
     const { settings, isLoading: isLoadingSettings, error: settingsError } = useAppStore.getState().siteSettings;
 
+    // Guard Clause: If EITHER data source is loading, show the loader.
+    if (isLoadingUsers || isLoadingSettings) {
+        mainContent.innerHTML = `
+            <div class="initial-app-loader">
+                <div class="coffee-cup-spinner">
+                    <div class="cup-body"></div><div class="cup-handle"></div>
+                </div>
+            </div>`;
+        return;
+    }
     console.log("--- 2. Current State ---", { isLoadingUsers, isLoadingSettings, userCount: users.length });
 
     // 3. Render loading or error states first (Guard Clauses).

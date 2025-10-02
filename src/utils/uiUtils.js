@@ -157,3 +157,19 @@ export function getThemeControlsHTML(currentThemeSettings = {}) {
     html += '<button type="button" id="save-theme-settings" class="button-primary" style="margin-top:1em;">Save Theme Settings</button>';
     return html;
 }
+
+
+
+
+export function hideInitialLoader() {
+    const loader = document.querySelector('.initial-app-loader');
+    if (!loader) return;
+
+    // Add a class to fade it out
+    loader.classList.add('hidden');
+
+    // After the fade-out transition, remove it from the DOM entirely
+    loader.addEventListener('transitionend', () => {
+        loader.remove();
+    });
+}

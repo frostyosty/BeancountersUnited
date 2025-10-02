@@ -5,20 +5,23 @@ import * as uiUtils from '@/utils/uiUtils.js';
 /**
  * Renders the user's order history page.
  */
-export async function renderOrderHistoryPage() {
+export function renderOrderHistoryPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    mainContent.innerHTML = `<div class="loading-spinner">Loading your order history...</div>`;
+    // --- THIS IS THE UPDATED LOGIC ---
+    useAppStore.getState().orderHistory.fetchOrderHistory();
 
-    // Fetch the latest order history
-    await useAppStore.getState().orderHistory.fetchOrderHistory();
-
-    // Get the state after the fetch is complete
     const { orders, isLoading, error } = useAppStore.getState().orderHistory;
     
-    if (error) {
-        mainContent.innerHTML = `<div class="error-message"><h2>Could not load history</h2><p>${error}</p></div>`;
+    // Guard Clause: If history is loading, show the loader.
+    if (isLoading) {
+        mainContent.innerHTML = `
+            <div class="initial-app-loader">
+                <div class="coffee-cup-spinner">
+                    <div class="cup-body"></div><div class="cup-handle"></div>
+                </div>
+            </div>`;
         return;
     }
 
