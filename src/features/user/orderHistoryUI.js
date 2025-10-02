@@ -6,16 +6,18 @@ import * as uiUtils from '@/utils/uiUtils.js';
  * Renders the user's order history page.
  */
 export function renderOrderHistoryPage() {
+    console.log("[OrderHistoryUI] 1. renderOrderHistoryPage() CALLED.");
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // --- THIS IS THE UPDATED LOGIC ---
+    console.log("[OrderHistoryUI] 2. Calling fetchOrderHistory() from the store.");
     useAppStore.getState().orderHistory.fetchOrderHistory();
 
     const { orders, isLoading, error } = useAppStore.getState().orderHistory;
+    console.log("[OrderHistoryUI] 3. Current state is:", { isLoading, orderCount: orders.length, error });
     
-    // Guard Clause: If history is loading, show the loader.
     if (isLoading) {
+        console.log("[OrderHistoryUI] 4. Rendering 'Loading...' state.");
         mainContent.innerHTML = `
             <div class="initial-app-loader">
                 <div class="coffee-cup-spinner">
@@ -68,6 +70,7 @@ export function renderOrderHistoryPage() {
     `;
 
     attachOrderHistoryListeners();
+    console.log("[OrderHistoryUI] 5. Rendering final content.");
 }
 
 /**

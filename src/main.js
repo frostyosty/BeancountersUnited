@@ -26,6 +26,7 @@ function renderPersistentUI() {
 
 // This function ONLY renders the main page content
 function renderPageContent() {
+    console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
     const { getUserRole, isAuthenticated } = useAppStore.getState().auth;
     const userRole = getUserRole();
@@ -43,14 +44,29 @@ function renderPageContent() {
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
             if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; // Simplified for brevity
             break;
-        case '#order-history':
-            if (isAuthenticated) { renderOrderHistoryPage(); } else { window.location.hash = '#menu'; }
+         case '#order-history':
+            if (isAuthenticated) {
+                console.log(`[Router] Hash is '${hash}'. Calling renderOrderHistoryPage().`);
+                renderOrderHistoryPage();
+            } else { 
+                window.location.hash = '#menu'; 
+            }
             break;
         case '#owner-dashboard':
-            if (userRole === 'owner' || userRole === 'manager') { renderOwnerDashboard(); } else { window.location.hash = '#menu'; }
+             if (userRole === 'owner' || userRole === 'manager') {
+                console.log(`[Router] Hash is '${hash}'. Calling renderOwnerDashboard().`);
+                renderOwnerDashboard();
+            } else { 
+                window.location.hash = '#menu'; 
+            }
             break;
         case '#manager-dashboard':
-            if (userRole === 'manager') { renderManagerDashboard(); } else { window.location.hash = '#menu'; }
+            if (userRole === 'manager') {
+                console.log(`[Router] Hash is '${hash}'. Calling renderManagerDashboard().`);
+                renderManagerDashboard();
+            } else { 
+                window.location.hash = '#menu'; 
+            }
             break;
         default: renderMenuPage(); break;
     }
