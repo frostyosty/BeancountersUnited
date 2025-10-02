@@ -1155,3 +1155,50 @@ body.on-checkout-page #phone-icon-link {
 #dynamic-spinner-box.hidden {
     display: none;
 }
+
+
+
+/* === DYNAMIC COFFEE SPINNER STYLES (UPDATED) === */
+.dynamic-coffee-spinner {
+  width: 90px; /* Slightly larger for the new design */
+  height: 90px;
+  opacity: 0.85;
+  --spinner-color: #b0b0b0; 
+}
+
+.dynamic-coffee-spinner .cup-outline {
+  stroke: var(--spinner-color);
+  transition: stroke 1s ease-in-out;
+}
+
+.dynamic-coffee-spinner .steam-line {
+  stroke: var(--spinner-color);
+  transition: stroke 1s ease-in-out;
+  /* Use a transform to make the steam rise */
+  animation: steam-rise 2.1s infinite ease-in-out;
+}
+
+.dynamic-coffee-spinner .steam-2 { animation-delay: 0.7s; }
+.dynamic-coffee-spinner .steam-3 { animation-delay: 1.4s; }
+
+/* A more subtle rising and fading animation for the new steam lines */
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Add a transition for hiding the initial loader */
+.initial-app-loader.hidden {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}

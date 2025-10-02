@@ -1,21 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mealmates</title> <!-- Or your custom name -->
-    <meta name="description" content="Order delicious food from Mealmates.">
-    <meta name="theme-color" content="#e67e22">
-    <!-- Vite will inject the link to the bundled CSS here -->
-  </head>
-  <body>
-    <div id="app">
-      <div class="initial-loader">
-        <p>Loading Mealmates...</p>
-      </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <link id="dynamic-favicon" rel="icon" type="image/svg+xml" href="/default-favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mealmates</title> <!-- Or your custom name -->
+  <meta name="description" content="Order delicious food from Mealmates.">
+  <meta name="theme-color" content="#e67e22">
+  <!-- Vite will inject the link to the bundled CSS here -->
+</head>
+
+<body>
+  <div id="app">
+    <!-- 
+    THIS IS THE NEW COMBINED INITIAL LOADER.
+    It now contains our dynamic spinner directly.
+  -->
+    <div class="initial-app-loader">
+      <svg class="dynamic-coffee-spinner" viewBox="0 0 100 100">
+        <!-- ANNOTATION: A slightly shorter, thinner, more elegant cup shape -->
+        <path class="cup-outline" d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke-width="4" />
+
+        <!-- A more stylized handle -->
+        <path class="cup-outline" d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke-width="4" />
+
+        <!-- ANNOTATION: Longer, straighter steam lines with a "kink" (two line segments) -->
+        <path class="steam-line steam-1" d="M40 35 L 42 25 L 40 15" fill="none" stroke-width="2.5" />
+        <path class="steam-line steam-2" d="M50 35 L 48 25 L 50 15" fill="none" stroke-width="2.5" />
+        <path class="steam-line steam-3" d="M60 35 L 62 25 L 60 15" fill="none" stroke-width="2.5" />
+      </svg>
     </div>
-    <!-- This is the SOURCE entry point. Vite will REPLACE this in the build output. -->
-    <script type="module" src="/src/main.js"></script>
-  </body>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>
