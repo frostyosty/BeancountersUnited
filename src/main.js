@@ -58,14 +58,38 @@ function renderPageContent() {
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
+        // Handle login/signup/logout buttons first
+        if (e.target.matches('#login-signup-btn')) {
+            showLoginSignupModal();
+            return; // Stop further processing
+        }
+        if (e.target.matches('#logout-btn')) {
+            useAppStore.getState().auth.logout();
+            return; // Stop further processing
+        }
+
+        // Handle ALL navigation links (desktop, mobile, and category filters)
         const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
             e.preventDefault();
+
+            // --- THIS IS THE FIX ---
+            const categoryFilter = navLink.dataset.categoryFilter;
+            if (categoryFilter) {
+                // If the link is a category filter, update the UI state.
+                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
+                
+                // The subscriber that watches UI state will then re-render the menu.
+                // We don't need to call renderPageContent() manually.
+            }
+            // --- END OF FIX ---
+
             const newHash = navLink.getAttribute('href');
-            if (window.location.hash !== newHash) window.location.hash = newHash;
+            // Only change the hash if it's a real navigation event
+            if (window.location.hash !== newHash) {
+                window.location.hash = newHash;
+            }
         }
-        if (e.target.matches('#login-signup-btn')) { showLoginSignupModal(); }
-        if (e.target.matches('#logout-btn')) { useAppStore.getState().auth.logout(); }
     });
 }
 
@@ -244,7 +268,7 @@ const getPageContentState = () => {
             previousPageContentState = currentPageContentState;
         }
     });
-    
+
     // Subscriber for the Header UI
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
@@ -270,8 +294,6 @@ const getPageContentState = () => {
             previousUIState = currentUIState;
         }
     });
-
-
 
 
     // Subscriber for the dynamic spinner color
@@ -301,7 +323,7 @@ const getPageContentState = () => {
     window.addEventListener('hashchange', renderPageContent);
 
     console.log("[App] Performing initial render...");
-    renderPageContent();
+    // renderPageContent();
 
     console.log("[App] Main initialization finished.");
 
