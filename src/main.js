@@ -119,7 +119,7 @@ function setupHamburgerMenu() {
 
     if (!hamburgerBtn || !mobileMenuPanel || !mainContent || !mobileNavContainer) return;
 
-    // We will use the ROBUST, STATE-DRIVEN build function
+    // --- We will use the ROBUST, STATE-DRIVEN build function ---
     const buildMobileMenu = () => {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
         let navHTML = '';
@@ -133,9 +133,17 @@ function setupHamburgerMenu() {
             if (profile.can_see_order_history) {
                 navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
             }
+
+            // --- THIS IS THE FIX ---
+            // If owner OR manager, show the Owner Dashboard link.
             if (profile.role === 'owner' || profile.role === 'manager') {
-                navHTML += `<a href="#owner-dashboard" class="nav-link">Dashboard</a>`;
+                navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
             }
+            // AND, if SPECIFICALLY a manager, ALSO show the God Mode link.
+            if (profile.role === 'manager') {
+                navHTML += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
+            }
+            // --- END OF FIX ---
         }
 
         // 3. Add the auth button section at the end
