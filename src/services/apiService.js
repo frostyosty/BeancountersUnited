@@ -18,7 +18,7 @@ async function request(endpoint, method = 'GET', body = null, requireAuth = fals
     if (body) {
         config.body = JSON.stringify(body);
     }
-    try {
+      try {
         console.log(`apiService: Sending fetch request to /api${endpoint}`);
         const response = await fetch(`/api${endpoint}`, config);
         console.log(`apiService: Received response for ${endpoint}. Status: ${response.status}`);
@@ -28,6 +28,14 @@ async function request(endpoint, method = 'GET', body = null, requireAuth = fals
             throw new Error(errorData.message || `API request failed with status ${response.status}`);
         }
         
+        // --- THIS IS THE FIX ---
+        // Check for "No Content" status before trying to parse JSON.
+        if (response.status === 204) {
+            console.log(`apiService: Received 204 No Content for ${endpoint}. Returning null.`);
+            return null; // Return null for empty responses
+        }
+        // --- END OF FIX ---
+
         const data = await response.json();
         console.log(`apiService: Successfully parsed JSON for ${endpoint}.`);
         return data;
