@@ -1,7 +1,7 @@
-// src/main.js (FINAL ARCHITECTURE)
+// src/main.js (FINAL & CORRECTED)
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
-import { hideInitialLoader } from './utils/uiUtils.js';
+import * as uiUtils from './utils/uiUtils.js'; // <-- RE-ADD THIS IMPORT
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -15,13 +15,21 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 // --- State and Render Logic ---
 let isAppInitialized = false;
 
-// This function ONLY renders the main page content based on the URL hash.
+// This function ONLY updates persistent elements like the header
+function renderPersistentUI() {
+    renderAuthStatus();
+    const cartCountSpan = document.getElementById('cart-count');
+    if(cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+    if(window.buildMobileMenu) window.buildMobileMenu();
+}
+
+
+// This function ONLY renders the main page content
 function renderPageContent() {
     const hash = window.location.hash || '#menu';
     const { getUserRole, isAuthenticated } = useAppStore.getState().auth;
     const userRole = getUserRole();
 
-    // Style the active nav link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
@@ -190,7 +198,7 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-    // === STEP 1: RENDER STATIC SHELL ===
+    // === STEP 1: RENDER STATIC SHELL (NO SPINNER HERE) ===
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -203,17 +211,17 @@ async function main() {
                     <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
                 </nav>
             </header>
-            <main id="main-content">Loading...</main>
+            <main id="main-content"></main>
             <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
             <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
-            `;
+        `;
     }
 
     // === STEP 2: SETUP ALL SUBSCRIPTIONS ===
-    console.log("[App] Setting up subscriptions...");html
+    console.log("[App] Setting up subscriptions...");
 
-    // Subscriber for the Header UI (Auth status, Cart count, Hamburger)
-    const getPersistentUIState = () => {
+    // Subscriber for the Header UI
+        const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
             isAuthLoading: state.auth.isAuthLoading,
@@ -226,16 +234,12 @@ async function main() {
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
         if (JSON.stringify(currentUIState) !== JSON.stringify(previousUIState)) {
-            console.log("%c[App Sub] Header UI state changed. Re-rendering.", "color: blue;");
-            renderAuthStatus();
-            const cartCountSpan = document.getElementById('cart-count');
-            if(cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-            if(window.buildMobileMenu) window.buildMobileMenu();
+            renderPersistentUI();
             previousUIState = currentUIState;
         }
     });
 
-    // Subscriber for the main content area when data loads
+    // Subscriber for the main content area
     const getPageContentState = () => {
         const state = useAppStore.getState();
         return {
@@ -248,42 +252,25 @@ async function main() {
     useAppStore.subscribe(() => {
         const currentPageContentState = getPageContentState();
         if (JSON.stringify(currentPageContentState) !== JSON.stringify(previousPageContentState)) {
-            console.log("%c[App Sub] Page content data state changed. Re-rendering page.", "color: green;");
-            // If any loading state has just finished, re-render the current page
             renderPageContent();
             previousPageContentState = currentPageContentState;
         }
     });
 
-    // Add a new subscriber for the advanced styles
+    // Subscriber for the dynamic spinner color
     useAppStore.subscribe(
-        // The selector: only re-run if the settings object itself changes
-        (state) => state.siteSettings.settings,
-        // The callback
-        (settings) => {
-            if (!settings) return;
-
-            // ... (all your existing logic for logo, title, etc.)
-
-            // --- THIS IS THE INTEGRATION ---
-            if (settings.themeVariables) {
-                // Get the primary color from the loaded theme settings
-                const primaryColor = settings.themeVariables['--primary-color'];
-                
-                // If the user is logged in, update the spinner color.
-                // The CSS transition will handle the 1-second animation.
-                if (useAppStore.getState().auth.isAuthenticated && primaryColor) {
-                    uiUtils.updateSpinnerColor(primaryColor);
-                }
+        (state) => state.siteSettings.settings.themeVariables,
+        (themeVariables) => {
+            if (themeVariables && useAppStore.getState().auth.isAuthenticated) {
+                const primaryColor = themeVariables['--primary-color'];
+                uiUtils.updateSpinnerColor(primaryColor);
             }
-            // --- END OF INTEGRATION ---
-        },
-        { fireImmediately: true }
+        }
     );
 
     // === STEP 3: SYNCHRONOUS SETUP ===
     console.log("[App] Initializing synchronous UI and listeners...");
-    setupHamburgerMenu(); // Defines window.buildMobileMenu
+    setupHamburgerMenu();
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
     setupGodModeTrigger();
@@ -294,27 +281,19 @@ async function main() {
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
 
-    // Listen for hash changes to render page content
     window.addEventListener('hashchange', renderPageContent);
 
-    // Perform the very first render of all components
-    console.log("[App] Performing initial render...");
-    renderPageContent(); // Render main content
-    
-    // The header will be rendered by its subscriber as soon as the auth state settles.
-    
- // Perform the very first renders
     console.log("[App] Performing initial render...");
     renderPageContent();
     
     console.log("[App] Main initialization finished.");
 
-    // --- THIS IS THE FIX ---
-    // Wait a brief moment for the first paint, then hide the initial loader.
+    // === STEP 5: HIDE THE LOADER ===
+    // This now correctly calls the function from uiUtils.
     setTimeout(() => {
+        console.log("[App] Hiding initial loader.");
         uiUtils.hideInitialLoader();
-    }, 200); // 200ms is a safe delay
-    // --- END OF FIX ---
+    }, 300); // A slightly longer delay can be smoother
 }
 
 main();
