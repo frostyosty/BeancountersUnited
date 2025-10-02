@@ -79,6 +79,13 @@ export function renderOrderHistoryPage() {
 function attachOrderHistoryListeners() {
     const listContainer = document.querySelector('.order-history-list');
     if (!listContainer) return;
+    
+    // --- THIS IS THE FIX ---
+    // Prevent attaching the listener more than once
+    if (listContainer.dataset.listenersAttached === 'true') {
+        return;
+    }
+    // --- END OF FIX ---
 
     listContainer.addEventListener('click', (event) => {
         const reorderButton = event.target.closest('.re-order-btn');
@@ -87,6 +94,9 @@ function attachOrderHistoryListeners() {
             handleReorder(orderId);
         }
     });
+    
+    // Mark the container as having listeners
+    listContainer.dataset.listenersAttached = 'true'; // <-- Add this line
 }
 
 /**

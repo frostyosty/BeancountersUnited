@@ -259,31 +259,8 @@ async function main() {
 
     // === STEP 2: SETUP ALL SUBSCRIPTIONS ===
     console.log("[App] Setting up subscriptions...");
-const getPageContentState = () => {
-        const state = useAppStore.getState();
-        return {
-            // Keep the loading flags
-            isMenuLoading: state.menu.isLoading,
-            isAdminLoading: state.admin.isLoadingUsers,
-            isHistoryLoading: state.orderHistory.isLoading,
-            
-            // --- THIS IS THE FIX ---
-            // Also watch for the DATA itself. The length is a simple way to see if it has arrived.
-            menuItemCount: state.menu.items.length,
-            userCount: state.admin.users.length,
-            orderCount: state.orderHistory.orders.length
-            // --- END OF FIX ---
-        };
-    };
-    let previousPageContentState = getPageContentState();
-    useAppStore.subscribe(() => {
-        const currentPageContentState = getPageContentState();
-        if (JSON.stringify(currentPageContentState) !== JSON.stringify(previousPageContentState)) {
-            console.log("%c[App Sub] Page content data state changed. Re-rendering page.", "color: green;");
-            renderPageContent();
-            previousPageContentState = currentPageContentState;
-        }
-    });
+    
+    
 
     // Subscriber for the Header UI
     const getPersistentUIState = () => {
@@ -310,6 +287,37 @@ const getPageContentState = () => {
             previousUIState = currentUIState;
         }
     });
+
+
+     // --- TAB SUBSCRIPTIONS (The Fix for Blank Tabs) ---
+
+    // Helper to get the loading/data state for all active tabs
+    const getPageContentState = () => {
+        const state = useAppStore.getState();
+        return {
+            isMenuLoading: state.menu.isLoading,
+            isAdminLoading: state.admin.isLoadingUsers,
+            isHistoryLoading: state.orderHistory.isLoading,
+            menuItemCount: state.menu.items.length,
+            userCount: state.admin.users.length,
+            orderCount: state.orderHistory.orders.length
+        };
+    };
+
+    let previousPageContentState = getPageContentState();
+    useAppStore.subscribe(() => {
+        const currentPageContentState = getPageContentState();
+        // Check for deep-equality using JSON.stringify (as in the template)
+        if (JSON.stringify(currentPageContentState) !== JSON.stringify(previousPageContentState)) {
+            console.log("%c[App Sub] Page content data state changed. Re-rendering page.", "color: green;");
+            renderPageContent();
+            previousPageContentState = currentPageContentState;
+        }
+    });
+
+
+
+
 
 
     // Subscriber for the dynamic spinner color
