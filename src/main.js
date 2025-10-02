@@ -233,12 +233,16 @@ function setupHamburgerMenu() {
     });
 }
 
+
+
+
+
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-    // === STEP 1: RENDER STATIC SHELL (NO SPINNER HERE) ===
+    // === STEP 1: RENDER STATIC SHELL ===
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -256,13 +260,20 @@ async function main() {
             <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
         `;
     }
+    // === STEP 2: SETUP ALL SYNCHRONOUS UI & LISTENERS ===
+    console.log("[App] Initializing synchronous UI and listeners...");
+    setupHamburgerMenu();
+    setupNavigationAndInteractions();
+    initializeImpersonationToolbar();
+    setupGodModeTrigger();
 
-    // === STEP 2: SETUP ALL SUBSCRIPTIONS ===
-    console.log("[App] Setting up subscriptions...");
-    
-    
+    // === STEP 3: SETUP SUBSCRIPTIONS & ASYNC STARTUP ===
+    console.log("[App] Setting up subscriptions and kicking off initial fetches...");
 
-    // Subscriber for the Header UI
+    // Set up the hashchange listener
+    window.addEventListener('hashchange', renderPageContent);
+    
+    // Set up the Header UI subscriber
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
@@ -277,21 +288,13 @@ async function main() {
         const currentUIState = getPersistentUIState();
         if (JSON.stringify(currentUIState) !== JSON.stringify(previousUIState)) {
             console.log("%c[App Sub] Header UI state changed. Re-rendering.", "color: blue;");
-            renderPersistentUI(); // This was missing from my previous snippet
-
-            // --- ADD THIS LINE ---
-            // If a loading flag just turned false, it's safe to re-render the page content
-            renderPageContent();
-            // --- END ADD ---
-
+            renderPersistentUI();
             previousUIState = currentUIState;
         }
     });
 
-
-     // --- TAB SUBSCRIPTIONS (The Fix for Blank Tabs) ---
-
-    // This subscriber specifically listens for when ANY data loading process finishes.
+    // Set up the Page Content subscriber
+    
     useAppStore.subscribe(
         (state) => ({
             menu: state.menu.isLoading,
@@ -304,53 +307,33 @@ async function main() {
             const historyJustFinished = previousState.history && !currentState.history;
 
             if (menuJustFinished || adminJustFinished || historyJustFinished) {
-                console.log("%c[App Sub] A data fetch has just completed. Re-rendering page content.", "color: green; font-weight: bold;");
+                console.log("%c[App Sub] A data fetch has just completed...", "color: green;");
                 renderPageContent();
             }
         }
     );
-
-
-
-
-
-    // Subscriber for the dynamic spinner color
-    useAppStore.subscribe(
-        (state) => state.siteSettings.settings.themeVariables,
-        (themeVariables) => {
-            if (themeVariables && useAppStore.getState().auth.isAuthenticated) {
-                const primaryColor = themeVariables['--primary-color'];
-                uiUtils.updateSpinnerColor(primaryColor);
-            }
-        }
-    );
-
-    // === STEP 3: SYNCHRONOUS SETUP ===
-    console.log("[App] Initializing synchronous UI and listeners...");
-    setupHamburgerMenu();
-    setupNavigationAndInteractions();
-    initializeImpersonationToolbar();
-    setupGodModeTrigger();
-
-    // === STEP 4: ASYNCHRONOUS STARTUP & INITIAL RENDER ===
-    console.log("[App] Kicking off initial data fetches...");
-    useAppStore.getState().auth.listenToAuthChanges();
-    useAppStore.getState().menu.fetchMenu();
-    useAppStore.getState().siteSettings.fetchSiteSettings();
-
-    window.addEventListener('hashchange', renderPageContent);
-
-    console.log("[App] Performing initial render...");
-    // renderPageContent();
+    
+    // --- THIS IS THE FIX ---
+    // 1. Await the critical initial data fetches.
+    await Promise.all([
+        useAppStore.getState().auth.listenToAuthChanges(), // listenToAuthChanges should be quick
+        useAppStore.getState().menu.fetchMenu(),
+        useAppStore.getState().siteSettings.fetchSiteSettings()
+    ]);
+    
+    // 2. NOW, after data is loaded, perform the first complete render.
+    console.log("[App] Initial data loaded. Performing first full render...");
+    renderPersistentUI();
+    renderPageContent();
+    // --- END OF FIX ---
 
     console.log("[App] Main initialization finished.");
 
-    // === STEP 5: HIDE THE LOADER ===
-    // This now correctly calls the function from uiUtils.
+    // === STEP 4: HIDE THE LOADER ===
     setTimeout(() => {
         console.log("[App] Hiding initial loader.");
         uiUtils.hideInitialLoader();
-    }, 300); // A slightly longer delay can be smoother
+    }, 100); // Shorter delay is fine now
 }
 
 main();
