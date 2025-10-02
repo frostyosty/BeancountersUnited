@@ -173,3 +173,39 @@ export function hideInitialLoader() {
         loader.remove();
     });
 }
+
+
+
+/**
+ * Shows the new dynamic coffee cup spinner.
+ */
+export function showDynamicSpinner() {
+    const overlay = document.getElementById('global-spinner-overlay');
+    const dynamicSpinner = document.getElementById('dynamic-spinner-box');
+    if (overlay && dynamicSpinner) {
+        dynamicSpinner.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+    }
+}
+
+/**
+ * Hides the global spinner overlay entirely.
+ */
+export function hideDynamicSpinner() {
+    const overlay = document.getElementById('global-spinner-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+}
+
+/**
+ * Updates the color of the dynamic spinner.
+ * @param {string} newColor - The new color in a valid CSS format (e.g., '#ff0000').
+ */
+export function updateSpinnerColor(newColor) {
+    const spinner = document.querySelector('.dynamic-coffee-spinner');
+    if (spinner && newColor) {
+        // This is where the magic happens: we update the CSS variable with JavaScript.
+        spinner.style.setProperty('--spinner-color', newColor);
+    }
+}

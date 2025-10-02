@@ -1083,3 +1083,75 @@ body.on-checkout-page #phone-icon-link {
     }
 
 }
+
+
+/* === DYNAMIC COFFEE SPINNER STYLES === */
+
+/* 
+  ANNOTATION: This is the main SVG container for the spinner.
+  - We define a CSS variable `--spinner-color` here. This is the key to our
+    dynamic color system. It starts as a default greyscale color.
+  - The `opacity` makes it slightly transparent as requested.
+*/
+.dynamic-coffee-spinner {
+  width: 80px;
+  height: 80px;
+  opacity: 0.85;
+  --spinner-color: #b0b0b0; /* Initial greyscale color */
+}
+
+/* 
+  ANNOTATION: Target the cup's outline paths.
+  - The `stroke` is set to our CSS variable.
+  - The `transition` property is crucial. It tells the browser to animate
+    any changes to the `stroke` color over a 1-second period.
+*/
+.dynamic-coffee-spinner .cup-outline {
+  stroke: var(--spinner-color);
+  transition: stroke 1s ease-in-out;
+}
+
+/* 
+  ANNOTATION: Target the steam lines.
+  - Their `stroke` is also tied to our CSS variable.
+  - They also get the 1-second color transition.
+  - The `animation` property applies our pulsing effect.
+*/
+.dynamic-coffee-spinner .steam-line {
+  stroke: var(--spinner-color);
+  transition: stroke 1s ease-in-out;
+  animation: steam-pulse 2.1s infinite ease-in-out;
+}
+
+/* 
+  ANNOTATION: We use different animation delays for each steam line
+  to make them pulsate out of sync, which looks more natural.
+*/
+.dynamic-coffee-spinner .steam-2 {
+  animation-delay: 0.7s;
+}
+.dynamic-coffee-spinner .steam-3 {
+  animation-delay: 1.4s;
+}
+
+/* 
+  ANNOTATION: This is the keyframe animation for the steam pulse.
+  - It animates the `opacity` of the steam lines from invisible (0)
+    to visible (1) and back, creating the gentle pulsing effect.
+*/
+@keyframes steam-pulse {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Helper to show/hide the correct spinner box */
+#dynamic-spinner-box.hidden {
+    display: none;
+}

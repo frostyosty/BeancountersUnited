@@ -194,18 +194,50 @@ async function main() {
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
-            <header id="main-header">
-                <h1>Mealmates</h1>
-                <nav>
-                    <a href="#menu" class="nav-link">Menu</a>
-                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                    <div id="auth-status-container">...</div>
-                    <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
-                </nav>
-            </header>
-            <main id="main-content">Loading...</main>
-            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
-            <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
+            <div id="app-shell"> ... </div>
+
+            <div id="global-spinner-overlay" class="hidden">
+                
+                <!-- The original spinner (can be kept for other uses) -->
+                <div class="spinner-box">
+                    <div class="coffee-cup-spinner"> ... </div>
+                </div>
+
+                <!-- === THIS IS THE NEW DYNAMIC SPINNER === -->
+                <div id="dynamic-spinner-box" class="spinner-box">
+                    <!-- 
+                      ANNOTATION: We use an SVG for crisp, scalable graphics.
+                      The 'dynamic-coffee-spinner' class is our main target for styling.
+                    -->
+                    <svg class="dynamic-coffee-spinner" viewBox="0 0 100 100">
+                        <!-- 
+                          ANNOTATION: This is the main cup outline. We give it a class
+                          so we can specifically target its 'stroke' (outline color)
+                          for the color transition.
+                        -->
+                        <path class="cup-outline" 
+                              d="M20 35 H 80 L 75 80 Q 50 95 25 80 Z" 
+                              fill="transparent" 
+                              stroke-width="5" />
+                        
+                        <!-- The handle, also part of the outline -->
+                        <path class="cup-outline" 
+                              d="M80 50 C 95 50, 95 70, 80 70" 
+                              fill="transparent" 
+                              stroke-width="5" />
+
+                        <!-- 
+                          ANNOTATION: These are the three steam lines. Using paths with
+                          a curve command ('Q') gives us the gentle squiggly effect.
+                          Each has a unique class to apply a different animation delay.
+                        -->
+                        <path class="steam-line steam-1" d="M40 25 Q 45 15 50 25" fill="none" stroke-width="3" />
+                        <path class="steam-line steam-2" d="M55 25 Q 60 15 65 25" fill="none" stroke-width="3" />
+                        <path class="steam-line steam-3" d="M70 25 Q 75 15 80 25" fill="none" stroke-width="3" />
+                    </svg>
+                </div>
+
+            </div>
         `;
     }
 
@@ -254,6 +286,34 @@ async function main() {
             previousPageContentState = currentPageContentState;
         }
     });
+
+
+
+    // Add a new subscriber for the advanced styles
+    useAppStore.subscribe(
+        // The selector: only re-run if the settings object itself changes
+        (state) => state.siteSettings.settings,
+        // The callback
+        (settings) => {
+            if (!settings) return;
+
+            // ... (all your existing logic for logo, title, etc.)
+
+            // --- THIS IS THE INTEGRATION ---
+            if (settings.themeVariables) {
+                // Get the primary color from the loaded theme settings
+                const primaryColor = settings.themeVariables['--primary-color'];
+                
+                // If the user is logged in, update the spinner color.
+                // The CSS transition will handle the 1-second animation.
+                if (useAppStore.getState().auth.isAuthenticated && primaryColor) {
+                    uiUtils.updateSpinnerColor(primaryColor);
+                }
+            }
+            // --- END OF INTEGRATION ---
+        },
+        { fireImmediately: true }
+    );
 
     // === STEP 3: SYNCHRONOUS SETUP ===
     console.log("[App] Initializing synchronous UI and listeners...");
