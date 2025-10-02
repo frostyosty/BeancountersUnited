@@ -194,7 +194,18 @@ async function main() {
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
-            <div id="app-shell"> ... </div>
+            <header id="main-header">
+                <h1>Mealmates</h1>
+                <nav>
+                    <a href="#menu" class="nav-link">Menu</a>
+                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
+                    <div id="auth-status-container">...</div>
+                    <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
+                </nav>
+            </header>
+            <main id="main-content">Loading...</main>
+            <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+            <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
 
             <div id="global-spinner-overlay" class="hidden">
                 
@@ -286,8 +297,6 @@ async function main() {
             previousPageContentState = currentPageContentState;
         }
     });
-
-
 
     // Add a new subscriber for the advanced styles
     useAppStore.subscribe(
