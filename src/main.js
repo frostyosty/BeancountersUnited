@@ -19,8 +19,8 @@ let isAppInitialized = false;
 function renderPersistentUI() {
     renderAuthStatus();
     const cartCountSpan = document.getElementById('cart-count');
-    if(cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-    if(window.buildMobileMenu) window.buildMobileMenu();
+    if (cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+    if (window.buildMobileMenu) window.buildMobileMenu();
 }
 
 
@@ -41,7 +41,7 @@ function renderPageContent() {
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if(mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; // Simplified for brevity
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; // Simplified for brevity
             break;
         case '#order-history':
             if (isAuthenticated) { renderOrderHistoryPage(); } else { window.location.hash = '#menu'; }
@@ -162,7 +162,7 @@ function setupHamburgerMenu() {
         } else {
             authSectionHTML = `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
         }
-        
+
         const newHTML = navHTML + authSectionHTML;
         // Make it idempotent to prevent loops
         if (mobileNavContainer.innerHTML !== newHTML) {
@@ -185,7 +185,7 @@ function setupHamburgerMenu() {
             toggleMenu();
         }
     });
-    
+
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) {
             toggleMenu();
@@ -221,7 +221,7 @@ async function main() {
     console.log("[App] Setting up subscriptions...");
 
     // Subscriber for the Header UI
-        const getPersistentUIState = () => {
+    const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
             isAuthLoading: state.auth.isAuthLoading,
@@ -231,31 +231,23 @@ async function main() {
         };
     };
     let previousUIState = getPersistentUIState();
-    useAppStore.subscribe(() => {
+useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
         if (JSON.stringify(currentUIState) !== JSON.stringify(previousUIState)) {
-            renderPersistentUI();
+            console.log("%c[App Sub] Header UI state changed. Re-rendering.", "color: blue;");
+            renderPersistentUI(); // This was missing from my previous snippet
+            
+            // --- ADD THIS LINE ---
+            // If a loading flag just turned false, it's safe to re-render the page content
+            renderPageContent(); 
+            // --- END ADD ---
+
             previousUIState = currentUIState;
         }
     });
 
-    // Subscriber for the main content area
-    const getPageContentState = () => {
-        const state = useAppStore.getState();
-        return {
-            isMenuLoading: state.menu.isLoading,
-            isAdminLoading: state.admin.isLoadingUsers,
-            isHistoryLoading: state.orderHistory.isLoading
-        };
-    };
-    let previousPageContentState = getPageContentState();
-    useAppStore.subscribe(() => {
-        const currentPageContentState = getPageContentState();
-        if (JSON.stringify(currentPageContentState) !== JSON.stringify(previousPageContentState)) {
-            renderPageContent();
-            previousPageContentState = currentPageContentState;
-        }
-    });
+
+
 
     // Subscriber for the dynamic spinner color
     useAppStore.subscribe(
@@ -274,7 +266,7 @@ async function main() {
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
     setupGodModeTrigger();
-    
+
     // === STEP 4: ASYNCHRONOUS STARTUP & INITIAL RENDER ===
     console.log("[App] Kicking off initial data fetches...");
     useAppStore.getState().auth.listenToAuthChanges();
@@ -285,7 +277,7 @@ async function main() {
 
     console.log("[App] Performing initial render...");
     renderPageContent();
-    
+
     console.log("[App] Main initialization finished.");
 
     // === STEP 5: HIDE THE LOADER ===
