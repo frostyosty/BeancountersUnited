@@ -11,25 +11,24 @@ export const createOrderHistorySlice = (set, get) => ({
 
     // --- ACTIONS ---
     fetchOrderHistory: async () => {
-        // --- THIS IS THE FIX ---
-        // 1. Get the current state.
+        console.log("[OrderHistorySlice] 1. fetchOrderHistory() CALLED.");
         const { isLoading, orders, error } = get().orderHistory;
 
-        // 2. Safety Check: If we are already loading, or if we have successfully
-        //    fetched data before (and there's no error), then do nothing.
         if (isLoading || (orders.length > 0 && !error)) {
-            return; // Return immediately, DO NOT set state again.
+            console.log("[OrderHistorySlice] 2. Skipping fetch: already loading or has data.");
+            return;
         }
-        // --- END OF FIX ---
 
-        // ONLY set loading state if a fetch is about to happen.
+        console.log("[OrderHistorySlice] 3. Setting isLoading: true.");
         set(state => ({ orderHistory: { ...state.orderHistory, isLoading: true, error: null } }));
-        
+
         try {
-            // Your apiService should handle auth automatically now.
-            const history = await api.getOrderHistory();
+            console.log("[OrderHistorySlice] 4. Calling api.getOrderHistory()...");
+            const history = await api.getOrderHistory(); // This call is now correct.
+            console.log(`[OrderHistorySlice] 5. Fetch successful. Received ${history.length} orders.`);
             set(state => ({ orderHistory: { ...state.orderHistory, orders: history, isLoading: false } }));
         } catch (error) {
+            console.error("[OrderHistorySlice] 6. Fetch FAILED.", error);
             // If the user is not logged in, apiService will throw an error.
             // We can treat this as an empty history rather than a critical failure.
             if (error.message.includes("Authentication token is missing")) {
