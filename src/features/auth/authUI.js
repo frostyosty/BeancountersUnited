@@ -123,7 +123,7 @@ async function handleLoginFormSubmit(event) {
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
-    const { error } = await login(email, password);
+    const { error, user, profile } = await login(email, password); // <-- UPDATE to get user/profile back
 
     if (error) {
         messageEl.textContent = error.message;
@@ -131,9 +131,13 @@ async function handleLoginFormSubmit(event) {
         submitButton.disabled = false;
         submitButton.textContent = 'Login';
     } else {
-        // Success is handled by the onAuthStateChange listener
+        // --- THIS IS THE FIX ---
+        // Manually set the user state instead of waiting for the listener.
+        useAppStore.getState().auth.setUserAndProfile(user, profile);
+        
         uiUtils.showToast('Login successful!', 'success');
         uiUtils.closeModal();
+        // --- END OF FIX ---
     }
 }
 

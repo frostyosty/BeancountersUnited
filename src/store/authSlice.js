@@ -1,4 +1,3 @@
-// src/store/authSlice.js
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
@@ -12,20 +11,45 @@ export const createAuthSlice = (set, get) => ({
     originalUser: null,
     originalProfile: null,
 
-    listenToAuthChanges: () => {
+    // --- NEW ACTION ---
+    // Explicitly sets the user and profile, similar to your reference project.
+    setUserAndProfile: (user, profile) => {
+        set({
+            auth: {
+                ...get().auth,
+                user,
+                profile,
+                isAuthenticated: !!user,
+                isAuthLoading: false, // Turn off loading
+                authError: null
+            }
+        }, false, 'auth/setUserAndProfile');
+    },
+
+     listenToAuthChanges: () => {
+        console.log("[AuthSlice] Setting up onAuthStateChange listener.");
         supabase.auth.onAuthStateChange(async (event, session) => {
-            // If we are impersonating, ignore real-time auth events.
+            console.log(`[AuthSlice] onAuthStateChange event: ${event}`);
+
             if (get().auth.isImpersonating()) return;
 
-            if (session?.user) {
+            // This primarily handles LOGOUT and INITIAL_SESSION
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                get().auth.setUserAndProfile(null, null);
+            } else if (session?.user) {
                 try {
-                    const profile = await api.getUserProfile(session.access_token);
-                    set(state => ({ auth: { ...state.auth, user: session.user, profile, isAuthenticated: true, isAuthLoading: false } }));
+                    const profile = await api.getUserProfile();
+                    get().auth.setUserAndProfile(session.user, profile);
                 } catch (error) {
-                    set(state => ({ auth: { ...state.auth, user: session.user, profile: null, isAuthenticated: true, isAuthLoading: false, authError: error.message } }));
+                    // Still set the user, but with a null profile and an error
+                    get().auth.setUserAndProfile(session.user, null);
+                    set(state => ({ auth: { ...state.auth, authError: error.message }}));
                 }
             } else {
-                set(state => ({ auth: { ...state.auth, user: null, profile: null, isAuthenticated: false, isAuthLoading: false } }));
+                // --- THIS IS THE FIX for the initial "..." bug ---
+                // This handles the INITIAL_SESSION when no user is found.
+                // It ensures isAuthLoading is set to false.
+                get().auth.setUserAndProfile(null, null);
             }
         });
     },
@@ -33,21 +57,22 @@ export const createAuthSlice = (set, get) => ({
     signUp: async (email, password) => {
         return await api.signUpViaApi(email, password);
     },
+
+    // --- UPDATED LOGIN ACTION ---
     login: async (email, password) => {
         try {
             const { session } = await api.loginViaApi(email, password);
             if (session) {
-                await supabase.auth.setSession({
-                    access_token: session.access_token,
-                    refresh_token: session.refresh_token,
-                });
-                return { error: null };
+                // After setting the session, we MUST fetch the profile to return it.
+                const profile = await api.getUserProfile();
+                return { error: null, user: session.user, profile }; // Return all data
             }
             return { error: { message: "Login failed." } };
         } catch (error) {
             return { error };
         }
     },
+    
     logout: async () => {
         if (get().auth.isImpersonating()) {
             get().auth.stopImpersonating();
