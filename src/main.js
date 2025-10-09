@@ -295,9 +295,12 @@ async function main() {
 
     // Set up the Page Content subscriber
     
-    // This subscriber ONLY listens for the trigger and re-renders the page content.
     useAppStore.subscribe(
-        (state) => state.ui._reRenderTrigger, // Only watches this simple number
+        // The "sensor" now watches BOTH the manual trigger AND the active category.
+        (state) => ({
+            trigger: state.ui._reRenderTrigger,
+            category: state.ui.activeMenuCategory 
+        }),
         () => {
             console.log("%c[App Sub] Page re-render triggered.", "color: green; font-weight: bold;");
             renderPageContent();
