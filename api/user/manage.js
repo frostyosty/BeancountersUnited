@@ -8,7 +8,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to manage users.' });
     }
 
-if (req.method === 'GET') {
+    if (req.method === 'GET') {
         try {
             // 1. Fetch all profiles. (This part is fine)
             const { data: profiles, error: profilesError } = await supabaseAdmin
@@ -37,7 +37,7 @@ if (req.method === 'GET') {
                 ...profile,
                 ...(authUserMap.get(profile.id) || {})
             }));
-            
+
             return res.status(200).json(formattedData);
         } catch (error) {
             console.error("CRITICAL ERROR in GET /api/user/manage:", error);
@@ -54,29 +54,29 @@ if (req.method === 'GET') {
             if (!userId || !validRoles.includes(newRole)) {
                 return res.status(400).json({ error: 'Invalid userId or newRole provided.' });
             }
-            
+
             // You cannot demote yourself if you are the last manager
             if (profile.id === userId && newRole !== 'manager') {
-                 const { count, error: countError } = await supabaseAdmin.from('profiles').select('*', { count: 'exact' }).eq('role', 'manager');
-                 if (countError) throw countError;
-                 if (count <= 1) {
-                     return res.status(400).json({ error: 'Cannot demote the last manager.' });
-                 }
+                const { count, error: countError } = await supabaseAdmin.from('profiles').select('*', { count: 'exact' }).eq('role', 'manager');
+                if (countError) throw countError;
+                if (count <= 1) {
+                    return res.status(400).json({ error: 'Cannot demote the last manager.' });
+                }
             }
 
-             const { data, error } = await supabaseAdmin
+            const { data, error } = await supabaseAdmin
                 .from('profiles')
-                .update({ 
-                    role: newRole, 
+                .update({
+                    role: newRole,
                     is_verified_buyer: isVerifiedBuyer,
                     can_see_order_history: canSeeOrderHistory // Add the new field to the update
                 })
                 .eq('id', userId)
                 .select()
                 .single();
-            
+
             if (error) throw error;
-            
+
             return res.status(200).json(data);
         } catch (error) {
             return res.status(500).json({ error: error.message });
