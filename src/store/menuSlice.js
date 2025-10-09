@@ -1,4 +1,5 @@
 // src/store/menuSlice.js
+import { useAppStore } from './appStore';
 import * as api from '@/services/apiService.js';
 
 export const createMenuSlice = (set, get) => ({

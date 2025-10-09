@@ -272,6 +272,7 @@ async function main() {
 
     // Set up the hashchange listener
     window.addEventListener('hashchange', renderPageContent);
+
     
     // Set up the Header UI subscriber
     const getPersistentUIState = () => {

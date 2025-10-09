@@ -7,7 +7,7 @@ export const createAdminSlice = (set, get) => ({
     isLoadingUsers: false,
     error: null,
 
-    // --- ACTIONS ---
+    // --- ACTIONS ---a
     fetchAllUsers: async () => {
         const { isLoadingUsers, users } = get().admin;
 

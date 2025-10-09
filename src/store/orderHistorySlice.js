@@ -1,4 +1,5 @@
 // src/store/orderHistorySlice.js
+import { useAppStore } from './appStore';
 import * as api from '@/services/apiService.js';
 
 export const createOrderHistorySlice = (set, get) => ({
