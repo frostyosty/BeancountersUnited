@@ -295,21 +295,12 @@ async function main() {
 
     // Set up the Page Content subscriber
     
+    // This subscriber ONLY listens for the trigger and re-renders the page content.
     useAppStore.subscribe(
-        (state) => ({
-            menu: state.menu.isLoading,
-            admin: state.admin.isLoadingUsers,
-            history: state.orderHistory.isLoading
-        }),
-        (currentState, previousState) => {
-            const menuJustFinished = previousState.menu && !currentState.menu;
-            const adminJustFinished = previousState.admin && !currentState.admin;
-            const historyJustFinished = previousState.history && !currentState.history;
-
-            if (menuJustFinished || adminJustFinished || historyJustFinished) {
-                console.log("%c[App Sub] A data fetch has just completed...", "color: green;");
-                renderPageContent();
-            }
+        (state) => state.ui._reRenderTrigger, // Only watches this simple number
+        () => {
+            console.log("%c[App Sub] Page re-render triggered.", "color: green; font-weight: bold;");
+            renderPageContent();
         }
     );
     

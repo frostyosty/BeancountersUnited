@@ -14,6 +14,7 @@ export const createSiteSettingsSlice = (set, get) => ({
         try {
             const settings = await api.getSiteSettings();
             set(state => ({ siteSettings: { ...state.siteSettings, settings, isLoading: false } }));
+            useAppStore.getState().ui.triggerPageRender();
         } catch (error) {
             set(state => ({ siteSettings: { ...state.siteSettings, error: error.message, isLoading: false } }));
         }

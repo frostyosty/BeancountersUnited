@@ -27,6 +27,7 @@ export const createAdminSlice = (set, get) => ({
             
             const userList = await api.listAllUsers(session.access_token);
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
+            useAppStore.getState().ui.triggerPageRender();
         } catch (error) {
             console.error("Failed to fetch all users:", error);
             set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }), false, 'admin/fetchUsersError');

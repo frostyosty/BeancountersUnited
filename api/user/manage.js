@@ -1,3 +1,5 @@
+//api/user/manage.js
+
 import { supabaseAdmin, getUserFromRequest } from '../_db.js';
 
 export default async function handler(req, res) {
@@ -6,25 +8,24 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to manage users.' });
     }
 
-    if (req.method === 'GET') {
+     if (req.method === 'GET') {
         try {
-            // --- THIS IS THE FIX ---
-
-            // 1. Fetch all profiles from your public 'profiles' table.
+            // 1. Fetch all profiles.
             const { data: profiles, error: profilesError } = await supabaseAdmin
                 .from('profiles')
                 .select(`id, email, role, full_name, is_verified_buyer, can_see_order_history`);
-            
             if (profilesError) throw profilesError;
 
-            // 2. Fetch all users from the protected 'auth.users' table.
-const { data: { users: authUsers }, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers({
-                page: 1,
-                perPage: 1000,
-            });
+            // --- THIS IS THE FIX ---
+            // 2. Fetch user metadata directly from the auth.users table. This is more reliable.
+            const { data: authUsers, error: authUsersError } = await supabaseAdmin
+                .from('users')
+                .select('id, created_at, last_sign_in_at')
+                .in('id', profiles.map(p => p.id)); // Only fetch users that have a profile
             if (authUsersError) throw authUsersError;
+            // --- END OF FIX ---
 
-            // 3. Create a quick lookup map for the auth data (created_at, last_sign_in_at).
+            // 3. Create a lookup map.
             const authUserMap = new Map();
             for (const authUser of authUsers) {
                 authUserMap.set(authUser.id, {
@@ -33,21 +34,15 @@ const { data: { users: authUsers }, error: authUsersError } = await supabaseAdmi
                 });
             }
 
-            // 4. Merge the two data sources.
-            const formattedData = profiles.map(profile => {
-                const authData = authUserMap.get(profile.id) || {}; // Find matching auth user
-                return {
-                    ...profile,
-                    created_at: authData.created_at,
-                    last_sign_in_at: authData.last_sign_in_at
-                };
-            });
-            
-            // --- END OF FIX ---
+            // 4. Merge the data.
+            const formattedData = profiles.map(profile => ({
+                ...profile,
+                ...(authUserMap.get(profile.id) || {})
+            }));
             
             return res.status(200).json(formattedData);
         } catch (error) {
-            console.error("CRITICAL ERROR in GET /api/user/manage:", error); // Add better logging
+            console.error("CRITICAL ERROR in GET /api/user/manage:", error);
             return res.status(500).json({ error: error.message });
         }
     }

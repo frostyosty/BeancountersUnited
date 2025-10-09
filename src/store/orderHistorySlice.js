@@ -30,6 +30,7 @@ export const createOrderHistorySlice = (set, get) => ({
             const history = await api.getOrderHistory(session.access_token);
             console.log(`[OrderHistorySlice] 5. Fetch successful. Received ${history.length} orders.`);
             set(state => ({ orderHistory: { ...state.orderHistory, orders: history, isLoading: false } }));
+            useAppStore.getState().ui.triggerPageRender();
         } catch (error) {
             console.error("[OrderHistorySlice] 6. Fetch FAILED.", error);
             // If the user is not logged in, apiService will throw an error.
