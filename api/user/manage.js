@@ -17,11 +17,13 @@ export default async function handler(req, res) {
             if (profilesError) throw profilesError;
 
             // --- THIS IS THE FIX ---
-            // 2. Fetch user metadata directly from the auth.users table. This is more reliable.
+            // 2. Fetch user metadata directly from the auth.users table by specifying the schema.
             const { data: authUsers, error: authUsersError } = await supabaseAdmin
-                .from('users')
+                .from('auth.users') // <-- Change 'users' to 'auth.users'
                 .select('id, created_at, last_sign_in_at')
-                .in('id', profiles.map(p => p.id)); // Only fetch users that have a profile
+                .in('id', profiles.map(p => p.id));
+            // --- END OF FIX ---
+            
             if (authUsersError) throw authUsersError;
             // --- END OF FIX ---
 
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
                     last_sign_in_at: authUser.last_sign_in_at
                 });
             }
-
+            
             // 4. Merge the data.
             const formattedData = profiles.map(profile => ({
                 ...profile,

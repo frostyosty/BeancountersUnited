@@ -6,7 +6,7 @@ export const createMenuSlice = (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
-
+    
     // --- ACTIONS for the 'menu' slice ---
     fetchMenu: async () => {
         // This set call correctly updates properties within its own slice
