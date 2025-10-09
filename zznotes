@@ -1,1 +1,1 @@
-git add . && git commit -m "error free, working now apart from god mode" && git push origin master
+git add . && git commit -m "first after reset" && git push origin master
