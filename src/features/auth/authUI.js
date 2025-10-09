@@ -130,13 +130,11 @@ async function handleLoginFormSubmit(event) {
         messageEl.className = 'auth-message error';
         submitButton.disabled = false;
         submitButton.textContent = 'Login';
-    } else {
+ } else {
         // --- THIS IS THE FIX ---
-        // We do NOT need to set the user state here.
-        // The onAuthStateChange listener is the single source of truth.
-        // It will fire automatically and update the state, which will close the modal.
+        // DO NOT close the modal here. Let the state change do it.
         uiUtils.showToast('Login successful!', 'success');
-        // The modal will be closed by the listener logic we added earlier.
+        // uiUtils.closeModal(); // <-- DELETE THIS LINE
         // --- END OF FIX ---
     }
 }

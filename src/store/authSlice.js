@@ -26,11 +26,18 @@ export const createAuthSlice = (set, get) => ({
         }, false, 'auth/setUserAndProfile');
     },
 
-     listenToAuthChanges: () => {
+    listenToAuthChanges: () => {
         console.log("[AuthSlice] 1. Setting up onAuthStateChange listener.");
         supabase.auth.onAuthStateChange(async (event, session) => {
             console.log(`%c[AuthSlice] 2. onAuthStateChange FIRED. Event: ${event}`, "color: purple;");
+            // If the event is SIGNED_IN, it means a login just completed.
+            if (event === 'SIGNED_IN') {
+                const uiUtils = await import('@/utils/uiUtils.js'); // Dynamically import to avoid circular dependencies
+                uiUtils.closeModal();
+            }
+            // --- END OF FIX ---
 
+            if (get().auth.isImpersonating()) return;
             if (get().auth.isImpersonating()) return;
 
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
@@ -45,7 +52,7 @@ export const createAuthSlice = (set, get) => ({
                 } catch (error) {
                     console.error("[AuthSlice] 4b. Profile fetch FAILED.", error);
                     get().auth.setUserAndProfile(session.user, null);
-                    set(state => ({ auth: { ...state.auth, authError: error.message }}));
+                    set(state => ({ auth: { ...state.auth, authError: error.message } }));
                 }
             } else {
                 console.log("[AuthSlice] 3c. No session found (e.g., initial load).");
@@ -60,7 +67,7 @@ export const createAuthSlice = (set, get) => ({
         try {
             console.log("[AuthSlice] 2. Calling api.loginViaApi...");
             const { session } = await api.loginViaApi(email, password);
-            
+
             if (session) {
                 console.log("[AuthSlice] 3. Login API successful. Calling supabase.auth.setSession().");
                 // This call will trigger the onAuthStateChange listener, which will then fetch the profile.
@@ -77,7 +84,7 @@ export const createAuthSlice = (set, get) => ({
                 console.log("[AuthSlice] 4. setSession successful. Login flow complete.");
                 return { error: null }; // The listener will handle the rest.
             }
-            
+
             console.warn("[AuthSlice] 3. Login API failed, no session returned.");
             return { error: { message: "Login failed." } };
         } catch (error) {
@@ -89,7 +96,7 @@ export const createAuthSlice = (set, get) => ({
     signUp: async (email, password) => {
         return await api.signUpViaApi(email, password);
     },
-    
+
     logout: async () => {
         if (get().auth.isImpersonating()) {
             get().auth.stopImpersonating();
