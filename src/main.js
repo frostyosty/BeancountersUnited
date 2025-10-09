@@ -44,28 +44,28 @@ function renderPageContent() {
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
             if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; // Simplified for brevity
             break;
-         case '#order-history':
+        case '#order-history':
             if (isAuthenticated) {
                 console.log(`[Router] Hash is '${hash}'. Calling renderOrderHistoryPage().`);
                 renderOrderHistoryPage();
-            } else { 
-                window.location.hash = '#menu'; 
+            } else {
+                window.location.hash = '#menu';
             }
             break;
         case '#owner-dashboard':
-             if (userRole === 'owner' || userRole === 'manager') {
+            if (userRole === 'owner' || userRole === 'manager') {
                 console.log(`[Router] Hash is '${hash}'. Calling renderOwnerDashboard().`);
                 renderOwnerDashboard();
-            } else { 
-                window.location.hash = '#menu'; 
+            } else {
+                window.location.hash = '#menu';
             }
             break;
         case '#manager-dashboard':
             if (userRole === 'manager') {
                 console.log(`[Router] Hash is '${hash}'. Calling renderManagerDashboard().`);
                 renderManagerDashboard();
-            } else { 
-                window.location.hash = '#menu'; 
+            } else {
+                window.location.hash = '#menu';
             }
             break;
         default: renderMenuPage(); break;
@@ -94,7 +94,7 @@ function setupNavigationAndInteractions() {
             if (categoryFilter) {
                 // If the link is a category filter, update the UI state.
                 useAppStore.getState().setActiveMenuCategory(categoryFilter);
-                
+
                 // The subscriber that watches UI state will then re-render the menu.
                 // We don't need to call renderPageContent() manually.
             }
@@ -273,7 +273,7 @@ async function main() {
     // Set up the hashchange listener
     window.addEventListener('hashchange', renderPageContent);
 
-    
+
     // Set up the Header UI subscriber
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
@@ -296,7 +296,7 @@ async function main() {
 
     // Set up the Page Content subscriber
     
-useAppStore.subscribe(
+    useAppStore.subscribe(
         (state) => ({
             trigger: state.ui.ui._reRenderTrigger,      // CORRECT: .ui.ui is needed here
             category: state.ui.ui.activeMenuCategory // CORRECT: .ui.ui is needed here
@@ -306,7 +306,7 @@ useAppStore.subscribe(
             renderPageContent();
         }
     );
-    
+
     // --- THIS IS THE FIX ---
     // 1. Await the critical initial data fetches.
     await Promise.all([
@@ -314,7 +314,7 @@ useAppStore.subscribe(
         useAppStore.getState().menu.fetchMenu(),
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
-    
+
     // 2. NOW, after data is loaded, perform the first complete render.
     console.log("[App] Initial data loaded. Performing first full render...");
     renderPersistentUI();

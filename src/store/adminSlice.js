@@ -22,7 +22,14 @@ export const createAdminSlice = (set, get) => ({
             const userList = await api.listAllUsers(session.access_token);
             console.log(`[AdminSlice] 3. Fetch successful. Received ${userList.length} users.`); // <-- ADD THIS
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
-            useAppStore.getState().ui.triggerPageRender();
+            // --- ADD THESE LOGS ---
+            console.log("[AdminSlice] Fetch complete. Attempting to trigger page re-render...");
+            const uiSlice = useAppStore.getState().ui;
+            console.log("[AdminSlice] Found uiSlice:", uiSlice);
+            console.log("[AdminSlice] Does triggerPageRender exist?", typeof uiSlice?.triggerPageRender);
+            
+            uiSlice.triggerPageRender();
+            console.log("[AdminSlice] triggerPageRender() was called.");
         } catch (error) {
             console.error("[AdminSlice] 4. Fetch FAILED.", error); // <-- ADD THIS
             set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }), false, 'admin/fetchUsersError');

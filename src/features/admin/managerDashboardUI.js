@@ -159,12 +159,7 @@ export function renderManagerDashboard() {
     }
     console.log("--- 2. Current State ---", { isLoadingUsers, isLoadingSettings, userCount: users.length });
 
-    // 3. Render loading or error states first (Guard Clauses).
-    if (isLoadingUsers || isLoadingSettings) {
-        console.log("--- 3. Rendering LOADING state ---");
-        mainContent.innerHTML = `<div class="loading-spinner">Loading God Mode Dashboard...</div>`;
-        return;
-    }
+
     if (userError || settingsError) {
         console.log("--- 3. Rendering ERROR state ---", { userError, settingsError });
         mainContent.innerHTML = `<div class="error-message"><h2>Could not load dashboard data</h2><p>${userError || settingsError}</p></div>`;
