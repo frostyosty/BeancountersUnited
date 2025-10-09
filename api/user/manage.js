@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     if (profile?.role !== 'manager') {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to manage users.' });
     }
-
+    
     if (req.method === 'GET') {
         try {
             // 1. Fetch all profiles. (This part is fine)
