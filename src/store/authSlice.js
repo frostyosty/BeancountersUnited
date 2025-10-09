@@ -27,50 +27,54 @@ export const createAuthSlice = (set, get) => ({
     },
 
      listenToAuthChanges: () => {
-        console.log("[AuthSlice] Setting up onAuthStateChange listener.");
+        console.log("[AuthSlice] 1. Setting up onAuthStateChange listener.");
         supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`[AuthSlice] onAuthStateChange event: ${event}`);
+            console.log(`%c[AuthSlice] 2. onAuthStateChange FIRED. Event: ${event}`, "color: purple;");
 
             if (get().auth.isImpersonating()) return;
 
-            // This primarily handles LOGOUT and INITIAL_SESSION
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                console.log("[AuthSlice] 3a. User signed out or deleted.");
                 get().auth.setUserAndProfile(null, null);
             } else if (session?.user) {
+                console.log("[AuthSlice] 3b. Session found. Fetching profile...");
                 try {
                     const profile = await api.getUserProfile();
+                    console.log("[AuthSlice] 4b. Profile fetch SUCCESS.", { profile });
                     get().auth.setUserAndProfile(session.user, profile);
                 } catch (error) {
-                    // Still set the user, but with a null profile and an error
+                    console.error("[AuthSlice] 4b. Profile fetch FAILED.", error);
                     get().auth.setUserAndProfile(session.user, null);
                     set(state => ({ auth: { ...state.auth, authError: error.message }}));
                 }
             } else {
-                // --- THIS IS THE FIX for the initial "..." bug ---
-                // This handles the INITIAL_SESSION when no user is found.
-                // It ensures isAuthLoading is set to false.
+                console.log("[AuthSlice] 3c. No session found (e.g., initial load).");
                 get().auth.setUserAndProfile(null, null);
             }
         });
     },
 
-    signUp: async (email, password) => {
-        return await api.signUpViaApi(email, password);
-    },
-
-    // --- UPDATED LOGIN ACTION ---
     login: async (email, password) => {
+        console.log("[AuthSlice] 1. login() action called.");
         try {
+            console.log("[AuthSlice] 2. Calling api.loginViaApi...");
             const { session } = await api.loginViaApi(email, password);
             if (session) {
-                // After setting the session, we MUST fetch the profile to return it.
+                console.log("[AuthSlice] 3. Login API successful. Fetching profile...");
                 const profile = await api.getUserProfile();
-                return { error: null, user: session.user, profile }; // Return all data
+                console.log("[AuthSlice] 4. Profile fetch successful. Returning data to UI.", { profile });
+                return { error: null, user: session.user, profile };
             }
+            console.warn("[AuthSlice] 3. Login API failed, no session returned.");
             return { error: { message: "Login failed." } };
         } catch (error) {
+            console.error("[AuthSlice] 5. login() action FAILED.", error);
             return { error };
         }
+    },
+
+    signUp: async (email, password) => {
+        return await api.signUpViaApi(email, password);
     },
     
     logout: async () => {

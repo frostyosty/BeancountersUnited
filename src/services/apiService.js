@@ -5,13 +5,25 @@ async function request(endpoint, method = 'GET', body = null, requireAuth = fals
     const headers = { 'Content-Type': 'application/json' };
 
     if (requireAuth) {
-        const { data: { session } } = await window.supabase.auth.getSession();
-        if (session?.access_token) {
-            headers['Authorization'] = `Bearer ${session.access_token}`;
-        } else {
-            // If auth is required but we have no token, fail early.
+        console.log(`[apiService] Auth required for ${endpoint}. Calling getSession().`);
+        // --- THIS IS THE FIX ---
+        // 1. Safely call getSession().
+        const sessionResult = await window.supabase.auth.getSession();
+        console.log("[apiService] getSession() result:", sessionResult);
+
+        // 2. Check for errors or a null session before trying to use it.
+        if (sessionResult.error) {
+            console.error("[apiService] Error getting session:", sessionResult.error.message);
+            throw new Error("Failed to retrieve authentication session.");
+        }
+        if (!sessionResult.data.session) {
+            console.warn(`[apiService] No active session found for protected route ${endpoint}.`);
             throw new Error("Authentication token is missing for a protected route.");
         }
+        
+        // 3. If we get here, the session is valid.
+        headers['Authorization'] = `Bearer ${sessionResult.data.session.access_token}`;
+        // --- END OF FIX ---
     }
 
     const config = { method, headers };
