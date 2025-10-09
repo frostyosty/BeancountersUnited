@@ -1,14 +1,17 @@
 // src/store/uiSlice.js
 export const createUiSlice = (set) => ({
-    // A dummy state property that we can change to force a re-render
     _reRenderTrigger: 0,
-    activeMenuCategory: 'All', // The default active category
+    activeMenuCategory: 'All',
 
     setActiveMenuCategory: (category) => {
-        set({ activeMenuCategory: category });
+        // Correctly updates the top-level property
+        set({ activeMenuCategory: category }, false, 'ui/setActiveMenuCategory');
     },
-    // This action will be called by our data slices when they finish loading.
+
     triggerPageRender: () => {
-        set(state => ({ ui: { ...state.ui, _reRenderTrigger: state.ui._reRenderTrigger + 1 }}));
+        // --- THIS IS THE FIX ---
+        // It now correctly updates the top-level _reRenderTrigger property.
+        set((state) => ({ _reRenderTrigger: state._reRenderTrigger + 1 }), false, 'ui/triggerPageRender');
+        // --- END OF FIX ---
     },
 });

@@ -93,7 +93,7 @@ function setupNavigationAndInteractions() {
             const categoryFilter = navLink.dataset.categoryFilter;
             if (categoryFilter) {
                 // If the link is a category filter, update the UI state.
-                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
+                useAppStore.getState().setActiveMenuCategory(categoryFilter);
                 
                 // The subscriber that watches UI state will then re-render the menu.
                 // We don't need to call renderPageContent() manually.
@@ -296,11 +296,11 @@ async function main() {
 
     // Set up the Page Content subscriber
     
+    // It watches for the flattened state properties directly.
     useAppStore.subscribe(
-        // The "sensor" now watches BOTH the manual trigger AND the active category.
         (state) => ({
-            trigger: state.ui._reRenderTrigger,
-            category: state.ui.activeMenuCategory 
+            trigger: state._reRenderTrigger,      // CORRECT: No '.ui'
+            category: state.activeMenuCategory // CORRECT: No '.ui'
         }),
         () => {
             console.log("%c[App Sub] Page re-render triggered.", "color: green; font-weight: bold;");

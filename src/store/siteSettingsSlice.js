@@ -18,7 +18,7 @@ export const createSiteSettingsSlice = (set, get) => ({
             const settings = await api.getSiteSettings();
             console.log("[SiteSettingsSlice] 2. Fetch successful."); // <-- ADD THIS
             set(state => ({ siteSettings: { ...state.siteSettings, settings, isLoading: false } }));
-            useAppStore.getState().ui.triggerPageRender();
+            useAppStore.getState().triggerPageRender();
         } catch (error) {
              console.error("[SiteSettingsSlice] 3. Fetch FAILED.", error);
             set(state => ({ siteSettings: { ...state.siteSettings, error: error.message, isLoading: false } }));

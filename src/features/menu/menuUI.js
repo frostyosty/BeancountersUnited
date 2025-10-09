@@ -49,7 +49,7 @@ function attachCategoryTabListeners() {
         if (event.target.matches('.sub-tab-button')) {
             const newCategory = event.target.dataset.category;
             // Call the action from the uiSlice to change the state
-            useAppStore.getState().ui.setActiveMenuCategory(newCategory);
+            useAppStore.getState().setActiveMenuCategory(newCategory);
         }
     });
     tabsContainer.dataset.listenerAttached = 'true';
