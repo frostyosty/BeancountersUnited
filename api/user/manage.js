@@ -18,8 +18,10 @@ export default async function handler(req, res) {
             if (profilesError) throw profilesError;
 
             // 2. Fetch all users from the protected 'auth.users' table.
-            const { data: { users: authUsers }, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
-
+const { data: { users: authUsers }, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers({
+                page: 1,
+                perPage: 1000,
+            });
             if (authUsersError) throw authUsersError;
 
             // 3. Create a quick lookup map for the auth data (created_at, last_sign_in_at).
