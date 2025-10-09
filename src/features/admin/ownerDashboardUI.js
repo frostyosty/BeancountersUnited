@@ -169,7 +169,6 @@ async function handleBusinessDetailsSave(form) {
     }
 }
 
-
 function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
@@ -237,26 +236,23 @@ function attachOwnerDashboardListeners() {
 }
 
 // --- MAIN RENDER FUNCTION ---
-
 export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
+    // --- THIS IS THE SURGICAL FIX ---
+    // 1. Actively request the data this component depends on.
+    // The store actions have safety checks to prevent duplicate fetches.
+    useAppStore.getState().menu.fetchMenu();
+    useAppStore.getState().siteSettings.fetchSiteSettings();
+    // --- END OF FIX ---
 
-
-
-    const { items: menuItems } = useAppStore.getState().menu;
-    const { settings, isLoading, error } = useAppStore.getState().siteSettings;
-    const ownerPermissions = settings.ownerPermissions || {
-        canEditTheme: true,
-        canEditCategories: true,
-    };
-    const { getMenuCategories } = useAppStore.getState().siteSettings;
-    const categories = getMenuCategories();
-
-
-
-    if (isLoading) {
+    // Now, read the state as it currently is.
+    const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
+    const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
+    
+    // Updated Guard Clause to check BOTH loading states.
+    if (isLoadingMenu || isLoadingSettings) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
         return;
     }
