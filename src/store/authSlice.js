@@ -54,17 +54,30 @@ export const createAuthSlice = (set, get) => ({
         });
     },
 
+    // --- SIMPLIFIED AND CORRECTED LOGIN ACTION ---
     login: async (email, password) => {
         console.log("[AuthSlice] 1. login() action called.");
         try {
             console.log("[AuthSlice] 2. Calling api.loginViaApi...");
             const { session } = await api.loginViaApi(email, password);
+            
             if (session) {
-                console.log("[AuthSlice] 3. Login API successful. Fetching profile...");
-                const profile = await api.getUserProfile();
-                console.log("[AuthSlice] 4. Profile fetch successful. Returning data to UI.", { profile });
-                return { error: null, user: session.user, profile };
+                console.log("[AuthSlice] 3. Login API successful. Calling supabase.auth.setSession().");
+                // This call will trigger the onAuthStateChange listener, which will then fetch the profile.
+                const { error } = await supabase.auth.setSession({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                });
+
+                if (error) {
+                    console.error("[AuthSlice] setSession failed:", error);
+                    return { error };
+                }
+
+                console.log("[AuthSlice] 4. setSession successful. Login flow complete.");
+                return { error: null }; // The listener will handle the rest.
             }
+            
             console.warn("[AuthSlice] 3. Login API failed, no session returned.");
             return { error: { message: "Login failed." } };
         } catch (error) {

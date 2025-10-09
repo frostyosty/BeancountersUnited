@@ -123,7 +123,7 @@ async function handleLoginFormSubmit(event) {
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
-    const { error, user, profile } = await login(email, password); // <-- UPDATE to get user/profile back
+     const { error } = await login(email, password); // This call is now simpler
 
     if (error) {
         messageEl.textContent = error.message;
@@ -132,11 +132,11 @@ async function handleLoginFormSubmit(event) {
         submitButton.textContent = 'Login';
     } else {
         // --- THIS IS THE FIX ---
-        // Manually set the user state instead of waiting for the listener.
-        useAppStore.getState().auth.setUserAndProfile(user, profile);
-        
+        // We do NOT need to set the user state here.
+        // The onAuthStateChange listener is the single source of truth.
+        // It will fire automatically and update the state, which will close the modal.
         uiUtils.showToast('Login successful!', 'success');
-        uiUtils.closeModal();
+        // The modal will be closed by the listener logic we added earlier.
         // --- END OF FIX ---
     }
 }
