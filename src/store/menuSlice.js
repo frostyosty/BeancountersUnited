@@ -21,7 +21,7 @@ export const createMenuSlice = (set, get) => ({
                 menu: { ...state.menu, items: menuItems, isLoading: false }
             }
             ));
-            useAppStore.getState().triggerPageRender();
+            useAppStore.getState().ui.triggerPageRender();
         } catch (error) {
             set(state => ({
                 menu: { ...state.menu, isLoading: false, error: error.message }

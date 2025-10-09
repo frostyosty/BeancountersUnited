@@ -296,14 +296,13 @@ async function main() {
 
     // Set up the Page Content subscriber
     
-    // It watches for the flattened state properties directly.
-    useAppStore.subscribe(
+useAppStore.subscribe(
         (state) => ({
-            trigger: state._reRenderTrigger,      // CORRECT: No '.ui'
-            category: state.activeMenuCategory // CORRECT: No '.ui'
+            trigger: state.ui.ui._reRenderTrigger,      // CORRECT: .ui.ui is needed here
+            category: state.ui.ui.activeMenuCategory // CORRECT: .ui.ui is needed here
         }),
         () => {
-            console.log("%c[App Sub] Page re-render triggered.", "color: green; font-weight: bold;");
+            console.log("%c[App Sub] Page re-render triggered.", "color: green;");
             renderPageContent();
         }
     );

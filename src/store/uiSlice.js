@@ -1,17 +1,20 @@
 // src/store/uiSlice.js
 export const createUiSlice = (set) => ({
-    _reRenderTrigger: 0,
-    activeMenuCategory: 'All',
+    ui: { // <-- All state for this slice is nested under a 'ui' key
+        _reRenderTrigger: 0,
+        activeMenuCategory: 'All',
+    },
 
+    // Actions live at the top level of the slice
     setActiveMenuCategory: (category) => {
-        // Correctly updates the top-level property
-        set({ activeMenuCategory: category }, false, 'ui/setActiveMenuCategory');
+        set((state) => ({
+            ui: { ...state.ui, activeMenuCategory: category }
+        }), false, 'ui/setActiveMenuCategory');
     },
 
     triggerPageRender: () => {
-        // --- THIS IS THE FIX ---
-        // It now correctly updates the top-level _reRenderTrigger property.
-        set((state) => ({ _reRenderTrigger: state._reRenderTrigger + 1 }), false, 'ui/triggerPageRender');
-        // --- END OF FIX ---
+        set((state) => ({
+            ui: { ...state.ui, _reRenderTrigger: state.ui._reRenderTrigger + 1 }
+        }), false, 'ui/triggerPageRender');
     },
 });
