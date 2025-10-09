@@ -4,7 +4,7 @@ import * as api from '@/services/apiService.js';
 export const createAdminSlice = (set, get) => ({
     // --- STATE ---
     users: [],
-    isLoadingUsers: true,
+    isLoadingUsers: false,
     error: null,
 
     // --- ACTIONS ---

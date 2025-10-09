@@ -5,7 +5,7 @@ import * as api from '@/services/apiService.js';
 export const createSiteSettingsSlice = (set, get) => ({
     // --- STATE ---
     settings: {}, // Holds { websiteName, themeVariables, menuCategories }
-    isLoading: true,
+    isLoading: false,
     error: null,
 
     // --- ACTIONS ---

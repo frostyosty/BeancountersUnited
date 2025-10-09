@@ -4,7 +4,7 @@ import * as api from '@/services/apiService.js';
 export const createOrderHistorySlice = (set, get) => ({
     // --- STATE ---
     orders: [],
-    isLoading: true,
+    isLoading: false,
     error: null,
 
     // src/store/orderHistorySlice.js

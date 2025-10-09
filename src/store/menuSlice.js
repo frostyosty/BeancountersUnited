@@ -4,7 +4,7 @@ import * as api from '@/services/apiService.js';
 export const createMenuSlice = (set, get) => ({
     // --- STATE for the 'menu' slice ---
     items: [],
-    isLoading: true,
+    isLoading: false,
     error: null,
 
     // --- ACTIONS for the 'menu' slice ---
