@@ -24,7 +24,10 @@ export const createOrderHistorySlice = (set, get) => ({
 
         try {
             console.log("[OrderHistorySlice] 4. Calling api.getOrderHistory()...");
-            const history = await api.getOrderHistory(); // This call is now correct.
+            const { data: { session } } = await window.supabase.auth.getSession();
+            if (!session) throw new Error("Authentication token is missing");
+            
+            const history = await api.getOrderHistory(session.access_token);
             console.log(`[OrderHistorySlice] 5. Fetch successful. Received ${history.length} orders.`);
             set(state => ({ orderHistory: { ...state.orderHistory, orders: history, isLoading: false } }));
         } catch (error) {

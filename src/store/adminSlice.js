@@ -22,7 +22,10 @@ export const createAdminSlice = (set, get) => ({
 
         console.log("Fetching all users from API...");
         try {
-            const userList = await api.listAllUsers();
+             const { data: { session } } = await window.supabase.auth.getSession();
+            if (!session) throw new Error("Not authenticated");
+            
+            const userList = await api.listAllUsers(session.access_token);
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
         } catch (error) {
             console.error("Failed to fetch all users:", error);
