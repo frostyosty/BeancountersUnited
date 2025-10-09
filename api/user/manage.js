@@ -8,23 +8,44 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
         try {
-            // Include the new 'can_see_order_history' column in the select
-            const { data, error } = await supabaseAdmin
+            // --- THIS IS THE FIX ---
+
+            // 1. Fetch all profiles from your public 'profiles' table.
+            const { data: profiles, error: profilesError } = await supabaseAdmin
                 .from('profiles')
-                .select(`id, email, role, full_name, is_verified_buyer, can_see_order_history, users(created_at, last_sign_in_at)`);
+                .select(`id, email, role, full_name, is_verified_buyer, can_see_order_history`);
             
-            if (error) throw error;
+            if (profilesError) throw profilesError;
+
+            // 2. Fetch all users from the protected 'auth.users' table.
+            const { data: { users: authUsers }, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
+
+            if (authUsersError) throw authUsersError;
+
+            // 3. Create a quick lookup map for the auth data (created_at, last_sign_in_at).
+            const authUserMap = new Map();
+            for (const authUser of authUsers) {
+                authUserMap.set(authUser.id, {
+                    created_at: authUser.created_at,
+                    last_sign_in_at: authUser.last_sign_in_at
+                });
+            }
+
+            // 4. Merge the two data sources.
+            const formattedData = profiles.map(profile => {
+                const authData = authUserMap.get(profile.id) || {}; // Find matching auth user
+                return {
+                    ...profile,
+                    created_at: authData.created_at,
+                    last_sign_in_at: authData.last_sign_in_at
+                };
+            });
             
-            // Flatten the data
-            const formattedData = data.map(p => ({
-                id: p.id, email: p.email, role: p.role, full_name: p.full_name,
-                is_verified_buyer: p.is_verified_buyer,
-                can_see_order_history: p.can_see_order_history, // Add the new field
-                created_at: p.users.created_at, last_sign_in_at: p.users.last_sign_in_at
-            }));
+            // --- END OF FIX ---
             
             return res.status(200).json(formattedData);
         } catch (error) {
+            console.error("CRITICAL ERROR in GET /api/user/manage:", error); // Add better logging
             return res.status(500).json({ error: error.message });
         }
     }
