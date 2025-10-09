@@ -133,7 +133,7 @@ function attachManagerDashboardListeners() {
 
 
 export function renderManagerDashboard() {
-    console.log("--- 1. renderManagerDashboard() CALLED ---");
+    console.log("%c[ManagerDashboardUI] renderManagerDashboard() CALLED.", "color: orange;"); // <-- ADD THIS LOG
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 

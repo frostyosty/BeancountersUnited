@@ -8,28 +8,23 @@ export const createAdminSlice = (set, get) => ({
     error: null,
 
     // --- ACTIONS ---a
-    fetchAllUsers: async () => {
+    tchAllUsers: async () => {
+        console.log("[AdminSlice] 1. fetchAllUsers() CALLED."); // <-- ADD THIS
         const { isLoadingUsers, users } = get().admin;
-
-        // Safety Check: If already loading or data exists, do nothing.
         if (isLoadingUsers || users.length > 0) {
-            return; // Return immediately, DO NOT set state again.
+            console.log("[AdminSlice] 2. Skipping fetch."); // <-- ADD THIS
+            return;
         }
-        // --- THIS IS THE CRITICAL FIX ---
-        // We now set the loading state BEFORE the async part,
-        // but only if we are actually going to fetch.
         set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
-
-        console.log("Fetching all users from API...");
         try {
-             const { data: { session } } = await window.supabase.auth.getSession();
+            const { data: { session } } = await window.supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
-            
             const userList = await api.listAllUsers(session.access_token);
+            console.log(`[AdminSlice] 3. Fetch successful. Received ${userList.length} users.`); // <-- ADD THIS
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
-            useAppStore.getState().ui.triggerPageRender();
+            useAppStore.getState().triggerPageRender();
         } catch (error) {
-            console.error("Failed to fetch all users:", error);
+            console.error("[AdminSlice] 4. Fetch FAILED.", error); // <-- ADD THIS
             set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }), false, 'admin/fetchUsersError');
         }
     },

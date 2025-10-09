@@ -237,6 +237,7 @@ function attachOwnerDashboardListeners() {
 
 // --- MAIN RENDER FUNCTION ---
 export function renderOwnerDashboard() {
+    console.log("%c[OwnerDashboardUI] renderOwnerDashboard() CALLED.", "color: orange;"); // <-- ADD THIS LOG
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
