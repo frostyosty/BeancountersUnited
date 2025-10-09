@@ -27,35 +27,33 @@ export const createAuthSlice = (set, get) => ({
     },
 
     listenToAuthChanges: () => {
-        console.log("[AuthSlice] 1. Setting up onAuthStateChange listener.");
         supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`%c[AuthSlice] 2. onAuthStateChange FIRED. Event: ${event}`, "color: purple;");
-            // If the event is SIGNED_IN, it means a login just completed.
-            if (event === 'SIGNED_IN') {
-                const uiUtils = await import('@/utils/uiUtils.js'); // Dynamically import to avoid circular dependencies
-                uiUtils.closeModal();
-            }
-            // --- END OF FIX ---
+            console.log(`%c[AuthSlice] onAuthStateChange FIRED. Event: ${event}`, "color: purple;", { session });
 
-            if (get().auth.isImpersonating()) return;
             if (get().auth.isImpersonating()) return;
 
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-                console.log("[AuthSlice] 3a. User signed out or deleted.");
                 get().auth.setUserAndProfile(null, null);
             } else if (session?.user) {
-                console.log("[AuthSlice] 3b. Session found. Fetching profile...");
+                console.log("[AuthSlice] Session found. Preparing to fetch profile...");
                 try {
-                    const profile = await api.getUserProfile();
-                    console.log("[AuthSlice] 4b. Profile fetch SUCCESS.", { profile });
+                    // --- THIS IS THE FIX ---
+                    // We MUST use the access_token from the session object provided by the listener.
+                    // Do NOT call a function that uses getSession() here.
+                    const token = session.access_token;
+                    console.log("[AuthSlice] Passing this access_token to getUserProfile:", token.slice(0, 20) + "...");
+                    const profile = await api.getUserProfile(token);
+                    // --- END OF FIX ---
+
+                    console.log("[AuthSlice] Profile fetch SUCCESS.", { profile });
                     get().auth.setUserAndProfile(session.user, profile);
                 } catch (error) {
-                    console.error("[AuthSlice] 4b. Profile fetch FAILED.", error);
+                    console.error("[AuthSlice] Profile fetch FAILED.", error);
                     get().auth.setUserAndProfile(session.user, null);
                     set(state => ({ auth: { ...state.auth, authError: error.message } }));
                 }
             } else {
-                console.log("[AuthSlice] 3c. No session found (e.g., initial load).");
+                console.log("[AuthSlice] No session found. Setting user to logged-out state.");
                 get().auth.setUserAndProfile(null, null);
             }
         });
