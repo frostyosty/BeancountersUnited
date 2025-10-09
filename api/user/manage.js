@@ -8,26 +8,22 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Forbidden: You do not have permission to manage users.' });
     }
 
-     if (req.method === 'GET') {
+if (req.method === 'GET') {
         try {
-            // 1. Fetch all profiles.
+            // 1. Fetch all profiles. (This part is fine)
             const { data: profiles, error: profilesError } = await supabaseAdmin
                 .from('profiles')
                 .select(`id, email, role, full_name, is_verified_buyer, can_see_order_history`);
             if (profilesError) throw profilesError;
 
-            // --- THIS IS THE FIX ---
-            // 2. Fetch user metadata directly from the auth.users table by specifying the schema.
+            // --- THIS IS THE FINAL FIX ---
+            // 2. Call our new database function using rpc().
             const { data: authUsers, error: authUsersError } = await supabaseAdmin
-                .from('auth.users') // <-- Change 'users' to 'auth.users'
-                .select('id, created_at, last_sign_in_at')
-                .in('id', profiles.map(p => p.id));
-            // --- END OF FIX ---
-            
+                .rpc('get_all_user_metadata');
             if (authUsersError) throw authUsersError;
             // --- END OF FIX ---
 
-            // 3. Create a lookup map.
+            // 3. Create a lookup map (same as before).
             const authUserMap = new Map();
             for (const authUser of authUsers) {
                 authUserMap.set(authUser.id, {
@@ -35,8 +31,8 @@ export default async function handler(req, res) {
                     last_sign_in_at: authUser.last_sign_in_at
                 });
             }
-            
-            // 4. Merge the data.
+
+            // 4. Merge the data (same as before).
             const formattedData = profiles.map(profile => ({
                 ...profile,
                 ...(authUserMap.get(profile.id) || {})
