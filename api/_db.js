@@ -32,7 +32,7 @@ export const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
 
 export async function getUserFromRequest(req) {
     console.log("--- [API _db.js] getUserFromRequest() started ---");
-    console.log("[API _db.js] Received headers:", { authorization: req.headers.authorization ? req.headers.authorization.slice(0, 15) + "..." : "Not present" });
+
     if (!req.headers.authorization) {
         console.log("[API _db.js] No authorization header found. Returning null user.");
         return { user: null, profile: null, error: { message: 'No authorization header provided.' } };
@@ -56,7 +56,7 @@ export async function getUserFromRequest(req) {
         console.log("[API _db.js] Supabase auth.getUser() returned no user. Token might be invalid or expired.");
         return { user: null, profile: null, error: { message: 'User not found for the provided token.' } };
     }
-
+    
     console.log(`[API _db.js] Successfully got user from token. User ID: ${user.id}, Email: ${user.email}`);
     console.log(`[API _db.js] Now attempting to fetch profile for user ID: ${user.id} from 'profiles' table...`);
 

@@ -57,8 +57,8 @@ export const signUpViaApi = (email, password) => request('/auth/signup', 'POST',
 
 // export const listAllUsers = () => request('/user/manage', 'GET', null, true);
 // export const updateUser = (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
-    return request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer, canSeeOrderHistory }, true);
-};
+//     return request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer, canSeeOrderHistory }, true);
+// };
 
 export const addMenuItem = (itemData) => request('/menu', 'POST', itemData, true);
 export const updateMenuItem = (itemId, itemData) => request(`/menu?id=${itemId}`, 'PUT', itemData, true);
