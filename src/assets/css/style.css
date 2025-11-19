@@ -1335,3 +1335,52 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     color: #a71d2a;
     transform: scale(1.1);
 }
+
+
+/* --- Mini Auth Spinner --- */
+.auth-loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    color: var(--primary-color); /* Takes the theme color */
+}
+
+.auth-loading-spinner svg {
+    height: 100%;
+    width: 100%;
+    animation: mini-pulse 1.5s infinite ease-in-out;
+}
+
+.mini-steam {
+    opacity: 0;
+    animation: mini-steam-rise 1.5s infinite;
+}
+.mini-steam:nth-child(3) { animation-delay: 0s; }
+.mini-steam:nth-child(4) { animation-delay: 0.2s; }
+.mini-steam:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes mini-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.9); opacity: 0.8; }
+}
+
+@keyframes mini-steam-rise {
+    0% { transform: translateY(0); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(-10px); opacity: 0; }
+}
+
+/* --- Role Badges in Header --- */
+.role-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin: 0 5px;
+    font-weight: bold;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+.role-badge.manager { background: #831111; color: white; }
+.role-badge.owner { background: #186b2b; color: white; }

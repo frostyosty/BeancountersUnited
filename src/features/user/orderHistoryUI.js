@@ -1,4 +1,3 @@
-// src/features/user/orderHistoryUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
@@ -34,37 +33,30 @@ export function renderOrderHistoryPage() {
     }
 }
 
-// --- ADMIN VIEW (Table) ---
+// --- ADMIN VIEW (Table + Manual Order Button) ---
 function renderAdminOrderTable(container, orders) {
-    if (orders.length === 0) {
-        container.innerHTML = `<div class="dashboard-container"><h2>Incoming Orders</h2><p>No orders found.</p></div>`;
-        return;
-    }
-
     // Sort by date (newest first)
     const sortedOrders = [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     const rows = sortedOrders.map(order => {
         const date = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const itemsSummary = order.order_items.map(i => `${i.quantity}x ${i.menu_items?.name}`).join(', ');
+        // Handle different data structures (some might be null if manual)
+        const customerName = order.profiles?.full_name || order.profiles?.email || 'Walk-in / Guest';
+        const itemsSummary = order.order_items ? order.order_items.map(i => `${i.quantity}x ${i.menu_items?.name || 'Item'}`).join(', ') : 'Manual Order';
         
-        // Urgency Color Coding
         let statusClass = 'status-pending';
         if (order.status === 'completed') statusClass = 'status-completed';
         if (order.status === 'cancelled') statusClass = 'status-cancelled';
-        if (order.status === 'preparing') statusClass = 'status-preparing';
 
         return `
             <tr class="${statusClass}">
                 <td>#${order.id.slice(0,6)}</td>
                 <td>${date}</td>
-                <td>${order.profiles?.full_name || order.profiles?.email || 'Guest'}</td>
+                <td>${customerName}</td>
                 <td>${itemsSummary}</td>
                 <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
                 <td><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <td>
-                    <button class="button-secondary small">Details</button>
-                </td>
+                <td><button class="button-secondary small">Details</button></td>
             </tr>
         `;
     }).join('');
@@ -73,9 +65,11 @@ function renderAdminOrderTable(container, orders) {
         <div class="dashboard-container">
             <h2>Incoming Orders (Live)</h2>
             
-            <!-- NEW BUTTON -->
-            <div style="margin-bottom: 15px;">
-                <button id="btn-manual-order" class="button-secondary">+ Add Walk-in / Phone Order</button>
+            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee;">
+                <button id="btn-manual-order" class="button-secondary" style="font-weight: 600;">
+                    + Add Walk-in / Phone Order
+                </button>
+                <span style="margin-left: 10px; font-size: 0.9rem; color: #666;">(Adds a random order for testing/demo)</span>
             </div>
 
             <div class="table-wrapper">
@@ -83,24 +77,28 @@ function renderAdminOrderTable(container, orders) {
                     <thead>
                         <tr><th>ID</th><th>Time</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody>${rows.length > 0 ? rows : '<tr><td colspan="7" style="text-align:center; padding:20px;">No orders yet.</td></tr>'}</tbody>
                 </table>
             </div>
         </div>
     `;
 
-    // Attach listener for the new button
-    document.getElementById('btn-manual-order')?.addEventListener('click', async () => {
-        const btn = document.getElementById('btn-manual-order');
+    // Attach listener for the manual order button
+    document.getElementById('btn-manual-order')?.addEventListener('click', async (e) => {
+        const btn = e.target;
         btn.disabled = true;
         btn.textContent = "Creating...";
+        
         const success = await useAppStore.getState().orderHistory.createManualOrder();
-        if(success) {
-             // Toast handled in slice or here
-             import('@/utils/uiUtils.js').then(u => u.showToast('Walk-in order created', 'success'));
+        
+        if(success) uiUtils.showToast('Walk-in order created', 'success');
+        
+        // Button resets automatically when re-render happens via store update
+        // But if it failed:
+        if (!success) {
+             btn.disabled = false;
+             btn.textContent = "+ Add Walk-in / Phone Order";
         }
-        btn.disabled = false;
-        btn.textContent = "+ Add Walk-in / Phone Order";
     });
 }
 
@@ -143,13 +141,11 @@ function renderCustomerOrderList(container, orders) {
         </div>
     `;
 
-    // Attach Listeners (Only for customers)
     attachCustomerListeners(container);
 }
 
 function attachCustomerListeners(container) {
     if (container.dataset.listenersAttached === 'true') return;
-
     container.addEventListener('click', (event) => {
         if (event.target.matches('.re-order-btn')) {
             handleReorder(event.target.dataset.orderId);

@@ -7,50 +7,59 @@ import * as uiUtils from '@/utils/uiUtils.js';
  * This is the ONLY exported function we'll use in the main render loop.
  */
 export function renderAuthStatus() {
-    const authContainer = document.getElementById('auth-status-container');
-    if (!authContainer) return;
+    const container = document.getElementById('auth-status-container');
+    if (!container) return;
 
-    const { isAuthenticated, user, profile, isAuthLoading } = useAppStore.getState().auth;
-    let newHTML = ''; // <-- We will calculate the new HTML first
+    const { user, profile, isAuthLoading } = useAppStore.getState().auth;
 
+    // 1. LOADING STATE: Use the SVG spinner
     if (isAuthLoading) {
-        newHTML = `<span>...</span>`;
-    } else if (isAuthenticated) {
-        const userRole = profile?.role || 'customer';
-        const canSeeHistory = profile?.can_see_order_history || false;
-        let dashboardLinks = '';
-        if (userRole === 'owner' || userRole === 'manager') {
-            dashboardLinks += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
-        }
-        if (userRole === 'manager') {
-            dashboardLinks += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
-        }
-        const orderHistoryLink = profile && canSeeHistory ? `<a href="#order-history" class="nav-link">Order History</a>` : '';
-
-        newHTML = `
-            <div class="user-info">
-                <span>${user.email}</span>
-                ${orderHistoryLink}
-                ${dashboardLinks}
-                <button id="logout-btn" class="button-secondary">Logout</button>
+        container.innerHTML = `
+            <div class="auth-loading-spinner">
+                <svg viewBox="0 0 100 100">
+                    <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
+                    <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
+                    <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
+                    <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
+                    <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
+                </svg>
             </div>
         `;
-    } else {
-        // NOTE: Your previous code had two separate buttons. 
-        // A single "Login / Sign Up" button that opens the modal is a more common pattern.
-        // I am using the version from our more recent main.js files.
-        newHTML = `<button id="login-signup-btn" class="button-primary">Login / Sign Up</button>`;
+        return;
     }
 
-    // --- THIS IS THE FIX ---
-    // Only update the DOM if the content has actually changed.
-    // This prevents unnecessary re-renders and solves the "lingering ..." bug.
-    if (authContainer.innerHTML !== newHTML) {
-        authContainer.innerHTML = newHTML;
+    // 2. LOGGED IN STATE
+    if (user) {
+        // Use a fallback display name if profile isn't loaded yet
+        const displayName = profile?.full_name || user.email.split('@')[0];
+        
+        // Add a badge if Manager/Owner
+        let badge = '';
+        if (profile?.role === 'manager') badge = '<span class="role-badge manager">GOD</span>';
+        else if (profile?.role === 'owner') badge = '<span class="role-badge owner">OWNER</span>';
+
+        container.innerHTML = `
+            <div class="auth-user-display">
+                <span class="user-greeting">Hi, ${displayName}</span>
+                ${badge}
+                <button id="logout-btn" class="button-link">Logout</button>
+            </div>
+        `;
+    } 
+    // 3. LOGGED OUT STATE
+    else {
+        container.innerHTML = `
+            <button id="login-signup-btn" class="button-primary small">Login</button>
+        `;
     }
-    // --- END OF FIX ---
 }
 
+// --- Helper to show the modal (called by main.js) ---
+export function showLoginSignupModal() {
+    import('./loginSignupModal.js').then(module => {
+        module.renderLoginModal();
+    });
+}
 
 
 /**
