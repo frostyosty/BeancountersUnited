@@ -13,6 +13,21 @@ import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
+
+// Define the spinner HTML constant so we can use it in multiple places
+const SPINNER_SVG = `
+<div class="auth-loading-spinner">
+    <svg viewBox="0 0 100 100">
+        <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
+        <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
+        <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
+        <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
+        <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
+    </svg>
+</div>`;
+
+
+
 // --- State and Render Logic ---
 let isAppInitialized = false;
 
@@ -237,7 +252,6 @@ function setupHamburgerMenu() {
 
 
 
-
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
@@ -252,7 +266,8 @@ async function main() {
                 <nav>
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                    <div id="auth-status-container">...</div>
+                    <!-- FIX: Pre-fill with spinner instead of "..." -->
+                    <div id="auth-status-container">${SPINNER_SVG}</div>
                     <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
                 </nav>
             </header>
