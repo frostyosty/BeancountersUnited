@@ -1,10 +1,32 @@
-// vite.config.js
-
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { execSync } from 'child_process';
+
+// --- 1. Calculate NZST Timestamp ---
+let buildTimestamp = new Date().toISOString();
+try {
+  // Get the last commit date from git
+  const gitDate = execSync('git log -1 --format=%cd').toString().trim();
+  buildTimestamp = gitDate;
+} catch (e) {
+  console.warn("Git history not found, using current time.");
+}
+
+// Format for New Zealand
+const nzstDate = new Date(buildTimestamp).toLocaleString('en-NZ', {
+  timeZone: 'Pacific/Auckland',
+  dateStyle: 'full',
+  timeStyle: 'long'
+});
+// -----------------------------------
 
 export default defineConfig({
+  // --- 2. Inject Global Variable ---
+  define: {
+    '__BUILD_TIMESTAMP__': JSON.stringify(nzstDate),
+  },
+
   build: {
     outDir: 'dist',
   },
@@ -18,13 +40,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      // Ensure all your icon assets are included for caching
       includeAssets: [
-        'favicon.ico',
-        'apple-touch-icon.png',
+        'favicon.ico', 
+        'apple-touch-icon.png', 
         'default-favicon.svg',
-        'android-chrome-192x192.png', // Added
-        'android-chrome-512x512.png'  // Added
+        'android-chrome-192x192.png', 
+        'android-chrome-512x512.png'
       ],
       manifest: {
         name: 'Mealmates',
@@ -36,17 +57,8 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         icons: [
-          {
-            src: 'pwa-192x192.png', // << Expects this filename
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png', // << Expects this filename
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
     }),

@@ -1,76 +1,45 @@
-// vite.config.js
-import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
-import path from 'path';
-import { execSync } from 'child_process';
+// src/utils/debugLogger.js
+console.log("--- [DebugLogger] Initializing... ---");
 
-// --- Feature 1: Get Last Commit Time in NZST ---
-let buildTimestamp = new Date().toISOString();
-try {
-  // Try to get the exact git commit time
-  const gitDate = execSync('git log -1 --format=%cd').toString().trim();
-  buildTimestamp = gitDate;
-} catch (e) {
-  console.warn("Could not retrieve git history, falling back to current time.");
+window.__LOG_HISTORY__ = [];
+const MAX_LOGS = 200;
+
+// Capture the original console methods
+const originalConsole = {
+    log: console.log,
+    error: console.error,
+    warn: console.warn,
+    info: console.info
+};
+
+// Helper to intercept logs
+function captureLog(type, args) {
+    try {
+        const timestamp = new Date().toLocaleTimeString('en-NZ', { hour12: false });
+        const processedArgs = args.map(arg => {
+            if (typeof arg === 'object') {
+                try { return JSON.stringify(arg); } catch (e) { return '[Object]'; }
+            }
+            return String(arg);
+        }).join(' ');
+
+        const entry = { id: Date.now() + Math.random(), timestamp, type, message: processedArgs };
+        
+        // Add to start of array (newest first)
+        window.__LOG_HISTORY__.unshift(entry);
+        if (window.__LOG_HISTORY__.length > MAX_LOGS) window.__LOG_HISTORY__.pop();
+    } catch (e) { /* Ignore logger errors */ }
 }
 
-// Format to NZST
-const nzstDate = new Date(buildTimestamp).toLocaleString('en-NZ', {
-  timeZone: 'Pacific/Auckland',
-  dateStyle: 'full',
-  timeStyle: 'long'
+// Override console
+['log', 'error', 'warn', 'info'].forEach(method => {
+    console[method] = (...args) => {
+        captureLog(method, args);
+        originalConsole[method].apply(console, args);
+    };
 });
-// -----------------------------------------------
 
-export default defineConfig({
-  // Inject the variable globally
-  define: {
-    '__BUILD_TIMESTAMP__': JSON.stringify(nzstDate),
-  },
-
-  build: {
-    outDir: 'dist',
-  },
-
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  plugins: [
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
-      includeAssets: [
-        'favicon.ico',
-        'apple-touch-icon.png',
-        'default-favicon.svg',
-        'android-chrome-192x192.png',
-        'android-chrome-512x512.png'
-      ],
-      manifest: {
-        name: 'Mealmates',
-        short_name: 'Mealmates',
-        description: 'Order delicious food for pickup from Mealmates.',
-        theme_color: '#e67e22',
-        background_color: '#ffffff',
-        start_url: '/',
-        display: 'standalone',
-        orientation: 'portrait',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-        ],
-      },
-    }),
-  ],
-});
+// Log the injected timestamp
+if (typeof __BUILD_TIMESTAMP__ !== 'undefined') {
+    console.log(`%c[Build Info] Last Commit (NZST): ${__BUILD_TIMESTAMP__}`, "color: cyan; background: #333; padding: 4px;");
+}
