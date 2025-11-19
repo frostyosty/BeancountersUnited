@@ -4,7 +4,6 @@ import * as uiUtils from '@/utils/uiUtils.js';
 
 /**
  * Renders the authentication status in the header.
- * This is the ONLY exported function we'll use in the main render loop.
  */
 export function renderAuthStatus() {
     const container = document.getElementById('auth-status-container');
@@ -54,10 +53,8 @@ export function renderAuthStatus() {
     }
 }
 
-
 /**
  * Displays a modal with side-by-side Login and Sign Up forms.
- * It is EXPORTED so main.js can import and use it.
  */
 export function showLoginSignupModal() {
     const modalContentHTML = `
@@ -105,10 +102,8 @@ export function showLoginSignupModal() {
     document.getElementById('signup-form')?.addEventListener('submit', handleSignupFormSubmit);
 }
 
-
 /**
  * Handles the submission of the LOGIN form.
- * @param {Event} event
  */
 async function handleLoginFormSubmit(event) {
     event.preventDefault();
@@ -125,26 +120,21 @@ async function handleLoginFormSubmit(event) {
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
-     const { error } = await login(email, password); // This call is now simpler
+    const { error } = await login(email, password);
 
     if (error) {
         messageEl.textContent = error.message;
         messageEl.className = 'auth-message error';
         submitButton.disabled = false;
         submitButton.textContent = 'Login';
- } else {
-        // --- THIS IS THE FIX ---
-        // DO NOT close the modal here. Let the state change do it.
+    } else {
+        // Don't need to close modal manually; auth state change will trigger UI updates.
         uiUtils.showToast('Login successful!', 'success');
-        // uiUtils.closeModal(); // <-- DELETE THIS LINE
-        // --- END OF FIX ---
     }
 }
 
-
 /**
  * Handles the submission of the SIGN UP form.
- * @param {Event} event
  */
 async function handleSignupFormSubmit(event) {
     event.preventDefault();
@@ -155,7 +145,6 @@ async function handleSignupFormSubmit(event) {
     const password = form.password.value;
     const { signUp } = useAppStore.getState().auth;
 
-    // Provide immediate feedback
     submitButton.disabled = true;
     submitButton.textContent = 'Signing Up...';
     messageEl.textContent = '';
@@ -169,10 +158,7 @@ async function handleSignupFormSubmit(event) {
         submitButton.disabled = false;
         submitButton.textContent = 'Sign Up';
     } else {
-        // On success, we don't close the modal. We show instructions.
         messageEl.textContent = 'Success! Please check your email for a confirmation link.';
         messageEl.className = 'auth-message success';
-        // The button remains disabled to prevent multiple signups.
     }
 }
-
