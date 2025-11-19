@@ -5,42 +5,43 @@ export function initializeImpersonationToolbar() {
     console.log("[GodModeUI] Initializing subscription...");
     
     useAppStore.subscribe(
-        (state) => ({
-            realProfile: state.auth.originalProfile || state.auth.profile,
-            isImpersonating: state.auth.isImpersonating(),
-            currentRole: state.auth.profile?.role || 'guest',
-        }),
-        ({ realProfile, isImpersonating, currentRole }) => {
-            // --- DEBUG LOG ---
-            console.log(`[GodModeUI] State Change Detected. Real Role: ${realProfile?.role}, Impersonating: ${isImpersonating}`);
+        // FIX: Return a primitive string to ensure strict equality works
+        (state) => {
+            const realRole = state.auth.originalProfile?.role || state.auth.profile?.role || 'guest';
+            const isImp = state.auth.isImpersonating();
+            const currRole = state.auth.profile?.role || 'guest';
+            return `${realRole}|${isImp}|${currRole}`; 
+        },
+        (keyString) => {
+            // Decode the string back into values
+            const [realRole, isImpStr, currentRole] = keyString.split('|');
+            const isImpersonating = isImpStr === 'true';
             
-            renderToolbar(realProfile?.role, isImpersonating, currentRole);
+            console.log(`[GodModeUI] State Change: ${keyString}`);
+            renderToolbar(realRole, isImpersonating, currentRole);
         },
         { fireImmediately: true }
     );
 }
 
+// ... keep renderToolbar and showDebugLogModal exactly as they were ...
 function renderToolbar(realRole, isImpersonating, currentRole) {
-    // 1. Safety Check
+    let toolbar = document.getElementById('god-mode-toolbar');
+    let debugBtn = document.getElementById('god-mode-debug-btn');
+
     if (realRole !== 'manager') {
-        const existingToolbar = document.getElementById('god-mode-toolbar');
-        const existingDebugBtn = document.getElementById('god-mode-debug-btn');
-        if (existingToolbar) existingToolbar.remove();
-        if (existingDebugBtn) existingDebugBtn.remove();
+        if (toolbar) toolbar.remove();
+        if (debugBtn) debugBtn.remove();
+        if (document.body.style.paddingBottom) document.body.style.paddingBottom = '';
         return;
     }
 
-    console.log("[GodModeUI] Rendering Toolbar & Debug Button...");
-
-    // 2. Create Toolbar Wrapper (if needed)
-    let toolbar = document.getElementById('god-mode-toolbar');
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'god-mode-toolbar';
         document.body.appendChild(toolbar);
         document.body.style.paddingBottom = '60px';
         
-        // Attach listeners once
         toolbar.addEventListener('click', (e) => {
             const auth = useAppStore.getState().auth;
             if (e.target.matches('[data-role]')) auth.impersonateRole(e.target.dataset.role);
@@ -48,7 +49,6 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         });
     }
 
-    // 3. Update Toolbar Content
     const stopButtonHTML = isImpersonating ? 
         `<button id="stop-impersonating-btn" class="toolbar-btn stop-btn">Stop Impersonating</button>` : '';
 
@@ -66,10 +66,7 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         </div>
     `;
 
-    // 4. Ensure Debug Button Exists
-    let debugBtn = document.getElementById('god-mode-debug-btn');
     if (!debugBtn) {
-        console.log("[GodModeUI] Creating 'D' Button.");
         debugBtn = document.createElement('button');
         debugBtn.id = 'god-mode-debug-btn';
         debugBtn.textContent = 'D';
@@ -79,17 +76,15 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
             backgroundColor: '#212529', color: '#00ff00', border: '2px solid #00ff00',
             fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         });
-        
         debugBtn.onclick = () => {
-            console.log("[DebugBtn] Clicked.");
-            showDebugLogModal();
+            if (window.showDebugLogModal) window.showDebugLogModal(); // Access global if defined
+            else showDebugLogModalInternal(); // Or use local
         };
-        
         document.body.appendChild(debugBtn);
     }
 }
 
-function showDebugLogModal() {
+function showDebugLogModalInternal() {
     const logs = window.__LOG_HISTORY__ || [];
     const rowsHTML = logs.map(log => {
         let color = log.type === 'error' ? '#ffcccc' : (log.type === 'warn' ? '#fff4cc' : '#f8f9fa');

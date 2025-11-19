@@ -298,12 +298,11 @@ async function main() {
     // Set up the Page Content subscriber
     
     useAppStore.subscribe(
-        (state) => ({
-            trigger: state.ui._reRenderTrigger,      // FIX: Removed the double .ui
-            category: state.ui.activeMenuCategory    // FIX: Removed the double .ui
-        }),
-        () => {
-            console.log("%c[App Sub] Page re-render triggered.", "color: green;");
+        // FIX: Return a string key "trigger-category"
+        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}`,
+        
+        (keyString) => {
+            console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
             renderPageContent();
         }
     );
