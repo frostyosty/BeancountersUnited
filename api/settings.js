@@ -1,53 +1,65 @@
-// /api/settings.js
 import { supabaseAdmin } from './_db.js';
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+    console.log(`[API /settings] Method: ${req.method}`);
 
-    try {
-        console.log("[API /settings] Fetching from 'site_settings' table...");
-        const { data, error, status } = await supabaseAdmin
-            .from('site_settings')
-            .select('key, value');
+    // --- GET: Fetch Settings ---
+    if (req.method === 'GET') {
+        try {
+            const { data, error } = await supabaseAdmin
+                .from('site_settings')
+                .select('key, value');
 
-        console.log(`[API /settings] Supabase query returned status: ${status}`);
-        console.log(`[API /settings] Error object from query:`, error);
-        console.log(`[API /settings] Data array from query (length: ${data?.length || 0}):`, data);
+            if (error && error.code !== 'PGRST116' && error.code !== '42P01') throw error;
 
-        if (error) {
-            // Let's explicitly check for the "table doesn't exist" error
-            if (error.code === '42P01') {
-                console.warn("[API /settings] The 'site_settings' table does not exist.");
-                return res.status(200).json({}); // Return empty object if table is missing
-            }
-            throw error; // Throw other database errors
-        }
-
-        if (!data || data.length === 0) {
-            console.warn("[API /settings] The 'site_settings' table is empty.");
-            return res.status(200).json({});
-        }
-
-        const settingsObject = data.reduce((acc, row) => {
-            try {
-                if (['themeVariables', 'ownerPermissions'].includes(row.key)) {
-                    acc[row.key] = JSON.parse(row.value);
-                } else {
+            // Convert DB rows [{key: 'a', value: 'b'}] into Object {a: b}
+            const settingsObject = (data || []).reduce((acc, row) => {
+                try {
+                    // Parse JSON strings back to objects for specific keys
+                    if (['themeVariables', 'ownerPermissions', 'menuCategories'].includes(row.key)) {
+                        acc[row.key] = JSON.parse(row.value);
+                    } else {
+                        acc[row.key] = row.value;
+                    }
+                } catch (e) {
                     acc[row.key] = row.value;
                 }
-            } catch (e) {
-                acc[row.key] = row.value;
-            }
-            return acc;
-        }, {});
-        
-        console.log("[API /settings] Successfully processed settings. Sending object:", settingsObject);
-        return res.status(200).json(settingsObject);
+                return acc;
+            }, {});
 
-    } catch (e) {
-        console.error("CRITICAL ERROR in /api/settings:", e);
-        return res.status(500).json({ error: "Failed to fetch site settings." });
+            return res.status(200).json(settingsObject);
+        } catch (e) {
+            console.error("GET Error:", e);
+            return res.status(500).json({ error: "Failed to fetch settings." });
+        }
     }
+
+    // --- PUT: Update Settings ---
+    if (req.method === 'PUT') {
+        try {
+            const updates = req.body; // e.g. { websiteName: "New Name", themeVariables: {...} }
+            console.log("[API /settings] Received updates:", Object.keys(updates));
+
+            // We need to upsert each key-value pair individually into the 'site_settings' table
+            const upsertPromises = Object.entries(updates).map(([key, value]) => {
+                // Stringify objects before saving
+                const dbValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                
+                return supabaseAdmin
+                    .from('site_settings')
+                    .upsert({ key, value: dbValue }, { onConflict: 'key' });
+            });
+
+            await Promise.all(upsertPromises);
+
+            return res.status(200).json({ success: true });
+
+        } catch (e) {
+            console.error("PUT Error:", e);
+            return res.status(500).json({ error: e.message });
+        }
+    }
+
+    res.setHeader('Allow', ['GET', 'PUT']);
+    res.status(405).json({ error: `Method ${req.method} Not Allowed` });
 }

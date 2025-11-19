@@ -1,47 +1,55 @@
-// src/store/orderHistorySlice.js
-import { useAppStore } from './appStore';
 import * as api from '@/services/apiService.js';
 
 export const createOrderHistorySlice = (set, get) => ({
-    // --- STATE ---
     orders: [],
     isLoading: false,
     error: null,
 
-    // src/store/orderHistorySlice.js
-
-    // --- ACTIONS ---
     fetchOrderHistory: async () => {
-        console.log("[OrderHistorySlice] 1. fetchOrderHistory() CALLED.");
-        const { isLoading, orders, error } = get().orderHistory;
+        const state = get().orderHistory;
+        const { getUserRole } = get().auth;
+        const role = getUserRole();
 
-        if (isLoading || (orders.length > 0 && !error)) {
-            console.log("[OrderHistorySlice] 2. Skipping fetch: already loading or has data.");
+        // --- LOOP FIX: Stop if loading OR if data exists ---
+        // (Admins might want to force refresh later, but let's stop the crash first)
+        if (state.isLoading || state.orders.length > 0) {
             return;
         }
 
-        console.log("[OrderHistorySlice] 3. Setting isLoading: true.");
         set(state => ({ orderHistory: { ...state.orderHistory, isLoading: true, error: null } }));
 
         try {
-            console.log("[OrderHistorySlice] 4. Calling api.getOrderHistory()...");
+            // Get the token
             const { data: { session } } = await window.supabase.auth.getSession();
-            if (!session) throw new Error("Authentication token is missing");
-            
-            const history = await api.getOrderHistory(session.access_token);
-            console.log(`[OrderHistorySlice] 5. Fetch successful. Received ${history.length} orders.`);
-            set(state => ({ orderHistory: { ...state.orderHistory, orders: history, isLoading: false } }));
-            useAppStore.getState().ui.triggerPageRender();
-        } catch (error) {
-            console.error("[OrderHistorySlice] 6. Fetch FAILED.", error);
-            // If the user is not logged in, apiService will throw an error.
-            // We can treat this as an empty history rather than a critical failure.
-            if (error.message.includes("Authentication token is missing")) {
-                set(state => ({ orderHistory: { ...state.orderHistory, orders: [], isLoading: false } }));
+            if (!session) throw new Error("Not authenticated");
+
+            let ordersData;
+
+            // --- BRANCHING LOGIC ---
+            if (role === 'manager' || role === 'owner') {
+                // Admin sees ALL orders (You might need to ensure api.getAllOrders exists, 
+                // or stick to getOrderHistory if your backend handles the role filtering)
+                // For now, we assume getOrderHistory returns what the user is allowed to see.
+                ordersData = await api.getOrderHistory(session.access_token); 
             } else {
-                // For all other errors, record them.
-                set(state => ({ orderHistory: { ...state.orderHistory, error: error.message, isLoading: false } }));
+                // Customers see their own
+                ordersData = await api.getOrderHistory(session.access_token);
             }
+
+            set(state => ({ 
+                orderHistory: { ...state.orderHistory, orders: ordersData || [], isLoading: false } 
+            }));
+            
+            // Trigger UI Update
+            if (get().ui && get().ui.triggerPageRender) {
+                get().ui.triggerPageRender();
+            }
+
+        } catch (error) {
+            console.error("Fetch Orders Failed:", error);
+            set(state => ({ 
+                orderHistory: { ...state.orderHistory, isLoading: false, error: error.message } 
+            }));
         }
-    },
+    }
 });

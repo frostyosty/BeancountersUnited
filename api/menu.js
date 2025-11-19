@@ -1,46 +1,54 @@
-// api/menu.js
-import { supabaseAdmin } from './_db.js';
+import { supabaseAdmin, getUserFromRequest } from './_db.js';
 
 export default async function handler(req, res) {
-    console.log("--- [API /api/menu] Handler started ---");
-    console.log(`[API /api/menu] Request Method: ${req.method}`);
+    console.log(`[API /menu] Method: ${req.method}`);
 
+    // --- GET: List Items ---
     if (req.method === 'GET') {
-        try {
-            console.log("[API /api/menu] Attempting to connect to Supabase and query 'menu_items' table...");
-
-            // The database query
-            const { data, error, status, statusText } = await supabaseAdmin
-                .from('menu_items')
-                .select('*')
-                .order('name');
-
-            // Log the raw response from Supabase
-            console.log("[API /api/menu] Supabase query completed.");
-            console.log(`[API /api/menu] Status: ${status} ${statusText}`);
-            console.log("[API /api/menu] Error object:", error);
-            console.log("[API /api/menu] Data object:", data);
-
-            // Check for errors from the query
-            if (error) {
-                // Throw the error so it's caught by our catch block
-                console.error("[API /api/menu] Supabase query returned an error object.");
-                throw error;
-            }
-
-            console.log(`[API /api/menu] Successfully fetched ${data.length} items. Sending 200 OK response.`);
-            return res.status(200).json(data);
-
-        } catch (e) {
-            console.error("[API /api/menu] CRITICAL ERROR in try/catch block:", e);
-            return res.status(500).json({
-                error: "An internal server error occurred while fetching the menu.",
-                details: e.message
-            });
-        }
+        const { data, error } = await supabaseAdmin.from('menu_items').select('*').order('name');
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json(data);
     }
 
-    // Handle other methods if necessary
-    res.setHeader('Allow', ['GET']);
+    // --- POST: Create Item ---
+    if (req.method === 'POST') {
+        const { user, error: authError } = await getUserFromRequest(req);
+        if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { error } = await supabaseAdmin.from('menu_items').insert([req.body]);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(201).json({ success: true });
+    }
+
+    // --- PUT: Update Item ---
+    if (req.method === 'PUT') {
+        const { id } = req.query; // ?id=123
+        if (!id) return res.status(400).json({ error: "Missing Item ID" });
+
+        const { user, error: authError } = await getUserFromRequest(req);
+        if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+        // Exclude id from body to prevent changing it
+        const { id: _, ...updates } = req.body;
+
+        const { error } = await supabaseAdmin.from('menu_items').update(updates).eq('id', id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ success: true });
+    }
+
+    // --- DELETE: Remove Item ---
+    if (req.method === 'DELETE') {
+        const { id } = req.query;
+        if (!id) return res.status(400).json({ error: "Missing Item ID" });
+
+        const { user, error: authError } = await getUserFromRequest(req);
+        if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+        const { error } = await supabaseAdmin.from('menu_items').delete().eq('id', id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.status(200).json({ success: true });
+    }
+
+    res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
 }
