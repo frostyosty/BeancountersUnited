@@ -1,16 +1,44 @@
-// src/features/admin/ownerDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as api from '@/services/apiService.js';
 import * as uiUtils from '@/utils/uiUtils.js';
-import { supabase } from '@/supabaseClient.js'; // Import for Storage
+import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
 
 // --- HELPER FUNCTIONS ---
 
+function getMenuLayoutHTML() {
+    const { getMenuCategories } = useAppStore.getState().siteSettings;
+    const categories = getMenuCategories();
+    
+    const listItems = categories.map(cat => `
+        <li class="category-list-item" data-category-name="${cat}">
+            <span class="drag-handle">☰</span>
+            <span class="category-name">${cat}</span>
+            <div class="item-actions">
+                <button class="button-secondary small rename-category-btn">Rename</button>
+                <button class="button-danger small delete-category-btn">Delete</button>
+            </div>
+        </li>
+    `).join('');
+
+    return `
+        <div id="category-manager">
+            <div class="add-category-row">
+                <input type="text" id="new-category-name" placeholder="New Category Name">
+                <button id="add-category-btn" class="button-primary small">Add</button>
+            </div>
+            <ul id="category-list">${listItems}</ul>
+        </div>
+    `;
+}
+
 function showMenuItemModal(item = null) {
     const isEditing = item !== null;
     const modalTitle = isEditing ? `Edit "${item.name}"` : 'Add New Menu Item';
-    const { getMenuCategories } = useAppAppStore.getState().siteSettings;
+    
+    // FIX: Corrected typo 'useAppAppStore' -> 'useAppStore'
+    const { getMenuCategories } = useAppStore.getState().siteSettings;
+    
     const categories = getMenuCategories();
     const categoryOptions = categories.map(cat => `<option value="${cat}" ${item?.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
 
@@ -80,7 +108,7 @@ async function handleMenuItemFormSubmit(event) {
             itemData.image_url = publicUrl;
         }
 
-        const { data: { session } } = await window.supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
         if (isEditing) {
@@ -98,13 +126,14 @@ async function handleMenuItemFormSubmit(event) {
     }
 }
 
-
-
 async function handleDeleteMenuItem(itemId, itemName) {
     if (!confirm(`Are you sure you want to delete "${itemName}"?`)) return;
     const { fetchMenu } = useAppStore.getState().menu;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
     try {
-        await api.deleteMenuItem(itemId);
+        await api.deleteMenuItem(itemId, token);
         uiUtils.showToast('Item deleted.', 'info');
         uiUtils.closeModal();
         await fetchMenu();
@@ -127,7 +156,12 @@ function handleCategoryReorder() {
     const { updateSiteSettings } = useAppStore.getState().siteSettings;
     const listItems = document.querySelectorAll('#category-list .category-list-item');
     const newCategoryOrder = Array.from(listItems).map(li => li.dataset.categoryName);
-    updateSiteSettings({ menuCategories: newCategoryOrder });
+    
+    // Fetch token for update
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if(session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
+    });
+    
     uiUtils.showToast('Category order saved!', 'success');
 }
 
@@ -136,33 +170,35 @@ async function handleThemeSettingsSave() {
     const saveButton = document.getElementById('save-theme-settings');
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
+    
     const themeVariables = {};
     document.querySelectorAll('[data-css-var]').forEach(input => {
         themeVariables[input.dataset.cssVar] = input.value;
     });
-    await updateSiteSettings({ themeVariables });
+
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    await updateSiteSettings({ themeVariables }, session?.access_token);
     uiUtils.showToast('Theme saved successfully!', 'success');
     saveButton.textContent = 'Save Theme Settings';
     saveButton.disabled = false;
 }
 
-/**
- * NEW: Handles saving the business details form.
- * @param {HTMLFormElement} form
- */
 async function handleBusinessDetailsSave(form) {
     const saveButton = form.querySelector('button[type="submit"]');
     saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
 
     const formData = new FormData(form);
-    const detailsToUpdate = Object.fromEntries(formData.entries()); // { restaurantPhoneNumber: '...' }
+    const detailsToUpdate = Object.fromEntries(formData.entries());
 
     try {
-        await useAppStore.getState().siteSettings.updateSiteSettings(detailsToUpdate);
+        const { data: { session } } = await supabase.auth.getSession();
+        await api.updateSiteSettings(detailsToUpdate, session?.access_token);
         uiUtils.showToast('Business details saved!', 'success');
     } catch (error) {
-        // The slice handles optimistic revert, so just show a message
+        console.error(error);
+        uiUtils.showToast('Failed to save details.', 'error');
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = 'Save Details';
@@ -173,15 +209,13 @@ function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
 
-    // --- Event Delegation for all clicks and submits ---
     dashboardContainer.addEventListener('submit', (event) => {
-        // --- NEW: Handle Business Details Form Submission ---
         if (event.target.matches('#business-details-form')) {
             event.preventDefault();
             handleBusinessDetailsSave(event.target);
         }
-        // --- End New ---
     });
+    
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
         if (target.matches('#add-new-item-btn') || target.closest('.edit-item-btn-table')) {
@@ -193,15 +227,26 @@ function attachOwnerDashboardListeners() {
         if (target.matches('#save-theme-settings')) {
             handleThemeSettingsSave();
         }
+        
         const categoryManager = target.closest('#category-manager');
         if (categoryManager) {
-            const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
+            const { getMenuCategories } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
+            
+            // Helper to run update
+            const runUpdate = async (newCats) => {
+                const { data: { session } } = await supabase.auth.getSession();
+                api.updateSiteSettings({ menuCategories: newCats }, session?.access_token);
+                // Manually trigger local state update or refetch? 
+                // For simplicity, triggering a refetch usually safest:
+                useAppStore.getState().siteSettings.fetchSiteSettings(); // Force refresh
+            };
+
             if (target.matches('#add-category-btn')) {
                 const input = document.getElementById('new-category-name');
                 const newName = input.value.trim();
                 if (newName && !categories.includes(newName)) {
-                    updateSiteSettings({ menuCategories: [...categories, newName] });
+                    runUpdate([...categories, newName]);
                     input.value = '';
                 }
             }
@@ -211,7 +256,7 @@ function attachOwnerDashboardListeners() {
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
                     if (newName && newName.trim() !== oldName) {
-                        updateSiteSettings({ menuCategories: categories.map(c => c === oldName ? newName.trim() : c) });
+                        runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
                     }
                 }
                 if (target.matches('.delete-category-btn')) {
@@ -220,7 +265,7 @@ function attachOwnerDashboardListeners() {
                         return;
                     }
                     if (confirm(`Delete the "${oldName}" category?`)) {
-                        updateSiteSettings({ menuCategories: categories.filter(c => c !== oldName) });
+                        runUpdate(categories.filter(c => c !== oldName));
                     }
                 }
             }
@@ -237,22 +282,19 @@ function attachOwnerDashboardListeners() {
 
 // --- MAIN RENDER FUNCTION ---
 export function renderOwnerDashboard() {
-    console.log("%c[OwnerDashboardUI] renderOwnerDashboard() CALLED.", "color: orange;"); // <-- ADD THIS LOG
+    console.log("%c[OwnerDashboardUI] renderOwnerDashboard() CALLED.", "color: orange;");
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // --- THIS IS THE SURGICAL FIX ---
-    // 1. Actively request the data this component depends on.
-    // The store actions have safety checks to prevent duplicate fetches.
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
-    // --- END OF FIX ---
 
-    // Now, read the state as it currently is.
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     
-    // Updated Guard Clause to check BOTH loading states.
+    // FIX: Define ownerPermissions before using it
+    const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
+
     if (isLoadingMenu || isLoadingSettings) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
         return;
@@ -262,12 +304,11 @@ export function renderOwnerDashboard() {
         return;
     }
 
-
-    // --- Conditionally build HTML chunks based on permissions ---
     const themeControlsHTML = ownerPermissions.canEditTheme
         ? uiUtils.getThemeControlsHTML(settings.themeVariables || {})
         : '';
 
+    // FIX: getMenuLayoutHTML is now defined
     const menuLayoutHTML = ownerPermissions.canEditCategories
         ? getMenuLayoutHTML()
         : '';
@@ -316,9 +357,7 @@ export function renderOwnerDashboard() {
         </div>
     `;
 
-
     attachOwnerDashboardListeners();
-    // Only initialize SortableJS if the category list exists
     if (ownerPermissions.canEditCategories) {
         initializeSortable();
     }
