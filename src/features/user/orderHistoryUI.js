@@ -72,6 +72,12 @@ function renderAdminOrderTable(container, orders) {
     container.innerHTML = `
         <div class="dashboard-container">
             <h2>Incoming Orders (Live)</h2>
+            
+            <!-- NEW BUTTON -->
+            <div style="margin-bottom: 15px;">
+                <button id="btn-manual-order" class="button-secondary">+ Add Walk-in / Phone Order</button>
+            </div>
+
             <div class="table-wrapper">
                 <table class="admin-orders-table">
                     <thead>
@@ -82,6 +88,20 @@ function renderAdminOrderTable(container, orders) {
             </div>
         </div>
     `;
+
+    // Attach listener for the new button
+    document.getElementById('btn-manual-order')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-manual-order');
+        btn.disabled = true;
+        btn.textContent = "Creating...";
+        const success = await useAppStore.getState().orderHistory.createManualOrder();
+        if(success) {
+             // Toast handled in slice or here
+             import('@/utils/uiUtils.js').then(u => u.showToast('Walk-in order created', 'success'));
+        }
+        btn.disabled = false;
+        btn.textContent = "+ Add Walk-in / Phone Order";
+    });
 }
 
 // --- CUSTOMER VIEW (Cards) ---

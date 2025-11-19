@@ -295,12 +295,24 @@ async function main() {
         }
     });
 
+
+    setInterval(() => {
+        const state = useAppStore.getState();
+        if (state.auth.isAuthenticated) {
+            // Refresh orders silently to get latest timestamps/status
+            // (Only if we have loaded them at least once)
+            if (state.orderHistory.hasLoaded) {
+                // We trigger the check
+                state.orderHistory.checkUrgency();
+            }
+        }
+    }, 60 * 1000); // Check every 1 minute
     // Set up the Page Content subscriber
-    
+
     useAppStore.subscribe(
         // FIX: Return a string key "trigger-category"
         (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}`,
-        
+
         (keyString) => {
             console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
             renderPageContent();

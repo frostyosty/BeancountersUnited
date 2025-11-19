@@ -27,8 +27,6 @@ export const createAuthSlice = (set, get) => ({
 
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`%c[AuthSlice] Event: ${event}`, "color: purple;");
-
             if (get().auth.isImpersonating()) return;
 
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
@@ -36,10 +34,19 @@ export const createAuthSlice = (set, get) => ({
             } else if (session?.user) {
                 try {
                     const token = session.access_token;
-                    // Removed the noisy token log here
                     const profile = await api.getUserProfile(token);
-
                     get().auth.setUserAndProfile(session.user, profile);
+
+                    // --- NEW: Auto-Redirect for Owners ---
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        const role = profile?.role;
+                        if (role === 'owner' || role === 'manager') {
+                            console.log("[AuthSlice] Owner detected. Redirecting to Order History.");
+                            window.location.hash = '#order-history';
+                        }
+                    }
+                    // -------------------------------------
+
                 } catch (error) {
                     console.error("[AuthSlice] Profile fetch FAILED.", error);
                     get().auth.setUserAndProfile(session.user, null);

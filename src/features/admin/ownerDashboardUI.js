@@ -1,3 +1,4 @@
+// src/features/admin/ownerDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as api from '@/services/apiService.js';
 import * as uiUtils from '@/utils/uiUtils.js';
@@ -7,7 +8,35 @@ import Sortable from 'sortablejs';
 // --- LOCAL STATE FOR SORTING ---
 let currentSort = { column: 'name', direction: 'asc' };
 
-// --- HELPER FUNCTIONS ---
+// --- CSS STYLES FOR MODALS ---
+const MODAL_CSS = `
+<style>
+    /* Kept the same as previous version */
+    .modal-form-container { font-family: inherit; color: #333; }
+    .modal-form-container h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+    .form-row { display: flex; flex-direction: column; margin-bottom: 15px; text-align: left; }
+    .form-row label { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #444; }
+    .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+    .form-row textarea { min-height: 80px; resize: vertical; }
+    .image-upload-wrapper { background: #f9f9f9; border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px; }
+    .image-preview-container img { max-height: 150px; border-radius: 6px; display: block; margin: 0 auto 10px; }
+    .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px 1px 1px 1px); }
+    .upload-btn-label { display: inline-block; padding: 8px 16px; background-color: #e9ecef; color: #333; border-radius: 4px; cursor: pointer; border: 1px solid #ced4da; }
+    .form-actions-split { display: flex; justify-content: space-between; margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px; }
+</style>
+`;
+
+// --- HELPER: Generate Pastel Color from String ---
+function getCategoryColor(str) {
+    if (!str) return '#ffffff';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    // HSL: Hue (0-360 based on hash), Saturation 70%, Lightness 92% (Pastel)
+    const h = Math.abs(hash % 360);
+    return `hsl(${h}, 70%, 92%)`; 
+}
 
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
@@ -50,7 +79,6 @@ function getMenuLayoutHTML() {
 function showMenuItemModal(item = null) {
     const isEditing = item !== null;
     const modalTitle = isEditing ? `Edit Item` : 'Add New Item';
-    
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories() || ['Uncategorized'];
     
@@ -58,28 +86,24 @@ function showMenuItemModal(item = null) {
         `<option value="${cat}" ${item?.category === cat ? 'selected' : ''}>${cat}</option>`
     ).join('');
 
-    // Note: CSS is now in style.css
     const modalContentHTML = `
+        ${MODAL_CSS}
         <div class="modal-form-container">
             <h3>${modalTitle}</h3>
             <form id="menu-item-form">
                 <input type="hidden" name="id" value="${isEditing ? item.id : ''}">
-                
                 <div class="form-row">
                     <label>Item Name</label>
                     <input type="text" name="name" value="${isEditing ? item.name : ''}" required placeholder="e.g. Avocado Toast">
                 </div>
-                
                 <div class="form-row">
                     <label>Description</label>
-                    <textarea name="description" placeholder="Ingredients, allergens, or details...">${isEditing ? (item.description || '') : ''}</textarea>
+                    <textarea name="description" placeholder="Ingredients...">${isEditing ? (item.description || '') : ''}</textarea>
                 </div>
-                
                 <div class="form-row">
                     <label>Price ($)</label>
                     <input type="number" name="price" step="0.01" value="${isEditing ? item.price : ''}" required placeholder="0.00">
                 </div>
-                
                 <div class="form-row">
                     <label>Category</label>
                     <select name="category">
@@ -87,23 +111,17 @@ function showMenuItemModal(item = null) {
                         ${categoryOptions}
                     </select>
                 </div>
-                
                 <div class="image-upload-wrapper">
-                    <label style="display:block; margin-bottom:10px; font-weight:600; color:#444;">Item Image</label>
                     <div class="image-preview-container">
                         <img id="image-preview" src="${item?.image_url || '/placeholder-coffee.jpg'}" alt="Preview" />
                     </div>
-                    
                     <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp" class="visually-hidden">
                     <label for="item-image-upload" class="upload-btn-label">Choose New Image</label>
-                    
-                    <div id="image-upload-filename" class="file-info">No file selected</div>
+                    <div id="image-upload-filename" style="font-size:0.8rem; color:#666; margin-top:5px;">No file selected</div>
                     <input type="hidden" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}">
-                    <div id="image-upload-progress" style="display: none; color: var(--primary-color); font-weight: bold; margin-top: 8px;">Uploading...</div>
+                    <div id="image-upload-progress" style="display: none; color: blue; font-weight: bold; margin-top: 8px;">Uploading...</div>
                 </div>
-
                 <div class="form-actions-split">
-                    <!-- We moved delete to the table, but kept it here optionally -->
                     ${isEditing ? `<button type="button" id="delete-item-btn-modal" class="button-danger">Delete Item</button>` : '<div></div>'}
                     <button type="submit" class="button-primary">${isEditing ? 'Save Changes' : 'Create Item'}</button>
                 </div>
@@ -150,7 +168,6 @@ async function handleMenuItemFormSubmit(event) {
             const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(filePath);
             itemData.image_url = publicUrl;
         }
-
         delete itemData.imageFile;
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -166,28 +183,20 @@ async function handleMenuItemFormSubmit(event) {
             uiUtils.showToast('Item added!', 'success');
             uiUtils.closeModal();
         }
-        
     } catch (error) {
-        console.error(error);
         uiUtils.showToast(`Error: ${error.message}`, 'error');
         submitButton.disabled = false;
-        submitButton.textContent = isEditing ? 'Save Changes' : 'Create Item';
     }
 }
 
 async function handleDeleteMenuItem(itemId, itemName) {
     if (!confirm(`Delete "${itemName}"?`)) return;
-    
     const { deleteMenuItemOptimistic } = useAppStore.getState().menu;
     const { data: { session } } = await supabase.auth.getSession();
-    
     try {
         await deleteMenuItemOptimistic(itemId, session?.access_token);
         uiUtils.showToast('Item deleted.', 'info');
-        // If modal is open, close it
-        if (document.querySelector('.modal-overlay')) {
-            uiUtils.closeModal();
-        }
+        if (document.querySelector('.modal-overlay')) uiUtils.closeModal();
     } catch (error) {
         uiUtils.showToast(`Error: ${error.message}`, 'error');
     }
@@ -195,14 +204,8 @@ async function handleDeleteMenuItem(itemId, itemName) {
 
 function initializeSortable() {
     const list = document.getElementById('category-list');
-    if (!list) return;
-    if (list.dataset.sortableInitialized === 'true') return;
-
-    new Sortable(list, {
-        animation: 150,
-        handle: '.drag-handle-wrapper',
-        onEnd: handleCategoryReorder,
-    });
+    if (!list || list.dataset.sortableInitialized === 'true') return;
+    new Sortable(list, { animation: 150, handle: '.drag-handle-wrapper', onEnd: handleCategoryReorder });
     list.dataset.sortableInitialized = 'true';
 }
 
@@ -210,11 +213,9 @@ function handleCategoryReorder() {
     const { updateSiteSettings } = useAppStore.getState().siteSettings;
     const listItems = document.querySelectorAll('#category-list .category-list-item');
     const newCategoryOrder = Array.from(listItems).map(li => li.dataset.categoryName);
-    
     supabase.auth.getSession().then(({ data: { session } }) => {
         if(session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
     });
-    
     uiUtils.showToast('Category order updated!', 'success');
 }
 
@@ -224,41 +225,28 @@ function attachOwnerDashboardListeners() {
 
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
-        
-        // Add Item
-        if (target.matches('#add-new-item-btn')) {
-            showMenuItemModal(null);
-        }
-        // Edit Item
+        if (target.matches('#add-new-item-btn')) showMenuItemModal(null);
         else if (target.closest('.edit-item-btn-table')) {
             const row = target.closest('tr');
             const item = useAppStore.getState().menu.items.find(i => i.id === row.dataset.itemId);
             showMenuItemModal(item);
         }
-        // Delete Item (Small X)
         else if (target.closest('.delete-icon-btn')) {
             const row = target.closest('tr');
             const item = useAppStore.getState().menu.items.find(i => i.id === row.dataset.itemId);
             handleDeleteMenuItem(item.id, item.name);
         }
-        // Sorting Headers
         else if (target.matches('th.sortable')) {
             const column = target.dataset.sortCol;
-            if (currentSort.column === column) {
-                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSort.column = column;
-                currentSort.direction = 'asc';
-            }
-            renderOwnerDashboard(); // Re-render with new sort
+            if (currentSort.column === column) currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            else { currentSort.column = column; currentSort.direction = 'asc'; }
+            renderOwnerDashboard();
         }
-
-        // --- Category Management ---
+        // Category Manager Listeners
         const categoryManager = target.closest('#category-manager');
         if (categoryManager) {
             const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
-            
             const runUpdate = async (newCats) => {
                 const { data: { session } } = await supabase.auth.getSession();
                 updateSiteSettings({ menuCategories: newCats }, session?.access_token);
@@ -273,33 +261,24 @@ function attachOwnerDashboardListeners() {
                     uiUtils.showToast('Category added!', 'success');
                 }
             }
-            
             const listItem = target.closest('.category-list-item');
             if (listItem) {
                 const oldName = listItem.dataset.categoryName;
-                
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
-                    if (newName && newName.trim() !== oldName) {
-                        runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
-                    }
+                    if (newName && newName.trim() !== oldName) runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
                 }
                 if (target.matches('.delete-category-btn')) {
-                    if (categories.length <= 1) {
-                        alert('You must have at least one category.');
-                        return;
-                    }
-                    if (confirm(`Delete the "${oldName}" category?`)) {
-                        runUpdate(categories.filter(c => c !== oldName));
-                    }
+                    if (categories.length <= 1) { alert('Must have at least one category.'); return; }
+                    if (confirm(`Delete category "${oldName}"?`)) runUpdate(categories.filter(c => c !== oldName));
                 }
             }
         }
     });
-
     dashboardContainer.dataset.listenersAttached = 'true';
 }
 
+// --- MAIN RENDER FUNCTION ---
 export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -328,26 +307,31 @@ export function renderOwnerDashboard() {
         const col = currentSort.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
         const valB = col === 'price' ? parseFloat(b[col]) : (b[col] || '').toLowerCase();
-
         if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
         if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
         return 0;
     });
 
-    // Helper for sort indicators
     const getSortClass = (col) => currentSort.column === col ? currentSort.direction : '';
 
-    const menuItemsTableRows = sortedItems.map(item => `
-        <tr data-item-id="${item.id}">
-            <td style="font-weight:500;">${item.name}</td>
-            <td><span class="badge" style="background:#eee; color:#333;">${item.category || 'None'}</span></td>
-            <td>$${parseFloat(item.price).toFixed(2)}</td>
-            <td>
-                <button class="button-secondary small edit-item-btn-table">Edit</button>
+    // --- RENDER ROWS WITH COLORS ---
+    const menuItemsTableRows = sortedItems.map(item => {
+        // NEW: Generate hue based on category name
+        const categoryColor = getCategoryColor(item.category || 'Uncategorized');
+        
+        return `
+        <tr data-item-id="${item.id}" style="background-color: ${categoryColor}; border-bottom:1px solid #fff;">
+            <td style="font-weight:500; padding: 10px;">${item.name}</td>
+            <td style="padding: 10px;">
+                <span style="font-weight:600; opacity:0.7;">${item.category || 'None'}</span>
+            </td>
+            <td style="padding: 10px;">$${parseFloat(item.price).toFixed(2)}</td>
+            <td style="padding: 10px;">
+                <button class="button-secondary small edit-item-btn-table" style="background: rgba(255,255,255,0.6); border:1px solid rgba(0,0,0,0.1);">Edit</button>
                 <button class="delete-icon-btn" title="Delete Item">×</button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 
     mainContent.innerHTML = `
         <div class="dashboard-container">
@@ -360,13 +344,13 @@ export function renderOwnerDashboard() {
              </div>
              
                 <div class="table-wrapper">
-                    <table>
-                        <thead>
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <thead style="background: white; border-bottom: 2px solid #ddd;">
                             <tr>
-                                <th class="sortable ${getSortClass('name')}" data-sort-col="name">Name</th>
-                                <th class="sortable ${getSortClass('category')}" data-sort-col="category">Category</th>
-                                <th class="sortable ${getSortClass('price')}" data-sort-col="price">Price</th>
-                                <th>Actions</th>
+                                <th class="sortable ${getSortClass('name')}" data-sort-col="name" style="padding:10px;">Name</th>
+                                <th class="sortable ${getSortClass('category')}" data-sort-col="category" style="padding:10px;">Category</th>
+                                <th class="sortable ${getSortClass('price')}" data-sort-col="price" style="padding:10px;">Price</th>
+                                <th style="padding:10px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>${menuItemsTableRows}</tbody>
@@ -381,6 +365,18 @@ export function renderOwnerDashboard() {
                     Drag and drop to reorder categories.
                 </p>
                 ${menuLayoutHTML}
+            </section>
+            ` : ''}
+            
+            ${ownerPermissions.canEditTheme ? `
+            <section class="dashboard-section">
+                <h3>Visual Customization</h3>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
+                    Customize the colors and branding of your website.
+                </p>
+                <div class="theme-controls-wrapper">
+                     ${uiUtils.getThemeControlsHTML(settings.themeVariables || {})}
+                </div>
             </section>
             ` : ''}
         </div>
