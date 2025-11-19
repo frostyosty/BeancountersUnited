@@ -1,12 +1,12 @@
 // src/store/uiSlice.js
 export const createUiSlice = (set) => ({
-    ui: { // <-- All state for this slice is nested under a 'ui' key
-        _reRenderTrigger: 0,
-        activeMenuCategory: 'All',
-    },
+    // Flattened State
+    _reRenderTrigger: 0,
+    activeMenuCategory: 'All',
 
-    // Actions live at the top level of the slice
+    // Actions
     setActiveMenuCategory: (category) => {
+        // Notice: we update state.ui.activeMenuCategory directly, not state.ui.ui.activeMenuCategory
         set((state) => ({
             ui: { ...state.ui, activeMenuCategory: category }
         }), false, 'ui/setActiveMenuCategory');

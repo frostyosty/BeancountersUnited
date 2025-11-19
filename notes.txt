@@ -8,8 +8,8 @@ make sure to put on confirm email in supabase
 
 
 
+ok i have this website please analyse - what is the git command to give you a list of the nested file structure? After youve seen that ill deliver to you the files one by one or two if theyre small and you can review and understand them.
 When offering feedback, please bear in mind the following types of shortcomings you might encounter as an AI:
-
 1. You might be out of sync with the latest iteration of a file or have your wires crossed etc.
 2. You might have assumed a function was made that was not.
 3. You might have assumed a database entry was made that was not.

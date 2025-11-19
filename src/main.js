@@ -298,8 +298,8 @@ async function main() {
     
     useAppStore.subscribe(
         (state) => ({
-            trigger: state.ui.ui._reRenderTrigger,      // CORRECT: .ui.ui is needed here
-            category: state.ui.ui.activeMenuCategory // CORRECT: .ui.ui is needed here
+            trigger: state.ui._reRenderTrigger,      // FIX: Removed the double .ui
+            category: state.ui.activeMenuCategory    // FIX: Removed the double .ui
         }),
         () => {
             console.log("%c[App Sub] Page re-render triggered.", "color: green;");

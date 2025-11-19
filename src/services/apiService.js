@@ -60,9 +60,16 @@ export const signUpViaApi = (email, password) => request('/auth/signup', 'POST',
 //     return request('/user/manage', 'PUT', { userId, newRole, isVerifiedBuyer, canSeeOrderHistory }, true);
 // };
 
-export const addMenuItem = (itemData) => request('/menu', 'POST', itemData, true);
-export const updateMenuItem = (itemId, itemData) => request(`/menu?id=${itemId}`, 'PUT', itemData, true);
-export const deleteMenuItem = (itemId) => request(`/menu?id=${itemId}`, 'DELETE', null, true);
+// Remove the hardcoded 'true' and accept 'token' as an argument
+// We now accept 'token' as the last argument and pass it to request()
+
+export const addMenuItem = (itemData, token) => request('/menu', 'POST', itemData, token);
+
+export const updateMenuItem = (itemId, itemData, token) => request(`/menu?id=${itemId}`, 'PUT', itemData, token);
+
+export const deleteMenuItem = (itemId, token) => request(`/menu?id=${itemId}`, 'DELETE', null, token);
+
+export const updateSiteSettings = (settingsData, token) => request('/settings', 'PUT', settingsData, token);
 
 export const getOrderHistory = (token) => request('/user/orders', 'GET', null, token);
 export const getUserProfile = (token) => request('/user/profile', 'GET', null, token);
@@ -73,8 +80,5 @@ export const updateUser = (userId, newRole, isVerifiedBuyer, canSeeOrderHistory,
 // --- Settings API Functions ---
 // Anyone can read the settings
 export const getSiteSettings = () => request('/settings', 'GET');
-
-// Only authenticated users (owners/managers) can update settings
-export const updateSiteSettings = (settingsData) => request('/settings', 'PUT', settingsData, true);
 
 console.log("--- [2] apiService.js: END ---");
