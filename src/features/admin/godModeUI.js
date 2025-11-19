@@ -1,8 +1,9 @@
-// src/features/admin/godModeUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
 export function initializeImpersonationToolbar() {
+    console.log("[GodModeUI] Initializing subscription...");
+    
     useAppStore.subscribe(
         (state) => ({
             realProfile: state.auth.originalProfile || state.auth.profile,
@@ -10,6 +11,9 @@ export function initializeImpersonationToolbar() {
             currentRole: state.auth.profile?.role || 'guest',
         }),
         ({ realProfile, isImpersonating, currentRole }) => {
+            // --- DEBUG LOG ---
+            console.log(`[GodModeUI] State Change Detected. Real Role: ${realProfile?.role}, Impersonating: ${isImpersonating}`);
+            
             renderToolbar(realProfile?.role, isImpersonating, currentRole);
         },
         { fireImmediately: true }
@@ -17,31 +21,34 @@ export function initializeImpersonationToolbar() {
 }
 
 function renderToolbar(realRole, isImpersonating, currentRole) {
-    let toolbar = document.getElementById('god-mode-toolbar');
-    let debugBtn = document.getElementById('god-mode-debug-btn');
-
-    // 1. Clean up if not manager
+    // 1. Safety Check
     if (realRole !== 'manager') {
-        if (toolbar) toolbar.remove();
-        if (debugBtn) debugBtn.remove();
-        if (document.body.style.paddingBottom) document.body.style.paddingBottom = '';
+        const existingToolbar = document.getElementById('god-mode-toolbar');
+        const existingDebugBtn = document.getElementById('god-mode-debug-btn');
+        if (existingToolbar) existingToolbar.remove();
+        if (existingDebugBtn) existingDebugBtn.remove();
         return;
     }
 
-    // 2. Create Toolbar
+    console.log("[GodModeUI] Rendering Toolbar & Debug Button...");
+
+    // 2. Create Toolbar Wrapper (if needed)
+    let toolbar = document.getElementById('god-mode-toolbar');
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'god-mode-toolbar';
         document.body.appendChild(toolbar);
         document.body.style.paddingBottom = '60px';
         
+        // Attach listeners once
         toolbar.addEventListener('click', (e) => {
-            const { impersonateRole, stopImpersonating } = useAppStore.getState().auth;
-            if (e.target.matches('[data-role]')) impersonateRole(e.target.dataset.role);
-            if (e.target.matches('#stop-impersonating-btn')) stopImpersonating();
+            const auth = useAppStore.getState().auth;
+            if (e.target.matches('[data-role]')) auth.impersonateRole(e.target.dataset.role);
+            if (e.target.matches('#stop-impersonating-btn')) auth.stopImpersonating();
         });
     }
 
+    // 3. Update Toolbar Content
     const stopButtonHTML = isImpersonating ? 
         `<button id="stop-impersonating-btn" class="toolbar-btn stop-btn">Stop Impersonating</button>` : '';
 
@@ -59,8 +66,10 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         </div>
     `;
 
-    // 3. Create "D" Debug Button
+    // 4. Ensure Debug Button Exists
+    let debugBtn = document.getElementById('god-mode-debug-btn');
     if (!debugBtn) {
+        console.log("[GodModeUI] Creating 'D' Button.");
         debugBtn = document.createElement('button');
         debugBtn.id = 'god-mode-debug-btn';
         debugBtn.textContent = 'D';
@@ -70,7 +79,12 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
             backgroundColor: '#212529', color: '#00ff00', border: '2px solid #00ff00',
             fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         });
-        debugBtn.onclick = showDebugLogModal;
+        
+        debugBtn.onclick = () => {
+            console.log("[DebugBtn] Clicked.");
+            showDebugLogModal();
+        };
+        
         document.body.appendChild(debugBtn);
     }
 }

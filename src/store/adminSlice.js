@@ -1,38 +1,51 @@
-// src/store/adminSlice.js
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAdminSlice = (set, get) => ({
-    // --- STATE ---
     users: [],
     isLoadingUsers: false,
     error: null,
 
-    // --- ACTIONS ---
     fetchAllUsers: async () => {
+        console.log("%c[AdminSlice] fetchAllUsers() CALLED", "color: orange");
+        
         const { isLoadingUsers, users } = get().admin;
-        if (isLoadingUsers || users.length > 0) return;
+        
+        // Log the decision making
+        if (isLoadingUsers) {
+            console.warn("[AdminSlice] Fetch skipped: Already loading.");
+            return;
+        }
+        if (users.length > 0) {
+            console.log("[AdminSlice] Fetch skipped: Users already in state.");
+            return;
+        }
 
+        console.log("[AdminSlice] setting isLoadingUsers = true...");
         set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
+
         try {
-            // Fix 1: Use the imported supabase client, not window.supabase
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
+            console.log("[AdminSlice] API Request: fetching users...");
             const userList = await api.listAllUsers(session.access_token);
+            console.log(`[AdminSlice] API Success: Got ${userList.length} users.`);
+
+            set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }));
             
-            set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }), false, 'admin/fetchUsersSuccess');
-            
-            // Fix 2: Use 'get()' to access the UI slice safely
+            // Trigger UI update
+            console.log("[AdminSlice] Triggering page render...");
             get().ui.triggerPageRender(); 
 
         } catch (error) {
-            console.error("[AdminSlice] Fetch FAILED.", error);
-            set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }), false, 'admin/fetchUsersError');
+            console.error("[AdminSlice] Fetch FAILED:", error);
+            set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }));
         }
     },
 
     updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
+        // Keep existing logic, just ensuring the file is valid...
         const originalUsers = get().admin.users;
         const updatedUsers = originalUsers.map(u =>
             u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory } : u
@@ -40,10 +53,8 @@ export const createAdminSlice = (set, get) => ({
         set(state => ({ admin: { ...state.admin, users: updatedUsers } }));
 
         try {
-            // Fix 1: Use the imported supabase client
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
-
             await api.updateUser(userId, newRole, isVerifiedBuyer, canSeeOrderHistory, session.access_token);
         } catch (error) {
             console.error("Failed to update user:", error);
