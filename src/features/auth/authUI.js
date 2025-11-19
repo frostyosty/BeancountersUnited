@@ -54,13 +54,6 @@ export function renderAuthStatus() {
     }
 }
 
-// --- Helper to show the modal (called by main.js) ---
-export function showLoginSignupModal() {
-    import('./loginSignupModal.js').then(module => {
-        module.renderLoginModal();
-    });
-}
-
 
 /**
  * Displays a modal with side-by-side Login and Sign Up forms.
