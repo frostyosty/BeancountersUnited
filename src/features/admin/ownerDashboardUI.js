@@ -1,8 +1,112 @@
+// src/features/admin/ownerDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as api from '@/services/apiService.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
+
+// --- CSS STYLES FOR MODALS ---
+// We inject this string into the modal content to style the form nicely.
+const MODAL_CSS = `
+<style>
+    .modal-form-container {
+        font-family: inherit;
+        color: #333;
+    }
+    .modal-form-container h3 {
+        margin-top: 0;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .form-row {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 15px;
+        text-align: left;
+    }
+    .form-row label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+        color: #444;
+    }
+    .form-row input[type="text"],
+    .form-row input[type="number"],
+    .form-row select,
+    .form-row textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+    .form-row input:focus,
+    .form-row select:focus,
+    .form-row textarea:focus {
+        border-color: var(--primary-color, #007bff);
+        outline: none;
+    }
+    .form-row textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+    .image-upload-wrapper {
+        background: #f9f9f9;
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .image-preview-container img {
+        max-height: 150px;
+        border-radius: 6px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .file-info {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 5px;
+    }
+    .form-actions-split {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 25px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+    }
+    /* Helper to hide default file input */
+    .visually-hidden {
+        position: absolute !important;
+        height: 1px; 
+        width: 1px;
+        overflow: hidden;
+        clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+        clip: rect(1px, 1px, 1px, 1px);
+    }
+    .upload-btn-label {
+        display: inline-block;
+        padding: 8px 16px;
+        background-color: #e9ecef;
+        color: #333;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        border: 1px solid #ced4da;
+    }
+    .upload-btn-label:hover {
+        background-color: #dde0e3;
+    }
+</style>
+`;
 
 // --- HELPER FUNCTIONS ---
 
@@ -10,9 +114,21 @@ function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
     
+    if (!categories || categories.length === 0) {
+        return `
+            <div id="category-manager">
+                <p>No categories defined yet.</p>
+                <div class="add-category-row">
+                    <input type="text" id="new-category-name" placeholder="New Category Name">
+                    <button id="add-category-btn" class="button-primary small">Add</button>
+                </div>
+                <ul id="category-list"></ul>
+            </div>`;
+    }
+
     const listItems = categories.map(cat => `
         <li class="category-list-item" data-category-name="${cat}">
-            <span class="drag-handle">☰</span>
+            <div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div>
             <span class="category-name">${cat}</span>
             <div class="item-actions">
                 <button class="button-secondary small rename-category-btn">Rename</button>
@@ -34,41 +150,70 @@ function getMenuLayoutHTML() {
 
 function showMenuItemModal(item = null) {
     const isEditing = item !== null;
-    const modalTitle = isEditing ? `Edit "${item.name}"` : 'Add New Menu Item';
+    const modalTitle = isEditing ? `Edit Item` : 'Add New Item';
     
-    // FIX: Corrected typo 'useAppAppStore' -> 'useAppStore'
+    // Get current categories dynamically so dropdown is always fresh
     const { getMenuCategories } = useAppStore.getState().siteSettings;
+    const categories = getMenuCategories() || ['Uncategorized'];
     
-    const categories = getMenuCategories();
-    const categoryOptions = categories.map(cat => `<option value="${cat}" ${item?.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
+    const categoryOptions = categories.map(cat => 
+        `<option value="${cat}" ${item?.category === cat ? 'selected' : ''}>${cat}</option>`
+    ).join('');
 
     const modalContentHTML = `
-        <h3>${modalTitle}</h3>
-        <form id="menu-item-form">
-            <input type="hidden" name="id" value="${isEditing ? item.id : ''}">
-            <div class="form-group"><label>Name</label><input type="text" name="name" value="${isEditing ? item.name : ''}" required></div>
-            <div class="form-group"><label>Description</label><textarea name="description">${isEditing ? (item.description || '') : ''}</textarea></div>
-            <div class="form-group"><label>Price</label><input type="number" name="price" step="0.01" value="${isEditing ? item.price : ''}" required></div>
-            <div class="form-group"><label>Category</label><select name="category">${categoryOptions}</select></div>
-            
-            <div class="form-group image-upload-group">
-                <label>Item Image</label>
-                <img id="image-preview" src="${item?.image_url || '/placeholder-coffee.jpg'}" alt="Preview" />
-                <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp" class="visually-hidden">
-                <label for="item-image-upload" class="button-secondary">Choose File</label>
-                <span id="image-upload-filename">No new file selected.</span>
-                <input type="hidden" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}">
-                <div id="image-upload-progress" style="display: none;">Uploading...</div>
-            </div>
+        ${MODAL_CSS}
+        <div class="modal-form-container">
+            <h3>${modalTitle}</h3>
+            <form id="menu-item-form">
+                <input type="hidden" name="id" value="${isEditing ? item.id : ''}">
+                
+                <div class="form-row">
+                    <label>Item Name</label>
+                    <input type="text" name="name" value="${isEditing ? item.name : ''}" required placeholder="e.g. Avocado Toast">
+                </div>
+                
+                <div class="form-row">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Ingredients, allergens, or details...">${isEditing ? (item.description || '') : ''}</textarea>
+                </div>
+                
+                <div class="form-row">
+                    <label>Price ($)</label>
+                    <input type="number" name="price" step="0.01" value="${isEditing ? item.price : ''}" required placeholder="0.00">
+                </div>
+                
+                <div class="form-row">
+                    <label>Category</label>
+                    <select name="category">
+                        <option value="" disabled ${!item ? 'selected' : ''}>Select Category...</option>
+                        ${categoryOptions}
+                    </select>
+                </div>
+                
+                <div class="image-upload-wrapper">
+                    <label style="display:block; margin-bottom:10px; font-weight:600; color:#444;">Item Image</label>
+                    <div class="image-preview-container">
+                        <img id="image-preview" src="${item?.image_url || '/placeholder-coffee.jpg'}" alt="Preview" />
+                    </div>
+                    
+                    <input type="file" id="item-image-upload" name="imageFile" accept="image/png, image/jpeg, image/webp" class="visually-hidden">
+                    <label for="item-image-upload" class="upload-btn-label">Choose New Image</label>
+                    
+                    <div id="image-upload-filename" class="file-info">No file selected</div>
+                    <input type="hidden" id="item-image-url" name="image_url" value="${isEditing ? (item.image_url || '') : ''}">
+                    <div id="image-upload-progress" style="display: none; color: var(--primary-color); font-weight: bold; margin-top: 8px;">Uploading...</div>
+                </div>
 
-            <div class="form-actions-split">
-                ${isEditing ? `<button type="button" id="delete-item-btn-modal" class="button-danger">Delete Item</button>` : '<div></div>'}
-                <button type="submit" class="button-primary">${isEditing ? 'Save Changes' : 'Create Item'}</button>
-            </div>
-        </form>
+                <div class="form-actions-split">
+                    ${isEditing ? `<button type="button" id="delete-item-btn-modal" class="button-danger">Delete Item</button>` : '<div></div>'}
+                    <button type="submit" class="button-primary">${isEditing ? 'Save Changes' : 'Create Item'}</button>
+                </div>
+            </form>
+        </div>
     `;
     uiUtils.showModal(modalContentHTML);
 
+    // Handle File Selection UI
     document.getElementById('item-image-upload')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -77,7 +222,10 @@ function showMenuItemModal(item = null) {
         }
     });
 
+    // Attach Submit Handler
     document.getElementById('menu-item-form')?.addEventListener('submit', handleMenuItemFormSubmit);
+    
+    // Attach Delete Handler (if editing)
     if (isEditing) {
         document.getElementById('delete-item-btn-modal')?.addEventListener('click', () => handleDeleteMenuItem(item.id, item.name));
     }
@@ -90,16 +238,21 @@ async function handleMenuItemFormSubmit(event) {
     submitButton.disabled = true;
     submitButton.textContent = 'Saving...';
 
-    const itemData = Object.fromEntries(new FormData(form).entries());
-    const imageFile = itemData.imageFile;
+    const formData = new FormData(form);
+    const itemData = Object.fromEntries(formData.entries());
+    const imageFile = formData.get('imageFile'); 
     const isEditing = !!itemData.id;
-    const { fetchMenu } = useAppStore.getState().menu;
+
+    // Get Actions
+    const { addMenuItemOptimistic, fetchMenu } = useAppStore.getState().menu;
 
     try {
+        // 1. Handle Image Upload (if a file was selected)
         if (imageFile && imageFile.size > 0) {
             document.getElementById('image-upload-progress').style.display = 'block';
+            
             const fileExt = imageFile.name.split('.').pop();
-            const filePath = `public/${Date.now()}.${fileExt}`;
+            const filePath = `public/${Date.now()}.${fileExt}`; // Unique name
 
             const { error: uploadError } = await supabase.storage.from('menu-images').upload(filePath, imageFile);
             if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
@@ -108,48 +261,64 @@ async function handleMenuItemFormSubmit(event) {
             itemData.image_url = publicUrl;
         }
 
+        // Remove the file object from the data we send to the API
+        delete itemData.imageFile;
+
+        // 2. Get Token
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
+        // 3. Execute Action
         if (isEditing) {
+            // Standard update for edits
             await api.updateMenuItem(itemData.id, itemData, token);
-            uiUtils.showToast('Item updated!', 'success');
+            uiUtils.showToast('Item updated successfully!', 'success');
+            uiUtils.closeModal();
+            fetchMenu(); // Sync with DB
         } else {
-            await api.addMenuItem(itemData, token);
-            uiUtils.showToast('Item added!', 'success');
+            // Optimistic update for adding
+            await addMenuItemOptimistic(itemData, token);
+            uiUtils.showToast('Item added to menu!', 'success');
+            uiUtils.closeModal();
         }
-        uiUtils.closeModal();
-        await fetchMenu();
+        
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        console.error(error);
+        uiUtils.showToast(`Error: ${error.message}`, 'error');
         submitButton.disabled = false;
+        submitButton.textContent = isEditing ? 'Save Changes' : 'Create Item';
     }
 }
 
 async function handleDeleteMenuItem(itemId, itemName) {
     if (!confirm(`Are you sure you want to delete "${itemName}"?`)) return;
-    const { fetchMenu } = useAppStore.getState().menu;
+    
+    const { deleteMenuItemOptimistic } = useAppStore.getState().menu;
     const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
+    
     try {
-        await api.deleteMenuItem(itemId, token);
+        // Optimistic Delete
+        await deleteMenuItemOptimistic(itemId, session?.access_token);
         uiUtils.showToast('Item deleted.', 'info');
         uiUtils.closeModal();
-        await fetchMenu();
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        uiUtils.showToast(`Error: ${error.message}`, 'error');
     }
 }
 
 function initializeSortable() {
     const list = document.getElementById('category-list');
     if (!list) return;
+    
+    // Prevent re-initializing if already done
+    if (list.dataset.sortableInitialized === 'true') return;
+
     new Sortable(list, {
         animation: 150,
-        handle: '.drag-handle',
+        handle: '.drag-handle-wrapper', // updated handle selector
         onEnd: handleCategoryReorder,
     });
+    list.dataset.sortableInitialized = 'true';
 }
 
 function handleCategoryReorder() {
@@ -157,17 +326,17 @@ function handleCategoryReorder() {
     const listItems = document.querySelectorAll('#category-list .category-list-item');
     const newCategoryOrder = Array.from(listItems).map(li => li.dataset.categoryName);
     
-    // Fetch token for update
     supabase.auth.getSession().then(({ data: { session } }) => {
         if(session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
     });
     
-    uiUtils.showToast('Category order saved!', 'success');
+    uiUtils.showToast('Category order updated!', 'success');
 }
 
 async function handleThemeSettingsSave() {
     const { updateSiteSettings } = useAppStore.getState().siteSettings;
     const saveButton = document.getElementById('save-theme-settings');
+    
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
     
@@ -178,10 +347,15 @@ async function handleThemeSettingsSave() {
 
     const { data: { session } } = await supabase.auth.getSession();
     
-    await updateSiteSettings({ themeVariables }, session?.access_token);
-    uiUtils.showToast('Theme saved successfully!', 'success');
-    saveButton.textContent = 'Save Theme Settings';
-    saveButton.disabled = false;
+    try {
+        await updateSiteSettings({ themeVariables }, session?.access_token);
+        uiUtils.showToast('Theme saved successfully!', 'success');
+    } catch (e) {
+        uiUtils.showToast('Failed to save theme.', 'error');
+    } finally {
+        saveButton.textContent = 'Save Theme Settings';
+        saveButton.disabled = false;
+    }
 }
 
 async function handleBusinessDetailsSave(form) {
@@ -218,47 +392,57 @@ function attachOwnerDashboardListeners() {
     
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
+        
+        // Add / Edit Item
         if (target.matches('#add-new-item-btn') || target.closest('.edit-item-btn-table')) {
             const row = target.closest('tr');
             const itemId = row?.dataset.itemId;
             const item = itemId ? useAppStore.getState().menu.items.find(i => i.id === itemId) : null;
             showMenuItemModal(item);
         }
+        
+        // Save Theme
         if (target.matches('#save-theme-settings')) {
             handleThemeSettingsSave();
         }
         
+        // Category Management
         const categoryManager = target.closest('#category-manager');
         if (categoryManager) {
-            const { getMenuCategories } = useAppStore.getState().siteSettings;
+            const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
             
-            // Helper to run update
+            // Helper to run update with token
             const runUpdate = async (newCats) => {
                 const { data: { session } } = await supabase.auth.getSession();
-                api.updateSiteSettings({ menuCategories: newCats }, session?.access_token);
-                // Manually trigger local state update or refetch? 
-                // For simplicity, triggering a refetch usually safest:
-                useAppStore.getState().siteSettings.fetchSiteSettings(); // Force refresh
+                // Updating site settings will update the slice state optimistically
+                updateSiteSettings({ menuCategories: newCats }, session?.access_token);
             };
 
+            // Add Category
             if (target.matches('#add-category-btn')) {
                 const input = document.getElementById('new-category-name');
                 const newName = input.value.trim();
                 if (newName && !categories.includes(newName)) {
                     runUpdate([...categories, newName]);
                     input.value = '';
+                    uiUtils.showToast('Category added!', 'success');
                 }
             }
+            
             const listItem = target.closest('.category-list-item');
             if (listItem) {
                 const oldName = listItem.dataset.categoryName;
+                
+                // Rename Category
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
                     if (newName && newName.trim() !== oldName) {
                         runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
                     }
                 }
+                
+                // Delete Category
                 if (target.matches('.delete-category-btn')) {
                     if (categories.length <= 1) {
                         alert('You must have at least one category.');
@@ -286,13 +470,14 @@ export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
+    // Safely fetch data (loops handled in slice)
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
 
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     
-    // FIX: Define ownerPermissions before using it
+    // Default permissions if settings not loaded yet
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
 
     if (isLoadingMenu || isLoadingSettings) {
@@ -308,15 +493,14 @@ export function renderOwnerDashboard() {
         ? uiUtils.getThemeControlsHTML(settings.themeVariables || {})
         : '';
 
-    // FIX: getMenuLayoutHTML is now defined
     const menuLayoutHTML = ownerPermissions.canEditCategories
         ? getMenuLayoutHTML()
         : '';
 
     const menuItemsTableRows = menuItems.map(item => `
         <tr data-item-id="${item.id}">
-            <td>${item.name}</td>
-            <td>${item.category || 'N/A'}</td>
+            <td style="font-weight:500;">${item.name}</td>
+            <td><span class="badge" style="background:#eee; color:#333;">${item.category || 'None'}</span></td>
             <td>$${parseFloat(item.price).toFixed(2)}</td>
             <td><button class="button-secondary small edit-item-btn-table">Edit</button></td>
         </tr>
@@ -327,10 +511,11 @@ export function renderOwnerDashboard() {
             <h2>Owner Dashboard</h2>
             
             <section class="dashboard-section">
-             <h3>Menu Management</h3>
-                <div class="table-actions">
-                    <button id="add-new-item-btn" class="button-primary">Add New Item</button>
-                </div>
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>Menu Items</h3>
+                <button id="add-new-item-btn" class="button-primary">+ Add New Item</button>
+             </div>
+             
                 <div class="table-wrapper">
                     <table>
                         <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
@@ -341,8 +526,10 @@ export function renderOwnerDashboard() {
 
             ${ownerPermissions.canEditCategories ? `
             <section class="dashboard-section">
-                <h3>Menu Layout & Categories</h3>
-                <p>Add, rename, delete, and reorder your menu categories. Drag and drop to reorder.</p>
+                <h3>Menu Categories</h3>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
+                    Drag and drop to reorder categories. These determine the tabs on your menu page.
+                </p>
                 ${menuLayoutHTML}
             </section>
             ` : ''}
@@ -350,7 +537,9 @@ export function renderOwnerDashboard() {
             ${ownerPermissions.canEditTheme ? `
             <section class="dashboard-section">
                 <h3>Visual Customization</h3>
-                <p>Change the look and feel of your website.</p>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
+                    Customize the colors and branding of your website.
+                </p>
                 <div class="theme-controls-wrapper">${themeControlsHTML}</div>
             </section>
             ` : ''}
