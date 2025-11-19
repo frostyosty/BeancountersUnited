@@ -1202,3 +1202,136 @@ body.on-checkout-page #phone-icon-link {
     opacity: 0;
     transition: opacity 0.5s ease-out;
 }
+
+
+
+/* --- Modal Form Styles --- */
+.modal-form-container {
+    font-family: inherit;
+    color: #333;
+}
+.modal-form-container h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+.form-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    text-align: left;
+}
+.form-row label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #444;
+}
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+    border-color: var(--primary-color, #a923e7);
+    outline: none;
+}
+.form-row textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-family: inherit;
+}
+.image-upload-wrapper {
+    background: #f9f9f9;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.image-preview-container img {
+    max-height: 150px;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+.file-info {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+.form-actions-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+/* File Input Helper */
+.visually-hidden {
+    position: absolute !important;
+    height: 1px; width: 1px;
+    overflow: hidden;
+    clip: rect(1px 1px 1px 1px);
+}
+.upload-btn-label {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #e9ecef;
+    color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    border: 1px solid #ced4da;
+}
+.upload-btn-label:hover {
+    background-color: #dde0e3;
+}
+/* Table Sorting Styles */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+th.sortable:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+th.sortable::after {
+    content: '↕';
+    font-size: 0.8em;
+    margin-left: 5px;
+    opacity: 0.3;
+}
+th.sortable.asc::after { content: '↑'; opacity: 1; }
+th.sortable.desc::after { content: '↓'; opacity: 1; }
+
+/* Delete Button in Table */
+.delete-icon-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    margin-left: 10px;
+}
+.delete-icon-btn:hover {
+    color: #a71d2a;
+    transform: scale(1.1);
+}
