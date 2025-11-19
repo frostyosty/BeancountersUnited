@@ -1323,7 +1323,7 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 .delete-icon-btn {
     background: none;
     border: none;
-    color: #dc3545;
+    color: #b32c3a;
     font-weight: bold;
     font-size: 1.2rem;
     cursor: pointer;
