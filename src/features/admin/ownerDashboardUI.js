@@ -248,25 +248,69 @@ function initializeSortable() {
     list.dataset.sortableInitialized = 'true';
 }
 
-function handleCategoryReorder() {
+async function handleCategoryReorder() {
     const { updateSiteSettings } = useAppStore.getState().siteSettings;
     const listItems = document.querySelectorAll('#category-list .category-list-item');
     const newCategoryOrder = Array.from(listItems).map(li => li.dataset.categoryName);
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
-    });
-    uiUtils.showToast('Category order updated!', 'success');
+    
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            await updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
+            uiUtils.showToast('Category order updated!', 'success');
+        }
+    } catch (error) {
+        console.error("Reorder failed:", error);
+        uiUtils.showToast('Failed to save order.', 'error');
+    }
 }
 
 function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
 
-    // --- 1. Form Submissions (Business Details) ---
-    dashboardContainer.addEventListener('submit', (event) => {
+    // --- 1. Form Submissions ---
+    // CRITICAL FIX: Added 'async' here because we use 'await' inside
+    dashboardContainer.addEventListener('submit', async (event) => {
+        
+        // Header Layout Settings
+        if (event.target.matches('#header-settings-form')) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const newSettings = {
+                logoAlignment: formData.get('logoAlignment'),
+                hamburgerPosition: formData.get('hamburgerPosition')
+            };
+
+            // Optimistic Update
+            uiUtils.applyHeaderLayout(newSettings);
+
+            // Save to DB
+            const { data: { session } } = await supabase.auth.getSession();
+            useAppStore.getState().siteSettings.updateSiteSettings({ headerSettings: newSettings }, session?.access_token);
+            uiUtils.showToast('Header layout saved!', 'success');
+        }
+
+        // Business Details
         if (event.target.matches('#business-details-form')) {
             event.preventDefault();
             handleBusinessDetailsSave(event.target);
+        }
+
+        // Payment Settings
+        if (event.target.matches('#payment-settings-form')) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const config = {
+                enableCash: formData.get('enableCash') === 'on',
+                maxCashAmount: parseFloat(formData.get('maxCashAmount')),
+                maxCashItems: parseInt(formData.get('maxCashItems'))
+            };
+            const { updateSiteSettings } = useAppStore.getState().siteSettings;
+            const { data: { session } } = await supabase.auth.getSession();
+
+            updateSiteSettings({ paymentConfig: config }, session?.access_token);
+            uiUtils.showToast('Payment rules saved!', 'success');
         }
     });
 
@@ -298,7 +342,7 @@ function attachOwnerDashboardListeners() {
                 currentSort.column = column;
                 currentSort.direction = 'asc';
             }
-            renderOwnerDashboard(); // Re-render to reflect sort
+            renderOwnerDashboard();
         }
 
         // -- Save Theme Button --
@@ -312,7 +356,6 @@ function attachOwnerDashboardListeners() {
             const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
 
-            // Helper to update categories with auth token
             const runUpdate = async (newCats) => {
                 const { data: { session } } = await supabase.auth.getSession();
                 updateSiteSettings({ menuCategories: newCats }, session?.access_token);
@@ -333,7 +376,7 @@ function attachOwnerDashboardListeners() {
             if (listItem) {
                 const oldName = listItem.dataset.categoryName;
 
-                // Rename Category
+                // Rename
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
                     if (newName && newName.trim() !== oldName) {
@@ -341,7 +384,7 @@ function attachOwnerDashboardListeners() {
                     }
                 }
 
-                // Delete Category
+                // Delete
                 if (target.matches('.delete-category-btn')) {
                     if (categories.length <= 1) {
                         alert('You must have at least one category.');
@@ -357,6 +400,17 @@ function attachOwnerDashboardListeners() {
 
     // --- 3. Font Selection Live Preview ---
     dashboardContainer.addEventListener('change', (event) => {
+        // Preview Header Layout
+        if (event.target.closest('#header-settings-form')) {
+            const form = document.getElementById('header-settings-form');
+            const formData = new FormData(form);
+            const previewSettings = {
+                logoAlignment: formData.get('logoAlignment'),
+                hamburgerPosition: formData.get('hamburgerPosition')
+            };
+            uiUtils.applyHeaderLayout(previewSettings);
+        }
+        // Preview Font
         if (event.target.matches('#font-selector')) {
             const fontName = event.target.value;
             uiUtils.applySiteFont(fontName);
@@ -367,24 +421,6 @@ function attachOwnerDashboardListeners() {
     dashboardContainer.addEventListener('input', (event) => {
         if (event.target.matches('[data-css-var]')) {
             uiUtils.updateCssVariable(event.target.dataset.cssVar, event.target.value);
-        }
-    });
-
-    dashboardContainer.addEventListener('submit', async (e) => {
-        if (e.target.matches('#payment-settings-form')) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const config = {
-                enableCash: formData.get('enableCash') === 'on',
-                maxCashAmount: parseFloat(formData.get('maxCashAmount')),
-                maxCashItems: parseInt(formData.get('maxCashItems'))
-            };
-            const { updateSiteSettings } = useAppStore.getState().siteSettings;
-            const { data: { session } } = await supabase.auth.getSession();
-
-            // Optimistic Update + API Save
-            updateSiteSettings({ paymentConfig: config }, session?.access_token);
-            uiUtils.showToast('Payment rules saved!', 'success');
         }
     });
 
@@ -445,6 +481,34 @@ export function renderOwnerDashboard() {
             </td>
         </tr>
     `}).join('');
+
+    // Retrieve current settings
+    const headerSettings = settings.headerSettings || { logoAlignment: 'center', hamburgerPosition: 'right' };
+
+    // HTML for the Header Controls
+    const headerControlsHTML = `
+        <section class="dashboard-section">
+            <h3>Header Layout</h3>
+            <form id="header-settings-form">
+                <div class="form-row">
+                    <label>Logo Alignment</label>
+                    <select name="logoAlignment">
+                        <option value="center" ${headerSettings.logoAlignment === 'center' ? 'selected' : ''}>Center</option>
+                        <option value="left" ${headerSettings.logoAlignment === 'left' ? 'selected' : ''}>Left</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Hamburger Menu Position</label>
+                    <select name="hamburgerPosition">
+                        <option value="right" ${headerSettings.hamburgerPosition === 'right' ? 'selected' : ''}>Right</option>
+                        <option value="left" ${headerSettings.hamburgerPosition === 'left' ? 'selected' : ''}>Left</option>
+                    </select>
+                </div>
+                <button type="submit" class="button-primary">Save Layout</button>
+            </form>
+        </section>
+    `;
+
 
     // 1. Get current Payment Settings (default if missing)
     const paymentConfig = settings.paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
@@ -510,6 +574,7 @@ export function renderOwnerDashboard() {
             </section>
             ` : ''}
             ${paymentSettingsHTML}
+            ${headerControlsHTML}
             ${ownerPermissions.canEditTheme ? `
             <section class="dashboard-section">
                 <h3>Visual Customization</h3>

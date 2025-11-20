@@ -1408,3 +1408,149 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     pointer-events: auto; 
     opacity: 1;
 }
+
+
+/* --- MAIN HEADER (Grid Layout) --- */
+#main-header {
+    position: sticky;
+    top: 0;
+    z-index: 1100; /* Above everything */
+    background-color: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+    height: 60px;
+    padding: 0 1rem;
+    
+    /* GRID MAGIC: 3 Columns (Left, Center, Right) */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+}
+
+/* The Logo (Default: Center) */
+#main-header h1 {
+    grid-column: 2;
+    margin: 0;
+    font-size: 1.5rem;
+    white-space: nowrap;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+/* The Right-Side Actions (Cart, Auth, Burger) */
+#main-header nav {
+    grid-column: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Push to right */
+    gap: 15px;
+}
+
+/* --- LAYOUT VARIANTS (Applied via JS classes) --- */
+
+/* Variant: Logo Left */
+#main-header.logo-align-left h1 {
+    grid-column: 1; /* Move to left */
+    text-align: left;
+}
+#main-header.logo-align-left nav {
+    grid-column: 2 / 4; /* Nav takes up remaining space */
+}
+
+/* Variant: Hamburger on the Left */
+/* We move the hamburger OUT of the nav and into the first grid column via JS logic later, 
+   OR we use 'order' property if we keep it in flex container. 
+   Simplest way visually: Absolute positioning for the burger if moved left, or using a specific slot. */
+#main-header.hamburger-left nav {
+    /* When burger is left, Nav is just Cart + Auth */
+    justify-content: flex-end;
+}
+
+#main-header.hamburger-left .hamburger-button {
+    /* Break out of the nav flow and sit on the far left */
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* --- COMPONENTS --- */
+
+/* Auth Container & Spinner */
+#auth-status-container {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Vertically & Horizontally centers spinner */
+    min-width: 32px;
+    height: 32px;
+}
+
+/* Hamburger Button (No Floating) */
+.hamburger-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 25px;
+    padding: 0;
+    z-index: 1101; /* Above the panel */
+    /* Remove float */
+}
+.hamburger-button span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: var(--text-color);
+    transition: all 0.3s;
+}
+
+/* --- MOBILE MENU PANEL --- */
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0; /* Default slide from right */
+    width: 280px; /* Not full width, looks better */
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    z-index: 1050; /* Below Header */
+    
+    /* Transition */
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    
+    /* Fix top content cutoff */
+    padding-top: 80px; /* Push content down below header */
+    box-sizing: border-box;
+}
+
+.mobile-menu-panel.open {
+    transform: translateX(0);
+}
+
+/* Mobile Menu Links */
+#mobile-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0 20px;
+}
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 768px) {
+    /* Hide desktop nav links if you had them, keep cart/burger */
+    .nav-link:not([href="#cart"]) {
+        display: none; 
+    }
+    /* Show them in mobile panel instead */
+}
+
+
+.mobile-menu-panel.slide-from-left {
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+.mobile-menu-panel.slide-from-left.open {
+    transform: translateX(0) !important;
+}

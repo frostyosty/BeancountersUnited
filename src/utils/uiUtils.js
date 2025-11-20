@@ -231,3 +231,46 @@ export function updateSpinnerColor(newColor) {
         spinner.style.color = newColor; 
     }
 }
+
+
+export function applyHeaderLayout(layoutConfig) {
+    const header = document.getElementById('main-header');
+    if (!header) return;
+
+    const { logoAlignment, hamburgerPosition } = layoutConfig || {};
+
+    // 1. Reset
+    header.classList.remove('logo-align-left', 'hamburger-left');
+
+    // 2. Apply Logo Alignment
+    if (logoAlignment === 'left') {
+        header.classList.add('logo-align-left');
+    }
+    // (Default is center, so no class needed for center)
+
+    // 3. Apply Hamburger Position
+    if (hamburgerPosition === 'left') {
+        header.classList.add('hamburger-left');
+        
+        // Update Mobile Menu slide direction
+        const panel = document.getElementById('mobile-menu-panel');
+        if (panel) {
+            panel.style.right = 'auto';
+            panel.style.left = '0';
+            panel.style.transform = 'translateX(-100%)'; // Start off-screen left
+            // We need to dynamically update the open state style too
+            // or use CSS variables. For simplicity, we stick to the CSS class logic
+            // but we might need a specific class on the panel.
+            panel.classList.add('slide-from-left');
+        }
+    } else {
+        // Reset to Right
+        const panel = document.getElementById('mobile-menu-panel');
+        if (panel) {
+            panel.style.right = '0';
+            panel.style.left = 'auto';
+            panel.style.transform = 'translateX(100%)';
+            panel.classList.remove('slide-from-left');
+        }
+    }
+}

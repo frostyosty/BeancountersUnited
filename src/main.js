@@ -300,6 +300,8 @@ async function main() {
             cartItemCount: state.cart.items.length // Simple count is enough to trigger
         };
     };
+
+
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
@@ -336,8 +338,8 @@ async function main() {
 
     // --- THIS IS THE FIX ---
     // 1. Await the critical initial data fetches.
-     await Promise.all([
-        useAppStore.getState().auth.listenToAuthChanges(), 
+    await Promise.all([
+        useAppStore.getState().auth.listenToAuthChanges(),
         useAppStore.getState().menu.fetchMenu(),
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
@@ -347,7 +349,10 @@ async function main() {
     if (settings?.themeVariables?.['--font-family-main-name']) {
         console.log(`[App] Applying saved font: ${settings.themeVariables['--font-family-main-name']}`);
         uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
-    }
+    };
+    if (settings?.headerSettings) {
+        uiUtils.applyHeaderLayout(settings.headerSettings);
+    };
     // -----------------------------
 
     console.log("[App] Initial data loaded. Performing first full render...");
