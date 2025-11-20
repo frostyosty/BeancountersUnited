@@ -1753,6 +1753,7 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     padding-bottom: 20px;
 }
 
+
 #main-header nav {
     grid-column: 3;
     display: flex;
@@ -1910,4 +1911,66 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 /* Bottom Line -> Rotates -45deg */
 .hamburger-button.open span:nth-child(3) {
     transform: translateY(-8px) rotate(-45deg);
+}
+
+
+/* --- ROBUST HAMBURGER BUTTON --- */
+.hamburger-button {
+    /* 1. Define exact box size so math works */
+    width: 30px;
+    height: 24px; 
+    
+    /* 2. Layout the lines */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Pushes lines to top, middle, bottom */
+    
+    /* 3. Reset styling */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    
+    /* 4. Critical: Allow X to extend outside if needed (prevents cutting off) */
+    overflow: visible; 
+    
+    /* 5. Z-Index: Keep above the mobile menu panel */
+    position: relative;
+    z-index: 2001 !important; 
+}
+
+.hamburger-button span {
+    display: block;
+    width: 100%;
+    height: 3px; /* Thickness of the lines */
+    background-color: var(--text-color);
+    border-radius: 2px; /* Rounded tips look nicer */
+    
+    /* 6. Animation Physics */
+    transition: all 0.3s ease-in-out;
+    transform-origin: center; /* CRITICAL: Rotate around the center, not the edge */
+}
+
+/* --- THE "X" TRANSFORMATION --- */
+
+/* Top Line: Move down to vertical center and rotate 45deg */
+/* Calculation: (Height 24px / 2) - (Line Height 3px / 2) = ~10.5px move */
+.hamburger-button.open span:nth-child(1) {
+    transform: translateY(10.5px) rotate(45deg);
+}
+
+/* Middle Line: Fade out and slide away */
+.hamburger-button.open span:nth-child(2) {
+    opacity: 0;
+    transform: translateX(-10px); /* Slide left slightly */
+}
+
+/* Bottom Line: Move up to vertical center and rotate -45deg */
+.hamburger-button.open span:nth-child(3) {
+    transform: translateY(-10.5px) rotate(-45deg);
+}
+
+/* --- ENSURE MOBILE MENU STAYS BELOW --- */
+.mobile-menu-panel {
+    z-index: 2000 !important; /* Explicitly lower than button (2001) */
 }
