@@ -1866,3 +1866,47 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 #god-mode-debug-btn {
     z-index: 1200 !important; /* Highest priority */
 }
+
+
+/* --- FIX: Z-Index Hierarchy for Mobile Menu --- */
+
+/* 1. The Panel (Background) */
+.mobile-menu-panel {
+    /* High enough to cover page content and header */
+    z-index: 2000 !important; 
+}
+
+/* 2. The Button (Foreground) */
+/* Must be higher than the panel to be visible/clickable when open */
+.hamburger-button {
+    position: relative; /* Required for z-index to apply */
+    z-index: 2001 !important; 
+}
+
+/* 3. God Mode Button (Topmost) */
+#god-mode-debug-btn {
+    z-index: 2002 !important;
+}
+
+/* --- ANIMATION: Hamburger to 'X' Cross --- */
+/* Ensure the spans have the right pivot point */
+.hamburger-button span {
+    transform-origin: center;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Top Line -> Rotates 45deg */
+.hamburger-button.open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+/* Middle Line -> Fades out */
+.hamburger-button.open span:nth-child(2) {
+    opacity: 0;
+    transform: translateX(10px); /* Slide out slightly */
+}
+
+/* Bottom Line -> Rotates -45deg */
+.hamburger-button.open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
