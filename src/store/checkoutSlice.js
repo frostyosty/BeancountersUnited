@@ -1,55 +1,100 @@
-// src/store/checkoutSlice.js
-import * as api from '@/services/apiService.js';
+// 1. ADD THIS IMPORT (Critical)
+import { supabase } from '@/supabaseClient.js'; 
 
 export const createCheckoutSlice = (set, get) => ({
-    // --- STATE ---
-    isSubmitting: false,      // True while the order is being sent to the API
-    checkoutError: null,      // Holds any submission error
-    lastSuccessfulOrderId: null, // Stores the ID for the confirmation page
+    isProcessing: false,
+    error: null,
+    lastSuccessfulOrderId: null,
 
-    // --- ACTIONS ---
-    submitOrder: async (customerDetails) => {
-        set(state => ({ checkout: { ...state.checkout, isSubmitting: true, checkoutError: null } }));
+    // --- VALIDATION HELPER ---
+    canPayWithCash: () => {
+        // Safely access settings (handle case where settings might not be loaded yet)
+        const settings = get().siteSettings.settings || {};
+        const { paymentConfig } = settings;
+        const { getTotalPrice, items } = get().cart;
 
-        // Get necessary data from other slices
-        const { items: cartItems, getCartTotal, clearCart } = get().cart;
+        // Default rules if settings haven't loaded or config is missing
+        const config = paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
 
-        // Construct the order payload for the API
-        const orderData = {
-            customerDetails,
-            items: cartItems,
-            totalAmount: getCartTotal(),
-        };
+        if (!config.enableCash) {
+            return { allowed: false, reason: "Pay on Pickup is currently disabled." };
+        }
+
+        if (getTotalPrice() > config.maxCashAmount) {
+            return { allowed: false, reason: `Orders over $${config.maxCashAmount} require online payment.` };
+        }
+
+        const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+        if (totalItems > config.maxCashItems) {
+            return { allowed: false, reason: `Orders with more than ${config.maxCashItems} items require online payment.` };
+        }
+
+        return { allowed: true };
+    },
+
+    submitCashOrder: async () => {
+        // 1. Run Validation
+        const validation = get().checkout.canPayWithCash();
+        if (!validation.allowed) {
+            return { success: false, error: validation.reason };
+        }
+
+        set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
-            // Get the session for the auth token
-            const { data: { session } } = await window.supabase.auth.getSession();
+            const { user } = get().auth;
+            const { items, getTotalPrice, clearCart } = get().cart;
 
-            // The apiService will add the token to the header if it exists
-            const submittedOrder = await api.submitOrder(orderData, session?.access_token);
-            if (!submittedOrder || !submittedOrder.id) {
-                throw new Error("API did not return a valid order confirmation.");
-            }
+            if (!user) throw new Error("You must be logged in to place an order.");
 
-            set(state => ({
-                checkout: {
-                    ...state.checkout,
-                    isSubmitting: false,
-                    lastSuccessfulOrderId: submittedOrder.id
-                }
-            }), false, 'checkout/submitSuccess');
+            // 2. Insert Order Header
+            const { data: orderData, error: orderError } = await supabase
+                .from('orders')
+                .insert([{
+                    user_id: user.id,
+                    total_amount: getTotalPrice(),
+                    status: 'pending',
+                    payment_status: 'pending', 
+                    payment_method: 'cash'
+                }])
+                .select()
+                .single();
+                
+            if (orderError) throw orderError;
 
-            // Call the action from the cart slice to clear the cart
+            // 3. Insert Order Items
+            const orderItems = items.map(item => ({
+                order_id: orderData.id,
+                menu_item_id: item.id,
+                quantity: item.quantity,
+                price_at_time: item.price
+            }));
 
-get().cart.clearCart();
-            return true; // Signal success to the UI
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+
+            if (itemsError) throw itemsError;
+
+            // 4. Success Cleanup
+            clearCart();
+            set(state => ({ 
+                checkout: { 
+                    ...state.checkout, 
+                    isProcessing: false, 
+                    lastSuccessfulOrderId: orderData.id 
+                } 
+            }));
+            
+            // Refresh history so it shows up immediately
+            get().orderHistory.refreshOrderHistory();
+            
+            return { success: true, orderId: orderData.id };
 
         } catch (error) {
-            console.error("Error submitting order:", error);
-            set(state => ({
-                checkout: { ...state.checkout, isSubmitting: false, checkoutError: error.message }
-            }), false, 'checkout/submitError');
-            return false; // Signal failure to the UI
+            console.error("Checkout Failed:", error);
+            set(state => ({ checkout: { ...state.checkout, isProcessing: false, error: error.message } }));
+            return { success: false, error: error.message };
         }
-    },
+    }
 });

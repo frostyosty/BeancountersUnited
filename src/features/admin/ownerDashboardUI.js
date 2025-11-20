@@ -35,7 +35,7 @@ function getCategoryColor(str) {
     }
     const h = Math.abs(hash % 360);
     // HSL: Lower saturation (40%), Higher lightness (96%) = Very Subtle Pastel
-    return `hsl(${h}, 40%, 96%)`; 
+    return `hsl(${h}, 40%, 96%)`;
 }
 
 // ... (Keep other functions: getMenuLayoutHTML, showMenuItemModal, etc.) ...
@@ -44,10 +44,10 @@ function getCategoryColor(str) {
 async function handleThemeSettingsSave() {
     const { updateSiteSettings } = useAppStore.getState().siteSettings;
     const saveButton = document.getElementById('save-theme-settings');
-    
+
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
-    
+
     const themeVariables = {};
     // 1. Capture CSS Variables (colors)
     document.querySelectorAll('[data-css-var]').forEach(input => {
@@ -64,7 +64,7 @@ async function handleThemeSettingsSave() {
     }
 
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     try {
         await updateSiteSettings({ themeVariables }, session?.access_token);
         uiUtils.showToast('Theme saved successfully!', 'success');
@@ -80,7 +80,7 @@ async function handleThemeSettingsSave() {
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    
+
     if (!categories || categories.length === 0) {
         return `
             <div id="category-manager">
@@ -120,8 +120,8 @@ function showMenuItemModal(item = null) {
     const modalTitle = isEditing ? `Edit Item` : 'Add New Item';
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories() || ['Uncategorized'];
-    
-    const categoryOptions = categories.map(cat => 
+
+    const categoryOptions = categories.map(cat =>
         `<option value="${cat}" ${item?.category === cat ? 'selected' : ''}>${cat}</option>`
     ).join('');
 
@@ -192,7 +192,7 @@ async function handleMenuItemFormSubmit(event) {
 
     const formData = new FormData(form);
     const itemData = Object.fromEntries(formData.entries());
-    const imageFile = formData.get('imageFile'); 
+    const imageFile = formData.get('imageFile');
     const isEditing = !!itemData.id;
 
     const { addMenuItemOptimistic, fetchMenu } = useAppStore.getState().menu;
@@ -253,7 +253,7 @@ function handleCategoryReorder() {
     const listItems = document.querySelectorAll('#category-list .category-list-item');
     const newCategoryOrder = Array.from(listItems).map(li => li.dataset.categoryName);
     supabase.auth.getSession().then(({ data: { session } }) => {
-        if(session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
+        if (session) updateSiteSettings({ menuCategories: newCategoryOrder }, session.access_token);
     });
     uiUtils.showToast('Category order updated!', 'success');
 }
@@ -273,7 +273,7 @@ function attachOwnerDashboardListeners() {
     // --- 2. Click Handlers ---
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
-        
+
         // -- Menu Item Actions --
         if (target.matches('#add-new-item-btn')) {
             showMenuItemModal(null);
@@ -288,7 +288,7 @@ function attachOwnerDashboardListeners() {
             const item = useAppStore.getState().menu.items.find(i => i.id === row.dataset.itemId);
             handleDeleteMenuItem(item.id, item.name);
         }
-        
+
         // -- Table Sorting --
         else if (target.matches('th.sortable')) {
             const column = target.dataset.sortCol;
@@ -305,13 +305,13 @@ function attachOwnerDashboardListeners() {
         else if (target.matches('#save-theme-settings')) {
             handleThemeSettingsSave();
         }
-        
+
         // -- Category Management --
         const categoryManager = target.closest('#category-manager');
         if (categoryManager) {
             const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
-            
+
             // Helper to update categories with auth token
             const runUpdate = async (newCats) => {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -328,11 +328,11 @@ function attachOwnerDashboardListeners() {
                     uiUtils.showToast('Category added!', 'success');
                 }
             }
-            
+
             const listItem = target.closest('.category-list-item');
             if (listItem) {
                 const oldName = listItem.dataset.categoryName;
-                
+
                 // Rename Category
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
@@ -340,7 +340,7 @@ function attachOwnerDashboardListeners() {
                         runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
                     }
                 }
-                
+
                 // Delete Category
                 if (target.matches('.delete-category-btn')) {
                     if (categories.length <= 1) {
@@ -370,6 +370,24 @@ function attachOwnerDashboardListeners() {
         }
     });
 
+    dashboardContainer.addEventListener('submit', async (e) => {
+        if (e.target.matches('#payment-settings-form')) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const config = {
+                enableCash: formData.get('enableCash') === 'on',
+                maxCashAmount: parseFloat(formData.get('maxCashAmount')),
+                maxCashItems: parseInt(formData.get('maxCashItems'))
+            };
+            const { updateSiteSettings } = useAppStore.getState().siteSettings;
+            const { data: { session } } = await supabase.auth.getSession();
+
+            // Optimistic Update + API Save
+            updateSiteSettings({ paymentConfig: config }, session?.access_token);
+            uiUtils.showToast('Payment rules saved!', 'success');
+        }
+    });
+
     dashboardContainer.dataset.listenersAttached = 'true';
 }
 
@@ -383,7 +401,7 @@ export function renderOwnerDashboard() {
 
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
-    
+
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
 
     if (isLoadingMenu || isLoadingSettings) {
@@ -413,7 +431,7 @@ export function renderOwnerDashboard() {
     const menuItemsTableRows = sortedItems.map(item => {
         // NEW: Generate hue based on category name
         const categoryColor = getCategoryColor(item.category || 'Uncategorized');
-        
+
         return `
         <tr data-item-id="${item.id}" style="background-color: ${categoryColor}; border-bottom:1px solid #fff;">
             <td style="font-weight:500; padding: 10px;">${item.name}</td>
@@ -428,9 +446,38 @@ export function renderOwnerDashboard() {
         </tr>
     `}).join('');
 
+    // 1. Get current Payment Settings (default if missing)
+    const paymentConfig = settings.paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
+
+    // 2. Create HTML for the Payment Settings Section
+    const paymentSettingsHTML = `
+        <section class="dashboard-section">
+            <h3>Payment Settings</h3>
+            <form id="payment-settings-form">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display:flex; align-items:center; font-weight:600; cursor:pointer;">
+                        <input type="checkbox" name="enableCash" ${paymentConfig.enableCash ? 'checked' : ''} style="width:20px; height:20px; margin-right:10px;">
+                        Enable "Pay on Pickup" (Cash/EFTPOS)
+                    </label>
+                </div>
+                <div class="form-row">
+                    <label>Max Order Value for Cash ($)</label>
+                    <input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}" min="0" step="1">
+                    <small style="color:#666;">Orders above this amount must use Stripe.</small>
+                </div>
+                <div class="form-row">
+                    <label>Max Items for Cash</label>
+                    <input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}" min="1" step="1">
+                    <small style="color:#666;">Large orders (catering?) might require prepayment.</small>
+                </div>
+                <button type="submit" class="button-primary">Save Payment Rules</button>
+            </form>
+        </section>
+    `;
+
+    // 3. Inject into main HTML (Add ${paymentSettingsHTML} where you want it, e.g., before Theme Customization)
     mainContent.innerHTML = `
         <div class="dashboard-container">
-            <h2>Owner Dashboard</h2>
             
             <section class="dashboard-section">
              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -462,7 +509,7 @@ export function renderOwnerDashboard() {
                 ${menuLayoutHTML}
             </section>
             ` : ''}
-            
+            ${paymentSettingsHTML}
             ${ownerPermissions.canEditTheme ? `
             <section class="dashboard-section">
                 <h3>Visual Customization</h3>

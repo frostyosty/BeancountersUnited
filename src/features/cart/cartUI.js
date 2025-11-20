@@ -1,33 +1,30 @@
 // src/features/cart/cartUI.js
 import { useAppStore } from '@/store/appStore.js';
+import * as uiUtils from '@/utils/uiUtils.js';
 
 /**
- * Renders the shopping cart page. This function is now "defensive".
+ * Renders the shopping cart page.
  */
 export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-
     // --- DEFENSIVE CHECK ---
-    // First, check if the entire 'cart' slice exists in the store.
     const cartSlice = useAppStore.getState().cart;
     if (!cartSlice) {
-        // This can happen on the very first render cycle.
-        // It's safe to show a loading state and wait for the next render.
         mainContent.innerHTML = `<div class="loading-spinner">Initializing cart...</div>`;
         return;
     }
-    // --- END CHECK ---
 
-    // Now it's safe to destructure properties and call selectors.
-    const { items, getCartTotal } = cartSlice;
+    // Use the correct selector name based on your store
+    const { items, getTotalPrice } = cartSlice;
 
     if (items.length === 0) {
         mainContent.innerHTML = `
             <div class="empty-state">
                 <h2>Your Cart is Empty</h2>
-                <a href="#menu" class="button-link">Continue Shopping</a>
+                <p>Looks like you haven't added anything yet.</p>
+                <a href="#menu" class="button-primary">Browse Menu</a>
             </div>
         `;
         return;
@@ -56,8 +53,11 @@ export function renderCartPage() {
         <h2>Your Cart</h2>
         <div class="cart-items-container">${cartItemsHTML}</div>
         <div class="cart-summary">
-            <p class="cart-total">Total: <strong>$${getCartTotal().toFixed(2)}</strong></p>
-            <a href="#checkout" class="button-primary">Proceed to Checkout</a>
+            <div class="cart-total-row">
+                <span>Total:</span>
+                <strong>$${getTotalPrice().toFixed(2)}</strong>
+            </div>
+            <a href="#checkout" class="button-primary full-width-mobile">Proceed to Checkout</a>
         </div>
     `;
     attachCartEventListeners();
@@ -65,10 +65,7 @@ export function renderCartPage() {
 
 function attachCartEventListeners() {
     const cartContainer = document.querySelector('.cart-items-container');
-    if (!cartContainer) return;
-    
-    // Use a flag to prevent attaching the listener more than once
-    if (cartContainer.dataset.listenersAttached) return;
+    if (!cartContainer || cartContainer.dataset.listenersAttached) return;
 
     cartContainer.addEventListener('click', (event) => {
         const target = event.target;
@@ -88,14 +85,12 @@ function attachCartEventListeners() {
         }
     });
 
-
     cartContainer.addEventListener('change', (event) => {
-        const target = event.target;
-        if (target.matches('.quantity-input')) {
-            const itemId = target.dataset.itemId;
-            const newQuantity = parseInt(target.value, 10);
+        if (event.target.matches('.quantity-input')) {
+            const itemId = event.target.dataset.itemId;
+            const newQuantity = parseInt(event.target.value, 10);
             if (!isNaN(newQuantity)) {
-                updateItemQuantity(itemId, newQuantity);
+                useAppStore.getState().cart.updateItemQuantity(itemId, newQuantity);
             }
         }
     });
@@ -105,68 +100,119 @@ function attachCartEventListeners() {
 
 /**
  * Renders the checkout page into the main content area.
+ * Now supports Hybrid Payments (Cash Restrictions + Stripe).
  */
 export function renderCheckoutPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    const { getCartTotal } = useAppStore.getState().cart;
+    const { items, getTotalPrice } = useAppStore.getState().cart;
     const { isAuthenticated } = useAppStore.getState().auth;
-    const total = getCartTotal();
+    const { canPayWithCash } = useAppStore.getState().checkout;
 
-    // Rule: Require login for orders over $10
-    if (total > 10 && !isAuthenticated) {
-        mainContent.innerHTML = `
-            <div class="notice-message">
-                <h2>Login Required</h2>
-                <p>Your order total is over $10.00. Please log in or sign up to continue.</p>
-                <p><em>(We'll bring you right back to this page after you log in!)</em></p>
-            </div>
-        `;
-        // The "Login / Sign Up" button is always visible in the header.
+    // 1. Empty Cart Check
+    if (items.length === 0) {
+        window.location.hash = '#menu';
         return;
     }
 
-    const { user } = useAppStore.getState().auth;
-    const minPickupDateTime = new Date(Date.now() + 20 * 60000);
-    const formattedMinPickup = `${minPickupDateTime.getFullYear()}-${String(minPickupDateTime.getMonth() + 1).padStart(2, '0')}-${String(minPickupDateTime.getDate()).padStart(2, '0')}T${String(minPickupDateTime.getHours()).padStart(2, '0')}:${String(minPickupDateTime.getMinutes()).padStart(2, '0')}`;
+    // 2. Auth Check
+    if (!isAuthenticated) {
+        mainContent.innerHTML = `
+            <div class="notice-message">
+                <h2>Login Required</h2>
+                <p>Please log in or sign up to complete your order.</p>
+                <button class="button-primary" onclick="document.getElementById('login-signup-btn').click()">Login / Sign Up</button>
+            </div>
+        `;
+        return;
+    }
+
+    const total = getTotalPrice();
+    
+    // 3. Check Payment Rules (Owner Dashboard Settings)
+    const cashValidation = canPayWithCash();
+
+    // 4. Generate Payment Buttons HTML
+    let cashSectionHTML = '';
+    if (cashValidation.allowed) {
+        cashSectionHTML = `
+            <button id="pay-cash-btn" class="button-secondary" style="width:100%; margin-bottom:15px; padding:15px; font-size:1rem; border:2px solid var(--secondary-color);">
+                Pay on Pickup (Cash/EFTPOS)
+            </button>
+        `;
+    } else {
+        cashSectionHTML = `
+            <div style="background:#fff3cd; color:#856404; padding:15px; border-radius:6px; margin-bottom:15px; font-size:0.9rem; border:1px solid #ffeeba;">
+                <strong>Pay on Pickup Unavailable:</strong><br>
+                ${cashValidation.reason}
+            </div>
+        `;
+    }
 
     mainContent.innerHTML = `
-        <div class="checkout-container">
+        <div class="checkout-container" style="max-width:600px; margin:0 auto;">
             <h2>Checkout</h2>
-            <div class="order-summary">
-                <h3>Your Order Summary</h3>
-                <p>Total: <strong>$${total.toFixed(2)}</strong></p>
+            
+            <div class="checkout-summary" style="background:#f9f9f9; padding:20px; border-radius:8px; margin-bottom:25px;">
+                <h3>Order Summary</h3>
+                <ul style="list-style:none; padding:0; margin:0 0 15px 0;">
+                    ${items.map(item => `
+                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.95rem;">
+                            <span>${item.quantity}x ${item.name}</span>
+                            <span>$${(item.price * item.quantity).toFixed(2)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+                <div style="border-top:1px solid #ddd; padding-top:10px; display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;">
+                    <span>Total</span>
+                    <span>$${total.toFixed(2)}</span>
+                </div>
             </div>
-            <form id="checkout-form">
-                <h3>Your Details</h3>
-                <div class="form-group">
-                    <label for="checkout-name">Full Name</label>
-                    <input type="text" id="checkout-name" name="name" required value="${user?.email || ''}">
-                </div>
-                <div class="form-group">
-                    <label for="checkout-email">Email Address</label>
-                    <input type="email" id="checkout-email" name="email" required value="${user?.email || ''}">
-                </div>
-                <div class="form-group">
-                    <label for="checkout-phone">Phone Number (Optional)</label>
-                    <input type="tel" id="checkout-phone" name="phone" placeholder="In case we need to contact you">
-                </div>
-                <h3>Pickup Details</h3>
-                <div class="form-group">
-                    <label for="checkout-pickup-time">Pickup Time</label>
-                    <input type="datetime-local" id="checkout-pickup-time" name="pickupTime" required min="${formattedMinPickup}">
-                </div>
-                <div class="form-group">
-                    <label for="checkout-requests">Special Requests</label>
-                    <textarea id="checkout-requests" name="specialRequests" rows="3"></textarea>
-                </div>
-                <div id="payment-placeholder">
-                    <p><strong>Payment:</strong> For this demo, payment is collected upon pickup.</p>
-                </div>
-                <button type="submit" id="submit-order-btn" class="button-primary">Place Order</button>
-            </form>
+
+            <div class="payment-options">
+                <h3>Choose Payment Method</h3>
+                
+                <!-- Cash Option -->
+                ${cashSectionHTML}
+                
+                <!-- Stripe Option -->
+                <button id="pay-stripe-btn" class="button-primary" style="width:100%; padding:15px; font-size:1rem;">
+                    Pay with Card (Stripe)
+                </button>
+            </div>
         </div>
     `;
-    document.getElementById('checkout-form').addEventListener('submit', handleCheckoutSubmit);
+
+    attachCheckoutListeners();
+}
+
+function attachCheckoutListeners() {
+    // --- Handler for Cash/Pickup ---
+    document.getElementById('pay-cash-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('pay-cash-btn');
+        btn.disabled = true;
+        btn.textContent = "Processing Order...";
+
+        const { submitCashOrder } = useAppStore.getState().checkout;
+        
+        // Call the store action
+        const result = await submitCashOrder();
+
+        if (result.success) {
+            uiUtils.showToast("Order Placed Successfully!", "success");
+            // Navigate to history to see the new pending order
+            window.location.hash = '#order-history';
+        } else {
+            uiUtils.showToast(result.error, "error");
+            btn.disabled = false;
+            btn.textContent = "Pay on Pickup (Cash/EFTPOS)";
+        }
+    });
+
+    // --- Handler for Stripe ---
+    document.getElementById('pay-stripe-btn')?.addEventListener('click', () => {
+        // Placeholder for Phase 4 (Stripe Integration)
+        alert("Stripe integration requires the Backend API setup. Please stick to Cash for this demo.");
+    });
 }
