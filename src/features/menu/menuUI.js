@@ -8,6 +8,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 const createMenuItemHTML = (item) => {
     const { getUserRole } = useAppStore.getState().auth;
     const userRole = getUserRole();
+    
     // Define the HTML for the owner's controls
     const ownerControls = `
         <div class="item-admin-controls">
@@ -18,6 +19,7 @@ const createMenuItemHTML = (item) => {
     const godUserControls = `
         <button class="button-danger delete-item-btn" data-item-id="${item.id}">Delete</button>
     `;
+    
     let adminControlsHTML = '';
     if (userRole === 'owner' || userRole === 'manager') { adminControlsHTML = ownerControls; }
     if (userRole === 'manager') { adminControlsHTML = adminControlsHTML.replace('</div>', ` ${godUserControls}</div>`); }
@@ -39,6 +41,73 @@ const createMenuItemHTML = (item) => {
 };
 
 /**
+ * NEW: Generates the HTML for the "Welcome Back / Reorder" banner.
+ */
+function createReorderBanner(lastOrder) {
+    if (!lastOrder || !lastOrder.order_items || lastOrder.order_items.length === 0) return '';
+    
+    // Create a summary string (e.g., "2x Burger, 1x Coffee")
+    // Note: We check if menu_items exists because manual orders might not have full linking
+    const summary = lastOrder.order_items
+        .filter(i => i.menu_items) 
+        .map(i => `${i.quantity}x ${i.menu_items.name}`)
+        .join(', ');
+
+    if (!summary) return '';
+
+    return `
+        <div class="reorder-banner" style="
+            background: var(--surface-color); 
+            border: 2px solid var(--primary-color); 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">
+            <div>
+                <h4 style="margin:0 0 5px 0; color: var(--primary-color);">Welcome back! Hungry?</h4>
+                <p style="margin:0; font-size: 0.9rem; color: var(--text-color);">
+                    Your last order: <strong>${summary}</strong>
+                </p>
+            </div>
+            <button id="quick-reorder-btn" class="button-primary" style="white-space: nowrap;">
+                Reorder Now
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * NEW: Logic to add previous items to cart and go to checkout.
+ */
+function handleQuickReorder(order) {
+    const { addItem } = useAppStore.getState().cart;
+    
+    let count = 0;
+    order.order_items.forEach(item => {
+        if (item.menu_items) {
+            // Add the item 'quantity' times
+            for (let i = 0; i < item.quantity; i++) {
+                addItem(item.menu_items);
+                count++;
+            }
+        }
+    });
+
+    if (count > 0) {
+        uiUtils.showToast(`${count} items added to cart!`, 'success');
+        window.location.hash = '#checkout';
+    } else {
+        uiUtils.showToast("Could not reorder items (items may no longer exist).", "error");
+    }
+}
+
+/**
  * Attaches event listeners for the category filter tabs.
  */
 function attachCategoryTabListeners() {
@@ -48,7 +117,6 @@ function attachCategoryTabListeners() {
     tabsContainer.addEventListener('click', (event) => {
         if (event.target.matches('.sub-tab-button')) {
             const newCategory = event.target.dataset.category;
-            // Call the action from the uiSlice to change the state
             useAppStore.getState().setActiveMenuCategory(newCategory);
         }
     });
@@ -62,17 +130,15 @@ const attachMenuEventListeners = () => {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Use a flag to prevent attaching the listener more than once
     if (mainContent.dataset.menuListenersAttached === 'true') return;
 
     mainContent.addEventListener('click', (event) => {
         const target = event.target;
         const menuItemCard = target.closest('.menu-item-card');
-        if (!menuItemCard) return;
-
-        const itemId = menuItemCard.dataset.itemId;
-
-        if (target.closest('.add-to-cart-btn')) {
+        
+        // 1. Add to Cart
+        if (menuItemCard && target.closest('.add-to-cart-btn')) {
+            const itemId = menuItemCard.dataset.itemId;
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (menuItem) {
                 useAppStore.getState().cart.addItem(menuItem);
@@ -80,15 +146,19 @@ const attachMenuEventListeners = () => {
             }
         }
 
-        else if (target.closest('.edit-item-btn')) {
-            const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
-            alert(`Editing "${menuItem.name}" - Feature coming soon!`);
+        // 2. Edit Item (Owner/Manager)
+        else if (menuItemCard && target.closest('.edit-item-btn')) {
+            const itemId = menuItemCard.dataset.itemId;
+            alert(`Editing item ${itemId} - Use the Owner Dashboard for full editing.`);
         }
 
-        else if (target.closest('.delete-item-btn')) {
+        // 3. Delete Item (Manager)
+        else if (menuItemCard && target.closest('.delete-item-btn')) {
+            const itemId = menuItemCard.dataset.itemId;
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
-            if (confirm(`Are you sure you want to delete "${menuItem.name}"?`)) {
-                alert(`Deleting "${menuItem.name}" - Feature coming soon!`);
+            if (confirm(`Are you sure you want to delete "${menuItem?.name}"?`)) {
+                // Call the optimistic delete action
+                useAppStore.getState().menu.deleteMenuItemOptimistic(itemId); 
             }
         }
     });
@@ -106,7 +176,14 @@ export function renderMenuPage() {
     // --- Get ALL necessary state from the store ---
     const { items, isLoading, error } = useAppStore.getState().menu;
     const { getMenuCategories } = useAppStore.getState().siteSettings;
-    const { activeMenuCategory } = useAppStore.getState().ui; // <-- THE FIX IS HERE
+    const { activeMenuCategory } = useAppStore.getState().ui;
+
+    // --- NEW: Get Order History for Reorder Logic ---
+    const { orders } = useAppStore.getState().orderHistory;
+    // Find most recent order (sorting descending by date)
+    const lastOrder = orders && orders.length > 0 
+        ? [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] 
+        : null;
 
     if (isLoading) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`;
@@ -122,6 +199,7 @@ export function renderMenuPage() {
     }
 
     try {
+        // 1. Prepare Categories
         const orderedCategories = getMenuCategories();
         const categoriesForTabs = ['All', ...orderedCategories];
 
@@ -133,10 +211,12 @@ export function renderMenuPage() {
             </button>
         `).join('');
 
+        // 2. Filter Items
         const filteredItems = activeMenuCategory === 'All'
             ? items
             : items.filter(item => (item.category || 'Uncategorized') === activeMenuCategory);
 
+        // 3. Group Items by Category
         const itemsByCategory = filteredItems.reduce((acc, item) => {
             const category = item.category || 'Uncategorized';
             if (!acc[category]) acc[category] = [];
@@ -146,6 +226,7 @@ export function renderMenuPage() {
 
         const sortedCategoryKeys = orderedCategories.filter(cat => itemsByCategory[cat]);
 
+        // 4. Build Menu Grid HTML
         const menuContentHTML = sortedCategoryKeys.map(category => {
             const categoryItems = itemsByCategory[category];
             const itemsHTML = categoryItems.map(createMenuItemHTML).join('');
@@ -157,8 +238,13 @@ export function renderMenuPage() {
             `;
         }).join('');
 
+        // 5. Build Reorder Banner HTML
+        const reorderBannerHTML = createReorderBanner(lastOrder);
+
+        // 6. Assemble Final HTML
         const finalHTML = `
             <div class="menu-header">
+                ${reorderBannerHTML}
                 <h2>Our Menu</h2>
                 <div class="sub-tabs-container">${tabsHTML}</div>
             </div>
@@ -167,8 +253,17 @@ export function renderMenuPage() {
 
         mainContent.innerHTML = finalHTML;
         
+        // 7. Attach Listeners
         attachMenuEventListeners();
         attachCategoryTabListeners();
+        
+        // Attach Reorder Listener
+        const reorderBtn = document.getElementById('quick-reorder-btn');
+        if (reorderBtn) {
+            reorderBtn.addEventListener('click', () => {
+                handleQuickReorder(lastOrder);
+            });
+        }
 
     } catch (e) {
         console.error("CRITICAL RENDER ERROR in renderMenuPage:", e);

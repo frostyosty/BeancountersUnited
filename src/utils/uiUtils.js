@@ -1,6 +1,70 @@
 // src/utils/uiUtils.js
 import { useAppStore } from '@/store/appStore.js';
 
+
+// --- SPINNER ASSETS ---
+const SPINNER_SVGS = {
+    coffee: `
+        <svg class="dynamic-coffee-spinner" viewBox="0 0 100 100">
+            <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
+            <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
+            <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
+            <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
+            <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
+        </svg>
+    `,
+    hammer: `
+        <svg class="dynamic-hammer-spinner" viewBox="0 0 100 100">
+            <!-- Nail -->
+            <g class="nail-body">
+                <rect x="48" y="55" width="4" height="25" fill="currentColor" />
+                <rect x="44" y="55" width="12" height="4" fill="currentColor" />
+            </g>
+            <!-- Hammer -->
+            <g class="hammer-body">
+                 <!-- Handle -->
+                <rect x="60" y="30" width="8" height="50" fill="currentColor" transform="rotate(-20 64 55)" />
+                <!-- Head -->
+                <path d="M45 20 H 85 V 35 H 45 Z" fill="currentColor" transform="rotate(-20 64 55)" />
+            </g>
+        </svg>
+    `
+};
+
+
+
+/**
+ * Sets the active spinner type (Coffee or Hammer).
+ * Saves to LocalStorage so it persists instantly on reload.
+ */
+export function setGlobalSpinner(type) {
+    const validTypes = ['coffee', 'hammer'];
+    const selectedType = validTypes.includes(type) ? type : 'coffee';
+    
+    // 1. Save for next boot
+    localStorage.setItem('site_spinner_type', selectedType);
+
+    // 2. Update DOM immediately if loader is visible or for auth spinner
+    const container = document.querySelector('.initial-app-loader');
+    if (container) {
+        container.innerHTML = SPINNER_SVGS[selectedType];
+    }
+    
+    // 3. Update Auth Status Spinner (if displayed)
+    const authSpinner = document.querySelector('.auth-loading-spinner');
+    if (authSpinner) {
+        authSpinner.innerHTML = SPINNER_SVGS[selectedType];
+    }
+}
+
+/**
+ * Called on app boot to inject the correct SVG based on previous choice.
+ */
+export function initGlobalSpinner() {
+    const savedType = localStorage.getItem('site_spinner_type') || 'coffee';
+    setGlobalSpinner(savedType);
+}
+
 // --- 1. FONTS CONFIGURATION ---
 export const AVAILABLE_FONTS = [
     "Roboto", 
@@ -216,9 +280,22 @@ export function getThemeControlsHTML(currentVars = {}) {
 export function hideInitialLoader() {
     const loader = document.querySelector('.initial-app-loader');
     if (!loader) return;
-    loader.style.transition = 'opacity 0.5s ease';
-    loader.style.opacity = '0';
-    setTimeout(() => loader.remove(), 500);
+
+    // 1. Force a tiny reflow to ensure the browser is ready for the transition
+    // (This prevents the animation from being skipped by the engine)
+    void loader.offsetWidth;
+
+    // 2. Add the class that triggers the CSS transition (opacity: 0)
+    loader.classList.add('fade-out');
+
+    // 3. Wait for the CSS transition (0.4s) to finish, then remove from DOM
+    setTimeout(() => {
+        loader.remove();
+        
+        // Optional: Trigger a "Content Ready" class on the app if you want 
+        // even more control, but the CSS animation on #main-content handles this.
+        document.body.classList.add('app-loaded'); 
+    }, 400); // Matches the 0.4s CSS transition
 }
 
 /**

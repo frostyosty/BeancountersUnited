@@ -13,6 +13,8 @@ import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
+// 1. Run this IMMEDIATELY (before anything else)
+uiUtils.initGlobalSpinner();
 
 // Define the spinner HTML constant so we can use it in multiple places
 const SPINNER_SVG = `
@@ -344,6 +346,10 @@ async function main() {
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
 
+    if (useAppStore.getState().auth.isAuthenticated) {
+        useAppStore.getState().orderHistory.fetchOrderHistory(true); // true = silent
+    }
+    
     // --- NEW: Apply Saved Font ---
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings?.themeVariables?.['--font-family-main-name']) {

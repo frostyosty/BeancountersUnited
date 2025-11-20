@@ -1,29 +1,24 @@
 // src/supabaseClient.js
 import { createClient } from '@supabase/supabase-js';
 
-console.log("--- [1] supabaseClient.js: START ---");
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabaseInstance = null;
-let initializationError = null;
-
+// 1. Validation: Fail fast if keys are missing
 if (!supabaseUrl || !supabaseAnonKey) {
-    initializationError = "CRITICAL: Supabase credentials (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are missing.";
-    console.error(initializationError);
-} else {
-    try {
-        supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-        console.log("--- [1] supabaseClient.js: Client created successfully. ---");
-    } catch (e) {
-        initializationError = `CRITICAL: Failed to create Supabase client: ${e.message}`;
-        console.error(initializationError);
-    }
+    const msg = "CRITICAL: Supabase URL or Anon Key is missing from .env file.";
+    console.error(msg);
+    throw new Error(msg);
 }
 
-export const supabase = supabaseInstance;
-export const supabaseError = initializationError;
+// 2. Create a SINGLE client instance with Auth Persistence
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,    // Saves session to LocalStorage (Required for 90-day login)
+        autoRefreshToken: true,  // Keeps the token alive
+        detectSessionInUrl: true // Handles magic links/password resets
+    }
+});
 
-window.supabase = supabaseInstance; // For easy console access
-console.log("--- [1] supabaseClient.js: END ---");
+// 3. Expose the SAME instance to window for debugging
+window.supabase = supabase;
