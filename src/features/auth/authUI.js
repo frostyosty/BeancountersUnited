@@ -1,54 +1,45 @@
-// src/features/auth/authUI.js
 import { useAppStore } from '@/store/appStore.js';
-import * as uiUtils from '@/utils/uiUtils.js';
+import * as uiUtils from '@/utils/uiUtils.js'; // Needed for modal
 
-/**
- * Renders the authentication status in the header.
- */
 export function renderAuthStatus() {
     const container = document.getElementById('auth-status-container');
     if (!container) return;
 
     const { user, profile, isAuthLoading } = useAppStore.getState().auth;
 
-    // 1. LOADING STATE: Use the SVG spinner
+    // 1. LOADING
     if (isAuthLoading) {
-        container.innerHTML = `
-            <div class="auth-loading-spinner">
-                <svg viewBox="0 0 100 100">
-                    <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
-                    <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
-                    <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
-                    <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
-                    <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
-                </svg>
-            </div>
-        `;
+        // This will be populated by initGlobalSpinner(), just put a placeholder
+        container.innerHTML = `<div class="auth-loading-spinner"></div>`;
+        uiUtils.initGlobalSpinner(); // Re-inject SVG if needed
         return;
     }
 
-    // 2. LOGGED IN STATE
+    // 2. LOGGED IN
     if (user) {
-        // Use a fallback display name if profile isn't loaded yet
-        const displayName = profile?.full_name || user.email.split('@')[0];
-        
-        // Add a badge if Manager/Owner
-        let badge = '';
-        if (profile?.role === 'manager') badge = '<span class="role-badge manager">GOD</span>';
-        else if (profile?.role === 'owner') badge = '<span class="role-badge owner">OWNER</span>';
+        const role = profile?.role;
+        let displayHTML = '';
+
+        if (role === 'manager') {
+            displayHTML = `<span class="role-badge manager" style="background:red; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
+        } else if (role === 'owner') {
+            displayHTML = `<span class="role-badge owner" style="background:green; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
+        } else {
+            const name = profile?.full_name || user.email.split('@')[0];
+            displayHTML = `<span class="user-greeting" style="font-size:0.9rem;">Hi, ${name}</span>`;
+        }
 
         container.innerHTML = `
-            <div class="auth-user-display">
-                <span class="user-greeting">Hi, ${displayName}</span>
-                ${badge}
-                <button id="logout-btn" class="button-link">Logout</button>
+            <div class="auth-user-display" style="display:flex; align-items:center; gap:10px;">
+                ${displayHTML}
+                <button id="logout-btn" class="button-link" style="font-size:0.9rem; text-decoration:underline; cursor:pointer; border:none; background:none; color:var(--text-color);">Logout</button>
             </div>
         `;
     } 
-    // 3. LOGGED OUT STATE
+    // 3. LOGGED OUT
     else {
         container.innerHTML = `
-            <button id="login-signup-btn" class="button-primary small">Login</button>
+            <button id="login-signup-btn" class="button-primary small" style="font-size:0.8rem; padding: 6px 12px;">Login / Sign Up</button>
         `;
     }
 }

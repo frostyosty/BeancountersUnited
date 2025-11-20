@@ -17,7 +17,8 @@ When offering feedback, please bear in mind the following types of shortcomings 
 
 5. You have an unfortunate tendency to forget scoping specificities.
 6. You also have an unfortunate tendency to give full files back when small snippet updates would be a better path.
-
+7. When returning snippets, if it's a full file, please ensure that the relative path to the file is printed at the top in the format // src/store/siteSettingsSlice.js
+8. If using placeholders for brevity (please prioritise full snippet dumps), please add an adendum to the bottom of the response saying where the placeholders are in the response.
 
 Please be aware of these shortcomings and consider them before offering drastic measures.
 
