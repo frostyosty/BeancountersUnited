@@ -1,6 +1,10 @@
 // src/features/cart/cartUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
+import { loadStripe } from '@stripe/stripe-js';
+
+// Initialize Stripe outside of render to avoid reloading it on every render
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 /**
  * Renders the shopping cart page.
@@ -16,7 +20,6 @@ export function renderCartPage() {
         return;
     }
 
-    // Use the correct selector name based on your store
     const { items, getTotalPrice } = cartSlice;
 
     if (items.length === 0) {
@@ -100,7 +103,6 @@ function attachCartEventListeners() {
 
 /**
  * Renders the checkout page into the main content area.
- * Now supports Hybrid Payments (Cash Restrictions + Stripe).
  */
 export function renderCheckoutPage() {
     const mainContent = document.getElementById('main-content');
@@ -180,6 +182,12 @@ export function renderCheckoutPage() {
                 <button id="pay-stripe-btn" class="button-primary" style="width:100%; padding:15px; font-size:1rem;">
                     Pay with Card (Stripe)
                 </button>
+                
+                <!-- Stripe Element Container (Hidden initially) -->
+                <div id="stripe-element-container" style="margin-top:20px; padding:15px; border:1px solid #eee; border-radius:8px; display:none;">
+                    <!-- Stripe will inject iframe here -->
+                </div>
+                <div id="stripe-error-message" style="color:red; margin-top:10px; display:none;"></div>
             </div>
         </div>
     `;
@@ -195,13 +203,10 @@ function attachCheckoutListeners() {
         btn.textContent = "Processing Order...";
 
         const { submitCashOrder } = useAppStore.getState().checkout;
-        
-        // Call the store action
         const result = await submitCashOrder();
 
         if (result.success) {
             uiUtils.showToast("Order Placed Successfully!", "success");
-            // Navigate to history to see the new pending order
             window.location.hash = '#order-history';
         } else {
             uiUtils.showToast(result.error, "error");
@@ -211,8 +216,86 @@ function attachCheckoutListeners() {
     });
 
     // --- Handler for Stripe ---
-    document.getElementById('pay-stripe-btn')?.addEventListener('click', () => {
-        // Placeholder for Phase 4 (Stripe Integration)
-        alert("Stripe integration requires the Backend API setup. Please stick to Cash for this demo.");
+    const stripeBtn = document.getElementById('pay-stripe-btn');
+    stripeBtn?.addEventListener('click', async () => {
+        const container = document.getElementById('stripe-element-container');
+        const errorDiv = document.getElementById('stripe-error-message');
+        const total = useAppStore.getState().cart.getTotalPrice();
+
+        stripeBtn.disabled = true;
+        stripeBtn.textContent = "Loading Secure Payment...";
+        errorDiv.style.display = 'none';
+        
+        try {
+            // 1. Call Backend to get Client Secret
+            const response = await fetch('/api/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: total }),
+            });
+            
+            const { clientSecret, error } = await response.json();
+            if (error) throw new Error(error);
+
+            // 2. Load Stripe Elements
+            const stripe = await stripePromise;
+            const elements = stripe.elements({ clientSecret, appearance: { theme: 'stripe' } });
+            const paymentElement = elements.create('payment');
+            
+            container.style.display = 'block';
+            container.innerHTML = ''; // Clear previous if any
+            paymentElement.mount('#stripe-element-container');
+            
+            // 3. Change Button to "Pay Now"
+            stripeBtn.textContent = `Pay $${total.toFixed(2)} Now`;
+            stripeBtn.disabled = false;
+            
+            // 4. Switch listener to "Submit Payment"
+            // We clone the button to remove old listeners easily
+            const newBtn = stripeBtn.cloneNode(true);
+            stripeBtn.parentNode.replaceChild(newBtn, stripeBtn);
+            
+            newBtn.addEventListener('click', async () => {
+                newBtn.disabled = true;
+                newBtn.textContent = "Processing...";
+                errorDiv.style.display = 'none';
+
+                // A. Confirm Payment with Stripe
+                const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        // We handle redirect manually via 'if_required'
+                    },
+                    redirect: 'if_required' 
+                });
+
+                if (stripeError) {
+                    errorDiv.textContent = stripeError.message;
+                    errorDiv.style.display = 'block';
+                    newBtn.disabled = false;
+                    newBtn.textContent = `Pay $${total.toFixed(2)} Now`;
+                } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                    // B. Payment Success! Save to DB
+                    const { submitPaidOrder } = useAppStore.getState().checkout;
+                    const res = await submitPaidOrder(paymentIntent);
+                    
+                    if (res.success) {
+                        uiUtils.showToast("Payment Successful!", "success");
+                        window.location.hash = '#order-history';
+                    } else {
+                        // Rare edge case: Payment worked, DB failed
+                        uiUtils.showToast(res.error, 'error');
+                        errorDiv.textContent = "Payment succeeded, but order saving failed. Please contact staff.";
+                        errorDiv.style.display = 'block';
+                    }
+                }
+            });
+
+        } catch (e) {
+            console.error(e);
+            uiUtils.showToast("Could not initialize payment.", "error");
+            stripeBtn.disabled = false;
+            stripeBtn.textContent = "Pay with Card (Stripe)";
+        }
     });
 }

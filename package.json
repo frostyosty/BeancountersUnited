@@ -11,9 +11,11 @@
     "lint": "stylelint \"src/**/*.css\""
   },
   "dependencies": {
+    "@stripe/stripe-js": "^8.5.2",
     "@supabase/supabase-js": "^2.43.4",
     "node-fetch": "^2.7.0",
     "sortablejs": "^1.15.6",
+    "stripe": "^20.0.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
