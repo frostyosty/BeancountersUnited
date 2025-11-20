@@ -336,13 +336,20 @@ async function main() {
 
     // --- THIS IS THE FIX ---
     // 1. Await the critical initial data fetches.
-    await Promise.all([
-        useAppStore.getState().auth.listenToAuthChanges(), // listenToAuthChanges should be quick
+     await Promise.all([
+        useAppStore.getState().auth.listenToAuthChanges(), 
         useAppStore.getState().menu.fetchMenu(),
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
 
-    // 2. NOW, after data is loaded, perform the first complete render.
+    // --- NEW: Apply Saved Font ---
+    const settings = useAppStore.getState().siteSettings.settings;
+    if (settings?.themeVariables?.['--font-family-main-name']) {
+        console.log(`[App] Applying saved font: ${settings.themeVariables['--font-family-main-name']}`);
+        uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
+    }
+    // -----------------------------
+
     console.log("[App] Initial data loaded. Performing first full render...");
     renderPersistentUI();
     renderPageContent();

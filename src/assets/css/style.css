@@ -1384,3 +1384,27 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 }
 .role-badge.manager { background: #831111; color: white; }
 .role-badge.owner { background: #186b2b; color: white; }
+
+
+/* --- Fix Mobile Header Clicks --- */
+#main-header {
+    position: sticky; /* or relative/fixed depending on your layout */
+    top: 0;
+    /* Ensure header is ABOVE the mobile menu panel's container */
+    z-index: 1100; 
+}
+
+.mobile-menu-panel {
+    /* ... existing styles ... */
+    z-index: 1050; 
+    /* CRITICAL: Prevent invisible panel from blocking clicks */
+    pointer-events: none; 
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mobile-menu-panel.open {
+    /* Re-enable clicks only when open */
+    pointer-events: auto; 
+    opacity: 1;
+}

@@ -26,17 +26,56 @@ const MODAL_CSS = `
 </style>
 `;
 
-// --- HELPER: Generate Pastel Color from String ---
+// --- 1. SUBTLE CATEGORY COLOR HELPER ---
 function getCategoryColor(str) {
     if (!str) return '#ffffff';
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    // HSL: Hue (0-360 based on hash), Saturation 70%, Lightness 92% (Pastel)
     const h = Math.abs(hash % 360);
-    return `hsl(${h}, 70%, 92%)`; 
+    // HSL: Lower saturation (40%), Higher lightness (96%) = Very Subtle Pastel
+    return `hsl(${h}, 40%, 96%)`; 
 }
+
+// ... (Keep other functions: getMenuLayoutHTML, showMenuItemModal, etc.) ...
+
+// --- 2. UPDATE: handleThemeSettingsSave to capture Font ---
+async function handleThemeSettingsSave() {
+    const { updateSiteSettings } = useAppStore.getState().siteSettings;
+    const saveButton = document.getElementById('save-theme-settings');
+    
+    saveButton.textContent = 'Saving...';
+    saveButton.disabled = true;
+    
+    const themeVariables = {};
+    // 1. Capture CSS Variables (colors)
+    document.querySelectorAll('[data-css-var]').forEach(input => {
+        themeVariables[input.dataset.cssVar] = input.value;
+    });
+
+    // 2. Capture Selected Font
+    const fontSelect = document.getElementById('font-selector');
+    if (fontSelect) {
+        const fontName = fontSelect.value;
+        themeVariables['--font-family-main-name'] = fontName;
+        // Apply immediately
+        uiUtils.applySiteFont(fontName);
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    try {
+        await updateSiteSettings({ themeVariables }, session?.access_token);
+        uiUtils.showToast('Theme saved successfully!', 'success');
+    } catch (e) {
+        uiUtils.showToast('Failed to save theme.', 'error');
+    } finally {
+        saveButton.textContent = 'Save Theme Settings';
+        saveButton.disabled = false;
+    }
+}
+
 
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
@@ -223,9 +262,22 @@ function attachOwnerDashboardListeners() {
     const dashboardContainer = document.querySelector('.dashboard-container');
     if (!dashboardContainer || dashboardContainer.dataset.listenersAttached === 'true') return;
 
+    // --- 1. Form Submissions (Business Details) ---
+    dashboardContainer.addEventListener('submit', (event) => {
+        if (event.target.matches('#business-details-form')) {
+            event.preventDefault();
+            handleBusinessDetailsSave(event.target);
+        }
+    });
+
+    // --- 2. Click Handlers ---
     dashboardContainer.addEventListener('click', (event) => {
         const target = event.target;
-        if (target.matches('#add-new-item-btn')) showMenuItemModal(null);
+        
+        // -- Menu Item Actions --
+        if (target.matches('#add-new-item-btn')) {
+            showMenuItemModal(null);
+        }
         else if (target.closest('.edit-item-btn-table')) {
             const row = target.closest('tr');
             const item = useAppStore.getState().menu.items.find(i => i.id === row.dataset.itemId);
@@ -236,22 +288,37 @@ function attachOwnerDashboardListeners() {
             const item = useAppStore.getState().menu.items.find(i => i.id === row.dataset.itemId);
             handleDeleteMenuItem(item.id, item.name);
         }
+        
+        // -- Table Sorting --
         else if (target.matches('th.sortable')) {
             const column = target.dataset.sortCol;
-            if (currentSort.column === column) currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            else { currentSort.column = column; currentSort.direction = 'asc'; }
-            renderOwnerDashboard();
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            renderOwnerDashboard(); // Re-render to reflect sort
         }
-        // Category Manager Listeners
+
+        // -- Save Theme Button --
+        else if (target.matches('#save-theme-settings')) {
+            handleThemeSettingsSave();
+        }
+        
+        // -- Category Management --
         const categoryManager = target.closest('#category-manager');
         if (categoryManager) {
             const { getMenuCategories, updateSiteSettings } = useAppStore.getState().siteSettings;
             let categories = getMenuCategories();
+            
+            // Helper to update categories with auth token
             const runUpdate = async (newCats) => {
                 const { data: { session } } = await supabase.auth.getSession();
                 updateSiteSettings({ menuCategories: newCats }, session?.access_token);
             };
 
+            // Add Category
             if (target.matches('#add-category-btn')) {
                 const input = document.getElementById('new-category-name');
                 const newName = input.value.trim();
@@ -261,20 +328,48 @@ function attachOwnerDashboardListeners() {
                     uiUtils.showToast('Category added!', 'success');
                 }
             }
+            
             const listItem = target.closest('.category-list-item');
             if (listItem) {
                 const oldName = listItem.dataset.categoryName;
+                
+                // Rename Category
                 if (target.matches('.rename-category-btn')) {
                     const newName = prompt(`Rename category "${oldName}":`, oldName);
-                    if (newName && newName.trim() !== oldName) runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
+                    if (newName && newName.trim() !== oldName) {
+                        runUpdate(categories.map(c => c === oldName ? newName.trim() : c));
+                    }
                 }
+                
+                // Delete Category
                 if (target.matches('.delete-category-btn')) {
-                    if (categories.length <= 1) { alert('Must have at least one category.'); return; }
-                    if (confirm(`Delete category "${oldName}"?`)) runUpdate(categories.filter(c => c !== oldName));
+                    if (categories.length <= 1) {
+                        alert('You must have at least one category.');
+                        return;
+                    }
+                    if (confirm(`Delete the "${oldName}" category?`)) {
+                        runUpdate(categories.filter(c => c !== oldName));
+                    }
                 }
             }
         }
     });
+
+    // --- 3. Font Selection Live Preview ---
+    dashboardContainer.addEventListener('change', (event) => {
+        if (event.target.matches('#font-selector')) {
+            const fontName = event.target.value;
+            uiUtils.applySiteFont(fontName);
+        }
+    });
+
+    // --- 4. Color Picker Live Preview ---
+    dashboardContainer.addEventListener('input', (event) => {
+        if (event.target.matches('[data-css-var]')) {
+            uiUtils.updateCssVariable(event.target.dataset.cssVar, event.target.value);
+        }
+    });
+
     dashboardContainer.dataset.listenersAttached = 'true';
 }
 
