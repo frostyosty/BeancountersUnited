@@ -1,4 +1,3 @@
-// src/store/orderHistorySlice.js
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 
@@ -10,43 +9,40 @@ export const createOrderHistorySlice = (set, get) => ({
     notifiedOrderIds: new Set(),
 
     // --- MAIN FETCH ACTION ---
-    fetchOrderHistory: async () => {
+    // Now accepts a 'silent' parameter to prevent the loading spinner
+    fetchOrderHistory: async (silent = false) => {
         const state = get().orderHistory;
-        console.log(`%c[OrderHistorySlice] fetchOrderHistory() CALLED. Loading: ${state.isLoading}, HasLoaded: ${state.hasLoaded}`, "color: violet");
+        
+        // 1. GUARD CLAUSE
+        // If already loading, stop. 
+        // If loaded and NOT a silent refresh (e.g. initial nav), stop.
+        if (state.isLoading) return;
+        if (state.hasLoaded && !silent) return;
 
-        // 1. GUARD CLAUSE: Stop the recursion loop
-        if (state.isLoading) {
-            console.warn("[OrderHistorySlice] Fetch skipped: Already in progress.");
-            return;
+        // 2. Start Loading (ONLY if not silent)
+        if (!silent) {
+            set(state => ({ orderHistory: { ...state.orderHistory, isLoading: true, error: null } }));
         }
-        if (state.hasLoaded) {
-            console.log("[OrderHistorySlice] Fetch skipped: Data already loaded. Use refreshOrderHistory() to force update.");
-            return;
-        }
-
-        // 2. Start Loading
-        set(state => ({ orderHistory: { ...state.orderHistory, isLoading: true, error: null } }));
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            console.log("[OrderHistorySlice] Fetching orders from API...");
+            // 3. Fetch Data
             const ordersData = await api.getOrderHistory(session.access_token);
-            console.log(`[OrderHistorySlice] Fetch success. Got ${ordersData ? ordersData.length : 0} orders.`);
 
+            // 4. Update State
             set(state => ({ 
                 orderHistory: { 
                     ...state.orderHistory, 
                     orders: ordersData || [], 
-                    isLoading: false,
-                    hasLoaded: true // <--- IMPORTANT: Marks data as fresh
+                    isLoading: false, // Ensure loading is off
+                    hasLoaded: true 
                 } 
             }));
             
-            // 3. Update UI
+            // 5. Trigger UI Update
             if (get().ui && get().ui.triggerPageRender) {
-                console.log("[OrderHistorySlice] Triggering Page Render.");
                 get().ui.triggerPageRender();
             }
 
@@ -58,67 +54,60 @@ export const createOrderHistorySlice = (set, get) => ({
         }
     },
 
-    // --- FORCE REFRESH ACTION ---
-    // Call this when you add/delete an order manually
-    refreshOrderHistory: () => {
-        console.log("[OrderHistorySlice] Forcing Refresh...");
-        // Reset hasLoaded to false, so the next fetch call is allowed to run
-        set(state => ({ orderHistory: { ...state.orderHistory, hasLoaded: false } }));
-        // Trigger the fetch immediately
-        get().orderHistory.fetchOrderHistory();
-    },
-
-    // --- UPDATED: Real Manual Order ---
+    // --- MANUAL ORDER (Uses Silent Refresh) ---
     createManualOrder: async (orderDetails) => {
-        console.log("[OrderHistorySlice] createManualOrder() called", orderDetails);
         try {
-            const { items, total } = orderDetails;
-            const { data: { session } } = await supabase.auth.getSession();
+            // 1. Optimistic UI Update (Optional but feels instant)
+            // We add a temporary "fake" order to the list immediately so the user sees it.
+            const tempId = 'temp-' + Date.now();
+            const optimisticOrder = {
+                id: tempId,
+                created_at: new Date().toISOString(),
+                total_amount: orderDetails.total,
+                status: 'pending',
+                profiles: { full_name: 'Walk-in (Saving...)' },
+                order_items: orderDetails.items.map(i => ({
+                    quantity: i.quantity,
+                    menu_items: { name: '...' } // Placeholder
+                }))
+            };
 
-            // 1. Create Order
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert([{
-                    user_id: session.user.id,
-                    total_amount: total,
-                    status: 'pending'
-                }])
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-
-            // 2. Add Items
-            const orderItemsData = items.map(item => ({
-                order_id: orderData.id,
-                menu_item_id: item.id,
-                quantity: item.quantity,
-                price_at_time: item.price
+            // Add to state immediately
+            set(state => ({
+                orderHistory: {
+                    ...state.orderHistory,
+                    orders: [...state.orderHistory.orders, optimisticOrder]
+                }
             }));
+            get().ui.triggerPageRender();
 
-            const { error: itemError } = await supabase
-                .from('order_items')
-                .insert(orderItemsData);
 
-            if (itemError) throw itemError;
+            // 2. Real Backend Call
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Not authenticated");
 
-            console.log("[OrderHistorySlice] Manual Order Created Successfully.");
+            // Call API
+            await api.createManualOrder(orderDetails, session.access_token);
+
+            // 3. Silent Refresh
+            // This will fetch the REAL data from the DB and replace our "fake" order
+            // WITHOUT showing a spinner.
+            await get().orderHistory.fetchOrderHistory(true);
             
-            // 3. FORCE REFRESH
-            get().orderHistory.refreshOrderHistory();
             return true;
+
         } catch (e) {
-            console.error("[OrderHistorySlice] Manual Order Error:", e);
-            alert(`Failed: ${e.message}`);
+            console.error("[OrderHistorySlice] Manual Order Failed:", e);
+            alert(`Failed to create order: ${e.message}`);
+            // Revert (Fetch normally to reset state)
+            get().orderHistory.fetchOrderHistory(true);
             return false;
         }
     },
 
-    // --- Dismiss/Cancel Order ---
+    // --- DISMISS ORDER (Optimistic) ---
     dismissOrder: async (orderId) => {
-        console.log(`[OrderHistorySlice] dismissOrder(${orderId})`);
-        
-        // Optimistic update
+        // 1. Optimistic Update: Update local state immediately
         const originalOrders = get().orderHistory.orders;
         const updatedOrders = originalOrders.map(o => 
             o.id === orderId ? { ...o, status: 'cancelled' } : o
@@ -128,16 +117,16 @@ export const createOrderHistorySlice = (set, get) => ({
         get().ui.triggerPageRender();
 
         try {
+            // 2. Background DB Update
             const { error } = await supabase
                 .from('orders')
                 .update({ status: 'cancelled' })
                 .eq('id', orderId);
                 
             if (error) throw error;
-            console.log("[OrderHistorySlice] Order dismissed in DB.");
         } catch (e) {
-            console.error("[OrderHistorySlice] Dismiss Failed:", e);
-            // Revert
+            console.error("Dismiss Failed:", e);
+            // 3. Revert on error
             set(state => ({ orderHistory: { ...state.orderHistory, orders: originalOrders } }));
             get().ui.triggerPageRender();
             alert("Failed to dismiss order.");
@@ -145,6 +134,7 @@ export const createOrderHistorySlice = (set, get) => ({
     },
 
     checkUrgency: () => {
+        // ... (Keep existing logic) ...
         const role = get().auth.getUserRole();
         if (role !== 'manager' && role !== 'owner') return;
         if (window.location.hash === '#order-history') return;
@@ -157,12 +147,9 @@ export const createOrderHistorySlice = (set, get) => ({
             if (order.status === 'pending' || order.status === 'preparing') {
                 const createdTime = new Date(order.created_at).getTime();
                 if ((now - createdTime) > URGENCY_THRESHOLD_MS && !notifiedOrderIds.has(order.id)) {
-                    console.log(`[OrderHistorySlice] Urgency Alert for Order #${order.id}`);
-                    
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(`⚠️ Order #${order.id.slice(0,4)} is overdue!`, 'error');
                     });
-
                     set(state => {
                         const newSet = new Set(state.orderHistory.notifiedOrderIds);
                         newSet.add(order.id);

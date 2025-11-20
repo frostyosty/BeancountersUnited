@@ -81,4 +81,6 @@ export const updateUser = (userId, newRole, isVerifiedBuyer, canSeeOrderHistory,
 // Anyone can read the settings
 export const getSiteSettings = () => request('/settings', 'GET');
 
+export const createManualOrder = (orderData, token) => request('/manual-order', 'POST', orderData, token);
+
 console.log("--- [2] apiService.js: END ---");
