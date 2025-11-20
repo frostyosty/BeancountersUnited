@@ -1746,10 +1746,11 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 #main-header h1 {
     grid-column: 2;
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 2rem;
     color: var(--primary-color);
     text-align: center;
     line-height: 1;
+    padding-bottom: 20px;
 }
 
 #main-header nav {
@@ -1873,7 +1874,7 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 /* 1. The Panel (Background) */
 .mobile-menu-panel {
     /* High enough to cover page content and header */
-    z-index: 2000 !important; 
+    z-index: 1000 !important; 
 }
 
 /* 2. The Button (Foreground) */
