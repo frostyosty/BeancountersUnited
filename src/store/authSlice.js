@@ -88,18 +88,41 @@ export const createAuthSlice = (set, get) => ({
     },
 
     impersonateRole: (roleToImpersonate) => {
-        const { user, profile, isImpersonating } = get().auth;
-        const realRole = get().auth.originalProfile?.role || profile?.role;
-        if (realRole !== 'manager' || isImpersonating()) return;
+        const state = get().auth;
+        
+        // 1. Determine the "Real" identity
+        // If already impersonating, keep the existing original. If not, save current as original.
+        const originalUser = state.originalUser || state.user;
+        const originalProfile = state.originalProfile || state.profile;
 
-        let impersonatedUser = user;
-        let impersonatedProfile = { ...profile, role: roleToImpersonate };
+        // 2. Security Check: Ensure the REAL user is actually a manager
+        if (originalProfile?.role !== 'manager') {
+            console.warn("Attempted impersonation by non-manager.");
+            return;
+        }
+
+        // 3. Construct Impersonated Profile
+        let impersonatedUser = originalUser;
+        let impersonatedProfile = { ...originalProfile, role: roleToImpersonate };
+        
+        // Special case for Guest (no user object)
         if (roleToImpersonate === 'guest') {
             impersonatedUser = null;
             impersonatedProfile = null;
         }
-        set(state => ({
-            auth: { ...state.auth, originalUser: user, originalProfile: profile, user: impersonatedUser, profile: impersonatedProfile, isAuthenticated: roleToImpersonate !== 'guest' }
+
+        // 4. Apply State
+        set(s => ({
+            auth: {
+                ...s.auth,
+                // Store the real identity if not already stored
+                originalUser: originalUser, 
+                originalProfile: originalProfile,
+                // Set the fake identity
+                user: impersonatedUser,
+                profile: impersonatedProfile,
+                isAuthenticated: roleToImpersonate !== 'guest'
+            }
         }), false, `auth/impersonate-${roleToImpersonate}`);
     },
 
@@ -107,7 +130,14 @@ export const createAuthSlice = (set, get) => ({
         const { originalUser, originalProfile } = get().auth;
         if (!originalUser) return;
         set(state => ({
-            auth: { ...state.auth, user: originalUser, profile: originalProfile, isAuthenticated: true, originalUser: null, originalProfile: null }
+            auth: { 
+                ...state.auth, 
+                user: originalUser, 
+                profile: originalProfile, 
+                isAuthenticated: true, 
+                originalUser: null, 
+                originalProfile: null 
+            }
         }), false, 'auth/stop-impersonating');
     },
 

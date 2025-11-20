@@ -482,6 +482,7 @@ export function renderOwnerDashboard() {
         </tr>
     `}).join('');
 
+    
     // Retrieve current settings
     const headerSettings = settings.headerSettings || { logoAlignment: 'center', hamburgerPosition: 'right' };
 

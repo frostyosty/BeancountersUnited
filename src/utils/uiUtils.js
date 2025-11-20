@@ -299,3 +299,36 @@ export function updateSpinnerColor(newColor) {
         spinner.style.color = newColor; 
     }
 }
+
+
+
+
+/**
+ * Updates all instances of the site title/logo in the DOM.
+ * @param {string} name - The text name of the website.
+ * @param {string} [logoUrl=null] - The URL of the logo image.
+ */
+export function updateSiteTitles(name, logoUrl = null) {
+    const siteTitleElement = document.querySelector('#main-header h1');
+    const siteTitleFooterElement = document.querySelector('#main-footer p');
+    const siteTitleTagElement = document.querySelector('title');
+
+    // 1. Update Text Elements (Title Tag & Footer)
+    if (siteTitleTagElement && name) {
+        siteTitleTagElement.textContent = name;
+    }
+    if (siteTitleFooterElement && name) {
+        siteTitleFooterElement.innerHTML = `&copy; ${new Date().getFullYear()} ${name}`;
+    }
+
+    // 2. Update Header (Logo vs Text)
+    if (siteTitleElement) {
+        if (logoUrl) {
+            // Render Image
+            siteTitleElement.innerHTML = `<img src="${logoUrl}" alt="${name || 'Site Logo'}" class="site-logo" />`;
+        } else if (name) {
+            // Render Text
+            siteTitleElement.textContent = name;
+        }
+    }
+}

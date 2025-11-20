@@ -1974,3 +1974,12 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 .mobile-menu-panel {
     z-index: 2000 !important; /* Explicitly lower than button (2001) */
 }
+
+
+/* --- SITE LOGO --- */
+.site-logo {
+    max-height: 45px; /* Fits nicely in 60px header */
+    width: auto;
+    display: block;
+    object-fit: contain;
+}

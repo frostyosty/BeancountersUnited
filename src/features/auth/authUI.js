@@ -21,9 +21,9 @@ export function renderAuthStatus() {
         let displayHTML = '';
 
         if (role === 'manager') {
-            displayHTML = `<span class="role-badge manager" style="background:red; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
+            displayHTML = `<span class="role-badge manager" style="background:black; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
         } else if (role === 'owner') {
-            displayHTML = `<span class="role-badge owner" style="background:green; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
+            displayHTML = `<span class="role-badge owner" style="background:mauve; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
         } else {
             const name = profile?.full_name || user.email.split('@')[0];
             displayHTML = `<span class="user-greeting" style="font-size:0.9rem;">Hi, ${name}</span>`;

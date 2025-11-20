@@ -345,20 +345,29 @@ async function main() {
         useAppStore.getState().menu.fetchMenu(),
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
+    
 
     if (useAppStore.getState().auth.isAuthenticated) {
         useAppStore.getState().orderHistory.fetchOrderHistory(true); // true = silent
     }
     
-    // --- NEW: Apply Saved Font ---
+// Apply Settings
     const settings = useAppStore.getState().siteSettings.settings;
-    if (settings?.themeVariables?.['--font-family-main-name']) {
-        console.log(`[App] Applying saved font: ${settings.themeVariables['--font-family-main-name']}`);
-        uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
-    };
-    if (settings?.headerSettings) {
-        uiUtils.applyHeaderLayout(settings.headerSettings);
-    };
+    
+    if (settings) {
+        // 1. Apply Fonts
+        if (settings.themeVariables?.['--font-family-main-name']) {
+            uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
+        }
+        // 2. Apply Header Layout
+        if (settings.headerSettings) {
+            uiUtils.applyHeaderLayout(settings.headerSettings);
+        }
+        // 3. Apply Logo / Title (NEW)
+        if (settings.websiteName || settings.logoUrl) {
+            uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
+        }
+    }
     // -----------------------------
 
     console.log("[App] Initial data loaded. Performing first full render...");
