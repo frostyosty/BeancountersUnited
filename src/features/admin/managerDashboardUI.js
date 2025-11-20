@@ -6,19 +6,27 @@ import { supabase } from '@/supabaseClient.js';
 
 // --- HELPER: Upload Logic for Logo ---
 async function uploadLogo(file) {
+    // 1. Generate Unique Filename
     const fileExt = file.name.split('.').pop();
     const fileName = `logos/site-logo-${Date.now()}.${fileExt}`;
 
+    // 2. Upload to Supabase Storage
+    // Note: We reuse the existing 'menu-images' bucket for simplicity
     const { error: uploadError } = await supabase.storage
         .from('menu-images') 
         .upload(fileName, file);
 
-    if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+    if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+    }
 
-    const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+    // 3. Get Public URL
+    const { data } = supabase.storage
+        .from('menu-images')
+        .getPublicUrl(fileName);
+        
     return data.publicUrl;
 }
-
 // --- MAIN RENDER FUNCTION ---
 export function renderManagerDashboard() {
     console.log("%c[ManagerDashboardUI] renderManagerDashboard() CALLED.", "color: orange;");
@@ -124,14 +132,14 @@ export function renderManagerDashboard() {
                 </div>
             </section>
 
-            <!-- SECTION 3: Theme Customizer (Added back) -->
+            <!-- SECTION 3: Theme Customizer -->
             <section class="dashboard-section">
                 <h3>Theme Customizer</h3>
                 <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">Control the visual identity of the site.</p>
                 ${themeControlsHTML}
             </section>
 
-            <!-- SECTION 4: Owner Permissions (Added back) -->
+            <!-- SECTION 4: Owner Permissions -->
             <section class="dashboard-section">
                 <h3>Owner Permissions</h3>
                 <form id="owner-permissions-form">
@@ -163,7 +171,7 @@ function attachManagerListeners() {
     const container = document.querySelector('.dashboard-container');
     if (!container || container.dataset.listenersAttached) return;
 
-    // 1. Logo Logic
+    // 1. Logo Handling
     const logoInput = document.getElementById('logo-upload');
     const logoPreview = document.getElementById('logo-preview');
     const noLogoText = document.getElementById('no-logo-text');
@@ -172,6 +180,7 @@ function attachManagerListeners() {
     logoInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Generate local preview
             logoPreview.src = URL.createObjectURL(file);
             logoPreview.style.display = 'inline-block';
             noLogoText.style.display = 'none';
@@ -180,6 +189,7 @@ function attachManagerListeners() {
     });
 
     clearLogoBtn?.addEventListener('click', () => {
+        // Clear UI
         logoInput.value = '';
         document.querySelector('input[name="logoUrl"]').value = '';
         logoPreview.src = '';
@@ -202,7 +212,7 @@ function attachManagerListeners() {
 
     // 3. Form Submits
     container.addEventListener('submit', async (event) => {
-        // Global Settings
+        // Global Settings (Logo/Name)
         if (event.target.matches('#global-settings-form')) {
             event.preventDefault();
             const btn = event.target.querySelector('button[type="submit"]');
@@ -216,6 +226,7 @@ function attachManagerListeners() {
             const hamburgerMenuContent = formData.get('hamburgerMenuContent');
 
             try {
+                // Upload new logo if present
                 if (logoFile && logoFile.size > 0) {
                     finalLogoUrl = await uploadLogo(logoFile);
                 }
@@ -229,7 +240,7 @@ function attachManagerListeners() {
                 await api.updateSiteSettings(settingsUpdate);
                 uiUtils.updateSiteTitles(websiteName, finalLogoUrl);
                 uiUtils.showToast('Global settings saved!', 'success');
-                // Refresh
+                // Refresh state to ensure consistency
                 useAppStore.getState().siteSettings.fetchSiteSettings();
 
             } catch (error) {
@@ -261,9 +272,11 @@ function attachManagerListeners() {
         // Save Theme Button
         if (event.target.matches('#save-theme-settings')) {
             const themeVariables = {};
+            // Scrape color inputs
             document.querySelectorAll('[data-css-var]').forEach(input => {
                 themeVariables[input.dataset.cssVar] = input.value;
             });
+            // Scrape font selection
             const fontSelect = document.getElementById('font-selector');
             if (fontSelect) themeVariables['--font-family-main-name'] = fontSelect.value;
 
@@ -296,33 +309,48 @@ function showEditUserModal(user) {
                         <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager (God)</option>
                     </select>
                 </div>
+                
                 <div class="form-row">
-                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" id="is-verified" ${user.is_verified_buyer ? 'checked' : ''}> 
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="is-verified" ${user.is_verified_buyer ? 'checked' : ''} style="width:auto;"> 
                         Verified Buyer Status
                     </label>
                 </div>
-                 <div class="form-row">
-                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" id="can-see-orders" ${user.can_see_order_history ? 'checked' : ''}> 
+                
+                <div class="form-row">
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="can-see-orders" ${user.can_see_order_history ? 'checked' : ''} style="width:auto;"> 
                         Can See Order History Tab
                     </label>
                 </div>
-                <div class="form-actions-split" style="justify-content:flex-end;">
+
+                <div class="form-actions-split" style="justify-content: flex-end; margin-top: 20px;">
                     <button type="submit" class="button-primary">Save Changes</button>
                 </div>
             </form>
         </div>
     `;
+    
     uiUtils.showModal(modalHTML);
     
-    document.getElementById('edit-user-form').addEventListener('submit', (e) => {
+    // Attach Listener
+    const form = document.getElementById('edit-user-form');
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
+        
         const newRole = document.getElementById('user-role').value;
         const isVerified = document.getElementById('is-verified').checked;
         const canSeeOrders = document.getElementById('can-see-orders').checked;
         
-        useAppStore.getState().admin.updateUserRole(user.id, newRole, isVerified, canSeeOrders);
+        // Call Store Action
+        useAppStore.getState().admin.updateUserRole(
+            user.id, 
+            newRole, 
+            isVerified, 
+            canSeeOrders
+        );
+        
         uiUtils.closeModal();
+        uiUtils.showToast(`User ${user.email} updated.`, 'success');
     });
 }

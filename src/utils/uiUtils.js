@@ -178,18 +178,6 @@ export function closeModal() {
 
 // --- 4. THEME & LAYOUT UTILS ---
 
-/**
- * Updates all instances of the site title in the DOM.
- */
-export function updateSiteTitles(newName) {
-    const siteTitleElement = document.querySelector('#main-header h1');
-    const siteTitleFooterElement = document.querySelector('#main-footer p');
-    const siteTitleTagElement = document.querySelector('title');
-
-    if (siteTitleElement) siteTitleElement.textContent = newName;
-    if (siteTitleFooterElement) siteTitleFooterElement.innerHTML = `&copy; ${new Date().getFullYear()} ${newName}`;
-    if (siteTitleTagElement) siteTitleTagElement.textContent = newName;
-}
 
 /**
  * Updates a CSS custom property on the :root element.
