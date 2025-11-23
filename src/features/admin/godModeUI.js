@@ -94,7 +94,7 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         Object.assign(debugBtn.style, {
             position: 'fixed', top: '12px', right: '60px', zIndex: '2147483647', // Max Z-Index
             width: '40px', height: '40px', borderRadius: '50%',
-            backgroundColor: '#212529', color: '#00ff00', border: '2px solid #00ff00',
+            backgroundColor: '#212529', color: '#ffffffff', border: '2px solid #92a392ff',
             fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         });
         
