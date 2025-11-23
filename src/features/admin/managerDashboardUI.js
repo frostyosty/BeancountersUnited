@@ -6,12 +6,9 @@ import { supabase } from '@/supabaseClient.js';
 
 // --- HELPER: Upload Logic for Logo ---
 async function uploadLogo(file) {
-    // 1. Generate Unique Filename
     const fileExt = file.name.split('.').pop();
     const fileName = `logos/site-logo-${Date.now()}.${fileExt}`;
 
-    // 2. Upload to Supabase Storage
-    // Note: We reuse the existing 'menu-images' bucket for simplicity
     const { error: uploadError } = await supabase.storage
         .from('menu-images') 
         .upload(fileName, file);
@@ -20,13 +17,20 @@ async function uploadLogo(file) {
         throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    // 3. Get Public URL
     const { data } = supabase.storage
         .from('menu-images')
         .getPublicUrl(fileName);
         
     return data.publicUrl;
 }
+
+// --- HELPER: Get Token ---
+async function getAuthToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("You are not logged in.");
+    return session.access_token;
+}
+
 // --- MAIN RENDER FUNCTION ---
 export function renderManagerDashboard() {
     console.log("%c[ManagerDashboardUI] renderManagerDashboard() CALLED.", "color: orange;");
@@ -34,7 +38,8 @@ export function renderManagerDashboard() {
     if (!mainContent) return;
 
     // 1. Fetch Data
-    useAppStore.getState().admin.fetchAllUsers();
+    // Use 'true' to force refresh users so you see new signups immediately
+    useAppStore.getState().admin.fetchAllUsers(true); 
     useAppStore.getState().siteSettings.fetchSiteSettings();
     
     const { users, isLoadingUsers, error: userError } = useAppStore.getState().admin;
@@ -180,7 +185,6 @@ function attachManagerListeners() {
     logoInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Generate local preview
             logoPreview.src = URL.createObjectURL(file);
             logoPreview.style.display = 'inline-block';
             noLogoText.style.display = 'none';
@@ -189,7 +193,6 @@ function attachManagerListeners() {
     });
 
     clearLogoBtn?.addEventListener('click', () => {
-        // Clear UI
         logoInput.value = '';
         document.querySelector('input[name="logoUrl"]').value = '';
         logoPreview.src = '';
@@ -226,7 +229,9 @@ function attachManagerListeners() {
             const hamburgerMenuContent = formData.get('hamburgerMenuContent');
 
             try {
-                // Upload new logo if present
+                // FIX: Get Token
+                const token = await getAuthToken();
+
                 if (logoFile && logoFile.size > 0) {
                     finalLogoUrl = await uploadLogo(logoFile);
                 }
@@ -237,10 +242,11 @@ function attachManagerListeners() {
                     logoUrl: finalLogoUrl 
                 };
 
-                await api.updateSiteSettings(settingsUpdate);
+                // FIX: Pass token
+                await api.updateSiteSettings(settingsUpdate, token);
+                
                 uiUtils.updateSiteTitles(websiteName, finalLogoUrl);
                 uiUtils.showToast('Global settings saved!', 'success');
-                // Refresh state to ensure consistency
                 useAppStore.getState().siteSettings.fetchSiteSettings();
 
             } catch (error) {
@@ -261,28 +267,35 @@ function attachManagerListeners() {
             };
             
             try {
-                await api.updateSiteSettings({ ownerPermissions: permissions });
+                // FIX: Get Token & Pass token
+                const token = await getAuthToken();
+                await api.updateSiteSettings({ ownerPermissions: permissions }, token);
                 uiUtils.showToast('Permissions updated.', 'success');
-            } catch(e) { uiUtils.showToast('Error saving permissions', 'error'); }
+            } catch(e) { 
+                uiUtils.showToast('Error saving permissions', 'error'); 
+            }
         }
     });
 
     // 4. Click Actions
-    container.addEventListener('click', (event) => {
+    container.addEventListener('click', async (event) => {
         // Save Theme Button
         if (event.target.matches('#save-theme-settings')) {
             const themeVariables = {};
-            // Scrape color inputs
             document.querySelectorAll('[data-css-var]').forEach(input => {
                 themeVariables[input.dataset.cssVar] = input.value;
             });
-            // Scrape font selection
             const fontSelect = document.getElementById('font-selector');
             if (fontSelect) themeVariables['--font-family-main-name'] = fontSelect.value;
 
-            api.updateSiteSettings({ themeVariables })
-               .then(() => uiUtils.showToast('Theme saved!', 'success'))
-               .catch(e => uiUtils.showToast('Theme save failed', 'error'));
+            try {
+                // FIX: Get Token & Pass token
+                const token = await getAuthToken();
+                await api.updateSiteSettings({ themeVariables }, token);
+                uiUtils.showToast('Theme saved!', 'success');
+            } catch (e) {
+                uiUtils.showToast('Theme save failed', 'error');
+            }
         }
 
         // Edit User Modal
@@ -296,6 +309,7 @@ function attachManagerListeners() {
     container.dataset.listenersAttached = 'true';
 }
 
+// ... showEditUserModal remains unchanged ...
 function showEditUserModal(user) {
     const modalHTML = `
         <div class="modal-form-container">
@@ -333,7 +347,6 @@ function showEditUserModal(user) {
     
     uiUtils.showModal(modalHTML);
     
-    // Attach Listener
     const form = document.getElementById('edit-user-form');
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -342,7 +355,6 @@ function showEditUserModal(user) {
         const isVerified = document.getElementById('is-verified').checked;
         const canSeeOrders = document.getElementById('can-see-orders').checked;
         
-        // Call Store Action
         useAppStore.getState().admin.updateUserRole(
             user.id, 
             newRole, 

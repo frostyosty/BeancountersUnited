@@ -12,7 +12,7 @@ export const createCheckoutSlice = (set, get) => ({
         // Safely access settings (handle case where settings might not be loaded yet)
         const settings = get().siteSettings.settings || {};
         const { paymentConfig } = settings;
-        const { getTotalPrice, items } = get().cart;
+        const { getCartTotal, items } = get().cart;
 
         // Default rules if settings haven't loaded or config is missing
         const config = paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
@@ -21,7 +21,7 @@ export const createCheckoutSlice = (set, get) => ({
             return { allowed: false, reason: "Pay on Pickup is currently disabled." };
         }
 
-        if (getTotalPrice() > config.maxCashAmount) {
+        if (getCartTotal() > config.maxCashAmount) {
             return { allowed: false, reason: `Orders over $${config.maxCashAmount} require online payment.` };
         }
 
@@ -45,7 +45,7 @@ export const createCheckoutSlice = (set, get) => ({
 
         try {
             const { user } = get().auth;
-            const { items, getTotalPrice, clearCart } = get().cart;
+            const { items, getCartTotal, clearCart } = get().cart;
 
             if (!user) throw new Error("You must be logged in to place an order.");
 
@@ -54,7 +54,7 @@ export const createCheckoutSlice = (set, get) => ({
                 .from('orders')
                 .insert([{
                     user_id: user.id,
-                    total_amount: getTotalPrice(),
+                    total_amount: getCartTotal(),
                     status: 'pending',         // Kitchen Status
                     payment_status: 'pending', // Payment Status (Not paid yet)
                     payment_method: 'cash'     // Method
@@ -107,7 +107,7 @@ export const createCheckoutSlice = (set, get) => ({
 
         try {
             const { user } = get().auth;
-            const { items, getTotalPrice, clearCart } = get().cart;
+            const { items, getCartTotal, clearCart } = get().cart;
 
             if (!user) throw new Error("User session missing during payment finalization.");
 
@@ -116,7 +116,7 @@ export const createCheckoutSlice = (set, get) => ({
                 .from('orders')
                 .insert([{
                     user_id: user.id,
-                    total_amount: getTotalPrice(),
+                    total_amount: getCartTotal(),
                     status: 'pending',        // Kitchen Status
                     payment_status: 'paid',   // <--- PAID
                     payment_method: 'stripe', // <--- STRIPE

@@ -107,16 +107,11 @@ function setupNavigationAndInteractions() {
         if (navLink) {
             e.preventDefault();
 
-            // --- THIS IS THE FIX ---
             const categoryFilter = navLink.dataset.categoryFilter;
             if (categoryFilter) {
-                // If the link is a category filter, update the UI state.
-                useAppStore.getState().setActiveMenuCategory(categoryFilter);
-
-                // The subscriber that watches UI state will then re-render the menu.
-                // We don't need to call renderPageContent() manually.
+                // FIX: Accessed via the 'ui' slice
+                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
             }
-            // --- END OF FIX ---
 
             const newHash = navLink.getAttribute('href');
             // Only change the hash if it's a real navigation event

@@ -13,16 +13,16 @@ export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // --- DEFENSIVE CHECK ---
     const cartSlice = useAppStore.getState().cart;
     if (!cartSlice) {
         mainContent.innerHTML = `<div class="loading-spinner">Initializing cart...</div>`;
         return;
     }
 
-    const { items, getTotalPrice } = cartSlice;
+    const { items, getCartTotal } = cartSlice;
 
     if (items.length === 0) {
+        // ... empty state logic ...
         mainContent.innerHTML = `
             <div class="empty-state">
                 <h2>Your Cart is Empty</h2>
@@ -52,13 +52,13 @@ export function renderCartPage() {
         </div>
     `).join('');
 
-    mainContent.innerHTML = `
+   mainContent.innerHTML = `
         <h2>Your Cart</h2>
         <div class="cart-items-container">${cartItemsHTML}</div>
         <div class="cart-summary">
             <div class="cart-total-row">
                 <span>Total:</span>
-                <strong>$${getTotalPrice().toFixed(2)}</strong>
+                <strong>$${getCartTotal().toFixed(2)}</strong>
             </div>
             <a href="#checkout" class="button-primary full-width-mobile">Proceed to Checkout</a>
         </div>
@@ -108,7 +108,8 @@ export function renderCheckoutPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    const { items, getTotalPrice } = useAppStore.getState().cart;
+
+    const { items, getCartTotal } = useAppStore.getState().cart;
     const { isAuthenticated } = useAppStore.getState().auth;
     const { canPayWithCash } = useAppStore.getState().checkout;
 
@@ -130,7 +131,7 @@ export function renderCheckoutPage() {
         return;
     }
 
-    const total = getTotalPrice();
+    const total = getCartTotal();
     
     // 3. Check Payment Rules (Owner Dashboard Settings)
     const cashValidation = canPayWithCash();
@@ -220,7 +221,7 @@ function attachCheckoutListeners() {
     stripeBtn?.addEventListener('click', async () => {
         const container = document.getElementById('stripe-element-container');
         const errorDiv = document.getElementById('stripe-error-message');
-        const total = useAppStore.getState().cart.getTotalPrice();
+        const total = useAppStore.getState().cart.getCartTotal();
 
         stripeBtn.disabled = true;
         stripeBtn.textContent = "Loading Secure Payment...";

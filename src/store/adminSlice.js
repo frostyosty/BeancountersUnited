@@ -6,17 +6,18 @@ export const createAdminSlice = (set, get) => ({
     isLoadingUsers: false,
     error: null,
 
-    fetchAllUsers: async () => {
+    // Added forceRefresh parameter
+    fetchAllUsers: async (forceRefresh = false) => {
         console.log("%c[AdminSlice] fetchAllUsers() CALLED", "color: orange");
         
         const { isLoadingUsers, users } = get().admin;
         
-        // Log the decision making
         if (isLoadingUsers) {
             console.warn("[AdminSlice] Fetch skipped: Already loading.");
             return;
         }
-        if (users.length > 0) {
+        // Only skip if data exists AND we are not forcing a refresh
+        if (users.length > 0 && !forceRefresh) {
             console.log("[AdminSlice] Fetch skipped: Users already in state.");
             return;
         }
@@ -34,18 +35,19 @@ export const createAdminSlice = (set, get) => ({
 
             set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }));
             
-            // Trigger UI update
-            console.log("[AdminSlice] Triggering page render...");
-            get().ui.triggerPageRender(); 
+            // Ensure uiSlice exists before calling this
+            if (get().ui && get().ui.triggerPageRender) {
+                get().ui.triggerPageRender(); 
+            }
 
         } catch (error) {
             console.error("[AdminSlice] Fetch FAILED:", error);
             set(state => ({ admin: { ...state.admin, error: error.message, isLoadingUsers: false } }));
         }
     },
-
+    
+    // ... updateUserRole remains the same ...
     updateUserRole: async (userId, newRole, isVerifiedBuyer, canSeeOrderHistory) => {
-        // Keep existing logic, just ensuring the file is valid...
         const originalUsers = get().admin.users;
         const updatedUsers = originalUsers.map(u =>
             u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory } : u

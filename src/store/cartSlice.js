@@ -10,7 +10,7 @@ const getInitialState = () => {
     }
 };
 export const createCartSlice = (set, get) => ({
-    items: JSON.parse(localStorage.getItem('restaurantCart')) || [],
+    items: getInitialState(), // <--- Use the function here
     _saveToLocalStorage: () => localStorage.setItem('restaurantCart', JSON.stringify(get().cart.items)),
     addItem: (itemToAdd) => {
         const currentItems = get().cart.items;
