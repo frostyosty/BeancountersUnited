@@ -12,10 +12,10 @@ export default async function handler(req, res) {
         // 1. Initialize Supabase Admin Client DIRECTLY here to debug auth issues
         const supabaseUrl = process.env.VITE_SUPABASE_URL;
         // CRITICAL: We need the SERVICE_ROLE_KEY for admin bypass, NOT the Anon key
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; 
 
         if (!supabaseUrl || !supabaseServiceKey) {
-            console.error("CRITICAL ERROR: Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env");
+            console.error("CRITICAL ERROR: Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_KEY in .env");
             return res.status(500).json({ error: "Server Configuration Error: Missing API Keys." });
         }
 
