@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
-import { supabase } from '@/supabaseClient.js'; // Needed for saving settings
+import { supabase } from '@/supabaseClient.js'; 
 
 export function initializeImpersonationToolbar() {
     console.log("[GodModeUI] Initializing subscription...");
@@ -10,7 +10,6 @@ export function initializeImpersonationToolbar() {
             const realRole = state.auth.originalProfile?.role || state.auth.profile?.role || 'guest';
             const isImp = state.auth.isImpersonating();
             const currRole = state.auth.profile?.role || 'guest';
-            // Create a unique key to trigger updates only when these specific values change
             return `${realRole}|${isImp}|${currRole}`; 
         },
         (keyString) => {
@@ -20,13 +19,33 @@ export function initializeImpersonationToolbar() {
         },
         { fireImmediately: true }
     );
+
+    // --- FIX: D-Key Listener (Attach once) ---
+    document.addEventListener('keydown', (e) => {
+        // Shift+D to toggle Debug Modal
+        if (e.shiftKey && e.key.toLowerCase() === 'd') {
+            const { profile } = useAppStore.getState().auth;
+            if (profile?.role === 'manager') {
+                toggleDebugModal();
+            }
+        }
+    });
+}
+
+function toggleDebugModal() {
+    const existingModal = document.querySelector('.debug-modal-container');
+    if (existingModal) {
+        uiUtils.closeModal();
+    } else {
+        if (window.showDebugLogModal) window.showDebugLogModal();
+        else showDebugLogModalInternal();
+    }
 }
 
 function renderToolbar(realRole, isImpersonating, currentRole) {
     let toolbar = document.getElementById('god-mode-toolbar');
     let debugBtn = document.getElementById('god-mode-debug-btn');
 
-    // 1. Security Check: Only Managers (God Users) see this
     if (realRole !== 'manager') {
         if (toolbar) toolbar.remove();
         if (debugBtn) debugBtn.remove();
@@ -34,30 +53,20 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         return;
     }
 
-    // 2. Create Toolbar if missing
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.id = 'god-mode-toolbar';
         document.body.appendChild(toolbar);
-        document.body.style.paddingBottom = '60px'; // Push content up
+        document.body.style.paddingBottom = '60px'; 
         
-        // Delegated listener for toolbar buttons
         toolbar.addEventListener('click', (e) => {
             const auth = useAppStore.getState().auth;
-            
-            if (e.target.matches('[data-role]')) {
-                auth.impersonateRole(e.target.dataset.role);
-            } 
-            else if (e.target.matches('#stop-impersonating-btn')) {
-                auth.stopImpersonating();
-            }
-            else if (e.target.closest('#god-config-btn')) {
-                showGodModeConfigModal();
-            }
+            if (e.target.matches('[data-role]')) auth.impersonateRole(e.target.dataset.role);
+            else if (e.target.matches('#stop-impersonating-btn')) auth.stopImpersonating();
+            else if (e.target.closest('#god-config-btn')) showGodModeConfigModal();
         });
     }
 
-    // 3. Render Toolbar Content
     const stopButtonHTML = isImpersonating ? 
         `<button id="stop-impersonating-btn" class="toolbar-btn stop-btn">Stop Impersonating</button>` : '';
 
@@ -71,8 +80,6 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
                 <button class="toolbar-btn" data-role="customer">Customer</button>
                 <button class="toolbar-btn" data-role="owner">Owner</button>
                 ${stopButtonHTML}
-                
-                <!-- NEW: Config Button -->
                 <button id="god-config-btn" class="toolbar-btn" title="Site Configuration" style="margin-left: 10px; background: #444; border: 1px solid #666;">
                     ⚙️ Config
                 </button>
@@ -80,59 +87,76 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         </div>
     `;
 
-    // 4. Ensure Debug "D" Button Exists
     if (!debugBtn) {
         debugBtn = document.createElement('button');
         debugBtn.id = 'god-mode-debug-btn';
         debugBtn.textContent = 'D';
         Object.assign(debugBtn.style, {
-    position: 'fixed', 
-    top: '12px', 
-    right: '60px', // Moved left so it doesn't overlap hamburger
-    zIndex: '1200',
+            position: 'fixed', top: '12px', right: '60px', zIndex: '2147483647', // Max Z-Index
             width: '40px', height: '40px', borderRadius: '50%',
             backgroundColor: '#212529', color: '#00ff00', border: '2px solid #00ff00',
             fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         });
         
-        debugBtn.onclick = () => {
-            if (window.showDebugLogModal) window.showDebugLogModal(); // Calls function defined in debugLogger.js (if attached to window)
-            else showDebugLogModalInternal(); // Fallback local version
-        };
+        debugBtn.onclick = () => toggleDebugModal();
         document.body.appendChild(debugBtn);
     }
 }
 
-// --- NEW: God Mode Configuration Modal ---
-function showGodModeConfigModal() {
-    // Get current settings
-    const currentSpinner = localStorage.getItem('site_spinner_type') || 'coffee';
+async function showGodModeConfigModal() {
+    // Fetch latest settings to populate form
+    const { settings } = useAppStore.getState().siteSettings;
+    const currentZoom = settings.themeVariables?.['--site-zoom'] || '100%';
+    const currentPadding = settings.themeVariables?.['--global-padding'] || '20px';
+    const currentMargin = settings.themeVariables?.['--section-margin'] || '20px';
+    const inStoreOnly = settings.paymentConfig?.inStoreOnly || false;
 
     const modalHTML = `
         <div class="modal-form-container">
-            <h3>God Mode Configuration</h3>
-            <p style="color:#666; margin-bottom:20px;">Global settings for the application instance.</p>
+            <h3>God Config & Layout</h3>
             
             <form id="god-config-form">
-                <div class="form-row">
-                    <label>Loading Animation (Brand Identity)</label>
-                    <div style="display:flex; gap:20px; margin-top:10px;">
-                        <label style="font-weight:normal; cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px; border:1px solid #ccc; border-radius:6px;">
-                            <input type="radio" name="spinnerType" value="coffee" ${currentSpinner === 'coffee' ? 'checked' : ''}> 
-                            ☕ Coffee (Restaurant)
-                        </label>
-                        <label style="font-weight:normal; cursor:pointer; display:flex; align-items:center; gap:8px; padding:10px; border:1px solid #ccc; border-radius:6px;">
-                            <input type="radio" name="spinnerType" value="hammer" ${currentSpinner === 'hammer' ? 'checked' : ''}> 
-                            🔨 Hammer (Construction)
-                        </label>
-                    </div>
-                    <p style="font-size:0.85rem; color:#888; margin-top:5px;">
-                        Changes the initial loading screen and auth spinner.
-                    </p>
+                <!-- 1. Payment Config -->
+                <div class="form-group" style="background:#fff0f0; padding:10px; border-radius:5px; border:1px solid #ffcccc;">
+                    <label style="color:#d00; font-weight:bold;">Emergency Controls</label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px; margin-top:5px;">
+                        <input type="checkbox" name="inStoreOnly" ${inStoreOnly ? 'checked' : ''}> 
+                        Disable Online Payments (In-Store/Cash Only)
+                    </label>
                 </div>
 
-                <div class="form-actions-split" style="justify-content: flex-end;">
-                    <button type="submit" class="button-primary">Save Configuration</button>
+                <!-- 2. Zoom Control -->
+                <div class="form-group">
+                    <label>Global Zoom (Scale)</label>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="button-secondary small zoom-btn" data-val="95%">95%</button>
+                        <button type="button" class="button-secondary small zoom-btn" data-val="100%">100%</button>
+                    </div>
+                    <input type="hidden" name="zoomLevel" id="zoom-input" value="${currentZoom}">
+                    <p id="zoom-display" style="font-size:0.8rem; color:#666; margin-top:5px;">Current: ${currentZoom}</p>
+                </div>
+
+                <!-- 3. Spacing Controls -->
+                <div class="form-group">
+                    <label>Global Padding (Container)</label>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="-2">-</button>
+                        <input type="text" name="globalPadding" id="padding-input" value="${currentPadding}" readonly style="width:60px; text-align:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="2">+</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Section Margins (Vertical)</label>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="-2">-</button>
+                        <input type="text" name="sectionMargin" id="margin-input" value="${currentMargin}" readonly style="width:60px; text-align:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="2">+</button>
+                    </div>
+                </div>
+
+                <div class="form-actions-split" style="justify-content: flex-end; margin-top:20px;">
+                    <button type="submit" class="button-primary">Save All Changes</button>
                 </div>
             </form>
         </div>
@@ -140,54 +164,72 @@ function showGodModeConfigModal() {
 
     uiUtils.showModal(modalHTML);
 
-    // Attach Listeners
     const form = document.getElementById('god-config-form');
-    
-    // Live Preview Listener
-    form.addEventListener('change', (e) => {
-        if (e.target.name === 'spinnerType') {
-            const newType = e.target.value;
-            // Apply immediately to see the change (e.g. in the auth spinner if visible)
-            uiUtils.setGlobalSpinner(newType);
-            uiUtils.showToast(`Previewing: ${newType} spinner`, 'info');
+
+    // -- Handlers for Buttons --
+    form.addEventListener('click', (e) => {
+        // Zoom Buttons
+        if (e.target.matches('.zoom-btn')) {
+            const val = e.target.dataset.val;
+            document.getElementById('zoom-input').value = val;
+            document.getElementById('zoom-display').textContent = `Current: ${val}`;
+            document.body.style.zoom = val; // Live Preview
+        }
+        // Increment/Decrement Buttons
+        if (e.target.matches('.adjust-btn')) {
+            const targetId = e.target.dataset.target;
+            const step = parseInt(e.target.dataset.step, 10);
+            const input = document.getElementById(targetId);
+            
+            let currentVal = parseInt(input.value, 10) || 0;
+            let newVal = Math.max(0, currentVal + step) + 'px';
+            input.value = newVal;
+
+            // Live Preview
+            if (targetId === 'padding-input') document.documentElement.style.setProperty('--global-padding', newVal);
+            if (targetId === 'margin-input') document.documentElement.style.setProperty('--section-margin', newVal);
         }
     });
 
-    // Save Listener
+    // -- Save Handler --
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(form);
-        const newSpinnerType = formData.get('spinnerType');
-
         const btn = form.querySelector('button[type="submit"]');
         btn.textContent = "Saving...";
         btn.disabled = true;
 
+        const formData = new FormData(form);
+        const updates = {
+            paymentConfig: { 
+                ...settings.paymentConfig, // Keep existing rules (maxCashAmount etc)
+                inStoreOnly: formData.get('inStoreOnly') === 'on' 
+            },
+            themeVariables: {
+                ...settings.themeVariables,
+                '--site-zoom': formData.get('zoomLevel'),
+                '--global-padding': formData.get('globalPadding'),
+                '--section-margin': formData.get('sectionMargin')
+            }
+        };
+
         try {
-            // 1. Local Storage (Instant)
-            uiUtils.setGlobalSpinner(newSpinnerType);
-
-            // 2. Database (Persist for everyone)
             const { data: { session } } = await supabase.auth.getSession();
-            await useAppStore.getState().siteSettings.updateSiteSettings(
-                { spinnerType: newSpinnerType }, 
-                session?.access_token
-            );
-
-            uiUtils.showToast('Global configuration saved!', 'success');
+            await useAppStore.getState().siteSettings.updateSiteSettings(updates, session?.access_token);
+            uiUtils.showToast('Config Saved!', 'success');
             uiUtils.closeModal();
-        } catch (error) {
-            console.error("Config Save Failed:", error);
-            uiUtils.showToast('Failed to save config.', 'error');
-            btn.textContent = "Save Configuration";
+        } catch (err) {
+            console.error(err);
+            uiUtils.showToast('Save failed', 'error');
             btn.disabled = false;
+            btn.textContent = "Save All Changes";
         }
     });
 }
 
-// --- INTERNAL DEBUG LOG VIEWER (Fallback if not global) ---
 function showDebugLogModalInternal() {
+    // ... (Same as before, but wrap in a container div with class 'debug-modal-container' for easy closing)
     const logs = window.__LOG_HISTORY__ || [];
+    // ... rowsHTML generation ...
     const rowsHTML = logs.map(log => {
         let color = log.type === 'error' ? '#ffcccc' : (log.type === 'warn' ? '#fff4cc' : '#f8f9fa');
         return `<tr style="background:${color}">
@@ -198,15 +240,15 @@ function showDebugLogModalInternal() {
     }).join('');
 
     const modalHTML = `
-        <div style="height:80vh; display:flex; flex-direction:column;">
-            <h2 style="margin:0 0 10px 0">Debug Console</h2>
-            <div style="margin-bottom:10px">
-                <button class="button-secondary small" onclick="location.reload()">Reload App</button>
+        <div class="debug-modal-container" style="height:80vh; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h2 style="margin:0">Debug Console</h2>
+                <button class="button-secondary small" onclick="document.querySelector('.debug-modal-container').closest('.modal-overlay').click()">Close (X)</button>
             </div>
             <div style="flex:1; overflow:auto; border:1px solid #ccc;">
                 <table style="width:100%; border-collapse:collapse;">
-                    <thead style="position:sticky; top:0; background:#eee;">
-                        <tr><th style="text-align:left">Time</th><th style="text-align:left">Type</th><th style="text-align:left">Message</th></tr>
+                    <thead>
+                        <tr><th style="text-align:left">Time</th><th>Type</th><th>Message</th></tr>
                     </thead>
                     <tbody>${rowsHTML}</tbody>
                 </table>

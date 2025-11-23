@@ -1,20 +1,29 @@
-/* src/assets/css/style.css */
-
-/* Define CSS variables for theming in the :root */
+/* ==========================================================================
+   1. VARIABLES & THEMING
+   ========================================================================== */
 :root {
+    /* --- Colors --- */
     --primary-color: #4d2909;
     --secondary-color: #6c757d;
     --background-color: #ffffff;
     --surface-color: #f8f9fa;
     --text-color: #212529;
     --border-color: #dee2e6;
+    
+    /* --- Layout Controls (Updated via God Mode) --- */
+    --global-padding: 1rem;
+    --section-margin: 2rem;
     --border-radius: 0.25rem;
-    --font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif;
+    --site-zoom: 100%;
+
+    /* --- Typography --- */
+    --font-family-main-name: system-ui;
+    --font-family-sans-serif: var(--font-family-main-name), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Example of a dark theme override, toggled by a class on the <html> element */
+/* Dark Mode Override */
 html.dark {
-    --primary-color: #fa3a18; /* A lighter orange for dark mode */
+    --primary-color: #fa3a18;
     --secondary-color: #8c96a2;
     --background-color: #121212;
     --surface-color: #1e1e1e;
@@ -22,62 +31,52 @@ html.dark {
     --border-color: #333;
 }
 
-/* Basic Reset & Global Styles */
-*, *::before, *::after {
-    box-sizing: border-box;
-}
+/* Apply God Mode Zoom */
+html { zoom: var(--site-zoom); }
+
+/* ==========================================================================
+   2. RESET & BASE STYLES
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
     margin: 0;
+    padding-bottom: 60px; /* Space for Footer/Toolbar */
     font-family: var(--font-family-sans-serif);
     font-size: 1rem;
-    font-weight: 400;
     line-height: 1.5;
     color: var(--text-color);
     background-color: var(--background-color);
-    -webkit-font-smoothing: antialiased;
-    transition: color 0.2s, background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
 }
 
+h1, h2, h3, h4 { margin-top: 0; color: var(--text-color); }
+p { margin-bottom: 1rem; }
+img { max-width: 100%; height: auto; display: block; }
+ul { list-style: none; padding: 0; margin: 0; }
 
-/* --- Core Layout & Header/Footer Styles --- */
-#main-header {
-    background-color: var(--surface-color);
-    border-bottom: 1px solid var(--border-color);
-    padding: 0 1rem;
-}
-
-#main-header nav {
+/* ==========================================================================
+   3. LAYOUT STRUCTURE
+   ========================================================================== */
+#app {
+    min-height: 100vh;
     display: flex;
-    align-items: center;
-    gap: 1.5rem;
+    flex-direction: column;
+}
+
+#main-content {
+    flex: 1;
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
-    height: 60px;
+    padding: var(--global-padding);
+    /* Entry Animation */
+    animation: fade-content-up 0.6s ease-out;
 }
 
-#main-header h1 {
-    margin-right: auto; /* Pushes nav links to the right */
-    font-size: 1.5rem;
-    color: var(--primary-color);
-}
-
-.nav-link {
-    text-decoration: none;
-    color: var(--text-color);
-    padding: 0.5rem 0;
-    position: relative;
-    transition: color 0.2s;
-}
-
-.nav-link:hover {
-    color: var(--primary-color);
-}
-
-.nav-link.active {
-    font-weight: bold;
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
+@keyframes fade-content-up {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 #main-footer {
@@ -89,1897 +88,306 @@ body {
     color: var(--secondary-color);
 }
 
-/* --- General Component & Typography Styles --- */
-
-h1, h2, h3, h4 {
-    color: var(--text-color);
-}
-
-.button-link {
-    display: inline-block;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 0.5rem 1rem;
-    text-decoration: none;
-    border-radius: var(--border-radius);
-}
-
-.error-message, .notice-message, .empty-state {
-    text-align: center;
-    padding: 2rem;
-    background-color: var(--surface-color);
-    border: 1px dashed var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-.loading-spinner {
-    text-align: center;
-    padding: 2rem;
-    font-size: 1.2rem;
-}
-
-
-
-
-
-
-
-#app {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-main {
-    flex-grow: 1;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
-}
-
-.initial-loader {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    font-size: 1.5rem;
-}
-
-/* --- Toast Notifications --- */
-#toast-container {
-    position: fixed;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 300px;
-}
-
-/* Position classes that will be set by the JS */
-.toast-container-bottom-right { bottom: 20px; right: 20px; align-items: flex-end; }
-.toast-container-bottom-center { bottom: 20px; left: 50%; transform: translateX(-50%); align-items: center; }
-.toast-container-top-right { top: 20px; right: 20px; align-items: flex-end; }
-.toast-container-top-center { top: 20px; left: 50%; transform: translateX(-50%); align-items: center; }
-
-
-.toast {
-    padding: 15px 20px;
-    border-radius: var(--border-radius, 4px);
-    color: #fff;
-    font-size: 0.9rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    width: 100%;
-}
-.toast-container-top-right .toast,
-.toast-container-top-center .toast {
-    transform: translateY(-20px);
-}
-
-
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.toast.toast-info { background-color: var(--secondary-color, #6c757d); }
-.toast.toast-success { background-color: #28a745; }
-.toast.toast-error { background-color: #dc3545; }
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Cart Page Styles --- */
-.cart-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.cart-item:last-child {
-    border-bottom: none;
-}
-
-.cart-item-image {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: var(--border-radius);
-}
-
-.cart-item-details {
-    flex-grow: 1;
-}
-
-.cart-item-name,
-.cart-item-price {
-    margin: 0 0 0.25rem 0;
-}
-
-.cart-item-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.quantity-selector {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-.quantity-btn,
-.remove-item-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0.5rem;
-    color: var(--text-color);
-}
-
-.remove-item-btn {
-    font-size: 1.5rem;
-    color: var(--secondary-color);
-}
-
-.quantity-input {
-    width: 40px;
-    text-align: center;
-    border: none;
-    border-left: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    padding: 0.5rem 0;
-    font-size: 1rem;
-    background-color: transparent;
-    color: var(--text-color);
-    -moz-appearance: textfield; /* Firefox */
-}
-.quantity-input::-webkit-outer-spin-button,
-.quantity-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-
-.cart-item-subtotal {
-    font-weight: bold;
-    min-width: 70px; /* Align totals */
-    text-align: right;
-}
-
-.cart-summary {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 2px solid var(--border-color);
-    text-align: right;
-}
-
-.cart-total {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.button-primary {
-    background-color: var(--primary-color);
-    color: #fff;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.button-primary:hover {
-    opacity: 0.9;
-}
-
-
-
-/* --- Active Navigation Link Style --- */
-#main-header nav a.active {
-    text-decoration: underline;
-    font-weight: bold;
-}
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Auth UI Styles --- */
-#auth-status-container {
-    margin-left: auto; /* Pushes auth to the right side of the nav */
-}
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-.button-secondary {
-    background-color: var(--secondary-color);
-    color: #fff;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-}
-.auth-modal .form-group {
-    margin-bottom: 1rem;
-}
-.auth-modal label {
-    display: block;
-    margin-bottom: 0.25rem;
-}
-.auth-modal input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-.auth-modal .form-actions {
-    margin-top: 1.5rem;
-}
-.auth-message {
-    margin-top: 1rem;
-    font-size: 0.9rem;
-    text-align: center;
-}
-.auth-message.error { color: #dc3545; }
-.auth-message.success { color: #28a745; }
-.auth-message.info { color: var(--secondary-color); }
-
-/* Generic Modal Styles (for uiUtils) */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-.modal-content {
-    background-color: var(--background-color);
-    padding: 0.5rem;
-    border-radius: var(--border-radius);
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    position: relative;
-}
-.modal-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-color);
-}
-
-
-/* --- Owner Dashboard Styles --- */
-.dashboard-container {
-    padding: 1rem;
-}
-.dashboard-section {
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin-top: 2rem;
-}
-.table-actions {
-    margin-bottom: 1rem;
-    text-align: right;
-}
-.table-wrapper {
-    overflow-x: auto;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-}
-th, td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-th {
-    background-color: var(--surface-color);
-}
-.form-actions-split {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1.5rem;
-}
-.button-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-
-
-
-
-
-
-/* --- God Mode Impersonation Toolbar --- */
-#god-mode-toolbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #000;
-    color: #fff;
-    z-index: 99999;
-    padding: 10px 20px;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
-}
-
-.toolbar-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.toolbar-label {
-    font-size: 0.9rem;
-}
-
-.toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.toolbar-btn {
-    background-color: #444;
-    color: #fff;
-    border: 1px solid #666;
-    padding: 5px 10px;
-    cursor: pointer;
-    border-radius: var(--border-radius);
-    font-size: 0.8rem;
-    transition: background-color 0.2s;
-}
-
-.toolbar-btn:hover {
-    background-color: #555;
-}
-
-.toolbar-btn.stop-btn {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-
-
-
-
-
-
-/* 
-#main-content {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: static !important;
-    min-height: 300px;
-    border: 5px dashed red !important;
-}
-
-#main-content * {
-
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    color: blue !important;
-    border: 1px dotted blue !important;
-} */
-
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Menu Category Tabs --- */
-.menu-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sub-tabs-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 1rem;
-}
-
-.sub-tab-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    color: var(--secondary-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.sub-tab-button:hover {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.sub-tab-button.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    font-weight: bold;
-}
-
-
-/* --- Side-by-Side Auth Modal Styles --- */
-.auth-modal-container {
-    display: flex;
-    gap: 2rem;
-    align-items: flex-start;
-}
-
-.auth-form-section {
-    flex: 1;
-}
-
-.auth-divider {
-    width: 1px;
-    background-color: var(--border-color);
-    align-self: stretch;
-}
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Category Manager (Owner Dashboard) --- */
-#category-manager {
-    margin-top: 1.5rem;
-}
-
-#category-list {
-    list-style: none;
-    padding: 0;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-.category-list-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.category-list-item:last-child {
-    border-bottom: none;
-}
-
-.drag-handle {
-    cursor: grab;
-    margin-right: 1rem;
-    color: var(--secondary-color);
-    font-family: monospace; /* Makes the handle look more uniform */
-}
-
-.category-name {
-    flex-grow: 1;
-}
-
-.category-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.button-secondary.small,
-.button-danger.small {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-.add-category-form {
-    margin-top: 1rem;
-    display: flex;
-    gap: 10px;
-}
-
-#new-category-name {
-    flex-grow: 1;
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Menu Category Tabs (Public Page) --- */
-.menu-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sub-tabs-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 1rem;
-}
-
-.sub-tab-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 999px; /* Pill shape */
-    color: var(--secondary-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.sub-tab-button:hover {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.sub-tab-button.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    font-weight: bold;
-}
-
-/* --- Category Manager (Owner Dashboard) --- */
-#category-manager {
-    margin-top: 1.5rem;
-}
-
-#category-list {
-    list-style: none;
-    padding: 0;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-.category-list-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
-}
-.category-list-item:last-child { border-bottom: none; }
-
-.drag-handle {
-    cursor: grab;
-    margin-right: 1rem;
-    color: var(--secondary-color);
-    font-size: 1.2rem;
-}
-.drag-handle:active { cursor: grabbing; }
-
-.category-name {
-    flex-grow: 1;
-}
-
-.category-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.button-secondary.small,
-.button-danger.small {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-.add-category-form {
-    margin-top: 1rem;
-    display: flex;
-    gap: 10px;
-}
-
-#new-category-name {
-    flex-grow: 1;
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
-
 /* ==========================================================================
-   9. Mobile Responsiveness & Hamburger Menu
+   4. HEADER & NAVIGATION (Grid Layout)
    ========================================================================== */
-
-/* --- Hamburger Menu Icon --- */
-.hamburger-button {
-    display: none; /* Hidden on desktop */
-    position: relative;
-    width: 30px;
-    height: 22px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    z-index: 1002; /* Above the overlay, below the panel */
-}
-
-.hamburger-button span {
-    display: block;
-    position: absolute;
-    height: 3px;
-    width: 100%;
-    background: var(--text-color);
-    border-radius: 3px;
-    opacity: 1;
-    left: 0;
-    transform: rotate(0deg);
-    transition: .25s ease-in-out;
-}
-.hamburger-button span:nth-child(1) { top: 0px; }
-.hamburger-button span:nth-child(2) { top: 9px; }
-.hamburger-button span:nth-child(3) { top: 18px; }
-
-/* Hamburger 'X' state */
-.hamburger-button.open span:nth-child(1) { top: 9px; transform: rotate(135deg); }
-.hamburger-button.open span:nth-child(2) { opacity: 0; left: -30px; }
-.hamburger-button.open span:nth-child(3) { top: 9px; transform: rotate(-135deg); }
-
-/* --- Off-Canvas Mobile Menu Panel --- */
-.mobile-menu-panel {
-    display: none; /* Hidden on desktop */
-    position: fixed;
-    top: 0;
-    right: -300px; /* Start off-screen */
-    width: 280px;
-    height: 100%;
-    background: var(--background-color);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-    z-index: 1001;
-    padding-top: 80px; /* Space for header */
-    transition: right 0.3s ease-in-out;
-}
-.mobile-menu-panel.open {
-    right: 0;
-}
-.mobile-menu-panel nav {
-    display: flex;
-    flex-direction: column;
-}
-.mobile-menu-panel nav a {
-    color: var(--text-color);
-    text-decoration: none;
-    font-size: 1.2rem;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-.mobile-menu-panel nav a:hover {
-    background-color: var(--surface-color);
-}
-
-/* --- Media Query for Mobile and Tablet --- */
-@media (max-width: 768px) {
-    /* Hide the desktop navigation links */
-    #main-header nav a.nav-link,
-    #main-header nav #auth-status-container {
-        display: none;
-    }
-    
-    /* Show the hamburger button */
-    .hamburger-button {
-        display: block;
-        margin-left: auto; /* Push it to the right */
-    }
-    
-    /* Show the mobile menu panel */
-    .mobile-menu-panel {
-        display: block;
-    }
-
-    /* Make the auth modal stack vertically */
-    .auth-modal-container {
-        flex-direction: column;
-    }
-    .auth-divider {
-        width: 100%;
-        height: 1px;
-        margin: 1rem 0;
-    }
-
-    /* Make menu item cards take up full width */
-    .menu-items-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-
-
-/* --- Image Uploader (Owner Dashboard) --- */
-.image-upload-group {
-    margin-top: 1rem;
-}
-#image-preview {
-    max-width: 150px;
-    max-height: 150px;
-    width: auto;
-    height: auto;
-    object-fit: cover;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    display: block;
-    margin-bottom: 0.5rem;
-}
-/* Hide the default file input */
-#item-image-upload {
-    display: none;
-}
-/* Style the label as a button */
-.image-upload-group label.button-secondary {
-    display: inline-block;
-    cursor: pointer;
-    margin-right: 10px;
-}
-#image-upload-filename {
-    font-size: 0.9rem;
-    color: var(--secondary-color);
-}
-
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Click-to-Call Phone Icon --- */
-.phone-icon {
-    display: flex; /* Will be set to 'flex' by JS when active */
-    align-items: center;
-    justify-content: center;
-    margin-left: 1rem;
-    color: var(--primary-color);
-    transition: transform 0.2s ease;
-}
-
-.phone-icon svg {
-    width: 28px;
-    height: 28px;
-}
-
-.phone-icon:hover {
-    transform: scale(1.1);
-}
-
-/* Hide the phone icon on the checkout page.
-   We can do this with a body class that our router will set. */
-body.on-checkout-page #phone-icon-link {
-    display: none;
-}
-
-
-/* In /src/assets/css/style.css */
-
-/* --- User Management Table (Manager Dashboard) --- */
-.role-badge {
-    padding: 0.2em 0.6em;
-    font-size: 0.8rem;
-    font-weight: bold;
-    border-radius: 999px;
-    color: white;
-}
-.role-customer { background-color: var(--secondary-color); }
-.role-owner { background-color: #007bff; }
-.role-manager { background-color: #dc3545; }
-
-
-/* src/assets/css/style.css */
-/* ... (keep all your existing styles) ... */
-
-/* --- Image Uploader (Owner Dashboard Modal) --- */
-.image-upload-group {
-    margin-top: 1rem;
-    border-top: 1px solid var(--border-color);
-    padding-top: 1rem;
-}
-
-#image-preview {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-    display: block;
-    margin-bottom: 1rem;
-}
-
-/* Visually hide the default file input but keep it accessible */
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-}
-
-/* Style the label to look like a button */
-.image-upload-group label.button-secondary {
-    display: inline-block;
-    cursor: pointer;
-    margin-right: 10px;
-    vertical-align: middle;
-}
-
-#image-upload-filename {
-    font-size: 0.9rem;
-    color: var(--secondary-color);
-    vertical-align: middle;
-}
-
-.progress-bar {
-    width: 100%;
-    background-color: var(--surface-color);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-    margin-top: 0.5rem;
-    overflow: hidden;
-}
-
-.progress-bar-inner {
-    height: 10px;
-    width: 100%; /* For an indeterminate loader */
-    background-color: var(--primary-color);
-    /* Basic indeterminate animation */
-    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
-    background-size: 1rem 1rem;
-    animation: progress-bar-stripes 1s linear infinite;
-}
-
-@keyframes progress-bar-stripes {
-    from { background-position: 1rem 0; }
-    to { background-position: 0 0; }
-}
-
-
-
-/* In /src/assets/css/style.css */
-
-/* --- Order History Page --- */
-.order-history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.order-history-card {
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 1rem 1.5rem;
-}
-
-.order-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-}
-.order-card-header h4, .order-card-header p {
-    margin: 0;
-}
-
-.order-card-items {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 1rem;
-}
-.order-card-items li {
-    padding: 0.25rem 0;
-}
-
-.order-card-actions {
-    text-align: right;
-}
-
-
-
-.mobile-auth-section {
-    margin-top: 2rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-}
-
-
-
-
-/* In /src/assets/css/style.css */
-
-@media (max-width: 768px) {
-    /* --- Header & Nav on Mobile --- */
-    #main-header nav {
-        flex-wrap: wrap; /* Allow items to wrap to the next line */
-        height: auto; /* Allow header to grow */
-        padding: 10px 0;
-    }
-
-    /* Hide the desktop nav links */
-    #main-header nav a.nav-link {
-        display: none;
-    }
-    
-    /* Show the hamburger button */
-    .hamburger-button {
-        display: block;
-        order: 3; /* Move it to the end */
-        margin-left: auto; /* Push it to the far right */
-    }
-
-    #main-header h1 {
-        margin-right: 0; /* Remove the auto margin */
-    }
-    
-    /* Make the auth container take up the full width on the next line */
-    #main-header nav #auth-status-container {
-        display: block; /* Make it visible */
-        flex-basis: 100%; /* Take up the full width */
-        order: 4; /* Ensure it's on the second line */
-        text-align: center; /* Center the buttons */
-        margin-top: 10px;
-    }
-
-}
-
-
-/* === DYNAMIC COFFEE SPINNER STYLES === */
-
-/* 
-  ANNOTATION: This is the main SVG container for the spinner.
-  - We define a CSS variable `--spinner-color` here. This is the key to our
-    dynamic color system. It starts as a default greyscale color.
-  - The `opacity` makes it slightly transparent as requested.
-*/
-.dynamic-coffee-spinner {
-  width: 80px;
-  height: 80px;
-  opacity: 0.85;
-  --spinner-color: #b0b0b0; /* Initial greyscale color */
-}
-
-/* 
-  ANNOTATION: Target the cup's outline paths.
-  - The `stroke` is set to our CSS variable.
-  - The `transition` property is crucial. It tells the browser to animate
-    any changes to the `stroke` color over a 1-second period.
-*/
-.dynamic-coffee-spinner .cup-outline {
-  stroke: var(--spinner-color);
-  transition: stroke 1s ease-in-out;
-}
-
-/* 
-  ANNOTATION: Target the steam lines.
-  - Their `stroke` is also tied to our CSS variable.
-  - They also get the 1-second color transition.
-  - The `animation` property applies our pulsing effect.
-*/
-.dynamic-coffee-spinner .steam-line {
-  stroke: var(--spinner-color);
-  transition: stroke 1s ease-in-out;
-  animation: steam-pulse 2.1s infinite ease-in-out;
-}
-
-/* 
-  ANNOTATION: We use different animation delays for each steam line
-  to make them pulsate out of sync, which looks more natural.
-*/
-.dynamic-coffee-spinner .steam-2 {
-  animation-delay: 0.7s;
-}
-.dynamic-coffee-spinner .steam-3 {
-  animation-delay: 1.4s;
-}
-
-/* 
-  ANNOTATION: This is the keyframe animation for the steam pulse.
-  - It animates the `opacity` of the steam lines from invisible (0)
-    to visible (1) and back, creating the gentle pulsing effect.
-*/
-@keyframes steam-pulse {
-  0% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* Helper to show/hide the correct spinner box */
-#dynamic-spinner-box.hidden {
-    display: none;
-}
-
-
-
-/* === DYNAMIC COFFEE SPINNER STYLES (UPDATED) === */
-.dynamic-coffee-spinner {
-  width: 90px; /* Slightly larger for the new design */
-  height: 90px;
-  opacity: 0.85;
-  --spinner-color: #b0b0b0; 
-}
-
-.dynamic-coffee-spinner .cup-outline {
-  stroke: var(--spinner-color);
-  transition: stroke 1s ease-in-out;
-}
-
-.dynamic-coffee-spinner .steam-line {
-  stroke: var(--spinner-color);
-  transition: stroke 1s ease-in-out;
-  /* Use a transform to make the steam rise */
-  animation: steam-rise 2.1s infinite ease-in-out;
-}
-
-.dynamic-coffee-spinner .steam-2 { animation-delay: 0.7s; }
-.dynamic-coffee-spinner .steam-3 { animation-delay: 1.4s; }
-
-/* A more subtle rising and fading animation for the new steam lines */
-@keyframes steam-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-/* Add a transition for hiding the initial loader */
-.initial-app-loader.hidden {
-    opacity: 0;
-    transition: opacity 0.5s ease-out;
-}
-
-
-
-/* --- Modal Form Styles --- */
-.modal-form-container {
-    font-family: inherit;
-    color: #333;
-}
-.modal-form-container h3 {
-    margin-top: 0;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-.form-row {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 15px;
-    text-align: left;
-}
-.form-row label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 6px;
-    color: #444;
-}
-.form-row input[type="text"],
-.form-row input[type="number"],
-.form-row select,
-.form-row textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-}
-.form-row input:focus,
-.form-row select:focus,
-.form-row textarea:focus {
-    border-color: var(--primary-color, #a923e7);
-    outline: none;
-}
-.form-row textarea {
-    min-height: 80px;
-    resize: vertical;
-    font-family: inherit;
-}
-.image-upload-wrapper {
-    background: #f9f9f9;
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-.image-preview-container img {
-    max-height: 150px;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 10px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-.file-info {
-    font-size: 0.85rem;
-    color: #666;
-    margin-top: 5px;
-}
-.form-actions-split {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 25px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
-}
-/* File Input Helper */
-.visually-hidden {
-    position: absolute !important;
-    height: 1px; width: 1px;
-    overflow: hidden;
-    clip: rect(1px 1px 1px 1px);
-}
-.upload-btn-label {
-    display: inline-block;
-    padding: 8px 16px;
-    background-color: #e9ecef;
-    color: #333;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    border: 1px solid #ced4da;
-}
-.upload-btn-label:hover {
-    background-color: #dde0e3;
-}
-/* Table Sorting Styles */
-th.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-}
-th.sortable:hover {
-    background-color: rgba(0,0,0,0.05);
-}
-th.sortable::after {
-    content: '↕';
-    font-size: 0.8em;
-    margin-left: 5px;
-    opacity: 0.3;
-}
-th.sortable.asc::after { content: '↑'; opacity: 1; }
-th.sortable.desc::after { content: '↓'; opacity: 1; }
-
-/* Delete Button in Table */
-.delete-icon-btn {
-    background: none;
-    border: none;
-    color: #b32c3a;
-    font-weight: bold;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0 8px;
-    line-height: 1;
-    margin-left: 10px;
-}
-.delete-icon-btn:hover {
-    color: #a71d2a;
-    transform: scale(1.1);
-}
-
-
-/* --- Mini Auth Spinner --- */
-.auth-loading-spinner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 32px;
-    width: 32px;
-    color: var(--primary-color); /* Takes the theme color */
-}
-
-.auth-loading-spinner svg {
-    height: 100%;
-    width: 100%;
-    animation: mini-pulse 1.5s infinite ease-in-out;
-}
-
-.mini-steam {
-    opacity: 0;
-    animation: mini-steam-rise 1.5s infinite;
-}
-.mini-steam:nth-child(3) { animation-delay: 0s; }
-.mini-steam:nth-child(4) { animation-delay: 0.2s; }
-.mini-steam:nth-child(5) { animation-delay: 0.4s; }
-
-@keyframes mini-pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(0.9); opacity: 0.8; }
-}
-
-@keyframes mini-steam-rise {
-    0% { transform: translateY(0); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateY(-10px); opacity: 0; }
-}
-
-/* --- Role Badges in Header --- */
-.role-badge {
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin: 0 5px;
-    font-weight: bold;
-    text-transform: uppercase;
-    vertical-align: middle;
-}
-.role-badge.manager { background: #831111; color: white; }
-.role-badge.owner { background: #186b2b; color: white; }
-
-
-/* --- Fix Mobile Header Clicks --- */
-#main-header {
-    position: sticky; /* or relative/fixed depending on your layout */
-    top: 0;
-    /* Ensure header is ABOVE the mobile menu panel's container */
-    z-index: 1100; 
-}
-
-.mobile-menu-panel {
-    /* ... existing styles ... */
-    z-index: 1050; 
-    /* CRITICAL: Prevent invisible panel from blocking clicks */
-    pointer-events: none; 
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.mobile-menu-panel.open {
-    /* Re-enable clicks only when open */
-    pointer-events: auto; 
-    opacity: 1;
-}
-
-
-/* --- MAIN HEADER (Grid Layout) --- */
 #main-header {
     position: sticky;
     top: 0;
-    z-index: 1100; /* Above everything */
-    background-color: var(--background-color);
+    z-index: 1000; /* Base Header Layer */
+    background-color: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
     height: 60px;
-    padding: 0 1rem;
-    
-    /* GRID MAGIC: 3 Columns (Left, Center, Right) */
+    padding: 0 var(--global-padding);
+
+    /* Grid: Left (Empty/Burger), Center (Logo), Right (Nav) */
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
 }
 
-/* The Logo (Default: Center) */
+/* Logo (Center) */
 #main-header h1 {
     grid-column: 2;
-    margin: 0;
     font-size: 1.5rem;
+    color: var(--primary-color);
+    margin: 0;
     white-space: nowrap;
     text-align: center;
-    color: var(--primary-color);
+    line-height: 1;
 }
 
-/* The Right-Side Actions (Cart, Auth, Burger) */
+.site-logo { max-height: 45px; width: auto; margin: 0 auto; }
+
+/* Nav Area (Right) */
 #main-header nav {
     grid-column: 3;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Push to right */
-    gap: 15px;
-}
-
-/* --- LAYOUT VARIANTS (Applied via JS classes) --- */
-
-/* Variant: Logo Left */
-#main-header.logo-align-left h1 {
-    grid-column: 1; /* Move to left */
-    text-align: left;
-}
-#main-header.logo-align-left nav {
-    grid-column: 2 / 4; /* Nav takes up remaining space */
-}
-
-/* Variant: Hamburger on the Left */
-/* We move the hamburger OUT of the nav and into the first grid column via JS logic later, 
-   OR we use 'order' property if we keep it in flex container. 
-   Simplest way visually: Absolute positioning for the burger if moved left, or using a specific slot. */
-#main-header.hamburger-left nav {
-    /* When burger is left, Nav is just Cart + Auth */
     justify-content: flex-end;
+    gap: 1.5rem;
+    height: 100%;
 }
 
-#main-header.hamburger-left .hamburger-button {
-    /* Break out of the nav flow and sit on the far left */
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
+.nav-link {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: color 0.2s;
 }
+.nav-link:hover, .nav-link.active { color: var(--primary-color); }
 
-/* --- COMPONENTS --- */
+/* Auth Status Wrapper */
+#auth-status-container { display: flex; align-items: center; gap: 10px; }
 
-/* Auth Container & Spinner */
-#auth-status-container {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Vertically & Horizontally centers spinner */
-    min-width: 32px;
-    height: 32px;
-}
-
-/* Hamburger Button (No Floating) */
+/* ==========================================================================
+   5. MOBILE MENU & HAMBURGER
+   ========================================================================== */
+/* The Button */
 .hamburger-button {
+    display: none; /* Hidden on desktop */
+    width: 30px;
+    height: 24px;
     background: none;
     border: none;
     cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    width: 30px;
-    height: 25px;
+    position: relative;
     padding: 0;
-    z-index: 1101; /* Above the panel */
-    /* Remove float */
+    
+    /* Z-INDEX CRITICAL: Must be > Mobile Panel (2000) */
+    z-index: 2001; 
+    
+    flex-direction: column;
+    justify-content: space-between;
 }
+
 .hamburger-button span {
     display: block;
     width: 100%;
     height: 3px;
     background-color: var(--text-color);
-    transition: all 0.3s;
+    border-radius: 2px;
+    transition: all 0.3s ease-in-out;
+    transform-origin: center;
 }
 
-/* --- MOBILE MENU PANEL --- */
-.mobile-menu-panel {
-    position: fixed;
-    top: 0;
-    right: 0; /* Default slide from right */
-    width: 280px; /* Not full width, looks better */
-    height: 100vh;
-    background-color: var(--surface-color);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-    z-index: 1050; /* Below Header */
-    
-    /* Transition */
-    transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
-    
-    /* Fix top content cutoff */
-    padding-top: 80px; /* Push content down below header */
-    box-sizing: border-box;
-}
+/* The "X" Animation */
+.hamburger-button.open span:nth-child(1) { transform: translateY(10.5px) rotate(45deg); }
+.hamburger-button.open span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+.hamburger-button.open span:nth-child(3) { transform: translateY(-10.5px) rotate(-45deg); }
 
-.mobile-menu-panel.open {
-    transform: translateX(0);
-}
-
-/* Mobile Menu Links */
-#mobile-nav-links {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 0 20px;
-}
-
-/* --- RESPONSIVE ADJUSTMENTS --- */
-@media (max-width: 768px) {
-    /* Hide desktop nav links if you had them, keep cart/burger */
-    .nav-link:not([href="#cart"]) {
-        display: none; 
-    }
-    /* Show them in mobile panel instead */
-}
-
-
-.mobile-menu-panel.slide-from-left {
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-}
-.mobile-menu-panel.slide-from-left.open {
-    transform: translateX(0) !important;
-}
-
-
-/* --- 1. INITIAL LOADER STYLES --- */
-.initial-app-loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--background-color);
-    display: flex;
-    justify-content: center; /* Horizontal Center */
-    align-items: center;     /* Vertical Center */
-    z-index: 9999;
-    
-    /* The Fade Out Transition */
-    transition: opacity 0.4s ease-out, visibility 0.4s;
-    opacity: 1;
-    visibility: visible;
-}
-
-/* The class JS will add to hide it */
-.initial-app-loader.fade-out {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
-
-/* The Cup Animation (Gently fades in on start) */
-.dynamic-coffee-spinner {
-    width: 80px;
-    height: 80px;
-    color: var(--primary-color);
-    /* Animation: Fade in + Pulse */
-    animation: spinner-entry 0.5s ease-out forwards, pulse-cup 2s infinite ease-in-out 0.5s;
-    opacity: 0; /* Start invisible, animate in */
-}
-
-@keyframes spinner-entry {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes pulse-cup {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(0.95); opacity: 0.8; }
-}
-
-/* --- 2. PAGE CONTENT ENTRY ANIMATION --- */
-/* This makes the dashboard/menu "slide up" gently when the loader vanishes */
-#main-content, #main-header, #main-footer {
-    animation: fade-content-up 0.6s ease-out;
-}
-
-@keyframes fade-content-up {
-    0% { 
-        opacity: 0; 
-        transform: translateY(10px); 
-    }
-    100% { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-
-
-/* ... Existing Coffee Styles ... */
-
-/* --- HAMMER SPINNER ANIMATIONS --- */
-.dynamic-hammer-spinner {
-    width: 80px;
-    height: 80px;
-    color: var(--primary-color);
-    overflow: visible;
-    opacity: 0;
-    animation: spinner-entry 0.5s ease-out forwards;
-}
-
-.hammer-body {
-    transform-origin: 70px 70px; /* Pivot at the bottom of handle */
-    animation: hammer-swing 1.2s infinite ease-in-out;
-}
-
-.nail-body {
-    animation: nail-hit 1.2s infinite ease-in-out;
-}
-
-@keyframes hammer-swing {
-    0% { transform: rotate(0deg); }
-    30% { transform: rotate(-30deg); } /* Cock back */
-    50% { transform: rotate(10deg); }  /* Hit */
-    65% { transform: rotate(0deg); }   /* Return */
-    100% { transform: rotate(0deg); }
-}
-
-@keyframes nail-hit {
-    0%, 45% { transform: translateY(0); opacity: 1; }
-    50% { transform: translateY(5px); opacity: 0.8; } /* Get hit */
-    55% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(0); opacity: 1; }
-}
-
-
-/* --- HEADER ADJUSTMENTS --- */
-#main-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr; /* Left, Center (Logo), Right (Nav) */
-    align-items: center; /* Fixes vertical alignment */
-    height: 60px;
-    padding: 0 1rem;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 1100;
-}
-
-#main-header h1 {
-    grid-column: 2;
-    margin: 0; /* FIX: Removes default margin causing "hanging low" */
-    line-height: 1; /* FIX: Tightens vertical space */
-    font-size: 1.5rem;
-    text-align: center;
-    color: var(--primary-color);
-}
-
-/* Fix Nav alignment */
-#main-header nav {
-    grid-column: 3;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 15px;
-    height: 100%;
-}
-
-/* --- MOBILE MENU FIXES --- */
+/* The Panel */
 .mobile-menu-panel {
     position: fixed;
     top: 0;
     right: 0;
     width: 280px;
     height: 100vh;
-    background-color: var(--surface-color);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-    z-index: 1050; /* Below Hamburger Button (1102), Below Header (1100) */
+    background: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.15);
     
+    /* Z-INDEX CRITICAL: Above Header (1000), Below Button (2001) */
+    z-index: 2000; 
+    
+    padding-top: 80px; /* Clear header */
     transform: translateX(100%);
     transition: transform 0.3s ease-in-out;
-    
-    /* FIX: Padding to ensure top items aren't hidden behind header */
-    padding-top: 80px; 
-    box-sizing: border-box;
-}
-
-/* --- HAMBURGER BUTTON --- */
-.hamburger-button {
-    /* Ensure it sits on top of everything */
-    z-index: 1102; 
-    position: relative; 
-    /* Remove float, handled by flex/grid */
-}
-
-/* --- GOD MODE D-BUTTON --- */
-/* Move it to the left of the hamburger (assuming hamburger is right: 1rem) */
-#god-mode-debug-btn {
-    /* Override the inline styles from JS via CSS if preferred, or update JS */
-    right: 60px !important; /* Moves it left of the hamburger */
-    top: 12px !important;
-    width: 35px !important; 
-    height: 35px !important;
-}
-
-
-/* --- HEADER GRID (Mobile First) --- */
-#main-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr; /* Left, Logo, Right */
-    align-items: center;
-    height: 60px;
-    padding: 0 1rem;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 1100;
-}
-
-#main-header h1 {
-    grid-column: 2;
-    margin: 0;
-    font-size: 2rem;
-    color: var(--primary-color);
-    text-align: center;
-    line-height: 1;
-    padding-bottom: 20px;
-}
-
-
-#main-header nav {
-    grid-column: 3;
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 15px;
-    height: 100%;
-}
-
-/* --- DESKTOP NAVIGATION (Hidden on Mobile) --- */
-.desktop-nav-link {
-    display: none; /* Hidden by default (Mobile) */
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.hamburger-button {
-    display: flex; /* Visible by default (Mobile) */
     flex-direction: column;
-    justify-content: space-around;
-    width: 24px;
-    height: 20px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    z-index: 1102;
-    padding: 0;
 }
 
-.hamburger-button span {
-    width: 100%;
-    height: 2px;
-    background-color: var(--text-color);
-    transition: 0.3s;
-}
+.mobile-menu-panel.open { transform: translateX(0); }
 
-/* --- MOBILE MENU PANEL --- */
-.mobile-menu-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 280px;
-    height: 100vh;
-    background-color: var(--surface-color);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-    z-index: 1050;
-    transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
-    padding-top: 80px; /* Space for header */
-    box-sizing: border-box;
-}
-
-.mobile-menu-panel.open {
-    transform: translateX(0);
-}
-
-/* --- DESKTOP MEDIA QUERY (The Fix) --- */
-@media (min-width: 769px) {
-    /* Hide Hamburger on Desktop */
-    .hamburger-button {
-        display: none !important;
-    }
-
-    /* Show Links on Desktop */
-    .desktop-nav-link {
-        display: inline-block;
-    }
-
-    /* Hide Mobile Panel on Desktop */
-    .mobile-menu-panel {
-        display: none !important;
-    }
-}
-
-
-/* --- Add these rules to the end of your CSS file --- */
-
-/* 1. Hide Hamburger on Desktop */
-@media (min-width: 769px) {
-    .hamburger-button {
-        display: none !important;
-    }
-    /* Ensure panel is hidden too */
-    .mobile-menu-panel {
-        display: none !important;
-    }
-    /* Ensure desktop links are visible (if you have them in HTML) */
-    .nav-link {
-        display: inline-block;
-    }
-}
-
-/* 2. Mobile Menu Link Visibility */
-/* Ensure text color is readable on the surface color */
 .mobile-menu-panel .nav-link {
     display: block;
-    padding: 15px 0;
+    padding: 1rem 1.5rem;
     font-size: 1.2rem;
-    color: var(--text-color);
-    text-decoration: none;
     border-bottom: 1px solid var(--border-color);
 }
 
-.mobile-menu-panel {
-    /* Ensure high enough Z-index but below D-button */
-    z-index: 1100;
-    padding-top: 80px; /* Push links down below header */
-}
+.mobile-auth-section { padding: 2rem; text-align: center; margin-top: auto; }
 
-/* 3. God Mode D-Button Positioning */
-#god-mode-debug-btn {
-    z-index: 1200 !important; /* Highest priority */
-}
-
-
-/* --- FIX: Z-Index Hierarchy for Mobile Menu --- */
-
-/* 1. The Panel (Background) */
-.mobile-menu-panel {
-    /* High enough to cover page content and header */
-    z-index: 1000 !important; 
-}
-
-/* 2. The Button (Foreground) */
-/* Must be higher than the panel to be visible/clickable when open */
-.hamburger-button {
-    position: relative; /* Required for z-index to apply */
-    z-index: 2001 !important; 
-}
-
-/* 3. God Mode Button (Topmost) */
-#god-mode-debug-btn {
-    z-index: 2002 !important;
-}
-
-/* --- ANIMATION: Hamburger to 'X' Cross --- */
-/* Ensure the spans have the right pivot point */
-.hamburger-button span {
-    transform-origin: center;
-    transition: all 0.3s ease-in-out;
-}
-
-/* Top Line -> Rotates 45deg */
-.hamburger-button.open span:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
-}
-
-/* Middle Line -> Fades out */
-.hamburger-button.open span:nth-child(2) {
-    opacity: 0;
-    transform: translateX(10px); /* Slide out slightly */
-}
-
-/* Bottom Line -> Rotates -45deg */
-.hamburger-button.open span:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
-}
-
-
-/* --- ROBUST HAMBURGER BUTTON --- */
-.hamburger-button {
-    /* 1. Define exact box size so math works */
-    width: 30px;
-    height: 24px; 
-    
-    /* 2. Layout the lines */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* Pushes lines to top, middle, bottom */
-    
-    /* 3. Reset styling */
-    background: none;
+/* ==========================================================================
+   6. COMPONENT STYLES
+   ========================================================================== */
+/* Buttons */
+.button-primary, .button-secondary, .button-danger {
+    padding: 0.6rem 1.2rem;
     border: none;
-    padding: 0;
+    border-radius: var(--border-radius);
     cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+.button-primary { background-color: var(--primary-color); color: white; }
+.button-secondary { background-color: var(--secondary-color); color: white; }
+.button-danger { background-color: #dc3545; color: white; }
+.button-primary:hover, .button-secondary:hover, .button-danger:hover { opacity: 0.9; }
+.button-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.small { padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+
+/* Forms */
+.form-group { margin-bottom: 1rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+input, select, textarea {
+    width: 100%; padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 1rem;
+}
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* Tables */
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+th { background-color: var(--surface-color); }
+.role-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: white; }
+.role-badge.manager { background: #dc3545; }
+.role-badge.owner { background: #28a745; }
+.role-badge.customer { background: var(--secondary-color); }
+
+/* ==========================================================================
+   7. FEATURE STYLES (Menu, Cart, History, Dashboard)
+   ========================================================================== */
+/* Menu */
+.menu-header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+.sub-tabs-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
+.sub-tab-button {
+    padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid var(--border-color);
+    background: var(--surface-color); cursor: pointer;
+}
+.sub-tab-button.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+.menu-items-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;
+    margin-bottom: var(--section-margin);
+}
+.menu-item-card {
+    border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden;
+    transition: transform 0.2s;
+}
+.menu-item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.menu-item-image { width: 100%; height: 180px; object-fit: cover; }
+.menu-item-content { padding: 1rem; }
+.menu-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+.menu-item-price { font-weight: bold; color: var(--primary-color); font-size: 1.1rem; }
+
+/* Cart */
+.cart-item { display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+.quantity-selector { display: flex; border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+.quantity-btn { background: none; border: none; padding: 0.5rem; cursor: pointer; }
+.quantity-input { border: none; width: 40px; text-align: center; }
+
+/* Order History */
+.order-history-list { display: flex; flex-direction: column; gap: 1rem; }
+.order-history-card { background: var(--surface-color); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--border-radius); }
+.order-card-header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+
+/* Admin / Uploads */
+#image-preview { width: 100px; height: 100px; object-fit: cover; border: 1px solid var(--border-color); display: block; margin-bottom: 10px; }
+
+/* ==========================================================================
+   8. UTILITIES (Modals, Toasts, Loaders)
+   ========================================================================== */
+/* Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 3000; /* Highest UI layer */
+}
+.modal-content, .modal-form-container {
+    background: var(--background-color); padding: 2rem;
+    border-radius: var(--border-radius); width: 90%; max-width: 500px;
+    position: relative; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.debug-modal-container { background: white; padding: 20px; width: 90%; height: 80vh; }
+
+/* Toasts */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+.toast { padding: 1rem; border-radius: var(--border-radius); color: white; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease; }
+.toast-success { background: #28a745; }
+.toast-error { background: #dc3545; }
+.toast-info { background: var(--secondary-color); }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* Initial Loader (Full Screen) */
+.initial-app-loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--background-color); z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.4s ease-out, visibility 0.4s;
+}
+.initial-app-loader.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Coffee Spinner Animation */
+.dynamic-coffee-spinner { width: 90px; height: 90px; color: var(--primary-color); opacity: 0.9; }
+.cup-outline { stroke: currentColor; fill: none; transition: stroke 0.5s; }
+.steam-line { stroke: currentColor; fill: none; opacity: 0; animation: steam-rise 2s infinite ease-in-out; }
+.steam-2 { animation-delay: 0.6s; }
+.steam-3 { animation-delay: 1.2s; }
+@keyframes steam-rise {
+    0% { opacity: 0; transform: translateY(5px); }
+    50% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Hammer Spinner Animation */
+.dynamic-hammer-spinner { width: 80px; height: 80px; color: var(--primary-color); }
+.hammer-body { transform-origin: 70px 70px; animation: hammer-swing 1s infinite ease-in-out; }
+.nail-body { animation: nail-hit 1s infinite ease-in-out; }
+@keyframes hammer-swing {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(15deg); }
+    100% { transform: rotate(0deg); }
+}
+@keyframes nail-hit {
+    0%, 40% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+    100% { transform: translateY(0); }
+}
+
+/* Auth Mini Spinner */
+.auth-loading-spinner { width: 24px; height: 24px; color: var(--primary-color); }
+
+/* ==========================================================================
+   9. GOD MODE UI
+   ========================================================================== */
+#god-mode-toolbar {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: #111; color: #fff; padding: 8px;
+    z-index: 5000; display: flex; justify-content: center;
+    font-size: 0.85rem;
+}
+.toolbar-content { display: flex; gap: 1rem; align-items: center; }
+.toolbar-btn { background: #333; color: #fff; border: 1px solid #555; padding: 2px 8px; cursor: pointer; }
+.toolbar-btn.stop-btn { background: var(--primary-color); }
+
+#god-mode-debug-btn {
+    /* Positioned via JS, but enforced here */
+    z-index: 6000 !important; 
+    transition: transform 0.2s;
+}
+#god-mode-debug-btn:hover { transform: scale(1.1); }
+
+/* ==========================================================================
+   10. MEDIA QUERIES (Mobile)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* Hide Desktop Nav */
+    .nav-link:not(.mobile-only) { display: none; }
+    #auth-status-container { display: none; }
     
-    /* 4. Critical: Allow X to extend outside if needed (prevents cutting off) */
-    overflow: visible; 
+    /* Show Hamburger */
+    .hamburger-button { display: flex; }
     
-    /* 5. Z-Index: Keep above the mobile menu panel */
-    position: relative;
-    z-index: 2001 !important; 
-}
-
-.hamburger-button span {
-    display: block;
-    width: 100%;
-    height: 3px; /* Thickness of the lines */
-    background-color: var(--text-color);
-    border-radius: 2px; /* Rounded tips look nicer */
-    
-    /* 6. Animation Physics */
-    transition: all 0.3s ease-in-out;
-    transform-origin: center; /* CRITICAL: Rotate around the center, not the edge */
-}
-
-/* --- THE "X" TRANSFORMATION --- */
-
-/* Top Line: Move down to vertical center and rotate 45deg */
-/* Calculation: (Height 24px / 2) - (Line Height 3px / 2) = ~10.5px move */
-.hamburger-button.open span:nth-child(1) {
-    transform: translateY(10.5px) rotate(45deg);
-}
-
-/* Middle Line: Fade out and slide away */
-.hamburger-button.open span:nth-child(2) {
-    opacity: 0;
-    transform: translateX(-10px); /* Slide left slightly */
-}
-
-/* Bottom Line: Move up to vertical center and rotate -45deg */
-.hamburger-button.open span:nth-child(3) {
-    transform: translateY(-10.5px) rotate(-45deg);
-}
-
-/* --- ENSURE MOBILE MENU STAYS BELOW --- */
-.mobile-menu-panel {
-    z-index: 2000 !important; /* Explicitly lower than button (2001) */
-}
-
-
-/* --- SITE LOGO --- */
-.site-logo {
-    max-height: 45px; /* Fits nicely in 60px header */
-    width: auto;
-    display: block;
-    object-fit: contain;
+    /* Stack Modal */
+    .auth-modal-container { flex-direction: column; }
+    .auth-divider { width: 100%; height: 1px; margin: 1rem 0; }
 }
