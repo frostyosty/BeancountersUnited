@@ -83,4 +83,11 @@ export const getSiteSettings = () => request('/settings', 'GET');
 
 export const createManualOrder = (orderData, token) => request('/manual-order', 'POST', orderData, token);
 
+// --- CRM Functions ---
+export const getCustomerDetails = (userId, token) => 
+    request(`/user/crm?userId=${userId}`, 'GET', null, token);
+
+export const updateCustomerDetails = (data, token) => 
+    request('/user/crm', 'POST', data, token);
+
 console.log("--- [2] apiService.js: END ---");

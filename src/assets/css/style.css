@@ -400,3 +400,102 @@ th { background-color: var(--surface-color); }
         color: var(--text-color);
     }
 }
+
+
+
+/* --- BETTER BUTTON STYLES --- */
+
+/* 1. Modal Close Button (Top Right) */
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50%; /* Perfect Circle */
+    color: var(--text-color);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.modal-close-btn:hover {
+    background-color: #dc3545; /* Red on hover */
+    color: white;
+    border-color: #dc3545;
+    transform: rotate(90deg); /* Spin effect */
+}
+
+/* 2. Delete Icon Button (Trash Can style) */
+.delete-icon-btn, .delete-item-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #dc3545; /* Red text */
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.delete-icon-btn:hover, .delete-item-btn:hover {
+    background-color: #fff5f5;
+    border-color: #dc3545;
+    transform: scale(1.05);
+}
+
+/* Add a generic icon if using text "Delete" */
+.delete-item-btn::before {
+    content: "🗑️"; /* Optional trash icon */
+    font-size: 0.9em;
+}
+
+/* --- Allergen Filters (Menu Page) --- */
+.allergen-filter-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--secondary-color);
+}
+.allergen-filter-btn.active {
+    background-color: #e8f5e9;
+    border-color: #2ecc71;
+    color: #27ae60;
+    font-weight: bold;
+}
+.allergen-filter-btn:hover {
+    background-color: var(--surface-color);
+}
+
+/* Badge on Card */
+.allergen-container {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-left: 5px;
+}
+.allergen-badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: white;
+    font-weight: bold;
+}
+.allergen-badge.GF { background-color: #2ecc71; }
+.allergen-badge.V  { background-color: #27ae60; }
+.allergen-badge.VG { background-color: #9b59b6; }
+.allergen-badge.DF { background-color: #3498db; }

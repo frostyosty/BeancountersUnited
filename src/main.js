@@ -11,7 +11,7 @@ import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
 import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
 import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
-import { initializeImpersonationToolbar } from './features/admin/godModeUI.js';
+import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
 // 1. Run this IMMEDIATELY (before anything else)
@@ -79,7 +79,7 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-        case '#manager-dashboard':
+        case '#god-dashboard':
             if (userRole === 'manager') {
                 console.log(`[Router] Hash is '${hash}'. Calling renderManagerDashboard().`);
                 renderManagerDashboard();

@@ -1,9 +1,10 @@
+// src/features/admin/godTaskbarUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { supabase } from '@/supabaseClient.js'; 
 
 export function initializeImpersonationToolbar() {
-    console.log("[GodModeUI] Initializing subscription...");
+    console.log("[GodTaskbarUI] Initializing subscription...");
     
     useAppStore.subscribe(
         (state) => {
@@ -20,14 +21,11 @@ export function initializeImpersonationToolbar() {
         { fireImmediately: true }
     );
 
-    // --- FIX: D-Key Listener (Attach once) ---
+    // D-Key Listener
     document.addEventListener('keydown', (e) => {
-        // Shift+D to toggle Debug Modal
         if (e.shiftKey && e.key.toLowerCase() === 'd') {
             const { profile } = useAppStore.getState().auth;
-            if (profile?.role === 'manager') {
-                toggleDebugModal();
-            }
+            if (profile?.role === 'manager') toggleDebugModal();
         }
     });
 }
@@ -104,11 +102,12 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
 }
 
 async function showGodModeConfigModal() {
-    // Fetch latest settings to populate form
     const { settings } = useAppStore.getState().siteSettings;
     const currentZoom = settings.themeVariables?.['--site-zoom'] || '100%';
-    const currentPadding = settings.themeVariables?.['--global-padding'] || '20px';
-    const currentMargin = settings.themeVariables?.['--section-margin'] || '20px';
+    const currentPadding = settings.themeVariables?.['--global-padding'] || '1rem';
+    const currentMargin = settings.themeVariables?.['--section-margin'] || '2rem';
+    // NEW: Get current radius (default to 4px if missing)
+    const currentRadius = settings.themeVariables?.['--border-radius'] || '4px';
     const inStoreOnly = settings.paymentConfig?.inStoreOnly || false;
 
     const modalHTML = `
@@ -116,7 +115,7 @@ async function showGodModeConfigModal() {
             <h3>God Config & Layout</h3>
             
             <form id="god-config-form">
-                <!-- 1. Payment Config -->
+                <!-- Payment Config -->
                 <div class="form-group" style="background:#fff0f0; padding:10px; border-radius:5px; border:1px solid #ffcccc;">
                     <label style="color:#d00; font-weight:bold;">Emergency Controls</label>
                     <label style="font-weight:normal; display:flex; align-items:center; gap:10px; margin-top:5px;">
@@ -125,34 +124,44 @@ async function showGodModeConfigModal() {
                     </label>
                 </div>
 
-                <!-- 2. Zoom Control -->
+                <!-- Zoom Control -->
                 <div class="form-group">
-                    <label>Global Zoom (Scale)</label>
+                    <label>Global Zoom</label>
                     <div style="display:flex; gap:10px;">
                         <button type="button" class="button-secondary small zoom-btn" data-val="95%">95%</button>
                         <button type="button" class="button-secondary small zoom-btn" data-val="100%">100%</button>
                     </div>
                     <input type="hidden" name="zoomLevel" id="zoom-input" value="${currentZoom}">
-                    <p id="zoom-display" style="font-size:0.8rem; color:#666; margin-top:5px;">Current: ${currentZoom}</p>
                 </div>
 
-                <!-- 3. Spacing Controls -->
+                <!-- Spacing Controls -->
                 <div class="form-group">
-                    <label>Global Padding (Container)</label>
+                    <label>Global Padding</label>
                     <div style="display:flex; gap:5px; align-items:center;">
-                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="-2">-</button>
-                        <input type="text" name="globalPadding" id="padding-input" value="${currentPadding}" readonly style="width:60px; text-align:center;">
-                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="2">+</button>
+                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="-2" data-unit="px">-</button>
+                        <input type="text" name="globalPadding" id="padding-input" value="${currentPadding}" readonly style="width:70px; text-align:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="padding-input" data-step="2" data-unit="px">+</button>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Section Margins (Vertical)</label>
+                    <label>Section Margins</label>
                     <div style="display:flex; gap:5px; align-items:center;">
-                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="-2">-</button>
-                        <input type="text" name="sectionMargin" id="margin-input" value="${currentMargin}" readonly style="width:60px; text-align:center;">
-                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="2">+</button>
+                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="-2" data-unit="px">-</button>
+                        <input type="text" name="sectionMargin" id="margin-input" value="${currentMargin}" readonly style="width:70px; text-align:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="margin-input" data-step="2" data-unit="px">+</button>
                     </div>
+                </div>
+
+                <!-- NEW: Corner Rounding Control -->
+                <div class="form-group">
+                    <label>Corner Rounding (Border Radius)</label>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="radius-input" data-step="-2" data-unit="px">-</button>
+                        <input type="text" name="borderRadius" id="radius-input" value="${currentRadius}" readonly style="width:70px; text-align:center;">
+                        <button type="button" class="button-secondary small adjust-btn" data-target="radius-input" data-step="2" data-unit="px">+</button>
+                    </div>
+                    <p style="font-size:0.8rem; color:#666; margin-top:5px;">Affects buttons, cards, and inputs.</p>
                 </div>
 
                 <div class="form-actions-split" style="justify-content: flex-end; margin-top:20px;">
@@ -166,32 +175,42 @@ async function showGodModeConfigModal() {
 
     const form = document.getElementById('god-config-form');
 
-    // -- Handlers for Buttons --
     form.addEventListener('click', (e) => {
-        // Zoom Buttons
+        // Zoom
         if (e.target.matches('.zoom-btn')) {
             const val = e.target.dataset.val;
             document.getElementById('zoom-input').value = val;
-            document.getElementById('zoom-display').textContent = `Current: ${val}`;
-            document.body.style.zoom = val; // Live Preview
+            document.body.style.zoom = val; 
         }
-        // Increment/Decrement Buttons
+        
+        // Adjusters (+/-)
         if (e.target.matches('.adjust-btn')) {
             const targetId = e.target.dataset.target;
             const step = parseInt(e.target.dataset.step, 10);
+            const unit = e.target.dataset.unit || 'px';
             const input = document.getElementById(targetId);
             
-            let currentVal = parseInt(input.value, 10) || 0;
-            let newVal = Math.max(0, currentVal + step) + 'px';
+            // Regex to grab the number part (handle '1rem' vs '20px')
+            const match = input.value.match(/(\d*\.?\d+)/);
+            let currentVal = match ? parseFloat(match[0]) : 0;
+            
+            // If it was '1rem' (16px approx) and we are changing by px, conversions get messy. 
+            // For simplicity in God Mode, we convert everything to 'px' once touched.
+            if (input.value.includes('rem') && unit === 'px') {
+                currentVal = currentVal * 16; 
+            }
+
+            let newVal = Math.max(0, currentVal + step) + unit;
             input.value = newVal;
 
-            // Live Preview
+            // Live CSS Variable Updates
             if (targetId === 'padding-input') document.documentElement.style.setProperty('--global-padding', newVal);
             if (targetId === 'margin-input') document.documentElement.style.setProperty('--section-margin', newVal);
+            // NEW: Radius update
+            if (targetId === 'radius-input') document.documentElement.style.setProperty('--border-radius', newVal);
         }
     });
 
-    // -- Save Handler --
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = form.querySelector('button[type="submit"]');
@@ -201,14 +220,15 @@ async function showGodModeConfigModal() {
         const formData = new FormData(form);
         const updates = {
             paymentConfig: { 
-                ...settings.paymentConfig, // Keep existing rules (maxCashAmount etc)
+                ...settings.paymentConfig, 
                 inStoreOnly: formData.get('inStoreOnly') === 'on' 
             },
             themeVariables: {
                 ...settings.themeVariables,
                 '--site-zoom': formData.get('zoomLevel'),
                 '--global-padding': formData.get('globalPadding'),
-                '--section-margin': formData.get('sectionMargin')
+                '--section-margin': formData.get('sectionMargin'),
+                '--border-radius': formData.get('borderRadius') // Save the new radius
             }
         };
 
