@@ -1,5 +1,5 @@
 // /api/auth/login.js
-import { supabaseAdmin } from '../_db.js';
+import { supabaseAdmin } from './_db.js';
 
 export default async function handler(req, res) {
     console.log("--- [API /auth/login] Handler started ---");

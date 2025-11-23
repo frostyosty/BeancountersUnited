@@ -1,1 +1,1 @@
-git add . && git commit -m "gutted css" && git push origin master
+git add . && git commit -m "removed some api files consolidated" && git push origin master

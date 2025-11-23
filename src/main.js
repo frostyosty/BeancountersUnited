@@ -10,7 +10,7 @@ import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
 import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
-import { renderManagerDashboard } from './features/admin/managerDashboardUI.js';
+import { renderGodDashboard } from './features/admin/godDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 
@@ -81,8 +81,8 @@ function renderPageContent() {
             break;
         case '#god-dashboard':
             if (userRole === 'manager') {
-                console.log(`[Router] Hash is '${hash}'. Calling renderManagerDashboard().`);
-                renderManagerDashboard();
+                console.log(`[Router] Hash is '${hash}'. Calling renderGodDashboard().`);
+                renderGodDashboard();
             } else {
                 window.location.hash = '#menu';
             }
