@@ -263,10 +263,20 @@ export function initializeSortable() {
     list.dataset.sortableInitialized = 'true';
 }
 
-window.handleOrderRowClick = (userId, orderId) => {
+// --- MOVE THIS HERE (GLOBAL CLICK HANDLER) ---
+window.handleOrderRowClick = (userId) => {
     const event = window.event; 
     const target = event.target;
+    
+    // Prevent opening if the click was actually on a button (like Edit/Delete)
     if (target.closest('button')) return;
-    if (!userId || userId === 'null' || userId === 'undefined') { uiUtils.showToast("Guest order - no history available.", "info"); return; }
-    import('./adminModals.js').then(m => m.showCustomerCRMModal(userId));
+
+    // Check data validity
+    if (!userId || userId === 'null' || userId === 'undefined') { 
+        uiUtils.showToast("Guest order - no history available.", "info"); 
+        return; 
+    }
+    
+    // Call the imported function directly
+    showCustomerCRMModal(userId);
 };
