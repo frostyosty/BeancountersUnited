@@ -15,7 +15,7 @@ export function renderCartPage() {
 
     const cartSlice = useAppStore.getState().cart;
     // FIX: Use getCartTotal, not getTotalPrice
-    const { items, getCartTotal } = cartSlice; 
+    const { items, getCartTotal } = cartSlice;
 
     if (items.length === 0) {
         mainContent.innerHTML = `
@@ -65,7 +65,7 @@ export function renderCartPage() {
             <a href="#checkout" class="button-primary full-width-mobile" style="display:block; text-align:center;">Proceed to Checkout</a>
         </div>
     `;
-    
+
     attachCartEventListeners();
 }
 
@@ -116,6 +116,10 @@ export function renderCheckoutPage() {
     const { items, getCartTotal } = useAppStore.getState().cart;
     const { isAuthenticated } = useAppStore.getState().auth;
     const { canPayWithCash } = useAppStore.getState().checkout;
+    // FIX: Get settings directly to check for Stripe
+    const { settings } = useAppStore.getState().siteSettings;
+    const paymentConfig = settings.paymentConfig || {};
+    const enableStripe = paymentConfig.enableStripe !== false; // Default true
 
     // 1. Empty Cart Check
     if (items.length === 0) {
@@ -134,27 +138,48 @@ export function renderCheckoutPage() {
         `;
         return;
     }
-
     const total = getCartTotal();
-    
-    // 3. Check Payment Rules (Owner Dashboard Settings)
+    // 3. Check Payment Rules
     const cashValidation = canPayWithCash();
 
     // 4. Generate Payment Buttons HTML
     let cashSectionHTML = '';
+
+    // FIX: Only show button if allowed. Do NOT show "Unavailable" error box.
     if (cashValidation.allowed) {
         cashSectionHTML = `
             <button id="pay-cash-btn" class="button-secondary" style="width:100%; margin-bottom:15px; padding:15px; font-size:1rem; border:2px solid var(--secondary-color);">
                 Pay on Pickup (Cash/EFTPOS)
             </button>
         `;
-    } else {
-        cashSectionHTML = `
-            <div style="background:#fff3cd; color:#856404; padding:15px; border-radius:6px; margin-bottom:15px; font-size:0.9rem; border:1px solid #ffeeba;">
-                <strong>Pay on Pickup Unavailable:</strong><br>
-                ${cashValidation.reason}
-            </div>
+    }
+    // Else: Show nothing for cash.
+
+    let stripeSectionHTML = '';
+    if (enableStripe) {
+        stripeSectionHTML = `
+            <button id="pay-stripe-btn" class="button-primary" style="width:100%; padding:15px; font-size:1rem;">
+                Pay with Card (Stripe)
+            </button>
+            <div id="stripe-element-container" style="margin-top:20px; padding:15px; border:1px solid #eee; border-radius:8px; display:none;"></div>
+            <div id="stripe-error-message" style="color:red; margin-top:10px; display:none;"></div>
         `;
+    } else {
+        stripeSectionHTML = `<div class="notice-message">Online payments are temporarily disabled.</div>`;
+    }
+
+    // If both disabled?
+    if (!cashValidation.allowed && !enableStripe) {
+        mainContent.innerHTML = `
+            <div class="checkout-container" style="max-width:600px; margin:0 auto;">
+                <h2>Checkout</h2>
+                <div class="error-message">
+                    <h3>No Payment Methods Available</h3>
+                    <p>Your order (${cashValidation.reason}) cannot be paid with cash, and online payments are offline.</p>
+                    <p>Please reduce your order size or contact staff.</p>
+                </div>
+            </div>`;
+        return;
     }
 
     mainContent.innerHTML = `
@@ -179,20 +204,8 @@ export function renderCheckoutPage() {
 
             <div class="payment-options">
                 <h3>Choose Payment Method</h3>
-                
-                <!-- Cash Option -->
                 ${cashSectionHTML}
-                
-                <!-- Stripe Option -->
-                <button id="pay-stripe-btn" class="button-primary" style="width:100%; padding:15px; font-size:1rem;">
-                    Pay with Card (Stripe)
-                </button>
-                
-                <!-- Stripe Element Container (Hidden initially) -->
-                <div id="stripe-element-container" style="margin-top:20px; padding:15px; border:1px solid #eee; border-radius:8px; display:none;">
-                    <!-- Stripe will inject iframe here -->
-                </div>
-                <div id="stripe-error-message" style="color:red; margin-top:10px; display:none;"></div>
+                ${stripeSectionHTML}
             </div>
         </div>
     `;
@@ -230,7 +243,7 @@ function attachCheckoutListeners() {
         stripeBtn.disabled = true;
         stripeBtn.textContent = "Loading Secure Payment...";
         errorDiv.style.display = 'none';
-        
+
         try {
             // 1. Call Backend to get Client Secret
             const response = await fetch('/api/create-payment-intent', {
@@ -238,7 +251,7 @@ function attachCheckoutListeners() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: total }),
             });
-            
+
             const { clientSecret, error } = await response.json();
             if (error) throw new Error(error);
 
@@ -246,20 +259,20 @@ function attachCheckoutListeners() {
             const stripe = await stripePromise;
             const elements = stripe.elements({ clientSecret, appearance: { theme: 'stripe' } });
             const paymentElement = elements.create('payment');
-            
+
             container.style.display = 'block';
             container.innerHTML = ''; // Clear previous if any
             paymentElement.mount('#stripe-element-container');
-            
+
             // 3. Change Button to "Pay Now"
             stripeBtn.textContent = `Pay $${total.toFixed(2)} Now`;
             stripeBtn.disabled = false;
-            
+
             // 4. Switch listener to "Submit Payment"
             // We clone the button to remove old listeners easily
             const newBtn = stripeBtn.cloneNode(true);
             stripeBtn.parentNode.replaceChild(newBtn, stripeBtn);
-            
+
             newBtn.addEventListener('click', async () => {
                 newBtn.disabled = true;
                 newBtn.textContent = "Processing...";
@@ -271,7 +284,7 @@ function attachCheckoutListeners() {
                     confirmParams: {
                         // We handle redirect manually via 'if_required'
                     },
-                    redirect: 'if_required' 
+                    redirect: 'if_required'
                 });
 
                 if (stripeError) {
@@ -283,7 +296,7 @@ function attachCheckoutListeners() {
                     // B. Payment Success! Save to DB
                     const { submitPaidOrder } = useAppStore.getState().checkout;
                     const res = await submitPaidOrder(paymentIntent);
-                    
+
                     if (res.success) {
                         uiUtils.showToast("Payment Successful!", "success");
                         window.location.hash = '#order-history';

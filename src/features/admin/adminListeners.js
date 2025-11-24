@@ -146,11 +146,12 @@ export function attachOwnerDashboardListeners() {
             e.preventDefault();
             const formData = new FormData(target);
             const paymentConfig = {
-                enableCash: formData.get('enableCash') === 'on',
+                enableCash: true, // Always on (restricted by limits)
+                enableStripe: formData.get('enableStripe') === 'on', // NEW
                 maxCashAmount: parseInt(formData.get('maxCashAmount'), 10),
                 maxCashItems: parseInt(formData.get('maxCashItems'), 10)
             };
-            await api.updateSiteSettings({ paymentConfig }, session.access_token);
+            await useAppStore.getState().siteSettings.updateSiteSettings({ paymentConfig }, session.access_token);
             uiUtils.showToast('Payment rules saved.', 'success');
         }
     });
