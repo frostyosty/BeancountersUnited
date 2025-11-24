@@ -1,7 +1,6 @@
 // src/main.js (FINAL & CORRECTED)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
-import './assets/css/overrides.css'
 import { useAppStore } from './store/appStore.js';
 import * as uiUtils from './utils/uiUtils.js'; // <-- RE-ADD THIS IMPORT
 
