@@ -1,4 +1,4 @@
-user with email manager@mealmates.dev and password password123 -> manager role 
+user with email god@mealmates.dev and password password123 -> god role 
 
 
 when production:
@@ -255,7 +255,7 @@ async function mainAppInit() {
 
     // === STEP 5: INITIALIZE BACKGROUND SERVICES ===
     console.log('[App] 6. Initializing background services...');
-    prefetchManager.init();
+    prefetchGod.init();
     try {
         await initializeDanmakuSystem();
         console.log('[App] 6a. Danmaku service initialized.');

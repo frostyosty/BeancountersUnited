@@ -20,8 +20,8 @@ export function renderAuthStatus() {
         const role = profile?.role;
         let displayHTML = '';
 
-        if (role === 'manager') {
-            displayHTML = `<span class="role-badge manager" style="background:black; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
+        if (role === 'god') {
+            displayHTML = `<span class="role-badge god" style="background:black; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
         } else if (role === 'owner') {
             displayHTML = `<span class="role-badge owner" style="background:mauve; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
         } else {

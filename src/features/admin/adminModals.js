@@ -24,7 +24,7 @@ export async function showCustomerCRMModal(userId) {
         // 3. Build Audit Log HTML (NEW)
         const auditRows = (logs || []).map(log => {
             const date = new Date(log.created_at).toLocaleString();
-            const actorName = log.profiles?.email || 'Unknown Manager';
+            const actorName = log.profiles?.email || 'Unknown God';
             
             // Format the change message nicely
             let changeMsg = '';
@@ -255,7 +255,7 @@ export function showEditItemModal(item) {
 
 
 
-// --- NEW: User Edit Modal (Migrated from managerDashboard) ---
+// --- NEW: User Edit Modal (Migrated from godDashboard) ---
 export function showEditUserModal(user) {
     const modalHTML = `
         <div class="modal-form-container">
@@ -266,7 +266,7 @@ export function showEditUserModal(user) {
                     <select id="user-role">
                         <option value="customer" ${user.role === 'customer' ? 'selected' : ''}>Customer</option>
                         <option value="owner" ${user.role === 'owner' ? 'selected' : ''}>Owner</option>
-                        <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager (God)</option>
+                        <option value="god" ${user.role === 'god' ? 'selected' : ''}>God (God)</option>
                     </select>
                 </div>
                 

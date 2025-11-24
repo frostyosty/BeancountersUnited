@@ -33,7 +33,7 @@ export function renderOrderHistoryPage() {
     if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading orders...</div>`; return; }
     if (error) { mainContent.innerHTML = `<div class="error-message"><h3>Error</h3><p>${error}</p></div>`; return; }
 
-    if (role === 'manager' || role === 'owner') {
+    if (role === 'god' || role === 'owner') {
         renderAdminOrderTable(mainContent, orders);
     } else {
         renderCustomerOrderList(mainContent, orders);

@@ -21,8 +21,8 @@ const createMenuItemHTML = (item) => {
     `;
     
     let adminControlsHTML = '';
-    if (userRole === 'owner' || userRole === 'manager') { adminControlsHTML = ownerControls; }
-    if (userRole === 'manager') { adminControlsHTML = adminControlsHTML.replace('</div>', ` ${godUserControls}</div>`); }
+    if (userRole === 'owner' || userRole === 'god') { adminControlsHTML = ownerControls; }
+    if (userRole === 'god') { adminControlsHTML = adminControlsHTML.replace('</div>', ` ${godUserControls}</div>`); }
 
     // NEW: Allergen Badges on Card
     const allergenBadges = (item.allergens || []).map(tag => 

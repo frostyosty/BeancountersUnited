@@ -54,6 +54,7 @@ export const updateMenuItem = (itemId, itemData, token) => request(`/menu?id=${i
 export const deleteMenuItem = (itemId, token) => request(`/menu?id=${itemId}`, 'DELETE', null, token);
 export const updateSiteSettings = (settingsData, token) => request('/settings', 'PUT', settingsData, token);
 export const getSiteSettings = () => request('/settings', 'GET');
-export const createManualOrder = (orderData, token) => request('/manual-order', 'POST', orderData, token);
+export const createManualOrder = (orderData, token) => 
+    request('/user?type=manual_order', 'POST', orderData, token);
 
 console.log("--- [2] apiService.js: END ---");

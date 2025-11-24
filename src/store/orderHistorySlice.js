@@ -136,7 +136,7 @@ export const createOrderHistorySlice = (set, get) => ({
     checkUrgency: () => {
         // ... (Keep existing logic) ...
         const role = get().auth.getUserRole();
-        if (role !== 'manager' && role !== 'owner') return;
+        if (role !== 'god' && role !== 'owner') return;
         if (window.location.hash === '#order-history') return;
 
         const { orders, notifiedOrderIds } = get().orderHistory;

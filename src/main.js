@@ -47,8 +47,14 @@ function renderPersistentUI() {
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-    const { getUserRole, isAuthenticated } = useAppStore.getState().auth;
-    const userRole = getUserRole();
+    const { getUserRole, isAuthLoading } = useAppStore.getState().auth; // Get loading state
+    
+    // 1. STOP if auth is still loading. 
+    // The auth listener will trigger a re-render when it finishes.
+    if (isAuthLoading) {
+        console.log("[Router] Auth loading... waiting.");
+        return; 
+    }const userRole = getUserRole();
 
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
@@ -72,18 +78,19 @@ function renderPageContent() {
             }
             break;
         case '#owner-dashboard':
-            if (userRole === 'owner' || userRole === 'manager') {
+            if (userRole === 'owner' || userRole === 'god') {
                 console.log(`[Router] Hash is '${hash}'. Calling renderOwnerDashboard().`);
                 renderOwnerDashboard();
             } else {
                 window.location.hash = '#menu';
             }
             break;
-        case '#god-dashboard':
-            if (userRole === 'manager') {
-                console.log(`[Router] Hash is '${hash}'. Calling renderGodDashboard().`);
+case '#god-dashboard':
+            if (userRole === 'god') {
                 renderGodDashboard();
             } else {
+                // Only redirect if we are SURE they are not a god
+                console.warn(`[Router] Access Denied. Role is ${userRole}`);
                 window.location.hash = '#menu';
             }
             break;
@@ -138,7 +145,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@mealmates.dev';
+        const godUserEmail = 'god@mealmates.dev';
 
         if (user?.email === godUserEmail) {
             await logout();
@@ -198,13 +205,13 @@ function setupHamburgerMenu() {
             }
 
             // --- THIS IS THE FIX ---
-            // If owner OR manager, show the Owner Dashboard link.
-            if (profile.role === 'owner' || profile.role === 'manager') {
+            // If owner OR god, show the Owner Dashboard link.
+            if (profile.role === 'owner' || profile.role === 'god') {
                 navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
             }
-            // AND, if SPECIFICALLY a manager, ALSO show the God Mode link.
-            if (profile.role === 'manager') {
-                navHTML += `<a href="#manager-dashboard" class="nav-link">God Mode</a>`;
+            // AND, if SPECIFICALLY a god, ALSO show the God Mode link.
+            if (profile.role === 'god') {
+                navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
             }
             // --- END OF FIX ---
         }

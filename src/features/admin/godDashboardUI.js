@@ -7,12 +7,12 @@ import { attachOwnerDashboardListeners, initializeSortable, currentSort } from '
 function getCategoryColor(categoryName) {
     let hash = 0;
     for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    return `hsl(${hash % 360}, 70%, 95%)`; 
+    return `hsl(${hash % 360}, 70%, 95%)`;
 }
 function getAllergenBadges(allergens = []) {
     if (!allergens || allergens.length === 0) return '';
     const map = { 'GF': '#2ecc71', 'V': '#27ae60', 'DF': '#3498db', 'VG': '#9b59b6' };
-    return allergens.map(tag => `<span style="font-size:0.7rem; background:${map[tag]||'#999'}; color:white; padding:1px 4px; border-radius:3px; margin-right:2px;">${tag}</span>`).join('');
+    return allergens.map(tag => `<span style="font-size:0.7rem; background:${map[tag] || '#999'}; color:white; padding:1px 4px; border-radius:3px; margin-right:2px;">${tag}</span>`).join('');
 }
 function getSortIcon(col) {
     if (currentSort.column !== col) return '↕';
@@ -73,7 +73,7 @@ export function renderGodDashboard() {
     const currentLogo = settings.logoUrl || '';
     const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
-    
+
     const globalSettingsHTML = `
         <section class="dashboard-section" style="border-color: #7b2cbf;">
             <h3 style="color:#7b2cbf;">Global Site Settings</h3>
@@ -85,29 +85,35 @@ export function renderGodDashboard() {
                 <div class="form-group">
                     <label>Website Logo</label>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <img id="logo-preview" src="${currentLogo}" style="max-height:40px; display:${currentLogo?'block':'none'}; border:1px solid #ddd;">
+                        <img id="logo-preview" src="${currentLogo}" style="max-height:40px; display:${currentLogo ? 'block' : 'none'}; border:1px solid #ddd;">
                         <label for="logo-upload" class="button-secondary small" style="cursor:pointer;">Upload</label>
                         <input type="file" id="logo-upload" name="logoFile" accept="image/*" style="display:none;">
-                        <button type="button" id="clear-logo-btn" class="button-danger small" style="display:${currentLogo?'block':'none'};">Remove</button>
+                        <button type="button" id="clear-logo-btn" class="button-danger small" style="display:${currentLogo ? 'block' : 'none'};">Remove</button>
                         <input type="hidden" name="logoUrl" value="${currentLogo}">
-                        <p id="no-logo-text" style="display:${currentLogo?'none':'block'}; font-size:0.8rem; margin:0;">No logo</p>
+                        <p id="no-logo-text" style="display:${currentLogo ? 'none' : 'block'}; font-size:0.8rem; margin:0;">No logo</p>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Mobile Menu Content</label>
                     <div style="display:flex; gap:15px;">
-                        <label><input type="radio" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig==='main-nav'?'checked':''}> Main Links</label>
-                        <label><input type="radio" name="hamburgerMenuContent" value="categories" ${hamburgerConfig==='categories'?'checked':''}> Categories</label>
+                        <label><input type="radio" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig === 'main-nav' ? 'checked' : ''}> Main Links</label>
+                        <label><input type="radio" name="hamburgerMenuContent" value="categories" ${hamburgerConfig === 'categories' ? 'checked' : ''}> Categories</label>
                     </div>
                 </div>
-                <button type="submit" class="button-primary">Save Global Settings</button>
-            </form>
+                <div class="form-group">
+                    <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="showAllergens" ${settings.showAllergens ? 'checked' : ''}> 
+                        Enable Dietary Filters (GF, V, etc) on Menu
+                    </label>
+                </div>
+
+                <button type="submit" class="button-primary">Save Global Settings</button></form>
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
             <h4>Owner Permissions</h4>
             <form id="owner-permissions-form">
                 <div style="display:flex; gap:15px;">
-                    <label><input type="checkbox" name="canEditTheme" ${ownerPermissions.canEditTheme?'checked':''}> Edit Theme</label>
-                    <label><input type="checkbox" name="canEditCategories" ${ownerPermissions.canEditCategories?'checked':''}> Edit Categories</label>
+                    <label><input type="checkbox" name="canEditTheme" ${ownerPermissions.canEditTheme ? 'checked' : ''}> Edit Theme</label>
+                    <label><input type="checkbox" name="canEditCategories" ${ownerPermissions.canEditCategories ? 'checked' : ''}> Edit Categories</label>
                 </div>
                 <button type="submit" class="button-secondary small" style="margin-top:10px;">Update Permissions</button>
             </form>
@@ -117,7 +123,7 @@ export function renderGodDashboard() {
     // 3. Active Orders (Shared)
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
     const activeOrdersHTML = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
-        const profile = order.profiles || {}; 
+        const profile = order.profiles || {};
         const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
         let noteIcon = '';
         if (profile.staff_note) {
@@ -147,7 +153,7 @@ export function renderGodDashboard() {
     });
 
     const menuItemsTableRows = sortedItems.map(item => `
-        <tr data-item-id="${item.id}" style="background-color: ${getCategoryColor(item.category||'')}; border-bottom:1px solid #fff;">
+        <tr data-item-id="${item.id}" style="background-color: ${getCategoryColor(item.category || '')}; border-bottom:1px solid #fff;">
             <td style="padding:10px;">
                 <div style="font-weight:500;">${item.name}</div>
                 <div style="margin-top:2px;">${getAllergenBadges(item.allergens)}</div>
@@ -253,6 +259,6 @@ export function renderGodDashboard() {
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
-    return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
+    if (!categories || categories.length === 0) return `<div id="category-god"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
+    return `<div id="category-god"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
 }

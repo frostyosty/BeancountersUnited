@@ -44,11 +44,11 @@ export const createAuthSlice = (set, get) => ({
                     // Do NOT redirect if we are already on a dashboard or history page.
                     
                     const currentHash = window.location.hash;
-                    const onSafePage = ['#owner-dashboard', '#manager-dashboard', '#order-history'].includes(currentHash);
+                    const onSafePage = ['#owner-dashboard', '#god-dashboard', '#order-history'].includes(currentHash);
 
                     if (event === 'SIGNED_IN' && !onSafePage) {
                         const role = profile?.role;
-                        if (role === 'owner' || role === 'manager') {
+                        if (role === 'owner' || role === 'god') {
                             console.log("[AuthSlice] Owner Login. Redirecting to Order History.");
                             window.location.hash = '#order-history';
                         }
@@ -103,9 +103,9 @@ export const createAuthSlice = (set, get) => ({
         const originalUser = state.originalUser || state.user;
         const originalProfile = state.originalProfile || state.profile;
 
-        // 2. Security Check: Ensure the REAL user is actually a manager
-        if (originalProfile?.role !== 'manager') {
-            console.warn("Attempted impersonation by non-manager.");
+        // 2. Security Check: Ensure the REAL user is actually a god
+        if (originalProfile?.role !== 'god') {
+            console.warn("Attempted impersonation by non-god.");
             return;
         }
 

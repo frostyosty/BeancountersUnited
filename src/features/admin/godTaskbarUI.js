@@ -25,7 +25,7 @@ export function initializeImpersonationToolbar() {
     document.addEventListener('keydown', (e) => {
         if (e.shiftKey && e.key.toLowerCase() === 'd') {
             const { profile } = useAppStore.getState().auth;
-            if (profile?.role === 'manager') toggleDebugModal();
+            if (profile?.role === 'god') toggleDebugModal();
         }
     });
 }
@@ -44,7 +44,7 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
     let toolbar = document.getElementById('god-mode-toolbar');
     let debugBtn = document.getElementById('god-mode-debug-btn');
 
-    if (realRole !== 'manager') {
+    if (realRole !== 'god') {
         if (toolbar) toolbar.remove();
         if (debugBtn) debugBtn.remove();
         if (document.body.style.paddingBottom) document.body.style.paddingBottom = '';

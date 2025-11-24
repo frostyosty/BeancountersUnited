@@ -66,38 +66,63 @@ export default async function handler(req, res) {
                 .eq('id', user.id)
                 .single();
                 
-            if (adminProfile.role !== 'manager' && adminProfile.role !== 'owner') {
+            if (adminProfile.role !== 'god' && adminProfile.role !== 'owner') {
                 return res.status(403).json({ error: "Forbidden" });
             }
         }
 
         // =================================================
-        // TYPE: MANAGE (List/Update Users)
+        // TYPE: MANUAL ORDER (God/Owner Only)
         // =================================================
-        if (type === 'manage') {
-            if (req.method === 'GET') {
-                const { data: usersList, error } = await supabaseAdmin
-                    .from('profiles')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                if (error) throw error;
-                return res.status(200).json(usersList);
-            }
+        if (type === 'manual_order') {
+            if (req.method !== 'POST') return res.status(405).end();
             
-            if (req.method === 'PUT') {
-                const { userId, newRole, isVerifiedBuyer, canSeeOrderHistory } = req.body;
-                const { error } = await supabaseAdmin
-                    .from('profiles')
-                    .update({ 
-                        role: newRole, 
-                        is_verified_buyer: isVerifiedBuyer, 
-                        can_see_order_history: canSeeOrderHistory 
-                    })
-                    .eq('id', userId);
-                if (error) throw error;
-                return res.status(200).json({ success: true });
+            // 1. Role Check
+            const { data: adminProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (!adminProfile || (adminProfile.role !== 'god' && adminProfile.role !== 'owner')) {
+                return res.status(403).json({ error: "Forbidden" });
             }
+
+            const { items, total, customerName } = req.body;
+
+            // 2. Insert Order
+            const { data: orderData, error: orderError } = await supabaseAdmin
+                .from('orders')
+                .insert([{
+                    user_id: user.id,
+                    total_amount: total,
+                    status: 'pending',
+                    payment_status: 'paid',
+                    payment_method: 'manual',
+                    customer_name: customerName || 'Walk-in' // Fix for the previous null error
+                }])
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // 3. Insert Items
+            const orderItemsData = items.map(item => ({
+                order_id: orderData.id,
+                menu_item_id: item.id,
+                quantity: item.quantity,
+                price_at_time: item.price
+            }));
+
+            const { error: itemsError } = await supabaseAdmin
+                .from('order_items')
+                .insert(orderItemsData);
+
+            if (itemsError) throw itemsError;
+
+            return res.status(200).json({ success: true, orderId: orderData.id });
         }
+        
 
         // =================================================
         // TYPE: CRM (Client Relationship Mgmt & Audit)
