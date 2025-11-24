@@ -134,15 +134,6 @@ function attachMenuListeners() {
         }
     });
 
-    const reorderBtn = document.getElementById('quick-reorder-btn');
-    if (reorderBtn) {
-        // Find last order again or pass it via closure? 
-        // Simplest to just re-fetch from store logic if needed, but here we need the order object.
-        // For simplicity, we assume the button click is handled if we attach inside render or make handleQuickReorder rely on store.
-        // Actually, reorder logic is safer attached inside Render where we have the 'lastOrder' object in scope.
-        // See updated renderMenuPage below.
-    }
-
     mainContent.dataset.menuListenersAttached = 'true';
 }
 
@@ -156,11 +147,12 @@ export function renderMenuPage() {
 
     // --- State ---
     const { items, isLoading, error } = useAppStore.getState().menu;
-    const { getMenuCategories } = useAppStore.getState().siteSettings;
-    const { activeMenuCategory, activeAllergenFilters } = useAppStore.getState().ui; // <--- Get Filters
+    const { getMenuCategories, settings } = useAppStore.getState().siteSettings; // Fix: Get settings here
+    const { activeMenuCategory, activeAllergenFilters } = useAppStore.getState().ui; 
     const { isAuthenticated } = useAppStore.getState().auth;
     const { orders } = useAppStore.getState().orderHistory;
-     const showAllergens = getMenuCategories.showAllergens || false; // Check toggle
+    
+    const showAllergens = settings.showAllergens || false; // Fix: Check property on settings object
 
     // --- 1. Reorder Banner Logic ---
     let reorderBannerHTML = '';
@@ -184,11 +176,9 @@ export function renderMenuPage() {
             : items.filter(item => (item.category || 'Uncategorized') === activeMenuCategory);
 
         // B. Allergen Filter (NEW)
-        // Logic: If "GF" is active, ONLY show items that HAVE "GF" in their allergens list.
         if (activeAllergenFilters.length > 0) {
             filteredItems = filteredItems.filter(item => {
                 const itemAllergens = item.allergens || [];
-                // Check if item contains ALL selected filters
                 return activeAllergenFilters.every(filter => itemAllergens.includes(filter));
             });
         }
@@ -205,21 +195,20 @@ export function renderMenuPage() {
         `).join('');
 
         // Allergen Toggles HTML
-    // Only generate this HTML if enabled
-    let allergenControlsHTML = '';
-    if (showAllergens) {
-        const allergenTags = ['GF', 'V', 'VG', 'DF'];
-        const toggles = allergenTags.map(tag => {
-            const isActive = activeAllergenFilters.includes(tag);
-            return `<button class="allergen-filter-btn ${isActive ? 'active' : ''}" data-tag="${tag}">${isActive ? '✅' : '⬜'} ${tag}</button>`;
-        }).join('');
-        
-        allergenControlsHTML = `
-            <div class="allergen-filters-container" style="margin-top:15px; display:flex; gap:10px; align-items:center;">
-                <span style="font-size:0.9rem; font-weight:bold; color:var(--secondary-color);">Filters:</span>
-                ${toggles}
-            </div>`;
-    }
+        let allergenControlsHTML = '';
+        if (showAllergens) {
+            const allergenTags = ['GF', 'V', 'VG', 'DF'];
+            const toggles = allergenTags.map(tag => {
+                const isActive = activeAllergenFilters.includes(tag);
+                return `<button class="allergen-filter-btn ${isActive ? 'active' : ''}" data-tag="${tag}">${isActive ? '✅' : '⬜'} ${tag}</button>`;
+            }).join('');
+            
+            allergenControlsHTML = `
+                <div class="allergen-filters-container" style="margin-top:15px; display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:0.9rem; font-weight:bold; color:var(--secondary-color);">Filters:</span>
+                    ${toggles}
+                </div>`;
+        }
 
         // Group Items
         const itemsByCategory = filteredItems.reduce((acc, item) => {
@@ -253,11 +242,8 @@ export function renderMenuPage() {
                     <!-- Categories -->
                     <div class="sub-tabs-container">${tabsHTML}</div>
                     
-                    <!-- Dietary Filters -->
-                    <div class="allergen-filters-container" style="margin-top:15px; display:flex; gap:10px; align-items:center;">
-                        <span style="font-size:0.9rem; font-weight:bold; color:var(--secondary-color);">Filters:</span>
-                        ${allergenTogglesHTML}
-                    </div>
+                    <!-- Dietary Filters (Conditional) -->
+                    ${allergenControlsHTML}
                 </div>
             </div>
             ${filteredItems.length === 0 ? '<div class="empty-state">No items match your filters.</div>' : menuContentHTML}
@@ -266,7 +252,6 @@ export function renderMenuPage() {
         // --- 5. Attach Listeners ---
         attachMenuListeners();
         
-        // Special case for reorder btn
         const btn = document.getElementById('quick-reorder-btn');
         if (btn && lastOrder) {
             btn.onclick = () => handleQuickReorder(lastOrder);
