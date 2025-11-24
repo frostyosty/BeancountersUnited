@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { attachOwnerDashboardListeners, initializeSortable, currentSort } from './adminListeners.js';
 
-// --- Helpers ---
+// --- Helpers (Same as God Dashboard) ---
 function getCategoryColor(categoryName) {
     let hash = 0;
     for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
@@ -44,16 +44,7 @@ export function renderOwnerDashboard() {
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
 
-    // --- Payment Config Logic ---
-    // Defaults: Cash allowed, Stripe allowed, Limits set as requested
-    const paymentConfig = settings.paymentConfig || {};
-    const enableCash = paymentConfig.enableCash !== false; // Default True
-    const enableStripe = paymentConfig.enableStripe !== false; // Default True
-    const maxCashAmount = paymentConfig.maxCashAmount || 25;
-    const maxCashItems = paymentConfig.maxCashItems || 5;
-    const showAllergens = settings.showAllergens || false;
-
-    // 1. Active Orders HTML
+    // --- Active Orders HTML ---
     const activeOrdersHTML = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
         const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
@@ -74,7 +65,7 @@ export function renderOwnerDashboard() {
         </div>`;
     }).join('');
 
-    // 2. Menu Items HTML
+    // --- Menu Items HTML ---
     const sortedItems = [...menuItems].sort((a, b) => {
         const col = currentSort.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
@@ -98,6 +89,12 @@ export function renderOwnerDashboard() {
             </td>
         </tr>
     `).join('');
+
+    // --- Configs ---
+    const headerSettings = settings.headerSettings || { logoAlignment: 'center', hamburgerPosition: 'right' };
+    const paymentConfig = settings.paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
+    const enableStripe = paymentConfig.enableStripe !== false;
+    const showAllergens = settings.showAllergens || false;
 
     mainContent.innerHTML = `
         <div class="dashboard-container">
@@ -127,15 +124,12 @@ export function renderOwnerDashboard() {
                     </table>
                 </div>
                 
-                <!-- NEW: Allergen Toggle in Menu Section -->
                 <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
-                    <form id="global-settings-form"> 
-                    <!-- Note: Using global-settings-form ID reusing the listener for ease -->
+                    <form id="global-settings-form">
                         <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
                             <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
-                            Enable Dietary Filters (GF, V, etc) on Client Menu
+                            Enable Dietary Filters on Menu
                         </label>
-                        <button type="submit" class="button-secondary small" style="margin-top:10px;">Save Filter Setting</button>
                     </form>
                 </div>
             </section>
@@ -153,31 +147,45 @@ export function renderOwnerDashboard() {
                         <label style="font-weight:bold; display:block; margin-bottom:10px;">Online Payments</label>
                         <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
                             <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> 
-                            Enable Stripe (Credit Cards)
+                            Enable Stripe
                         </label>
-                        <p style="font-size:0.85rem; color:#666; margin-top:5px;">Uncheck to disable card payments (e.g. during banking outages).</p>
                     </div>
 
                     <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
                         <label style="font-weight:bold; display:block; margin-bottom:10px;">Pay on Pickup (Cash)</label>
-                        
-                        <!-- Hidden field to force 'enableCash' true unless we want to add a toggle for it too -->
-                        <input type="hidden" name="enableCash" value="on"> 
-
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
                             <div>
                                 <label>Restrict to Order Value ($)</label>
-                                <input type="number" name="maxCashAmount" value="${maxCashAmount}">
+                                <input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}">
                             </div>
                             <div>
                                 <label>Restrict to Item Count</label>
-                                <input type="number" name="maxCashItems" value="${maxCashItems}">
+                                <input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}">
                             </div>
                         </div>
-                        <p style="font-size:0.85rem; color:#666; margin-top:10px;">Orders exceeding these limits must pay online.</p>
                     </div>
-                    
-                    <button type="submit" class="button-primary">Save Payment Rules</button>
+                </form>
+            </section>
+
+            <section class="dashboard-section">
+                <h3>Header Layout</h3>
+                <form id="header-settings-form">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label>Logo Alignment</label>
+                            <select name="logoAlignment">
+                                <option value="center" ${headerSettings.logoAlignment === 'center' ? 'selected' : ''}>Center</option>
+                                <option value="left" ${headerSettings.logoAlignment === 'left' ? 'selected' : ''}>Left</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Burger Position</label>
+                            <select name="hamburgerPosition">
+                                <option value="right" ${headerSettings.hamburgerPosition === 'right' ? 'selected' : ''}>Right</option>
+                                <option value="left" ${headerSettings.hamburgerPosition === 'left' ? 'selected' : ''}>Left</option>
+                            </select>
+                        </div>
+                    </div>
                 </form>
             </section>
 
@@ -185,7 +193,6 @@ export function renderOwnerDashboard() {
             <section class="dashboard-section">
                 <h3>Visual Customization</h3>
                 ${uiUtils.getThemeControlsHTML(settings.themeVariables || {})}
-                <!-- Button removed (uiUtils usually adds one, or auto-saves on input) -->
             </section>` : ''}
         </div>
     `;
@@ -194,11 +201,10 @@ export function renderOwnerDashboard() {
     if (ownerPermissions.canEditCategories) initializeSortable();
 }
 
-// ... (getMenuLayoutHTML and window handler remain the same) ...
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    if (!categories || categories.length === 0) return `<div id="category-manager"><p>No categories.</p><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
+    if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
     return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
 }
 
