@@ -638,7 +638,6 @@ th { background-color: var(--surface-color); }
     }
 }
 
-
 .hamburger-button {
     z-index: 2100; /* Higher than Header (2000) and Panel (1900) */
     position: relative;

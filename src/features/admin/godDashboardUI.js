@@ -3,7 +3,6 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { attachOwnerDashboardListeners, initializeSortable, currentSort } from './adminListeners.js';
 
-
 // --- Helpers ---
 function getCategoryColor(categoryName) {
     let hash = 0;
@@ -20,15 +19,18 @@ function getSortIcon(col) {
     return currentSort.direction === 'asc' ? '↑' : '↓';
 }
 
+// --- MAIN RENDER FUNCTION (God Mode) ---
 export function renderGodDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Fetch Data
+    // Fetch Everything
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
-    useAppStore.getState().admin.fetchAllUsers(true); 
+    
+    // FIX: Removed 'true'. This stops the infinite recursion loop.
+    useAppStore.getState().admin.fetchAllUsers(); 
 
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
@@ -44,7 +46,7 @@ export function renderGodDashboard() {
         return;
     }
 
-    // --- 1. User Management ---
+    // --- 1. User Management (Exclusive) ---
     let userManagementHTML = '';
     if (users) {
         const userRows = users.map(user => `
@@ -53,6 +55,7 @@ export function renderGodDashboard() {
                 <td>${user.full_name || 'N/A'}</td>
                 <td><span class="role-badge role-${user.role}">${user.role}</span></td>
                 <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
+                <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
                 <td><button class="button-secondary small edit-user-btn">Edit</button></td>
             </tr>`).join('');
         userManagementHTML = `
@@ -60,7 +63,7 @@ export function renderGodDashboard() {
                 <h3 style="color:#7b2cbf;">User Management</h3>
                 <div class="table-wrapper">
                     <table style="width:100%; border-collapse:collapse;">
-                        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Verified</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
                         <tbody>${userRows}</tbody>
                     </table>
                 </div>
@@ -129,7 +132,7 @@ export function renderGodDashboard() {
         return `
         <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
             <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
-                 onclick="window.handleOrderRowClick('${order.user_id}', '${order.id}')">
+                 onclick="window.handleOrderRowClick('${order.user_id}')">
                 <span>#${order.id.slice(0, 4)} - ${displayName} ${noteIcon}</span>
                 <span>$${order.total_amount.toFixed(2)}</span>
             </div>
@@ -271,4 +274,3 @@ function getMenuLayoutHTML() {
     if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
     return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
 }
-
