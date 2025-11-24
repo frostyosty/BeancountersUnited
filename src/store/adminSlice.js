@@ -12,33 +12,26 @@ export const createAdminSlice = (set, get) => ({
         
         const { isLoadingUsers, users } = get().admin;
         
-        if (isLoadingUsers) {
-            console.warn("[AdminSlice] Fetch skipped: Already loading.");
-            return;
-        }
-        // Only skip if data exists AND we are not forcing a refresh
-        if (users.length > 0 && !forceRefresh) {
-            console.log("[AdminSlice] Fetch skipped: Users already in state.");
-            return;
-        }
+        if (isLoadingUsers) return;
+        if (users.length > 0 && !forceRefresh) return;
 
-        console.log("[AdminSlice] setting isLoadingUsers = true...");
         set(state => ({ admin: { ...state.admin, isLoadingUsers: true } }));
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            console.log("[AdminSlice] API Request: fetching users...");
             const userList = await api.listAllUsers(session.access_token);
-            console.log(`[AdminSlice] API Success: Got ${userList.length} users.`);
-
-            set(state => ({ admin: { ...state.admin, users: userList, isLoadingUsers: false } }));
             
-            // Ensure uiSlice exists before calling this
-            if (get().ui && get().ui.triggerPageRender) {
-                get().ui.triggerPageRender(); 
-            }
+            // --- FIX: Handle null/undefined response ---
+            const safeUserList = Array.isArray(userList) ? userList : [];
+            
+            console.log(`[AdminSlice] API Success: Got ${safeUserList.length} users.`);
+
+            set(state => ({ admin: { ...state.admin, users: safeUserList, isLoadingUsers: false } }));
+            
+            // Only trigger render if UI slice exists
+            if (get().ui?.triggerPageRender) get().ui.triggerPageRender(); 
 
         } catch (error) {
             console.error("[AdminSlice] Fetch FAILED:", error);

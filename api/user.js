@@ -40,8 +40,15 @@ export default async function handler(req, res) {
         // TYPE: MANAGE (List/Update Users)
         if (type === 'manage') {
             if (req.method === 'GET') {
-                const { data } = await supabaseAdmin.from('profiles').select('*').order('created_at', { ascending: false });
-                return res.status(200).json(data);
+                const { data, error } = await supabaseAdmin
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                // FIX: Return empty array if data is null
+                return res.status(200).json(data || []);
             }
             if (req.method === 'PUT') {
                 const { userId, newRole, isVerifiedBuyer, canSeeOrderHistory } = req.body;

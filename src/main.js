@@ -85,10 +85,10 @@ function renderPageContent() {
             }
             break;
 case '#god-dashboard':
+            // Ensure this checks for 'god', NOT 'manager'
             if (userRole === 'god') {
                 renderGodDashboard();
             } else {
-                // Only redirect if we are SURE they are not a god
                 console.warn(`[Router] Access Denied. Role is ${userRole}`);
                 window.location.hash = '#menu';
             }

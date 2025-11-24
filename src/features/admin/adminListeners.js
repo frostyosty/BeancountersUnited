@@ -143,16 +143,31 @@ export function attachOwnerDashboardListeners() {
 
         // --- D. Payment Settings ---
         if (target.matches('#payment-settings-form')) {
-            e.preventDefault();
-            const formData = new FormData(target);
-            const paymentConfig = {
-                enableCash: true, // Always on (restricted by limits)
-                enableStripe: formData.get('enableStripe') === 'on', // NEW
-                maxCashAmount: parseInt(formData.get('maxCashAmount'), 10),
-                maxCashItems: parseInt(formData.get('maxCashItems'), 10)
-            };
-            await useAppStore.getState().siteSettings.updateSiteSettings({ paymentConfig }, session.access_token);
-            uiUtils.showToast('Payment rules saved.', 'success');
+            e.preventDefault(); // CRITICAL: Must be first
+            console.log("[Listeners] Payment Settings Submit caught.");
+
+            const btn = target.querySelector('button');
+            btn.textContent = "Saving...";
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData(target);
+                const paymentConfig = {
+                    enableCash: true,
+                    enableStripe: formData.get('enableStripe') === 'on',
+                    maxCashAmount: parseInt(formData.get('maxCashAmount'), 10),
+                    maxCashItems: parseInt(formData.get('maxCashItems'), 10)
+                };
+                
+                await api.updateSiteSettings({ paymentConfig }, session.access_token);
+                uiUtils.showToast('Payment rules saved.', 'success');
+            } catch (error) {
+                console.error("Payment Save Failed:", error);
+                uiUtils.showToast("Save failed: " + error.message, "error");
+            } finally {
+                btn.textContent = "Save Payment Rules";
+                btn.disabled = false;
+            }
         }
     });
 
