@@ -14,57 +14,61 @@ export function renderCartPage() {
     if (!mainContent) return;
 
     const cartSlice = useAppStore.getState().cart;
-    if (!cartSlice) {
-        mainContent.innerHTML = `<div class="loading-spinner">Initializing cart...</div>`;
-        return;
-    }
-
-    const { items, getCartTotal } = cartSlice;
+    // FIX: Use getCartTotal, not getTotalPrice
+    const { items, getCartTotal } = cartSlice; 
 
     if (items.length === 0) {
-        // ... empty state logic ...
         mainContent.innerHTML = `
             <div class="empty-state">
                 <h2>Your Cart is Empty</h2>
-                <p>Looks like you haven't added anything yet.</p>
                 <a href="#menu" class="button-primary">Browse Menu</a>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
-    const cartItemsHTML = items.map(item => `
+    const cartItemsHTML = items.map(item => {
+        // FIX: Ensure numbers
+        const price = parseFloat(item.price) || 0;
+        const subtotal = price * item.quantity;
+
+        return `
         <div class="cart-item" data-item-id="${item.id}">
             <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" class="cart-item-image">
             <div class="cart-item-details">
-                <h4 class="cart-item-name">${item.name}</h4>
-                <p class="cart-item-price">$${parseFloat(item.price).toFixed(2)}</p>
+                <h4 class="cart-item-name">${item.name}</h4> <!-- Only print name once -->
+                <p class="cart-item-price">$${price.toFixed(2)}</p>
             </div>
             <div class="cart-item-actions">
                 <div class="quantity-selector">
                     <button class="quantity-btn decrease-qty" data-item-id="${item.id}">-</button>
-                    <input type="number" class="quantity-input" value="${item.quantity}" min="0" data-item-id="${item.id}">
+                    <input type="number" class="quantity-input" value="${item.quantity}" readonly>
                     <button class="quantity-btn increase-qty" data-item-id="${item.id}">+</button>
                 </div>
-                <p class="cart-item-subtotal">$${(item.price * item.quantity).toFixed(2)}</p>
-                <button class="remove-item-btn" data-item-id="${item.id}" title="Remove item">&times;</button>
+                <p class="cart-item-subtotal">$${subtotal.toFixed(2)}</p>
+                <button class="remove-item-btn" data-item-id="${item.id}" title="Remove">&times;</button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
-   mainContent.innerHTML = `
+    // FIX: Ensure total is a number
+    const totalVal = parseFloat(getCartTotal()) || 0;
+
+    mainContent.innerHTML = `
         <h2>Your Cart</h2>
         <div class="cart-items-container">${cartItemsHTML}</div>
         <div class="cart-summary">
-            <div class="cart-total-row">
+            <div class="cart-total-row" style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
                 <span>Total:</span>
-                <strong>$${getCartTotal().toFixed(2)}</strong>
+                <span>$${totalVal.toFixed(2)}</span>
             </div>
-            <a href="#checkout" class="button-primary full-width-mobile">Proceed to Checkout</a>
+            <a href="#checkout" class="button-primary full-width-mobile" style="display:block; text-align:center;">Proceed to Checkout</a>
         </div>
     `;
+    
     attachCartEventListeners();
 }
+
 
 function attachCartEventListeners() {
     const cartContainer = document.querySelector('.cart-items-container');

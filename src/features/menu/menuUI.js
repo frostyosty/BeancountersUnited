@@ -160,6 +160,7 @@ export function renderMenuPage() {
     const { activeMenuCategory, activeAllergenFilters } = useAppStore.getState().ui; // <--- Get Filters
     const { isAuthenticated } = useAppStore.getState().auth;
     const { orders } = useAppStore.getState().orderHistory;
+     const showAllergens = getMenuCategories.showAllergens || false; // Check toggle
 
     // --- 1. Reorder Banner Logic ---
     let reorderBannerHTML = '';
@@ -204,15 +205,21 @@ export function renderMenuPage() {
         `).join('');
 
         // Allergen Toggles HTML
+    // Only generate this HTML if enabled
+    let allergenControlsHTML = '';
+    if (showAllergens) {
         const allergenTags = ['GF', 'V', 'VG', 'DF'];
-        const allergenTogglesHTML = allergenTags.map(tag => {
+        const toggles = allergenTags.map(tag => {
             const isActive = activeAllergenFilters.includes(tag);
-            return `
-                <button class="allergen-filter-btn ${isActive ? 'active' : ''}" data-tag="${tag}">
-                    ${isActive ? '✅' : '⬜'} ${tag}
-                </button>
-            `;
+            return `<button class="allergen-filter-btn ${isActive ? 'active' : ''}" data-tag="${tag}">${isActive ? '✅' : '⬜'} ${tag}</button>`;
         }).join('');
+        
+        allergenControlsHTML = `
+            <div class="allergen-filters-container" style="margin-top:15px; display:flex; gap:10px; align-items:center;">
+                <span style="font-size:0.9rem; font-weight:bold; color:var(--secondary-color);">Filters:</span>
+                ${toggles}
+            </div>`;
+    }
 
         // Group Items
         const itemsByCategory = filteredItems.reduce((acc, item) => {

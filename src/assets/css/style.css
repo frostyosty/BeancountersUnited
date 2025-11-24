@@ -499,3 +499,72 @@ th { background-color: var(--surface-color); }
 .allergen-badge.V  { background-color: #27ae60; }
 .allergen-badge.VG { background-color: #9b59b6; }
 .allergen-badge.DF { background-color: #3498db; }
+
+
+
+/* --- FIX STICKY HEADER & Z-INDEX --- */
+#main-header {
+    position: sticky;
+    top: 0;
+    /* Header needs to be high, but Mobile Panel needs to be higher? 
+       Usually, mobile panel COVERS the header. 
+       If you want it UNDER, we keep this hierarchy: */
+    z-index: 1100; 
+    background-color: var(--surface-color); /* Ensure it's opaque */
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* --- FIX MOBILE MENU VISIBILITY --- */
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    z-index: 1200; /* FIX: Must be HIGHER than header (1100) to be seen */
+    
+    /* FIX: Padding so items aren't hidden by the top edge/status bar */
+    padding-top: 80px; 
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the Hamburger Button is on TOP of the open panel */
+.hamburger-button {
+    z-index: 1300; /* Highest priority */
+    position: relative;
+}
+
+/* --- FIX TOAST ANIMATIONS (Issue #8) --- */
+.toast {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    color: white;
+    width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    
+    /* Entry Animation */
+    animation: slideIn 0.3s ease forwards; 
+    
+    /* Ensure it has opacity 1 initially */
+    opacity: 1; 
+}
+
+/* Hide class triggered by JS */
+.toast.hide {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}

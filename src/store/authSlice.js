@@ -25,6 +25,7 @@ export const createAuthSlice = (set, get) => ({
         }, false, 'auth/setUserAndProfile');
     },
 
+    
     listenToAuthChanges: () => {
         supabase.auth.onAuthStateChange(async (event, session) => {
             if (get().auth.isImpersonating()) return;
@@ -37,11 +38,18 @@ export const createAuthSlice = (set, get) => ({
                     const profile = await api.getUserProfile(token);
                     get().auth.setUserAndProfile(session.user, profile);
 
-                    // --- NEW: Auto-Redirect for Owners ---
-                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    // --- FIX: SMARTER REDIRECT ---
+                    // Only redirect if we are strictly logging in (SIGNED_IN) 
+                    // OR if it's initial load but we are on the login page/root.
+                    // Do NOT redirect if we are already on a dashboard or history page.
+                    
+                    const currentHash = window.location.hash;
+                    const onSafePage = ['#owner-dashboard', '#manager-dashboard', '#order-history'].includes(currentHash);
+
+                    if (event === 'SIGNED_IN' && !onSafePage) {
                         const role = profile?.role;
                         if (role === 'owner' || role === 'manager') {
-                            console.log("[AuthSlice] Owner detected. Redirecting to Order History.");
+                            console.log("[AuthSlice] Owner Login. Redirecting to Order History.");
                             window.location.hash = '#order-history';
                         }
                     }

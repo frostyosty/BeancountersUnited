@@ -98,45 +98,49 @@ export function initGlobalSpinner() {
 
 // --- 2. TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', overrideDuration = null) {
-    // Hook into store settings if available
-    let settings = {};
-    try {
-        settings = useAppStore.getState().siteSettings?.toast || {};
-    } catch(e) { /* Ignore store errors during startup */ }
+    // 1. Setup Container
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        // CSS for container handled in style.css now, but force position fixed here just in case
+        container.style.position = 'fixed'; 
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
 
+    // 2. Get Settings safely
+    let settings = {};
+    try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
+    
     const duration = overrideDuration || settings.duration || 3000;
     const position = settings.position || 'bottom-right';
 
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        Object.assign(toastContainer.style, {
-            position: 'fixed', zIndex: '9999', pointerEvents: 'none',
-            display: 'flex', flexDirection: 'column', gap: '10px'
-        });
-        document.body.appendChild(toastContainer);
-    }
+    // 3. Apply Position (Dynamic updates)
+    if (position.includes('bottom')) { container.style.bottom = '20px'; container.style.top = 'auto'; }
+    else { container.style.top = '20px'; container.style.bottom = 'auto'; }
     
-    // Apply position logic
-    if (position.includes('bottom')) toastContainer.style.bottom = '20px';
-    else toastContainer.style.top = '20px';
-    
-    if (position.includes('right')) { toastContainer.style.right = '20px'; toastContainer.style.alignItems = 'flex-end'; }
-    else if (position.includes('left')) { toastContainer.style.left = '20px'; toastContainer.style.alignItems = 'flex-start'; }
-    else { toastContainer.style.left = '50%'; toastContainer.style.transform = 'translateX(-50%)'; toastContainer.style.alignItems = 'center'; }
+    if (position.includes('right')) { container.style.right = '20px'; container.style.left = 'auto'; container.style.alignItems = 'flex-end'; }
+    else if (position.includes('left')) { container.style.left = '20px'; container.style.right = 'auto'; container.style.alignItems = 'flex-start'; }
+    else { container.style.left = '50%'; container.style.transform = 'translateX(-50%)'; container.style.alignItems = 'center'; }
 
+    // 4. Create Toast
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    toast.style.pointerEvents = 'auto';
+    
+    // 5. Add to DOM
+    container.appendChild(toast);
 
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => toast.classList.add('show'), 10);
+    // 6. Removal Logic (CSS Animation based)
+    // We assume style.css has the keyframes for 'slideIn' (automatic) and 'fadeOut' (manual)
     setTimeout(() => {
-        toast.classList.remove('show');
-        toast.addEventListener('transitionend', () => toast.remove());
+        toast.classList.add('hide'); // Triggers CSS fadeOut
+        
+        // Wait for CSS animation to finish before removing from DOM
+        toast.addEventListener('animationend', () => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        });
     }, duration);
 }
 

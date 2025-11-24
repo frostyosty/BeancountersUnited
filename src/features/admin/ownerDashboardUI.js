@@ -21,7 +21,7 @@ function getSortIcon(col) {
     return currentSort.direction === 'asc' ? '↑' : '↓';
 }
 
-// --- MAIN RENDER FUNCTION (Owner Only) ---
+// --- MAIN RENDER FUNCTION ---
 export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
