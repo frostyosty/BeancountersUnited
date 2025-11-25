@@ -658,3 +658,22 @@ th { background-color: var(--surface-color); }
 .hamburger-button.open span:nth-child(3) {
     transform: translateY(-10px) rotate(-45deg);
 }
+
+
+/* 1. Parallax Effect */
+/* Keeps image static while content scrolls over it */
+body.bg-parallax {
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
+}
+
+/* 2. Background Animation (Slow Diagonal Scroll) */
+@keyframes bg-scroll-diag {
+    0% { background-position: 0 0; }
+    100% { background-position: 500px 500px; } /* Moves 500px diagonally */
+}
+
+body.bg-animate {
+    animation: bg-scroll-diag 60s linear infinite;
+}

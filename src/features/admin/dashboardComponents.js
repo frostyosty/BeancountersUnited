@@ -78,32 +78,88 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                     <tbody>${rows}</tbody>
                 </table>
             </div>
+            
+            <!-- Menu Settings (Allergen Toggle) -->
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
                 <form id="global-settings-form">
-                    <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
-                        <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
-                        Enable Dietary Filters on Menu
-                    </label>
+                    <!-- Note: We merge this into global settings form for saving logic -->
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                            <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
+                            Enable Dietary Filters on Menu
+                        </label>
+                    </div>
                 </form>
             </div>
         </section>
     `;
 }
 
-// --- 3. NEW: APPEARANCE & ANIMATIONS ---
+// --- 3. GLOBAL SETTINGS (God Mode) ---
+export function renderGlobalSettingsSection(settings) {
+    const currentLogo = settings.logoUrl || '';
+    const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
+    const aboutEnabled = settings.aboutUs?.enabled || false; // Toggle for About Us
+
+    return `
+        <section class="dashboard-section" style="border-color: #7b2cbf;">
+            <h3 style="color:#7b2cbf;">Global Site Settings</h3>
+            <form id="global-settings-form">
+                <div class="form-group">
+                    <label>Website Name</label>
+                    <input type="text" name="websiteName" value="${settings.websiteName || 'Mealmates'}" required>
+                </div>
+                <div class="form-group">
+                    <label>Website Logo</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img id="logo-preview" src="${currentLogo}" style="max-height:40px; display:${currentLogo?'block':'none'}; border:1px solid #ddd;">
+                        <label for="logo-upload" class="button-secondary small" style="cursor:pointer;">Upload</label>
+                        <input type="file" id="logo-upload" name="logoFile" accept="image/*" style="display:none;">
+                        <button type="button" id="clear-logo-btn" class="button-danger small" style="display:${currentLogo?'block':'none'};">Remove</button>
+                        <input type="hidden" name="logoUrl" value="${currentLogo}">
+                        <p id="no-logo-text" style="display:${currentLogo?'none':'block'}; font-size:0.8rem; margin:0;">No logo</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Features & Content</label>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:5px;">
+                        <!-- Hamburger Config -->
+                        <div style="display:flex; gap:15px;">
+                            <label><input type="radio" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig==='main-nav'?'checked':''}> Simple Menu</label>
+                            <label><input type="radio" name="hamburgerMenuContent" value="categories" ${hamburgerConfig==='categories'?'checked':''}> Category List</label>
+                        </div>
+                        
+                        <!-- About Us Toggle -->
+                        <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                            <input type="checkbox" name="enableAboutUs" ${aboutEnabled ? 'checked' : ''}> 
+                            Enable "About Us" Page
+                        </label>
+                    </div>
+                </div>
+            </form>
+        </section>
+    `;
+}
+
+// --- 4. APPEARANCE & ANIMATIONS ---
 export function renderAppearanceSection(settings) {
-    const bgImage = settings.themeVariables?.['--body-background-image'] || '';
+    const bgImage = settings.themeVariables?.['--body-background-image']?.replace(/url\(['"]?|['"]?\)/g, '') || '';
     const bgColor = settings.themeVariables?.['--background-color'] || '#ffffff';
-    const uiConfig = settings.uiConfig || {}; // New config object for animations
+    const uiConfig = settings.uiConfig || {}; 
     
     const transitionType = uiConfig.pageTransition || 'none';
     const staggerEnabled = uiConfig.staggerMenu || false;
+    
+    // New Background Settings
+    const bgType = uiConfig.backgroundType || 'color'; // color, image, pattern
+    const bgParallax = uiConfig.bgParallax || false;
+    const bgAnimation = uiConfig.bgAnimation || false;
 
     return `
         <section class="dashboard-section">
             <h3>Appearance & Animations</h3>
             
-            <!-- Visual Theme Controls (Colors/Fonts) -->
             <div style="margin-bottom:20px;">
                 ${uiUtils.getThemeControlsHTML(settings.themeVariables || {})}
             </div>
@@ -112,27 +168,59 @@ export function renderAppearanceSection(settings) {
 
             <form id="appearance-settings-form">
                 <h4>Site Background</h4>
-                <div class="form-group">
+                
+                <!-- Background Type Selection -->
+                <div class="form-group" style="display:flex; gap:15px; margin-bottom:15px;">
+                    <label style="font-weight:normal; cursor:pointer;">
+                        <input type="radio" name="backgroundType" value="color" ${bgType==='color'?'checked':''}> Solid Color
+                    </label>
+                    <label style="font-weight:normal; cursor:pointer;">
+                        <input type="radio" name="backgroundType" value="image" ${bgType==='image'?'checked':''}> Custom Image
+                    </label>
+                    <label style="font-weight:normal; cursor:pointer;">
+                        <input type="radio" name="backgroundType" value="pattern" ${bgType==='pattern'?'checked':''}> Name Pattern
+                    </label>
+                </div>
+
+                <!-- 1. Color Control -->
+                <div class="form-group bg-control-group" id="bg-ctrl-color" style="display:${bgType==='color'?'block':'none'}">
                     <label>Background Color</label>
                     <input type="color" data-css-var="--background-color" value="${bgColor}" style="width:100%; height:40px;">
                 </div>
-                <div class="form-group">
-                    <label>Background Image</label>
+
+                <!-- 2. Image Control -->
+                <div class="form-group bg-control-group" id="bg-ctrl-image" style="display:${bgType==='image'?'block':'none'}">
+                    <label>Upload Image</label>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <img id="bg-preview" src="${bgImage}" style="width:40px; height:40px; object-fit:cover; border:1px solid #ddd; display:${bgImage?'block':'none'}; background:#eee;">
-                        <label for="bg-upload" class="button-secondary small" style="cursor:pointer;">Upload Image</label>
+                        <img id="bg-preview" src="${bgImage}" style="width:40px; height:40px; object-fit:cover; border:1px solid #ddd; background:#eee;">
+                        <label for="bg-upload" class="button-secondary small" style="cursor:pointer;">Upload</label>
                         <input type="file" id="bg-upload" accept="image/*" style="display:none;">
-                        <button type="button" id="clear-bg-btn" class="button-danger small" style="display:${bgImage?'block':'none'};">Remove</button>
+                        <button type="button" id="clear-bg-btn" class="button-danger small">Remove</button>
                     </div>
-                    <!-- Hidden input to store URL for autosave logic if needed, though we handle upload separately -->
-                    <input type="hidden" name="bgUrl" id="bg-url-input" value="${bgImage}">
+                    <div style="margin-top:10px;">
+                        <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                            <input type="checkbox" name="bgParallax" ${bgParallax ? 'checked' : ''}> 
+                            Enable Parallax (Fixed Background on Scroll)
+                        </label>
+                    </div>
                 </div>
 
-                <h4 style="margin-top:20px;">Animations</h4>
+                <!-- 3. Pattern Control -->
+                <div class="form-group bg-control-group" id="bg-ctrl-pattern" style="display:${bgType==='pattern'?'block':'none'}">
+                    <p style="font-size:0.9rem; color:#666;">
+                        Automatically generates a diagonal pattern using your Website Name ("${settings.websiteName || 'Mealmates'}").
+                    </p>
+                    <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="bgAnimation" ${bgAnimation ? 'checked' : ''}> 
+                        Animate (Slow Scroll)
+                    </label>
+                </div>
+
+                <h4 style="margin-top:20px;">UI Transitions</h4>
                 <div class="form-group">
-                    <label>Page Transition Style</label>
+                    <label>Page Transition</label>
                     <select name="pageTransition">
-                        <option value="none" ${transitionType==='none'?'selected':''}>None (Instant)</option>
+                        <option value="none" ${transitionType==='none'?'selected':''}>None</option>
                         <option value="fade" ${transitionType==='fade'?'selected':''}>Fade In</option>
                         <option value="slide" ${transitionType==='slide'?'selected':''}>Slide Up</option>
                         <option value="zoom" ${transitionType==='zoom'?'selected':''}>Zoom In</option>
@@ -149,7 +237,7 @@ export function renderAppearanceSection(settings) {
     `;
 }
 
-// --- 4. PAYMENT SETTINGS ---
+// --- 5. PAYMENT SETTINGS ---
 export function renderPaymentSection(paymentConfig) {
     const enableStripe = paymentConfig.enableStripe !== false;
     return `
@@ -183,7 +271,7 @@ export function renderPaymentSection(paymentConfig) {
     `;
 }
 
-// --- 5. HEADER SETTINGS ---
+// --- 6. HEADER SETTINGS ---
 export function renderHeaderSection(headerSettings) {
     return `
         <section class="dashboard-section">

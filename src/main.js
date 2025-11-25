@@ -13,6 +13,7 @@ import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
 import { renderGodDashboard } from './features/admin/godDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
+import { renderAboutUsPage } from './features/about/aboutUsUI.js'; 
 
 // 1. Run this IMMEDIATELY (before anything else)
 uiUtils.initGlobalSpinner();
@@ -75,7 +76,8 @@ function renderPageContent() {
 
     // Router Switch
     switch (hash) {
-        case '#menu': renderMenuPage(); break;
+case '#menu': renderMenuPage(); break;
+        case '#about-us': renderAboutUsPage(); break; // <--- NEW CASE
         case '#cart': renderCartPage(); break;
         case '#checkout': renderCheckoutPage(); break;
         case '#order-confirmation':
@@ -200,6 +202,10 @@ function setupHamburgerMenu() {
         let navHTML = '';
 
         navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
+        if (aboutEnabled) {
+            navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
+        }
+
         navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;
 
         if (isAuthenticated && profile) {
@@ -345,6 +351,8 @@ async function main() {
             }
         }
 
+        uiUtils.applyGlobalBackground(settings);
+        
         // 2. Apply Header Layout
         if (settings.headerSettings) {
             uiUtils.applyHeaderLayout(settings.headerSettings);

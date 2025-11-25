@@ -324,3 +324,64 @@ export function updateSiteTitles(name, logoUrl = null) {
         }
     }
 }
+
+
+
+/**
+ * Generates a diagonal text pattern SVG data URI.
+ */
+export function generatePatternUrl(text) {
+    // Create a simple SVG that repeats
+    // We use grey text (fill="#999") with low opacity
+    const svg = `
+    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="textPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                <text x="0" y="50" font-family="sans-serif" font-weight="bold" font-size="16" 
+                      fill="#000" opacity="0.05" transform="rotate(-45 0 50)">
+                    ${text}   ${text}
+                </text>
+            </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#textPattern)" />
+    </svg>`;
+    
+    // Encode to Data URI
+    return `url('data:image/svg+xml;base64,${btoa(svg)}')`;
+}
+
+/**
+ * Applies all background logic based on settings.
+ */
+export function applyGlobalBackground(settings) {
+    const style = document.documentElement.style;
+    const body = document.body;
+    const uiConfig = settings.uiConfig || {};
+    const theme = settings.themeVariables || {};
+    const bgType = uiConfig.backgroundType || 'color'; // 'color', 'image', 'pattern'
+
+    // Reset classes
+    body.classList.remove('bg-parallax', 'bg-animate');
+
+    // 1. Handle Background Type
+    if (bgType === 'image') {
+        style.setProperty('--body-background-image', theme['--body-background-image'] || 'none');
+        style.setProperty('background-size', 'cover');
+        
+        // Apply Parallax
+        if (uiConfig.bgParallax) body.classList.add('bg-parallax');
+    
+    } else if (bgType === 'pattern') {
+        const text = settings.websiteName || 'Mealmates';
+        const patternUrl = generatePatternUrl(text);
+        style.setProperty('--body-background-image', patternUrl);
+        style.setProperty('background-size', 'auto'); // Pattern needs to repeat naturally
+        
+        // Apply Animation
+        if (uiConfig.bgAnimation) body.classList.add('bg-animate');
+    
+    } else {
+        // Solid Color
+        style.setProperty('--body-background-image', 'none');
+    }
+}

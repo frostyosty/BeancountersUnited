@@ -120,17 +120,29 @@ export function attachOwnerDashboardListeners() {
     // 2. AUTOSAVE LOGIC
     // =========================================================
     
-    const saveFunctions = {
+  const saveFunctions = {
         globalSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
+            
+            // Need current settings to preserve existing About Us content (title/text)
+            const currentSettings = useAppStore.getState().siteSettings.settings;
+            const currentAbout = currentSettings.aboutUs || {};
+
             const settingsUpdate = { 
                 websiteName: formData.get('websiteName'), 
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
-                showAllergens: formData.get('showAllergens') === 'on'
+                showAllergens: formData.get('showAllergens') === 'on',
+                logoUrl: currentSettings.logoUrl, // Preserve unless changed via upload handler
+                
+                // NEW: Merge enabled status with existing content
+                aboutUs: {
+                    ...currentAbout,
+                    enabled: formData.get('enableAboutUs') === 'on'
+                }
             };
-            await api.updateSiteSettings(settingsUpdate, session.access_token);
-            uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
+            
+            await api.updateSiteSettings(settingsUpdate, session.access_token); uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
         },
         
@@ -185,18 +197,31 @@ export function attachOwnerDashboardListeners() {
         appearanceSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
+            const { settings } = useAppStore.getState().siteSettings;
+
             const uiConfig = {
                 pageTransition: formData.get('pageTransition'),
-                staggerMenu: formData.get('staggerMenu') === 'on'
+                staggerMenu: formData.get('staggerMenu') === 'on',
+                // New BG Settings
+                backgroundType: formData.get('backgroundType'),
+                bgParallax: formData.get('bgParallax') === 'on',
+                bgAnimation: formData.get('bgAnimation') === 'on'
             };
             
-            // Grab theme vars in case background color changed here
-            const themeVariables = {};
+            // Save Theme Variables (Color)
+            const themeVariables = { ...settings.themeVariables };
             container.querySelectorAll('[data-css-var]').forEach(input => {
                 themeVariables[input.dataset.cssVar] = input.value;
             });
 
+            // Save
             await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
+            
+            // Update Live View
+            // We merge the new settings locally to apply them immediately
+            const updatedSettings = { ...settings, uiConfig, themeVariables };
+            uiUtils.applyGlobalBackground(updatedSettings);
+            
             uiUtils.showToast('Appearance saved.', 'success', 1000);
         }
     };
@@ -222,9 +247,21 @@ export function attachOwnerDashboardListeners() {
     });
 
     // --- CHANGE LISTENER ---
-    container.addEventListener('change', async (e) => {
+ container.addEventListener('change', async (e) => {
         const target = e.target;
         const form = target.closest('form');
+
+        // 1. Background Type Switching (Show/Hide Inputs)
+        if (target.name === 'backgroundType') {
+            // Hide all
+            container.querySelectorAll('.bg-control-group').forEach(el => el.style.display = 'none');
+            // Show selected
+            const type = target.value; // color, image, pattern
+            const el = document.getElementById(`bg-ctrl-${type}`);
+            if (el) el.style.display = 'block';
+            
+            // Auto-save logic handled below
+        }
 
         // Logo Upload
         if (target.id === 'logo-upload') {
@@ -279,6 +316,7 @@ export function attachOwnerDashboardListeners() {
         if (form?.id === 'header-settings-form') saveFunctions.headerLayout(form);
         if (form?.id === 'payment-settings-form') saveFunctions.paymentSettings(form);
         if (form?.id === 'appearance-settings-form') saveFunctions.appearanceSettings(form);
+    
     });
 
     container.dataset.listenersAttached = 'true';
