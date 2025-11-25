@@ -125,7 +125,7 @@ async function showGodModeConfigModal() {
                     </div>
                     <input type="hidden" name="zoomLevel" id="zoom-input" value="${currentZoom}">
                 </div>
-
+                
                 <!-- Spacing Controls -->
                 <div class="form-group">
                     <label>Global Padding</label>

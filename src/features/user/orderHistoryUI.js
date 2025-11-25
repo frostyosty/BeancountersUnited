@@ -202,13 +202,34 @@ function showManualOrderModal() {
     `).join('');
 
     const modalHTML = `
-        ${STEPPER_CSS}
+        <style>
+            .stepper-container { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+            .stepper-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background-color: #eee; color: #333; font-weight: bold; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.2s; }
+            .stepper-btn:active { background-color: #ddd; transform: scale(0.95); }
+            .stepper-btn.plus { background-color: var(--primary-color); color: white; }
+            .stepper-val { font-weight: 600; min-width: 20px; text-align: center; }
+            .hidden { display: none !important; }
+        </style>
         <div class="modal-form-container">
-            <h3>Create Walk-in Order</h3>
+            <h3>Create Phone Order</h3>
             
-            <div style="margin-bottom:15px;">
-                <label style="font-weight:600; display:block; margin-bottom:5px;">Customer Name (Optional)</label>
-                <input type="text" id="manual-customer-name" placeholder="e.g. John" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <div>
+                    <label style="font-weight:600; display:block; margin-bottom:5px;">Customer Name</label>
+                    <input type="text" id="manual-customer-name" placeholder="e.g. Steve" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-weight:600; display:block; margin-bottom:5px;">Due Time</label>
+                    <select id="manual-due-select" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="0">Now (ASAP)</option>
+                        <option value="10">10 Mins</option>
+                        <option value="15">15 Mins</option>
+                        <option value="30">30 Mins</option>
+                        <option value="60">1 Hour</option>
+                        <option value="other">Other...</option>
+                    </select>
+                    <input type="time" id="manual-due-time-input" style="display:none; width:100%; margin-top:5px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                </div>
             </div>
 
             <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">
@@ -230,8 +251,24 @@ function showManualOrderModal() {
     const totalEl = document.getElementById('manual-order-total');
     const submitBtn = document.getElementById('submit-manual-order');
     const nameInput = document.getElementById('manual-customer-name');
+    const dueSelect = document.getElementById('manual-due-select');
+    const dueTimeInput = document.getElementById('manual-due-time-input');
     const selections = {}; 
 
+    // --- Due Time Logic ---
+    dueSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'other') {
+            dueTimeInput.style.display = 'block';
+            // Set default to now in HH:MM format
+            const now = new Date();
+            const timeString = now.toTimeString().substring(0,5);
+            dueTimeInput.value = timeString;
+        } else {
+            dueTimeInput.style.display = 'none';
+        }
+    });
+
+    // --- Stepper Logic ---
     const updateTotal = () => {
         let total = 0;
         let count = 0;
@@ -249,21 +286,16 @@ function showManualOrderModal() {
 
     container.addEventListener('click', (e) => {
         if (!e.target.classList.contains('stepper-btn')) return;
-        
         const row = e.target.closest('.manual-order-row');
         const itemId = row.dataset.itemId;
         const action = e.target.dataset.action;
-        
         let qty = selections[itemId] || 0;
         if (action === 'plus') qty++;
         if (action === 'minus') qty = Math.max(0, qty - 1);
-        
         selections[itemId] = qty;
 
-        // Update UI
         const minusBtn = row.querySelector('.minus');
         const valSpan = row.querySelector('.stepper-val');
-        
         valSpan.textContent = qty;
         if (qty > 0) {
             minusBtn.classList.remove('hidden');
@@ -277,6 +309,7 @@ function showManualOrderModal() {
         updateTotal();
     });
 
+    // --- Submit Logic ---
     submitBtn.addEventListener('click', async () => {
         const items = [];
         let total = 0;
@@ -289,11 +322,27 @@ function showManualOrderModal() {
             }
         });
 
+        // Calculate Due Time
+        let dueTimestamp = new Date();
+        const dueOption = dueSelect.value;
+        
+        if (dueOption === 'other') {
+            // Parse HH:MM from input and set it on today's date
+            const [hours, minutes] = dueTimeInput.value.split(':');
+            dueTimestamp.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            // If time is in the past (e.g. entered 1AM at 9PM), assume tomorrow? 
+            // For simplicity, let's assume today.
+        } else {
+            // Add minutes
+            dueTimestamp = new Date(dueTimestamp.getTime() + parseInt(dueOption) * 60000);
+        }
+
         submitBtn.textContent = "Processing...";
         submitBtn.disabled = true;
         
         const success = await useAppStore.getState().orderHistory.createManualOrder({
-            customerName: nameInput.value.trim() || "Walk-in",
+            customerName: nameInput.value.trim() || "Phone Order",
+            dueTime: dueTimestamp.toISOString(), // Pass ISO string
             items,
             total
         });

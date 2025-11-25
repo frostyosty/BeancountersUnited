@@ -86,20 +86,16 @@ export const createOrderHistorySlice = (set, get) => ({
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            // Call API
+            // Update: Ensure we pass the whole object including dueTime
             await api.createManualOrder(orderDetails, session.access_token);
 
             // 3. Silent Refresh
-            // This will fetch the REAL data from the DB and replace our "fake" order
-            // WITHOUT showing a spinner.
             await get().orderHistory.fetchOrderHistory(true);
-            
             return true;
 
         } catch (e) {
             console.error("[OrderHistorySlice] Manual Order Failed:", e);
             alert(`Failed to create order: ${e.message}`);
-            // Revert (Fetch normally to reset state)
             get().orderHistory.fetchOrderHistory(true);
             return false;
         }

@@ -101,9 +101,11 @@ export default async function handler(req, res) {
         }
 
         // TYPE: MANUAL ORDER
-        if (type === 'manual_order') {
-            const { items, total, customerName } = req.body;
+         if (type === 'manual_order') {
+            const { items, total, customerName, dueTime } = req.body; // Added dueTime
             
+            console.log(`[API] Creating Phone Order for ${customerName}. Due: ${dueTime}`);
+
             // 1. Insert Order & Check for Error
             const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
                 user_id: user.id, 
@@ -111,7 +113,11 @@ export default async function handler(req, res) {
                 status: 'pending', 
                 payment_status: 'paid', 
                 payment_method: 'manual', 
-                customer_name: customerName || 'Walk-in'
+                customer_name: customerName || 'Phone Order',
+                // FIX: Provide a placeholder email to satisfy DB constraint
+                customer_email: 'phone@instore.com', 
+                // FIX: Save the due time
+                pickup_time: dueTime || new Date().toISOString()
             }]).select().single();
 
             if (orderError || !order) {
