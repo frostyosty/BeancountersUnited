@@ -261,7 +261,7 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-    // === STEP 1: RENDER STATIC SHELL ===
+    // 1. Render Shell (Keep existing code)
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -340,8 +340,14 @@ async function main() {
         }
     );
 
-    // --- THIS IS THE FIX ---
-    // 1. Await the critical initial data fetches.
+
+    // If no hash exists, force it to #menu. 
+    // This triggers the hashchange listener automatically.
+    if (!window.location.hash) {
+        window.location.hash = '#menu';
+    }
+
+    // 4. Initial Data Fetch
     await Promise.all([
         useAppStore.getState().auth.listenToAuthChanges(),
         useAppStore.getState().menu.fetchMenu(),

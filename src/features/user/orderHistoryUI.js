@@ -20,23 +20,91 @@ const STEPPER_CSS = `
 `;
 
 export function renderOrderHistoryPage() {
+    console.log("%c[OrderHistoryUI] render CALLED", "color: pink");
+    
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    useAppStore.getState().orderHistory.fetchOrderHistory();
-    useAppStore.getState().menu.fetchMenu(); 
+    // 1. Safe State Access
+    const store = useAppStore.getState();
+    if (!store.orderHistory) {
+        console.error("[OrderHistoryUI] Slice missing!");
+        return;
+    }
 
-    const { orders, isLoading, error } = useAppStore.getState().orderHistory;
-    const { getUserRole } = useAppStore.getState().auth;
-    const role = getUserRole();
+    const { orders, isLoading, error } = store.orderHistory;
+    console.log("[OrderHistoryUI] State:", { count: orders?.length, isLoading, error });
 
-    if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading orders...</div>`; return; }
-    if (error) { mainContent.innerHTML = `<div class="error-message"><h3>Error</h3><p>${error}</p></div>`; return; }
+    // 2. Loading State
+    if (isLoading) {
+        mainContent.innerHTML = `<div class="loading-spinner">Loading your orders...</div>`;
+        return;
+    }
 
-    if (role === 'god' || role === 'owner') {
-        renderAdminOrderTable(mainContent, orders);
-    } else {
-        renderCustomerOrderList(mainContent, orders);
+    // 3. Error State
+    if (error) {
+        mainContent.innerHTML = `
+            <div class="error-message">
+                <h2>Error</h2>
+                <p>${error}</p>
+                <button class="button-primary" onclick="location.reload()">Retry</button>
+            </div>`;
+        return;
+    }
+
+    // 4. Empty State
+    if (!orders || orders.length === 0) {
+        mainContent.innerHTML = `
+            <div class="empty-state">
+                <h2>No Past Orders</h2>
+                <p>You haven't ordered anything yet.</p>
+                <a href="#menu" class="button-primary">Browse Menu</a>
+            </div>`;
+        return;
+    }
+
+    // 5. Render Orders
+    try {
+        const ordersHTML = orders.map(order => {
+            const date = new Date(order.created_at).toLocaleDateString() + ' ' + new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Handle missing order_items safely
+            const items = order.order_items || [];
+            const itemsList = items.map(i => `
+                <li style="display:flex; justify-content:space-between; border-bottom:1px dashed #eee; padding:5px 0;">
+                    <span>${i.quantity}x ${i.menu_items?.name || 'Unknown Item'}</span>
+                    <span>$${(i.price_at_time * i.quantity).toFixed(2)}</span>
+                </li>
+            `).join('');
+
+            return `
+                <div class="order-history-card" style="margin-bottom: 20px;">
+                    <div class="order-card-header">
+                        <div>
+                            <h4>Order #${order.id.slice(0, 4)}</h4>
+                            <small style="color:#666;">${date}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="status-badge ${order.status}" style="display:inline-block; padding:4px 8px; background:#eee; border-radius:4px; font-size:0.8rem;">${order.status.toUpperCase()}</span>
+                            <div style="font-weight:bold; margin-top:5px;">$${order.total_amount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <ul class="order-card-items" style="list-style:none; padding:0; margin:10px 0;">
+                        ${itemsList}
+                    </ul>
+                </div>
+            `;
+        }).join('');
+
+        mainContent.innerHTML = `
+            <h2>Order History</h2>
+            <div class="order-history-list">
+                ${ordersHTML}
+            </div>
+        `;
+    } catch (e) {
+        console.error("[OrderHistoryUI] Render Crash:", e);
+        mainContent.innerHTML = `<div class="error-message">Error displaying orders.</div>`;
     }
 }
 

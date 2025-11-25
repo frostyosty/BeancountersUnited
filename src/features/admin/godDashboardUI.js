@@ -24,18 +24,23 @@ export function renderGodDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Fetch Everything
+    // --- FIX: PREVENT INFINITE LOOP ---
+    // Only fetch if we haven't loaded them yet (or if the array is empty)
+    const { users } = useAppStore.getState().admin;
+    if (!users || users.length === 0) {
+        // This ensures we only trigger the fetch (and subsequent re-render) once
+        useAppStore.getState().admin.fetchAllUsers(); 
+    }
+
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
     
-    // FIX: Removed 'true'. This stops the infinite recursion loop.
-    useAppStore.getState().admin.fetchAllUsers(); 
 
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
-    const { users } = useAppStore.getState().admin;
+
 
     if (isLoadingMenu || isLoadingSettings) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading God Dashboard...</div>`;
