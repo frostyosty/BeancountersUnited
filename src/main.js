@@ -320,12 +320,28 @@ async function main() {
     
     // Apply Settings
     const settings = useAppStore.getState().siteSettings.settings;
+    
     if (settings) {
-        if (settings.themeVariables?.['--font-family-main-name']) {
-            uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
+        // 1. Apply ALL Theme Variables (Colors, Fonts, Spacing, Radius)
+        if (settings.themeVariables) {
+            Object.entries(settings.themeVariables).forEach(([key, value]) => {
+                document.documentElement.style.setProperty(key, value);
+            });
+            // Explicitly handle font helper if needed, though the loop above sets the variable
+            if (settings.themeVariables['--font-family-main-name']) {
+                uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
+            }
         }
-        if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
-        if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
+
+        // 2. Apply Header Layout
+        if (settings.headerSettings) {
+            uiUtils.applyHeaderLayout(settings.headerSettings);
+        }
+        
+        // 3. Apply Logo / Title
+        if (settings.websiteName || settings.logoUrl) {
+            uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
+        }
     }
 
     console.log("[App] Initial data loaded. Performing first full render...");

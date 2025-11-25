@@ -3,22 +3,25 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { attachOwnerDashboardListeners, initializeSortable, currentSort } from './adminListeners.js';
 
-// --- Helpers (Same as God Dashboard) ---
+// --- Helpers ---
 function getCategoryColor(categoryName) {
     let hash = 0;
     for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
     return `hsl(${hash % 360}, 70%, 95%)`; 
 }
+
 function getAllergenBadges(allergens = []) {
     if (!allergens || allergens.length === 0) return '';
     const map = { 'GF': '#2ecc71', 'V': '#27ae60', 'DF': '#3498db', 'VG': '#9b59b6' };
     return allergens.map(tag => `<span style="font-size:0.7rem; background:${map[tag]||'#999'}; color:white; padding:1px 4px; border-radius:3px; margin-right:2px;">${tag}</span>`).join('');
 }
+
 function getSortIcon(col) {
     if (currentSort.column !== col) return '↕';
     return currentSort.direction === 'asc' ? '↑' : '↓';
 }
 
+// --- MAIN RENDER FUNCTION ---
 export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -44,7 +47,13 @@ export function renderOwnerDashboard() {
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
 
-    // --- Active Orders HTML ---
+    // --- Configs ---
+    const headerSettings = settings.headerSettings || { logoAlignment: 'center', hamburgerPosition: 'right' };
+    const paymentConfig = settings.paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
+    const enableStripe = paymentConfig.enableStripe !== false;
+    const showAllergens = settings.showAllergens || false;
+
+    // 1. Active Orders HTML
     const activeOrdersHTML = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
         const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
@@ -55,7 +64,7 @@ export function renderOwnerDashboard() {
         return `
         <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
             <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
-                 onclick="window.handleOrderRowClick('${order.user_id}', '${order.id}')">
+                 onclick="window.handleOrderRowClick('${order.user_id}')">
                 <span>#${order.id.slice(0, 4)} - ${displayName} ${noteIcon}</span>
                 <span>$${order.total_amount.toFixed(2)}</span>
             </div>
@@ -65,7 +74,7 @@ export function renderOwnerDashboard() {
         </div>`;
     }).join('');
 
-    // --- Menu Items HTML ---
+    // 2. Menu Table HTML
     const sortedItems = [...menuItems].sort((a, b) => {
         const col = currentSort.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
@@ -90,21 +99,18 @@ export function renderOwnerDashboard() {
         </tr>
     `).join('');
 
-    // --- Configs ---
-    const headerSettings = settings.headerSettings || { logoAlignment: 'center', hamburgerPosition: 'right' };
-    const paymentConfig = settings.paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
-    const enableStripe = paymentConfig.enableStripe !== false;
-    const showAllergens = settings.showAllergens || false;
-
+    // --- FINAL ASSEMBLY ---
     mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>Owner Dashboard</h2>
             
+            <!-- 1. ACTIVE ORDERS -->
             <section class="dashboard-section" style="background:#f0f8ff; border:1px solid #d0e8ff;">
                 <h3>Active Orders</h3>
                 ${activeOrdersHTML}
             </section>
 
+            <!-- 2. MENU ITEMS -->
             <section class="dashboard-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3>Menu Items</h3>
@@ -124,49 +130,25 @@ export function renderOwnerDashboard() {
                     </table>
                 </div>
                 
+                <!-- Allergen Filter Toggle -->
                 <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
                     <form id="global-settings-form">
                         <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
                             <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
-                            Enable Dietary Filters on Menu
+                            Enable Dietary Filters (GF, V, etc) on Menu
                         </label>
                     </form>
                 </div>
             </section>
 
+            <!-- 3. CATEGORIES -->
             ${ownerPermissions.canEditCategories ? `
             <section class="dashboard-section">
                 <h3>Menu Categories</h3>
                 ${getMenuLayoutHTML()}
             </section>` : ''}
 
-            <section class="dashboard-section">
-                <h3>Payment Settings</h3>
-                <form id="payment-settings-form">
-                    <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                        <label style="font-weight:bold; display:block; margin-bottom:10px;">Online Payments</label>
-                        <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> 
-                            Enable Stripe
-                        </label>
-                    </div>
-
-                    <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                        <label style="font-weight:bold; display:block; margin-bottom:10px;">Pay on Pickup (Cash)</label>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                            <div>
-                                <label>Restrict to Order Value ($)</label>
-                                <input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}">
-                            </div>
-                            <div>
-                                <label>Restrict to Item Count</label>
-                                <input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}">
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </section>
-
+            <!-- 4. HEADER LAYOUT -->
             <section class="dashboard-section">
                 <h3>Header Layout</h3>
                 <form id="header-settings-form">
@@ -189,11 +171,41 @@ export function renderOwnerDashboard() {
                 </form>
             </section>
 
+            <!-- 5. VISUAL THEME (No Duplicate Button) -->
             ${ownerPermissions.canEditTheme ? `
             <section class="dashboard-section">
                 <h3>Visual Customization</h3>
                 ${uiUtils.getThemeControlsHTML(settings.themeVariables || {})}
             </section>` : ''}
+
+            <!-- 6. PAYMENT & EMERGENCY (Red Styling + Bottom) -->
+            <section class="dashboard-section" style="border: 2px solid #dc3545;">
+                <h3 style="color: #dc3545;">Payment & Emergency Controls</h3>
+                <form id="payment-settings-form">
+                    <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
+                        <label style="font-weight:bold; display:block; margin-bottom:10px;">Online Payments</label>
+                        <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
+                            <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> 
+                            Enable Stripe (Credit Cards)
+                        </label>
+                        <p style="font-size:0.85rem; color:#666; margin-top:5px;">Uncheck to disable card payments immediately.</p>
+                    </div>
+
+                    <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
+                        <label style="font-weight:bold; display:block; margin-bottom:10px;">Pay on Pickup (Cash)</label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div>
+                                <label>Restrict to Order Value ($)</label>
+                                <input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}">
+                            </div>
+                            <div>
+                                <label>Restrict to Item Count</label>
+                                <input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
         </div>
     `;
 
@@ -204,6 +216,6 @@ export function renderOwnerDashboard() {
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
+    if (!categories || categories.length === 0) return `<div id="category-manager"><p>No categories.</p><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
     return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
 }

@@ -165,7 +165,12 @@ export function renderCheckoutPage() {
             <div id="stripe-error-message" style="color:red; margin-top:10px; display:none;"></div>
         `;
     } else {
-        stripeSectionHTML = `<div class="notice-message">Online payments are temporarily disabled.</div>`;
+        // FIX: Show a disabled button instead of text
+        stripeSectionHTML = `
+            <button class="button-primary" disabled style="width:100%; padding:15px; font-size:1rem; opacity: 0.6; cursor: not-allowed;">
+                Stripe Payment Coming Soon
+            </button>
+        `;
     }
 
     // If both disabled?

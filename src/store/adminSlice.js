@@ -45,7 +45,12 @@ export const createAdminSlice = (set, get) => ({
         const updatedUsers = originalUsers.map(u =>
             u.id === userId ? { ...u, role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory } : u
         );
+        
+        // 1. Optimistic Update
         set(state => ({ admin: { ...state.admin, users: updatedUsers } }));
+        
+        // FIX: Tell the UI to repaint immediately
+        get().ui.triggerPageRender();
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -53,7 +58,9 @@ export const createAdminSlice = (set, get) => ({
             await api.updateUser(userId, newRole, isVerifiedBuyer, canSeeOrderHistory, session.access_token);
         } catch (error) {
             console.error("Failed to update user:", error);
+            // Revert
             set(state => ({ admin: { ...state.admin, users: originalUsers } }));
+            get().ui.triggerPageRender();
             alert(`Failed to update user: ${error.message}`);
         }
     },
