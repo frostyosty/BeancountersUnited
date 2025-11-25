@@ -1,8 +1,9 @@
 // src/main.js (FINAL & CORRECTED)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
+// import './assets/css/overrides.css'; // Commented out: All styles are now in style.css
 import { useAppStore } from './store/appStore.js';
-import * as uiUtils from './utils/uiUtils.js'; // <-- RE-ADD THIS IMPORT
+import * as uiUtils from './utils/uiUtils.js'; 
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -16,7 +17,7 @@ import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 // 1. Run this IMMEDIATELY (before anything else)
 uiUtils.initGlobalSpinner();
 
-// Define the spinner HTML constant so we can use it in multiple places
+// Define the spinner HTML constant
 const SPINNER_SVG = `
 <div class="auth-loading-spinner">
     <svg viewBox="0 0 100 100">
@@ -28,12 +29,10 @@ const SPINNER_SVG = `
     </svg>
 </div>`;
 
-
-
 // --- State and Render Logic ---
 let isAppInitialized = false;
 
-// This function ONLY updates persistent elements like the header
+// Updates persistent elements like the header
 function renderPersistentUI() {
     renderAuthStatus();
     const cartCountSpan = document.getElementById('cart-count');
@@ -41,24 +40,28 @@ function renderPersistentUI() {
     if (window.buildMobileMenu) window.buildMobileMenu();
 }
 
-
-// This function ONLY renders the main page content
+// Renders the main page content
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-    const { getUserRole, isAuthLoading } = useAppStore.getState().auth; // Get loading state
+    
+    // FIX 1: Destructure isAuthenticated here so we can use it later
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
     
     // 1. STOP if auth is still loading. 
-    // The auth listener will trigger a re-render when it finishes.
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
         return; 
-    }const userRole = getUserRole();
+    }
+    
+    const userRole = getUserRole();
 
+    // Update Active Nav Link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
     });
 
+    // Router Switch
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#cart': renderCartPage(); break;
@@ -66,9 +69,10 @@ function renderPageContent() {
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; // Simplified for brevity
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
             break;
         case '#order-history':
+            // FIX: This variable is now defined
             if (isAuthenticated) {
                 console.log(`[Router] Hash is '${hash}'. Calling renderOrderHistoryPage().`);
                 renderOrderHistoryPage();
@@ -84,8 +88,7 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-case '#god-dashboard':
-            // Ensure this checks for 'god', NOT 'manager'
+        case '#god-dashboard':
             if (userRole === 'god') {
                 renderGodDashboard();
             } else {
@@ -99,29 +102,23 @@ case '#god-dashboard':
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
-        // Handle login/signup/logout buttons first
         if (e.target.matches('#login-signup-btn')) {
             showLoginSignupModal();
-            return; // Stop further processing
+            return; 
         }
         if (e.target.matches('#logout-btn')) {
             useAppStore.getState().auth.logout();
-            return; // Stop further processing
+            return; 
         }
 
-        // Handle ALL navigation links (desktop, mobile, and category filters)
         const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
             e.preventDefault();
-
             const categoryFilter = navLink.dataset.categoryFilter;
             if (categoryFilter) {
-                // FIX: Accessed via the 'ui' slice
                 useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
             }
-
             const newHash = navLink.getAttribute('href');
-            // Only change the hash if it's a real navigation event
             if (window.location.hash !== newHash) {
                 window.location.hash = newHash;
             }
@@ -144,7 +141,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'god@mealmates.dev';
+        const godUserEmail = 'manager@mealmates.dev'; // Ensure this matches your DB
 
         if (user?.email === godUserEmail) {
             await logout();
@@ -167,9 +164,7 @@ function setupGodModeTrigger() {
         clickCount++;
         clearTimeout(clickTimer);
         clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
-        if (clickCount === 3) {
-            toggleGodMode();
-        }
+        if (clickCount === 3) toggleGodMode();
     });
 
     triggerElement.addEventListener('touchstart', (e) => {
@@ -188,34 +183,25 @@ function setupHamburgerMenu() {
 
     if (!hamburgerBtn || !mobileMenuPanel || !mainContent || !mobileNavContainer) return;
 
-    // --- We will use the ROBUST, STATE-DRIVEN build function ---
     const buildMobileMenu = () => {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
         let navHTML = '';
 
-        // 1. Always add static links
         navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
         navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;
 
-        // 2. Add dynamic, user-specific links based on auth state
         if (isAuthenticated && profile) {
             if (profile.can_see_order_history) {
                 navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
             }
-
-            // --- THIS IS THE FIX ---
-            // If owner OR god, show the Owner Dashboard link.
             if (profile.role === 'owner' || profile.role === 'god') {
                 navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
             }
-            // AND, if SPECIFICALLY a god, ALSO show the God Mode link.
             if (profile.role === 'god') {
                 navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
             }
-            // --- END OF FIX ---
         }
 
-        // 3. Add the auth button section at the end
         let authSectionHTML = '';
         if (isAuthenticated) {
             authSectionHTML = `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`;
@@ -224,13 +210,11 @@ function setupHamburgerMenu() {
         }
 
         const newHTML = navHTML + authSectionHTML;
-        // Make it idempotent to prevent loops
         if (mobileNavContainer.innerHTML !== newHTML) {
             mobileNavContainer.innerHTML = newHTML;
         }
     };
 
-    // Expose the function globally so other parts of the app can call it
     window.buildMobileMenu = buildMobileMenu;
 
     const toggleMenu = () => {
@@ -239,29 +223,20 @@ function setupHamburgerMenu() {
     };
 
     hamburgerBtn.addEventListener('click', () => toggleMenu());
-
     mobileMenuPanel.addEventListener('click', (e) => {
-        if (e.target.closest('a.nav-link') || e.target.closest('button')) {
-            toggleMenu();
-        }
+        if (e.target.closest('a.nav-link') || e.target.closest('button')) toggleMenu();
     });
-
     mainContent.addEventListener('click', () => {
-        if (mobileMenuPanel.classList.contains('open')) {
-            toggleMenu();
-        }
+        if (mobileMenuPanel.classList.contains('open')) toggleMenu();
     });
 }
-
-
-
 
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-    // 1. Render Shell (Keep existing code)
+    // 1. Render Shell
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -270,7 +245,6 @@ async function main() {
                 <nav>
                     <a href="#menu" class="nav-link">Menu</a>
                     <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
-                    <!-- FIX: Pre-fill with spinner instead of "..." -->
                     <div id="auth-status-container">${SPINNER_SVG}</div>
                     <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
                 </nav>
@@ -280,69 +254,55 @@ async function main() {
             <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
         `;
     }
-    // === STEP 2: SETUP ALL SYNCHRONOUS UI & LISTENERS ===
-    console.log("[App] Initializing synchronous UI and listeners...");
+
+    // 2. Listeners
     setupHamburgerMenu();
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
     setupGodModeTrigger();
 
-    // === STEP 3: SETUP SUBSCRIPTIONS & ASYNC STARTUP ===
-    console.log("[App] Setting up subscriptions and kicking off initial fetches...");
-
-    // Set up the hashchange listener
+    // 3. Subscriptions
     window.addEventListener('hashchange', renderPageContent);
 
-
-    // Set up the Header UI subscriber
+    // Header UI Subscriber
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile, // Need profile for hamburger links
-            cartItemCount: state.cart.items.length // Simple count is enough to trigger
+            profile: state.auth.profile, 
+            cartItemCount: state.cart.items.length
         };
     };
-
-
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
         if (JSON.stringify(currentUIState) !== JSON.stringify(previousUIState)) {
-            console.log("%c[App Sub] Header UI state changed. Re-rendering.", "color: blue;");
             renderPersistentUI();
             previousUIState = currentUIState;
         }
     });
 
-
+    // Check Urgency Loop
     setInterval(() => {
         const state = useAppStore.getState();
-        if (state.auth.isAuthenticated) {
-            // Refresh orders silently to get latest timestamps/status
-            // (Only if we have loaded them at least once)
-            if (state.orderHistory.hasLoaded) {
-                // We trigger the check
-                state.orderHistory.checkUrgency();
-            }
+        if (state.auth.isAuthenticated && state.orderHistory.hasLoaded) {
+            state.orderHistory.checkUrgency();
         }
-    }, 60 * 1000); // Check every 1 minute
-    // Set up the Page Content subscriber
+    }, 60 * 1000);
 
+    // Page Content Subscriber
     useAppStore.subscribe(
-        // FIX: Return a string key "trigger-category"
-        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}`,
-
+        // FIX 2: Subscribe to Auth Loading State too!
+        // This ensures that when Auth finishes loading (true -> false), the page renders.
+        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}-${state.auth.isAuthLoading}`,
         (keyString) => {
             console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
             renderPageContent();
         }
     );
 
-
-    // If no hash exists, force it to #menu. 
-    // This triggers the hashchange listener automatically.
+    // Force default route
     if (!window.location.hash) {
         window.location.hash = '#menu';
     }
@@ -353,43 +313,30 @@ async function main() {
         useAppStore.getState().menu.fetchMenu(),
         useAppStore.getState().siteSettings.fetchSiteSettings()
     ]);
-    
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true); // true = silent
+        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
     }
     
-// Apply Settings
+    // Apply Settings
     const settings = useAppStore.getState().siteSettings.settings;
-    
     if (settings) {
-        // 1. Apply Fonts
         if (settings.themeVariables?.['--font-family-main-name']) {
             uiUtils.applySiteFont(settings.themeVariables['--font-family-main-name']);
         }
-        // 2. Apply Header Layout
-        if (settings.headerSettings) {
-            uiUtils.applyHeaderLayout(settings.headerSettings);
-        }
-        // 3. Apply Logo / Title (NEW)
-        if (settings.websiteName || settings.logoUrl) {
-            uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
-        }
+        if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
+        if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
     }
-    // -----------------------------
 
     console.log("[App] Initial data loaded. Performing first full render...");
     renderPersistentUI();
     renderPageContent();
-    // --- END OF FIX ---
 
-    console.log("[App] Main initialization finished.");
-
-    // === STEP 4: HIDE THE LOADER ===
+    // 5. Hide Loader
     setTimeout(() => {
         console.log("[App] Hiding initial loader.");
         uiUtils.hideInitialLoader();
-    }, 100); // Shorter delay is fine now
+    }, 100);
 }
 
 main();
