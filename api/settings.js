@@ -1,7 +1,15 @@
-import { supabaseAdmin } from './_db.js';
+// api/settings.js
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-    console.log(`[API /settings] Method: ${req.method}`);
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return res.status(500).json({ error: "Server Config Error" });
+    }
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // --- GET: Fetch Settings ---
     if (req.method === 'GET') {
@@ -10,13 +18,12 @@ export default async function handler(req, res) {
                 .from('site_settings')
                 .select('key, value');
 
-            if (error && error.code !== 'PGRST116' && error.code !== '42P01') throw error;
+            if (error) throw error;
 
-            // Convert DB rows [{key: 'a', value: 'b'}] into Object {a: b}
             const settingsObject = (data || []).reduce((acc, row) => {
                 try {
-                    // Parse JSON strings back to objects for specific keys
-                    if (['themeVariables', 'ownerPermissions', 'menuCategories'].includes(row.key)) {
+                    // Try to parse JSON, fallback to string if regular text
+                    if (['themeVariables', 'ownerPermissions', 'menuCategories', 'headerSettings', 'paymentConfig'].includes(row.key)) {
                         acc[row.key] = JSON.parse(row.value);
                     } else {
                         acc[row.key] = row.value;
@@ -29,37 +36,45 @@ export default async function handler(req, res) {
 
             return res.status(200).json(settingsObject);
         } catch (e) {
-            console.error("GET Error:", e);
-            return res.status(500).json({ error: "Failed to fetch settings." });
+            console.error("GET Settings Error:", e);
+            return res.status(500).json({ error: e.message });
         }
     }
 
     // --- PUT: Update Settings ---
     if (req.method === 'PUT') {
         try {
-            const updates = req.body; // e.g. { websiteName: "New Name", themeVariables: {...} }
-            console.log("[API /settings] Received updates:", Object.keys(updates));
-
-            // We need to upsert each key-value pair individually into the 'site_settings' table
+            const updates = req.body;
+            
+            // Create array of promises
             const upsertPromises = Object.entries(updates).map(([key, value]) => {
-                // Stringify objects before saving
                 const dbValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                
+                // Return the promise so we can check results
                 return supabaseAdmin
                     .from('site_settings')
                     .upsert({ key, value: dbValue }, { onConflict: 'key' });
             });
 
-            await Promise.all(upsertPromises);
+            // Wait for all
+            const results = await Promise.all(upsertPromises);
+
+            // --- FIX: CHECK FOR ERRORS ---
+            // Supabase upsert returns { error: ... }. We must check it.
+            const errors = results.filter(r => r.error).map(r => r.error.message);
+            
+            if (errors.length > 0) {
+                console.error("Settings Database Error:", errors);
+                // Throwing error here stops the 200 OK response
+                throw new Error("Database write failed: " + errors[0]);
+            }
 
             return res.status(200).json({ success: true });
 
         } catch (e) {
-            console.error("PUT Error:", e);
+            console.error("PUT Settings Error:", e);
             return res.status(500).json({ error: e.message });
         }
     }
 
-    res.setHeader('Allow', ['GET', 'PUT']);
-    res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    return res.status(405).json({ error: 'Method not allowed' });
 }

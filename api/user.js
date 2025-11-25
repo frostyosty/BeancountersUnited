@@ -40,19 +40,26 @@ export default async function handler(req, res) {
         // TYPE: MANAGE (List/Update Users)
         if (type === 'manage') {
             if (req.method === 'GET') {
-                const { data, error } = await supabaseAdmin
-                    .from('profiles')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                
-                if (error) throw error;
-                
-                // FIX: Return empty array if data is null
+                const { data } = await supabaseAdmin.from('profiles').select('*').order('created_at', { ascending: false });
                 return res.status(200).json(data || []);
             }
             if (req.method === 'PUT') {
                 const { userId, newRole, isVerifiedBuyer, canSeeOrderHistory } = req.body;
-                await supabaseAdmin.from('profiles').update({ role: newRole, is_verified_buyer: isVerifiedBuyer, can_see_order_history: canSeeOrderHistory }).eq('id', userId);
+                
+                // FIX: Check for error!
+                const { error } = await supabaseAdmin
+                    .from('profiles')
+                    .update({ 
+                        role: newRole, 
+                        is_verified_buyer: isVerifiedBuyer, 
+                        can_see_order_history: canSeeOrderHistory 
+                    })
+                    .eq('id', userId);
+
+                if (error) {
+                    console.error("Update Profile Failed:", error);
+                    throw new Error(error.message);
+                }
                 return res.status(200).json({ success: true });
             }
         }
@@ -96,12 +103,37 @@ export default async function handler(req, res) {
         // TYPE: MANUAL ORDER
         if (type === 'manual_order') {
             const { items, total, customerName } = req.body;
-            const { data: order } = await supabaseAdmin.from('orders').insert([{
-                user_id: user.id, total_amount: total, status: 'pending', payment_status: 'paid', payment_method: 'manual', customer_name: customerName || 'Walk-in'
-            }]).select().single();
             
-            const itemsData = items.map(i => ({ order_id: order.id, menu_item_id: i.id, quantity: i.quantity, price_at_time: i.price }));
-            await supabaseAdmin.from('order_items').insert(itemsData);
+            // 1. Insert Order & Check for Error
+            const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
+                user_id: user.id, 
+                total_amount: total, 
+                status: 'pending', 
+                payment_status: 'paid', 
+                payment_method: 'manual', 
+                customer_name: customerName || 'Walk-in'
+            }]).select().single();
+
+            if (orderError || !order) {
+                console.error("Manual Order Header Insert Failed:", orderError);
+                throw new Error("Failed to create order header: " + (orderError?.message || "Unknown error"));
+            }
+            
+            // 2. Insert Items
+            const itemsData = items.map(i => ({ 
+                order_id: order.id, 
+                menu_item_id: i.id, 
+                quantity: i.quantity, 
+                price_at_time: i.price 
+            }));
+            
+            const { error: itemsError } = await supabaseAdmin.from('order_items').insert(itemsData);
+            
+            if (itemsError) {
+                console.error("Manual Order Items Insert Failed:", itemsError);
+                throw new Error("Failed to create order items: " + itemsError.message);
+            }
+
             return res.status(200).json({ success: true, orderId: order.id });
         }
 
