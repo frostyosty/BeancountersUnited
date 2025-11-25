@@ -120,7 +120,8 @@ export function attachOwnerDashboardListeners() {
     // 2. AUTOSAVE LOGIC
     // =========================================================
     
-  const saveFunctions = {
+// Define the save functions
+    const saveFunctions = {
         globalSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
@@ -132,18 +133,34 @@ export function attachOwnerDashboardListeners() {
             const settingsUpdate = { 
                 websiteName: formData.get('websiteName'), 
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
-                showAllergens: formData.get('showAllergens') === 'on',
-                logoUrl: currentSettings.logoUrl, // Preserve unless changed via upload handler
+                // showAllergens removed from here (handled by menuConfig now)
+                logoUrl: currentSettings.logoUrl, 
                 
-                // NEW: Merge enabled status with existing content
+                // Merge enabled status with existing content
                 aboutUs: {
                     ...currentAbout,
                     enabled: formData.get('enableAboutUs') === 'on'
                 }
             };
             
-            await api.updateSiteSettings(settingsUpdate, session.access_token); uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
+            await api.updateSiteSettings(settingsUpdate, session.access_token);
+            uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
+        },
+
+        // --- NEW: Handles the Allergen Toggle in the Menu Section ---
+        menuConfig: async (form) => {
+            const formData = new FormData(form);
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            const settingsUpdate = { 
+                showAllergens: formData.get('showAllergens') === 'on'
+            };
+            
+            await api.updateSiteSettings(settingsUpdate, session.access_token);
+            uiUtils.showToast('Menu settings saved.', 'success', 1000);
+            // Force refresh so the UI (God/Owner dashboard) sees the checkbox update state if needed
+            useAppStore.getState().siteSettings.fetchSiteSettings();
         },
         
         ownerPermissions: async (form) => {
@@ -214,11 +231,9 @@ export function attachOwnerDashboardListeners() {
                 themeVariables[input.dataset.cssVar] = input.value;
             });
 
-            // Save
             await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
             
             // Update Live View
-            // We merge the new settings locally to apply them immediately
             const currentSettings = useAppStore.getState().siteSettings.settings;
             const newSettings = { 
                 ...currentSettings, 
@@ -226,9 +241,7 @@ export function attachOwnerDashboardListeners() {
                 themeVariables: { ...currentSettings.themeVariables, ...themeVariables }
             };
             
-            // Force the UI update
             uiUtils.applyGlobalBackground(newSettings);
-            
             uiUtils.showToast('Appearance saved.', 'success', 1000);
         }
     };
@@ -251,6 +264,7 @@ export function attachOwnerDashboardListeners() {
             document.documentElement.style.setProperty(target.dataset.cssVar, target.value);
             debouncedSave.theme();
         }
+        
     });
 
     // --- CHANGE LISTENER ---
@@ -318,7 +332,9 @@ export function attachOwnerDashboardListeners() {
         }
 
         // Form Autosaves
+         // Form Autosaves
         if (form?.id === 'global-settings-form') saveFunctions.globalSettings(form);
+        if (form?.id === 'menu-config-form') saveFunctions.menuConfig(form);
         if (form?.id === 'owner-permissions-form') saveFunctions.ownerPermissions(form);
         if (form?.id === 'header-settings-form') saveFunctions.headerLayout(form);
         if (form?.id === 'payment-settings-form') saveFunctions.paymentSettings(form);
