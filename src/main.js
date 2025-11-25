@@ -3,7 +3,7 @@ import './utils/debugLogger.js';
 import './assets/css/style.css';
 // import './assets/css/overrides.css'; // Commented out: All styles are now in style.css
 import { useAppStore } from './store/appStore.js';
-import * as uiUtils from './utils/uiUtils.js'; 
+import * as uiUtils from './utils/uiUtils.js';
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -44,18 +44,30 @@ function renderPersistentUI() {
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-    
+
     // FIX 1: Destructure isAuthenticated here so we can use it later
-    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
-    
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth;
+
     // 1. STOP if auth is still loading. 
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
-        return; 
+        return;
     }
-    
-    const userRole = getUserRole();
 
+    const userRole = getUserRole();
+    const { settings } = useAppStore.getState().siteSettings;
+    const transitionType = settings?.uiConfig?.pageTransition || 'none';
+
+    const mainContent = document.getElementById('main-content');
+
+    // Reset classes
+    mainContent.classList.remove('page-transition-fade', 'page-transition-slide', 'page-transition-zoom');
+
+    // Apply new class (forcing reflow to restart animation is sometimes needed)
+    if (transitionType !== 'none') {
+        void mainContent.offsetWidth; // Force reflow
+        mainContent.classList.add(`page-transition-${transitionType}`);
+    }
     // Update Active Nav Link
     document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
         link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
@@ -69,7 +81,7 @@ function renderPageContent() {
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`;
             break;
         case '#order-history':
             // FIX: This variable is now defined
@@ -104,11 +116,11 @@ function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
         if (e.target.matches('#login-signup-btn')) {
             showLoginSignupModal();
-            return; 
+            return;
         }
         if (e.target.matches('#logout-btn')) {
             useAppStore.getState().auth.logout();
-            return; 
+            return;
         }
 
         const navLink = e.target.closest('a[href^="#"]');
@@ -270,7 +282,7 @@ async function main() {
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile, 
+            profile: state.auth.profile,
             cartItemCount: state.cart.items.length
         };
     };
@@ -315,12 +327,12 @@ async function main() {
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
+        useAppStore.getState().orderHistory.fetchOrderHistory(true);
     }
-    
+
     // Apply Settings
     const settings = useAppStore.getState().siteSettings.settings;
-    
+
     if (settings) {
         // 1. Apply ALL Theme Variables (Colors, Fonts, Spacing, Radius)
         if (settings.themeVariables) {
@@ -337,7 +349,7 @@ async function main() {
         if (settings.headerSettings) {
             uiUtils.applyHeaderLayout(settings.headerSettings);
         }
-        
+
         // 3. Apply Logo / Title
         if (settings.websiteName || settings.logoUrl) {
             uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);

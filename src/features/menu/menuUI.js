@@ -3,9 +3,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { supabase } from '@/supabaseClient.js';
 
-/**
- * Generates the HTML for a single menu item card.
- */
+// --- Helper: Generate Card HTML ---
 const createMenuItemHTML = (item) => {
     const { getUserRole } = useAppStore.getState().auth;
     const userRole = getUserRole();
@@ -24,7 +22,7 @@ const createMenuItemHTML = (item) => {
     if (userRole === 'owner' || userRole === 'god') { adminControlsHTML = ownerControls; }
     if (userRole === 'god') { adminControlsHTML = adminControlsHTML.replace('</div>', ` ${godUserControls}</div>`); }
 
-    // NEW: Allergen Badges on Card
+    // Allergen Badges
     const allergenBadges = (item.allergens || []).map(tag => 
         `<span class="allergen-badge ${tag}">${tag}</span>`
     ).join('');
@@ -48,7 +46,7 @@ const createMenuItemHTML = (item) => {
     `;
 };
 
-// ... (createReorderBanner and handleQuickReorder remain unchanged) ...
+// --- Helper: Reorder Banner ---
 function createReorderBanner(lastOrder) {
     if (!lastOrder || !lastOrder.order_items || lastOrder.order_items.length === 0) return '';
     const totalItems = lastOrder.order_items.reduce((sum, i) => sum + i.quantity, 0);
@@ -87,20 +85,19 @@ function handleQuickReorder(order) {
     }
 }
 
-// --- LISTENERS ---
+// --- Helper: Attach Listeners ---
 function attachMenuListeners() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent || mainContent.dataset.menuListenersAttached === 'true') return;
 
-    // 1. Category Tabs
     mainContent.addEventListener('click', async (event) => {
+        // Category Tabs
         if (event.target.matches('.sub-tab-button')) {
             const newCategory = event.target.dataset.category;
             useAppStore.getState().ui.setActiveMenuCategory(newCategory);
-            // Trigger render is handled by subscription in main.js
         }
 
-        // 2. Allergen Toggles (NEW)
+        // Allergen Toggles
         if (event.target.closest('.allergen-filter-btn')) {
             const btn = event.target.closest('.allergen-filter-btn');
             const tag = btn.dataset.tag;
@@ -108,7 +105,7 @@ function attachMenuListeners() {
             useAppStore.getState().ui.triggerPageRender();
         }
 
-        // 3. Add to Cart / Edit / Delete
+        // Item Actions
         const target = event.target;
         const menuItemCard = target.closest('.menu-item-card');
         
@@ -138,23 +135,22 @@ function attachMenuListeners() {
 }
 
 
-/**
- * Renders the entire menu page.
- */
+// --- MAIN RENDER FUNCTION ---
 export function renderMenuPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // --- State ---
+    // State
     const { items, isLoading, error } = useAppStore.getState().menu;
-    const { getMenuCategories, settings } = useAppStore.getState().siteSettings; // Fix: Get settings here
+    const { getMenuCategories, settings } = useAppStore.getState().siteSettings;
     const { activeMenuCategory, activeAllergenFilters } = useAppStore.getState().ui; 
     const { isAuthenticated } = useAppStore.getState().auth;
     const { orders } = useAppStore.getState().orderHistory;
     
-    const showAllergens = settings.showAllergens || false; // Fix: Check property on settings object
+    const showAllergens = settings.showAllergens || false;
+    const stagger = settings.uiConfig?.staggerMenu || false; // Check Stagger setting
 
-    // --- 1. Reorder Banner Logic ---
+    // 1. Reorder Banner
     let reorderBannerHTML = '';
     let lastOrder = null;
     if (isAuthenticated && orders && orders.length > 0) {
@@ -162,20 +158,17 @@ export function renderMenuPage() {
         reorderBannerHTML = createReorderBanner(lastOrder);
     }
 
-    // --- 2. Load States ---
+    // 2. Load/Error/Empty
     if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`; return; }
     if (error) { mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`; return; }
     if (items.length === 0) { mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`; return; }
 
     try {
-        // --- 3. Filter Items (Category + Allergens) ---
-        
-        // A. Category Filter
+        // 3. Filter Items
         let filteredItems = activeMenuCategory === 'All'
             ? items
             : items.filter(item => (item.category || 'Uncategorized') === activeMenuCategory);
 
-        // B. Allergen Filter (NEW)
         if (activeAllergenFilters.length > 0) {
             filteredItems = filteredItems.filter(item => {
                 const itemAllergens = item.allergens || [];
@@ -183,9 +176,8 @@ export function renderMenuPage() {
             });
         }
 
-        // --- 4. Render HTML ---
-        
-        // Category Tabs
+        // 4. Generate HTML
+        // Categories
         const orderedCategories = getMenuCategories();
         const categoriesForTabs = ['All', ...orderedCategories];
         const tabsHTML = categoriesForTabs.map(category => `
@@ -194,7 +186,7 @@ export function renderMenuPage() {
             </button>
         `).join('');
 
-        // Allergen Toggles HTML
+        // Allergens
         let allergenControlsHTML = '';
         if (showAllergens) {
             const allergenTags = ['GF', 'V', 'VG', 'DF'];
@@ -210,7 +202,7 @@ export function renderMenuPage() {
                 </div>`;
         }
 
-        // Group Items
+        // Content Grid (Grouped by Category)
         const itemsByCategory = filteredItems.reduce((acc, item) => {
             const category = item.category || 'Uncategorized';
             if (!acc[category]) acc[category] = [];
@@ -220,10 +212,21 @@ export function renderMenuPage() {
 
         const sortedCategoryKeys = orderedCategories.filter(cat => itemsByCategory[cat]);
 
-        // Build Grid
         const menuContentHTML = sortedCategoryKeys.map(category => {
             const categoryItems = itemsByCategory[category];
-            const itemsHTML = categoryItems.map(createMenuItemHTML).join('');
+            
+            // --- STAGGER LOGIC INTEGRATED HERE ---
+            const itemsHTML = categoryItems.map((item, index) => {
+                let html = createMenuItemHTML(item);
+                if (stagger) {
+                    // Inject animation class and delay
+                    // Delay increases by 0.1s for each item in the category
+                    html = html.replace('class="menu-item-card"', `class="menu-item-card fade-in-up" style="animation-delay: ${index * 0.1}s"`);
+                }
+                return html;
+            }).join('');
+            // -------------------------------------
+
             return `
                 <section class="menu-category">
                     <h2 class="category-title">${category}</h2>
@@ -232,24 +235,20 @@ export function renderMenuPage() {
             `;
         }).join('');
 
-        // Final Assembly
+        // Assembly
         mainContent.innerHTML = `
             <div class="menu-header">
                 ${reorderBannerHTML}
                 <h2>Our Menu</h2>
-                
                 <div class="menu-controls-wrapper">
-                    <!-- Categories -->
                     <div class="sub-tabs-container">${tabsHTML}</div>
-                    
-                    <!-- Dietary Filters (Conditional) -->
                     ${allergenControlsHTML}
                 </div>
             </div>
             ${filteredItems.length === 0 ? '<div class="empty-state">No items match your filters.</div>' : menuContentHTML}
         `;
 
-        // --- 5. Attach Listeners ---
+        // 5. Listeners
         attachMenuListeners();
         
         const btn = document.getElementById('quick-reorder-btn');

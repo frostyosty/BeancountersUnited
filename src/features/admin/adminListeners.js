@@ -9,7 +9,6 @@ import { showCustomerCRMModal, showEditItemModal, showEditUserModal } from './ad
 export let currentSort = { column: 'category', direction: 'asc' };
 
 // --- UTILITY: Debounce ---
-// Prevents saving on every keystroke. Waits for 'delay' ms of silence.
 function debounce(func, delay) {
     let timer;
     return (...args) => {
@@ -34,21 +33,19 @@ export function attachOwnerDashboardListeners() {
     if (!container || container.dataset.listenersAttached) return;
 
     // =========================================================
-    // 1. CLICK DELEGATION (Item/User/Category Actions)
+    // 1. CLICK DELEGATION
     // =========================================================
     container.addEventListener('click', async (e) => {
         const target = e.target;
 
-        // Edit Item
+        // Item Actions
         if (target.closest('.edit-item-btn-table')) {
             const itemId = target.closest('tr').dataset.itemId;
             const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (item) showEditItemModal(item);
         }
-        // Add Item
         if (target.closest('#add-new-item-btn')) showEditItemModal(null);
         
-        // Delete Item
         if (target.closest('.delete-icon-btn')) {
             const itemId = target.closest('tr').dataset.itemId;
             const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
@@ -58,7 +55,7 @@ export function attachOwnerDashboardListeners() {
             }
         }
 
-        // Edit User
+        // User Actions
         if (target.closest('.edit-user-btn')) {
             const userId = target.closest('tr').dataset.userId;
             const user = useAppStore.getState().admin.users.find(u => u.id === userId);
@@ -73,7 +70,7 @@ export function attachOwnerDashboardListeners() {
             useAppStore.getState().ui.triggerPageRender();
         }
 
-        // Add Category
+        // Category Actions
         if(target.matches('#add-category-btn')) {
             const input = document.getElementById('new-category-name');
             const newCat = input.value.trim();
@@ -87,7 +84,6 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Category added.', 'success');
         }
 
-        // Delete Category
         if (target.closest('.delete-category-btn')) {
             const catToDelete = target.closest('.category-list-item').dataset.categoryName;
             if (confirm(`Delete category "${catToDelete}"?`)) {
@@ -99,7 +95,7 @@ export function attachOwnerDashboardListeners() {
             }
         }
         
-        // Remove Logo
+        // Clear Logo/BG Buttons
         if (target.matches('#clear-logo-btn')) {
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ logoUrl: '' }, session.access_token);
@@ -107,24 +103,32 @@ export function attachOwnerDashboardListeners() {
             useAppStore.getState().siteSettings.fetchSiteSettings();
             uiUtils.showToast('Logo removed.', 'success');
         }
+        
+        if (target.matches('#clear-bg-btn')) {
+             const { data: { session } } = await supabase.auth.getSession();
+             const { settings } = useAppStore.getState().siteSettings;
+             const newTheme = { ...settings.themeVariables, '--body-background-image': 'none' };
+             await api.updateSiteSettings({ themeVariables: newTheme }, session.access_token);
+             document.documentElement.style.setProperty('--body-background-image', 'none');
+             document.getElementById('bg-preview').style.display = 'none';
+             target.style.display = 'none';
+             uiUtils.showToast("Background removed.", "success");
+        }
     });
 
     // =========================================================
-    // 2. AUTOSAVE LOGIC (Debounced & Direct)
+    // 2. AUTOSAVE LOGIC
     // =========================================================
     
-    // Define the save functions
     const saveFunctions = {
         globalSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
-            
             const settingsUpdate = { 
                 websiteName: formData.get('websiteName'), 
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
                 showAllergens: formData.get('showAllergens') === 'on'
             };
-            
             await api.updateSiteSettings(settingsUpdate, session.access_token);
             uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
@@ -176,17 +180,34 @@ export function attachOwnerDashboardListeners() {
             const { data: { session } } = await supabase.auth.getSession();
             await useAppStore.getState().siteSettings.updateSiteSettings({ themeVariables }, session.access_token);
             uiUtils.showToast('Theme saved.', 'success', 1000);
+        },
+
+        appearanceSettings: async (form) => {
+            const formData = new FormData(form);
+            const { data: { session } } = await supabase.auth.getSession();
+            const uiConfig = {
+                pageTransition: formData.get('pageTransition'),
+                staggerMenu: formData.get('staggerMenu') === 'on'
+            };
+            
+            // Grab theme vars in case background color changed here
+            const themeVariables = {};
+            container.querySelectorAll('[data-css-var]').forEach(input => {
+                themeVariables[input.dataset.cssVar] = input.value;
+            });
+
+            await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
+            uiUtils.showToast('Appearance saved.', 'success', 1000);
         }
     };
 
-    // Debounced Wrappers for Text Inputs
     const debouncedSave = {
         global: debounce(saveFunctions.globalSettings, 800),
         payment: debounce(saveFunctions.paymentSettings, 800),
         theme: debounce(saveFunctions.visualTheme, 800)
     };
 
-    // --- INPUT LISTENER (Typing) ---
+    // --- INPUT LISTENER ---
     container.addEventListener('input', (e) => {
         const target = e.target;
         const form = target.closest('form');
@@ -194,19 +215,18 @@ export function attachOwnerDashboardListeners() {
         if (form?.id === 'global-settings-form' && target.type === 'text') debouncedSave.global(form);
         if (form?.id === 'payment-settings-form' && target.type === 'number') debouncedSave.payment(form);
         
-        // Theme Live Preview + Autosave
         if (target.matches('[data-css-var]')) {
             document.documentElement.style.setProperty(target.dataset.cssVar, target.value);
             debouncedSave.theme();
         }
     });
 
-    // --- CHANGE LISTENER (Toggles/Selects/Files) ---
+    // --- CHANGE LISTENER ---
     container.addEventListener('change', async (e) => {
         const target = e.target;
         const form = target.closest('form');
 
-        // Logo Upload (Special Case)
+        // Logo Upload
         if (target.id === 'logo-upload') {
             const file = target.files[0];
             if (file) {
@@ -215,16 +235,33 @@ export function attachOwnerDashboardListeners() {
                     const url = await uploadLogo(file);
                     const { data: { session } } = await supabase.auth.getSession();
                     await api.updateSiteSettings({ logoUrl: url }, session.access_token);
-                    
-                    // Update UI
                     document.getElementById('logo-preview').src = url;
                     document.getElementById('logo-preview').style.display = 'inline-block';
                     document.getElementById('no-logo-text').style.display = 'none';
                     document.getElementById('clear-logo-btn').style.display = 'inline-block';
                     uiUtils.showToast("Logo saved.", "success");
-                } catch (err) {
-                    uiUtils.showToast("Upload failed.", "error");
-                }
+                } catch (err) { uiUtils.showToast("Upload failed.", "error"); }
+            }
+            return;
+        }
+
+        // BG Upload
+        if (target.id === 'bg-upload') {
+            const file = target.files[0];
+            if (file) {
+                uiUtils.showToast("Uploading background...", "info");
+                try {
+                    const url = await uploadLogo(file);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const { settings } = useAppStore.getState().siteSettings;
+                    const newTheme = { ...settings.themeVariables, '--body-background-image': `url('${url}')` };
+                    await api.updateSiteSettings({ themeVariables: newTheme }, session.access_token);
+                    document.documentElement.style.setProperty('--body-background-image', `url('${url}')`);
+                    document.getElementById('bg-preview').src = url;
+                    document.getElementById('bg-preview').style.display = 'block';
+                    document.getElementById('clear-bg-btn').style.display = 'inline-block';
+                    uiUtils.showToast("Background saved.", "success");
+                } catch (err) { uiUtils.showToast("Upload failed.", "error"); }
             }
             return;
         }
@@ -241,12 +278,13 @@ export function attachOwnerDashboardListeners() {
         if (form?.id === 'owner-permissions-form') saveFunctions.ownerPermissions(form);
         if (form?.id === 'header-settings-form') saveFunctions.headerLayout(form);
         if (form?.id === 'payment-settings-form') saveFunctions.paymentSettings(form);
+        if (form?.id === 'appearance-settings-form') saveFunctions.appearanceSettings(form);
     });
 
     container.dataset.listenersAttached = 'true';
 }
 
-// ... (Keep initializeSortable and window.handleOrderRowClick) ...
+// --- SORTABLE ---
 export function initializeSortable() {
     const list = document.getElementById('category-list');
     if (!list || list.dataset.sortableInitialized === 'true') return;
@@ -263,20 +301,11 @@ export function initializeSortable() {
     list.dataset.sortableInitialized = 'true';
 }
 
-// --- MOVE THIS HERE (GLOBAL CLICK HANDLER) ---
+// --- GLOBAL CLICK HANDLER ---
 window.handleOrderRowClick = (userId) => {
     const event = window.event; 
     const target = event.target;
-    
-    // Prevent opening if the click was actually on a button (like Edit/Delete)
     if (target.closest('button')) return;
-
-    // Check data validity
-    if (!userId || userId === 'null' || userId === 'undefined') { 
-        uiUtils.showToast("Guest order - no history available.", "info"); 
-        return; 
-    }
-    
-    // Call the imported function directly
+    if (!userId || userId === 'null' || userId === 'undefined') { uiUtils.showToast("Guest order - no history available.", "info"); return; }
     showCustomerCRMModal(userId);
 };
