@@ -115,14 +115,6 @@ async function showGodModeConfigModal() {
             <h3>God Config & Layout</h3>
             
             <form id="god-config-form">
-                <!-- Payment Config -->
-                <div class="form-group" style="background:#fff0f0; padding:10px; border-radius:5px; border:1px solid #ffcccc;">
-                    <label style="color:#d00; font-weight:bold;">Emergency Controls</label>
-                    <label style="font-weight:normal; display:flex; align-items:center; gap:10px; margin-top:5px;">
-                        <input type="checkbox" name="inStoreOnly" ${inStoreOnly ? 'checked' : ''}> 
-                        Disable Online Payments (In-Store/Cash Only)
-                    </label>
-                </div>
 
                 <!-- Zoom Control -->
                 <div class="form-group">
