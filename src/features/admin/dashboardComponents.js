@@ -8,15 +8,15 @@ export function renderActiveOrdersSection(orders) {
     const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
         const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
-        let noteIcon = '';
-        if (profile.staff_note) {
-            noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
-        }
+        
+        // Note: We use onclick="window.handleOrderRowClick..." 
+        // Ensure adminListeners.js has assigned this to window!
         return `
-        <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
+        <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px; position:relative;">
+            <!-- Entire Header Clickable -->
             <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
                  onclick="window.handleOrderRowClick('${order.user_id}')">
-                <span>#${order.id.slice(0, 4)} - ${displayName} ${noteIcon}</span>
+                <span>#${order.id.slice(0, 4)} - ${displayName}</span>
                 <span>$${order.total_amount.toFixed(2)}</span>
             </div>
             <div style="font-size:0.9rem; color:#666; margin-top:5px;">
@@ -35,6 +35,9 @@ export function renderActiveOrdersSection(orders) {
 
 // --- 2. MENU ITEMS TABLE ---
 export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
+    // Default to false if undefined
+    const isEnabled = showAllergens === true;
+
     const sortedItems = [...menuItems].sort((a, b) => {
         const col = sortConfig.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
@@ -54,7 +57,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
             <td style="padding:10px;">$${parseFloat(item.price).toFixed(2)}</td>
             <td style="padding:10px;">
                 <button class="button-secondary small edit-item-btn-table">Edit</button>
-                <button class="delete-icon-btn">×</button>
+                <button class="delete-icon-btn" title="Delete">×</button>
             </td>
         </tr>
     `).join('');
@@ -65,6 +68,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                 <h3>Menu Items</h3>
                 <button id="add-new-item-btn" class="button-primary">+ Add New Item</button>
             </div>
+            
             <div class="table-wrapper">
                 <table style="width:100%; border-collapse:collapse;">
                     <thead style="background:white; border-bottom:2px solid #ddd;">
@@ -78,17 +82,14 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                     <tbody>${rows}</tbody>
                 </table>
             </div>
-            
-            <!-- Menu Settings (Allergen Toggle) -->
+
+            <!-- NEW: Dedicated Form for Menu Settings -->
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
-                <form id="global-settings-form">
-                    <!-- Note: We merge this into global settings form for saving logic -->
-                    <div style="margin-bottom:10px;">
-                        <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
-                            Enable Dietary Filters on Menu
-                        </label>
-                    </div>
+                <form id="menu-config-form">
+                    <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="showAllergens" ${isEnabled ? 'checked' : ''}> 
+                        Enable Dietary Filters (GF, V, etc) on Customer Menu
+                    </label>
                 </form>
             </div>
         </section>

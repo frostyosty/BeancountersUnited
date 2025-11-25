@@ -219,8 +219,15 @@ export function attachOwnerDashboardListeners() {
             
             // Update Live View
             // We merge the new settings locally to apply them immediately
-            const updatedSettings = { ...settings, uiConfig, themeVariables };
-            uiUtils.applyGlobalBackground(updatedSettings);
+            const currentSettings = useAppStore.getState().siteSettings.settings;
+            const newSettings = { 
+                ...currentSettings, 
+                uiConfig, 
+                themeVariables: { ...currentSettings.themeVariables, ...themeVariables }
+            };
+            
+            // Force the UI update
+            uiUtils.applyGlobalBackground(newSettings);
             
             uiUtils.showToast('Appearance saved.', 'success', 1000);
         }
@@ -346,4 +353,14 @@ window.handleOrderRowClick = (userId) => {
     if (target.closest('button')) return;
     if (!userId || userId === 'null' || userId === 'undefined') { uiUtils.showToast("Guest order - no history available.", "info"); return; }
     showCustomerCRMModal(userId);
+};
+
+
+// --- PHOTO CLICK HANDLER ---
+window.handleItemPhotoClick = (itemId) => {
+    // Open the Edit Item Modal directly to the image section? 
+    // Or just trigger the file input logic.
+    // For simplicity, let's open the Edit Modal since it already has image upload logic.
+    const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
+    if (item) showEditItemModal(item);
 };

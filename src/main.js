@@ -182,10 +182,10 @@ function setupGodModeTrigger() {
                 await new Promise(res => setTimeout(res, 500));
             }
             const { error } = await login(godUserEmail, 'password123');
-            if (error) {
-                alert(`God Mode Login Failed: ${error.message}`);
+if (error) {
+                uiUtils.showToast(`Login Failed: ${error.message}`, "error");
             } else {
-                alert("God Mode Activated!");
+                uiUtils.showToast("God Mode Activated!", "success");
             }
         }
     };

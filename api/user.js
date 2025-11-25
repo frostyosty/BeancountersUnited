@@ -127,7 +127,7 @@ export default async function handler(req, res) {
                 order_id: order.id, 
                 menu_item_id: i.id, 
                 quantity: i.quantity, 
-                price_at_time: i.price 
+                price_at_order: i.price
             }));
             
             const { error: itemsError } = await supabaseAdmin.from('order_items').insert(itemsData);
