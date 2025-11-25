@@ -677,3 +677,18 @@ body.bg-parallax {
 body.bg-animate {
     animation: bg-scroll-diag 60s linear infinite;
 }
+
+
+/* --- Desktop Nav Group (Dynamic Links) --- */
+.desktop-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Hide on mobile (use the existing media query or add this) */
+@media (max-width: 768px) {
+    .desktop-nav-group {
+        display: none;
+    }
+}

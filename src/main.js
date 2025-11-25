@@ -1,8 +1,8 @@
-// src/main.js
+// src/main.js (FINAL)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
-import * as uiUtils from './utils/uiUtils.js';
+import * as uiUtils from './utils/uiUtils.js'; 
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -12,12 +12,10 @@ import { renderOwnerDashboard } from './features/admin/ownerDashboardUI.js';
 import { renderGodDashboard } from './features/admin/godDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
-import { renderAboutUsPage } from './features/about/aboutUsUI.js'; // NEW IMPORT
+import { renderAboutUsPage } from './features/about/aboutUsUI.js';
 
-// 1. Run this IMMEDIATELY
 uiUtils.initGlobalSpinner();
 
-// Spinner HTML
 const SPINNER_SVG = `
 <div class="auth-loading-spinner">
     <svg viewBox="0 0 100 100">
@@ -29,13 +27,54 @@ const SPINNER_SVG = `
     </svg>
 </div>`;
 
-// --- State and Render Logic ---
 let isAppInitialized = false;
 
+// --- NEW: Dynamic Desktop Navigation ---
+function renderDesktopNav() {
+    const container = document.getElementById('desktop-nav-links');
+    if (!container) return;
+
+    const { isAuthenticated, profile } = useAppStore.getState().auth;
+    const { settings } = useAppStore.getState().siteSettings;
+    const cartCount = useAppStore.getState().cart.getTotalItemCount();
+    const aboutEnabled = settings?.aboutUs?.enabled || false;
+    const currentHash = window.location.hash || '#menu';
+
+    // Helper to create link
+    const makeLink = (hash, label) => {
+        const activeClass = currentHash === hash ? 'active' : '';
+        return `<a href="${hash}" class="nav-link ${activeClass}">${label}</a>`;
+    };
+
+    let html = makeLink('#menu', 'Menu');
+
+    if (aboutEnabled) {
+        html += makeLink('#about-us', 'About Us');
+    }
+
+    if (isAuthenticated && profile) {
+        if (profile.can_see_order_history) {
+            html += makeLink('#order-history', 'Orders');
+        }
+        // Owner Dashboard
+        if (profile.role === 'owner' || profile.role === 'god') {
+            html += makeLink('#owner-dashboard', 'Dashboard');
+        }
+        // God Mode
+        if (profile.role === 'god') {
+            html += makeLink('#god-dashboard', 'God Mode');
+        }
+    }
+
+    html += `<a href="#cart" class="nav-link ${currentHash === '#cart' ? 'active' : ''}">Cart (<span id="cart-count">${cartCount}</span>)</a>`;
+
+    container.innerHTML = html;
+}
+
+// Updates persistent elements like the header
 function renderPersistentUI() {
     renderAuthStatus();
-    const cartCountSpan = document.getElementById('cart-count');
-    if (cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
+    renderDesktopNav(); // <--- Update Desktop Nav dynamically
     if (window.buildMobileMenu) window.buildMobileMenu();
 }
 
@@ -52,13 +91,12 @@ function renderPageContent() {
     
     const userRole = getUserRole();
 
-    document.querySelectorAll('#main-header nav a.nav-link').forEach(link => {
-        link.getAttribute('href') === hash ? link.classList.add('active') : link.classList.remove('active');
-    });
+    // Re-render nav to update 'active' class state
+    renderDesktopNav();
 
     switch (hash) {
         case '#menu': renderMenuPage(); break;
-        case '#about-us': renderAboutUsPage(); break; // NEW ROUTE
+        case '#about-us': renderAboutUsPage(); break;
         case '#cart': renderCartPage(); break;
         case '#checkout': renderCheckoutPage(); break;
         case '#order-confirmation':
@@ -177,16 +215,12 @@ function setupHamburgerMenu() {
 
     const buildMobileMenu = () => {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
-        
-        // FIX: Safely access settings for the toggle
         const { settings } = useAppStore.getState().siteSettings;
         const aboutEnabled = settings?.aboutUs?.enabled || false;
 
         let navHTML = '';
-
         navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
         
-        // NEW: Conditionally add About Us
         if (aboutEnabled) {
             navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
         }
@@ -245,8 +279,9 @@ async function main() {
             <header id="main-header">
                 <h1>Mealmates</h1>
                 <nav>
-                    <a href="#menu" class="nav-link">Menu</a>
-                    <a href="#cart" class="nav-link">Cart (<span id="cart-count">0</span>)</a>
+                    <!-- FIX: Replaced hardcoded links with a dynamic container -->
+                    <div id="desktop-nav-links" class="desktop-nav-group"></div>
+                    
                     <div id="auth-status-container">${SPINNER_SVG}</div>
                     <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
                 </nav>
@@ -271,7 +306,6 @@ async function main() {
             isAuthenticated: state.auth.isAuthenticated,
             profile: state.auth.profile, 
             cartItemCount: state.cart.items.length,
-            // Add settings trigger so hamburger updates when "About Us" is toggled
             aboutEnabled: state.siteSettings.settings?.aboutUs?.enabled
         };
     };
@@ -326,8 +360,6 @@ async function main() {
         }
         if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
         if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
-        
-        // Apply Backgrounds
         uiUtils.applyGlobalBackground(settings);
     }
 

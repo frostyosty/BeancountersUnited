@@ -100,23 +100,20 @@ export default async function handler(req, res) {
             }
         }
 
-        // TYPE: MANUAL ORDER
-         if (type === 'manual_order') {
-            const { items, total, customerName, dueTime } = req.body; // Added dueTime
+        // TYPE: MANUAL ORDER (Phone/Walk-in)
+        // Beast 1: No limits, No email required, Managers Only.
+        if (type === 'manual_order') {
+            const { items, total, customerName, dueTime } = req.body;
             
-            console.log(`[API] Creating Phone Order for ${customerName}. Due: ${dueTime}`);
-
-            // 1. Insert Order & Check for Error
+            // 1. Insert Order
+            // Note: We DO NOT send customer_email here anymore. It will be NULL in the DB.
             const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
                 user_id: user.id, 
                 total_amount: total, 
                 status: 'pending', 
-                payment_status: 'paid', 
-                payment_method: 'manual', 
-                customer_name: customerName || 'Phone Order',
-                // FIX: Provide a placeholder email to satisfy DB constraint
-                customer_email: 'phone@instore.com', 
-                // FIX: Save the due time
+                payment_status: 'paid', // Assumed paid via cash/terminal in store
+                payment_method: 'manual_entry', // specific tag
+                customer_name: customerName || 'Walk-in',
                 pickup_time: dueTime || new Date().toISOString()
             }]).select().single();
 
@@ -125,7 +122,7 @@ export default async function handler(req, res) {
                 throw new Error("Failed to create order header: " + (orderError?.message || "Unknown error"));
             }
             
-            // 2. Insert Items
+            // 2. Insert Items (Unchanged)
             const itemsData = items.map(i => ({ 
                 order_id: order.id, 
                 menu_item_id: i.id, 
@@ -135,10 +132,7 @@ export default async function handler(req, res) {
             
             const { error: itemsError } = await supabaseAdmin.from('order_items').insert(itemsData);
             
-            if (itemsError) {
-                console.error("Manual Order Items Insert Failed:", itemsError);
-                throw new Error("Failed to create order items: " + itemsError.message);
-            }
+            if (itemsError) throw new Error("Failed to create order items: " + itemsError.message);
 
             return res.status(200).json({ success: true, orderId: order.id });
         }
