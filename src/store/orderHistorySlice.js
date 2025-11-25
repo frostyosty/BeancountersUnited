@@ -143,13 +143,20 @@ export const createOrderHistorySlice = (set, get) => ({
             if (order.status === 'pending' || order.status === 'preparing') {
                 const createdTime = new Date(order.created_at).getTime();
                 if ((now - createdTime) > URGENCY_THRESHOLD_MS && !notifiedOrderIds.has(order.id)) {
+                    
+                    // NEW: Clickable Toast
                     import('@/utils/uiUtils.js').then(utils => {
-                        utils.showToast(`⚠️ Order #${order.id.slice(0,4)} is overdue!`, 'error');
-                    });
-                    set(state => {
-                        const newSet = new Set(state.orderHistory.notifiedOrderIds);
-                        newSet.add(order.id);
-                        return { orderHistory: { ...state.orderHistory, notifiedOrderIds: newSet } };
+                        utils.showToast(
+                            `⚠️ Order #${order.id.slice(0,4)} is overdue!`, 
+                            'error', 
+                            6000, // Longer duration
+                            () => {
+                                // Navigation Action
+                                window.location.hash = '#owner-dashboard';
+                                // Optional: Scroll to row? 
+                                // (Requires dashboard to be rendered first, might need a timeout or store flag)
+                            }
+                        );
                     });
                 }
             }

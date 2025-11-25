@@ -87,14 +87,18 @@ function renderAdminOrderTable(container, orders) {
         // For simplicity, we just allow dismiss (hide from list).
         
         return `
-            <tr class="${statusClass}" data-order-id="${order.id}">
+            <tr class="${statusClass}" data-order-id="${order.id}" 
+                style="cursor:pointer;" 
+                onclick="window.handleOrderRowClick('${order.user_id}')"> <!-- FIX: Added Click Handler -->
+                
                 <td>#${order.id.slice(0,4)}</td>
                 <td>${date}</td>
                 <td style="font-weight:500;">${customerName}</td>
                 <td style="font-size:0.9rem;">${itemsSummary}</td>
                 <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
                 <td><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <td><button class="delete-icon-btn dismiss-order-btn" title="Dismiss/Archive">×</button></td>
+                <!-- Prevent row click when clicking dismiss -->
+                <td><button class="delete-icon-btn dismiss-order-btn" title="Dismiss" onclick="event.stopPropagation()">×</button></td>
             </tr>
         `;
     }).join('');

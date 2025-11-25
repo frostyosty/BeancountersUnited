@@ -25,8 +25,35 @@ function getSortIcon(col) {
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list"></ul></div>`;
-    return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
+    
+    if (!categories || categories.length === 0) {
+        return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><p>No categories defined.</p></div>`;
+    }
+
+    const listItems = categories.map(cat => `
+        <li class="category-list-item" data-category-name="${cat}" style="display:flex; align-items:center; padding:8px; border-bottom:1px solid #eee; background:white;">
+            <div class="drag-handle-wrapper" style="margin-right:10px; cursor:grab; color:#999;">
+                <span class="drag-handle">☰</span>
+            </div>
+            <span class="category-name" style="flex-grow:1;">${cat}</span>
+            
+            <!-- FIX: Styled X Button with Margin -->
+            <button class="delete-icon-btn delete-category-btn" style="margin-left:15px;" title="Delete Category">
+                ×
+            </button>
+        </li>
+    `).join('');
+
+    return `
+        <div id="category-manager">
+            <div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;">
+                <input type="text" id="new-category-name" placeholder="New Category Name" style="flex:1; padding:5px;">
+                <button id="add-category-btn" class="button-primary small">Add</button>
+            </div>
+            <ul id="category-list" style="list-style:none; padding:0; border:1px solid #ddd; border-radius:4px;">
+                ${listItems}
+            </ul>
+        </div>`;
 }
 
 export function renderGodDashboard() {

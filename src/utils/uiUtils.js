@@ -97,15 +97,11 @@ export function initGlobalSpinner() {
 }
 
 // --- 2. TOAST NOTIFICATIONS ---
-export function showToast(message, type = 'info', overrideDuration = null) {
-    // 1. Setup Container
+export function showToast(message, type = 'info', overrideDuration = null, onClick = null) {
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        // CSS for container handled in style.css now, but force position fixed here just in case
-        container.style.position = 'fixed'; 
-        container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
 
@@ -124,24 +120,34 @@ export function showToast(message, type = 'info', overrideDuration = null) {
     else if (position.includes('left')) { container.style.left = '20px'; container.style.right = 'auto'; container.style.alignItems = 'flex-start'; }
     else { container.style.left = '50%'; container.style.transform = 'translateX(-50%)'; container.style.alignItems = 'center'; }
 
-    // 4. Create Toast
+//4 position
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
     
-    // 5. Add to DOM
+    // NEW: Click Handler
+    if (onClick) {
+        toast.classList.add('clickable');
+        toast.addEventListener('click', () => {
+            onClick();
+            // Optional: Remove immediately on click
+            toast.remove(); 
+        });
+    }
+
     container.appendChild(toast);
 
     // 6. Removal Logic (CSS Animation based)
     // We assume style.css has the keyframes for 'slideIn' (automatic) and 'fadeOut' (manual)
+setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
-        toast.classList.add('hide'); // Triggers CSS fadeOut
-        
-        // Wait for CSS animation to finish before removing from DOM
-        toast.addEventListener('animationend', () => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        });
-    }, duration);
+        if (toast.parentNode) {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            });
+        }
+    }, overrideDuration || 3000);
 }
 
 // --- 3. MODAL SYSTEM ---
@@ -385,3 +391,4 @@ export function applyGlobalBackground(settings) {
         style.setProperty('--body-background-image', 'none');
     }
 }
+

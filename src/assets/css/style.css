@@ -723,3 +723,30 @@ body.bg-animate {
     gap: 10px;
     align-items: center;
 }
+
+/* --- TOAST CONTAINER (Fixed Positioning) --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0; /* Span full width */
+    z-index: 9999;
+    
+    /* Flexbox Centering (Robust against Zoom) */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center horizontally */
+    gap: 10px;
+    pointer-events: none; /* Let clicks pass through the container area */
+}
+
+.toast {
+    /* ... keep existing styles ... */
+    pointer-events: auto; /* Re-enable clicks on the toast itself */
+    cursor: default;
+}
+
+.toast.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+}
