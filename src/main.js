@@ -166,6 +166,7 @@ function setupGodModeTrigger() {
     const longPressDuration = 3000;
 
     const toggleGodMode = async () => {
+        // ... (Keep existing toggle logic) ...
         clearTimeout(clickTimer);
         clearTimeout(longPressTimer);
         clickCount = 0;
@@ -182,25 +183,36 @@ function setupGodModeTrigger() {
                 await new Promise(res => setTimeout(res, 500));
             }
             const { error } = await login(godUserEmail, 'password123');
-if (error) {
-                uiUtils.showToast(`Login Failed: ${error.message}`, "error");
+            if (error) {
+                alert(`God Mode Login Failed: ${error.message}`);
             } else {
-                uiUtils.showToast("God Mode Activated!", "success");
+                alert("God Mode Activated!");
             }
         }
     };
 
-    triggerElement.addEventListener('click', () => {
+    triggerElement.addEventListener('click', (e) => {
+        // Optional: Don't count clicks on buttons/links as god mode attempts
+        if (e.target.closest('button') || e.target.closest('a')) return;
+
         clickCount++;
         clearTimeout(clickTimer);
         clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
-        if (clickCount === 3) toggleGodMode();
+        if (clickCount === 3) {
+            toggleGodMode();
+        }
     });
 
     triggerElement.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        longPressTimer = setTimeout(toggleGodMode, longPressDuration);
+        // FIX: REMOVED e.preventDefault(); 
+        // This allows the touch to turn into a 'click' for the hamburger button.
+        
+        // Optional: Only start timer if touching empty space
+        if (!e.target.closest('button') && !e.target.closest('a')) {
+            longPressTimer = setTimeout(toggleGodMode, longPressDuration);
+        }
     });
+
     triggerElement.addEventListener('touchend', () => clearTimeout(longPressTimer));
     triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 }
