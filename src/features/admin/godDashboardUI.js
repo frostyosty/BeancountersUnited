@@ -1,6 +1,6 @@
 // src/features/admin/godDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
-import * as components from './dashboardComponents.js'; // Use the components!
+import * as components from './dashboardComponents.js';
 import { attachOwnerDashboardListeners, initializeSortable, currentSort } from './adminListeners.js';
 
 // --- Helpers (Color/Badge/Sort logic is inside components or listeners now, or kept here if needed for sorting state) ---
@@ -67,6 +67,7 @@ function getMenuLayoutHTML() {
 
 // src/features/admin/godDashboardUI.js
 
+
 export function renderGodDashboard() {
     console.log("--- [GodDashboard] Render START ---");
     const mainContent = document.getElementById('main-content');
@@ -127,8 +128,10 @@ export function renderGodDashboard() {
         const globalSettingsHTML = components.renderGlobalSettingsSection(settings);
 
         console.log("2. Rendering Active Orders...");
-        if (typeof components.renderActiveOrdersSection !== 'function') throw new Error("renderActiveOrdersSection is missing!");
-        const activeOrdersHTML = components.renderActiveOrdersSection(orders);
+        if (typeof components.renderClientRelationshipsSection !== 'function') {
+            throw new Error("renderClientRelationshipsSection not found in dashboardComponents.js");
+        }
+        const activeOrdersHTML = components.renderClientRelationshipsSection(orders);
 
         console.log("3. Rendering Menu...");
         if (typeof components.renderMenuSection !== 'function') throw new Error("renderMenuSection is missing!");

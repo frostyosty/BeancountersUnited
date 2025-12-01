@@ -1,38 +1,6 @@
 // src/features/admin/dashboardComponents.js
 import * as uiUtils from '@/utils/uiUtils.js';
 
-// --- 1. ACTIVE ORDERS ---
-export function renderActiveOrdersSection(orders) {
-    const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
-    
-    const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
-        const profile = order.profiles || {}; 
-        const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
-        let noteIcon = '';
-        if (profile.staff_note) {
-            noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
-        }
-        return `
-        <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
-            <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
-                 onclick="window.handleOrderRowClick('${order.user_id}')">
-                <span>#${order.id.slice(0, 4)} - ${displayName} ${noteIcon}</span>
-                <span>$${order.total_amount.toFixed(2)}</span>
-            </div>
-            <div style="font-size:0.9rem; color:#666; margin-top:5px;">
-                ${order.order_items.map(i => `${i.quantity}x ${i.menu_items?.name}`).join(', ')}
-            </div>
-        </div>`;
-    }).join('');
-
-    return `
-        <section class="dashboard-section" style="background:#f0f8ff; border:1px solid #d0e8ff;">
-            <h3>Active Orders</h3>
-            ${content}
-        </section>
-    `;
-}
-
 // --- 2. MENU ITEMS ---
 export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
     const sortedItems = [...menuItems].sort((a, b) => {
@@ -255,6 +223,58 @@ export function renderHeaderSection(headerSettings) {
                     </div>
                 </div>
             </form>
+        </section>
+    `;
+}
+
+// --- 7. CLIENT RELATIONSHIPS (For Owner Dashboard) ---
+export function renderClientRelationshipsSection(clients) {
+    if (!clients) return '<p>Loading clients...</p>';
+    
+    const rows = clients.map(client => {
+        const lastOrderDate = client.lastOrder ? new Date(client.lastOrder).toLocaleDateString() : '-';
+        const displayName = client.internal_nickname || client.full_name || client.email || 'Unknown';
+        const noteIcon = client.staff_note ? '📝' : '';
+
+        return `
+            <tr onclick="window.handleOrderRowClick('${client.id}')" style="cursor:pointer; border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:500;">
+                    ${displayName} ${noteIcon}
+                    <div style="font-size:0.8rem; color:#888;">${client.email}</div>
+                </td>
+                <td style="padding:10px;">${client.orderCount}</td>
+                <td style="padding:10px; color:var(--primary-color); font-weight:bold;">$${client.totalSpend.toFixed(2)}</td>
+                <td style="padding:10px;">${lastOrderDate}</td>
+                <td style="padding:10px;">
+                    <button class="button-secondary small" onclick="event.stopPropagation(); window.handleMergeClick('${client.id}')">Merge</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <section class="dashboard-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>Client Relationships</h3>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="client-search" placeholder="Search..." style="padding:5px; border:1px solid #ccc; border-radius:4px;">
+                    <button class="button-primary small" onclick="window.showAddPastOrderModal()">+ Past Order</button>
+                </div>
+            </div>
+            <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead style="background:#f9f9f9; position:sticky; top:0; z-index:1;">
+                        <tr>
+                            <th style="padding:10px;">Name / Email</th>
+                            <th style="padding:10px;">Orders</th>
+                            <th style="padding:10px;">Total Spend</th>
+                            <th style="padding:10px;">Last Seen</th>
+                            <th style="padding:10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="client-table-body">${rows}</tbody>
+                </table>
+            </div>
         </section>
     `;
 }
