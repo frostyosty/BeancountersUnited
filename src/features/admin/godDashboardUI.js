@@ -65,13 +65,19 @@ function getMenuLayoutHTML() {
         </div>`;
 }
 
+// src/features/admin/godDashboardUI.js
+
 export function renderGodDashboard() {
+    console.log("--- [GodDashboard] Render START ---");
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Fetch (Prevent Loop)
+    // Fetch Data (Safely)
     const { users } = useAppStore.getState().admin;
-    if (!users || users.length === 0) useAppStore.getState().admin.fetchAllUsers(); 
+    if (!users || users.length === 0) {
+        console.log("[GodDashboard] Fetching Users...");
+        useAppStore.getState().admin.fetchAllUsers(); 
+    }
 
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
@@ -90,66 +96,100 @@ export function renderGodDashboard() {
         return;
     }
 
-    // --- 1. User Management (Exclusive) ---
-    let userManagementHTML = '';
-    if (users) {
-        const userRows = users.map(user => `
-            <tr data-user-id="${user.id}">
-                <td>${user.email}</td>
-                <td>${user.full_name || 'N/A'}</td>
-                <td><span class="role-badge role-${user.role}">${user.role}</span></td>
-                <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
-                <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
-                <td><button class="button-secondary small edit-user-btn">Edit</button></td>
-            </tr>`).join('');
-        userManagementHTML = `
-            <section class="dashboard-section" style="border-color: #7b2cbf;">
-                <h3 style="color:#7b2cbf;">User Management</h3>
-                <div class="table-wrapper">
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
-                        <tbody>${userRows}</tbody>
-                    </table>
-                </div>
-            </section>`;
+    try {
+        // --- 1. User Management ---
+        let userManagementHTML = '';
+        if (users) {
+            const userRows = users.map(user => `
+                <tr data-user-id="${user.id}">
+                    <td>${user.email}</td>
+                    <td>${user.full_name || 'N/A'}</td>
+                    <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                    <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
+                    <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td><button class="button-secondary small edit-user-btn">Edit</button></td>
+                </tr>`).join('');
+            userManagementHTML = `
+                <section class="dashboard-section" style="border-color: #7b2cbf;">
+                    <h3 style="color:#7b2cbf;">User Management</h3>
+                    <div class="table-wrapper">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
+                            <tbody>${userRows}</tbody>
+                        </table>
+                    </div>
+                </section>`;
+        }
+
+        // --- 2. Render Components (With Logging) ---
+        console.log("1. Rendering Global Settings...");
+        if (typeof components.renderGlobalSettingsSection !== 'function') throw new Error("renderGlobalSettingsSection is missing!");
+        const globalSettingsHTML = components.renderGlobalSettingsSection(settings);
+
+        console.log("2. Rendering Active Orders...");
+        if (typeof components.renderActiveOrdersSection !== 'function') throw new Error("renderActiveOrdersSection is missing!");
+        const activeOrdersHTML = components.renderActiveOrdersSection(orders);
+
+        console.log("3. Rendering Menu...");
+        if (typeof components.renderMenuSection !== 'function') throw new Error("renderMenuSection is missing!");
+        const menuSectionHTML = components.renderMenuSection(
+            menuItems, 
+            currentSort, 
+            getCategoryColor, 
+            getAllergenBadges, 
+            getSortIcon, 
+            settings.showAllergens
+        );
+
+        console.log("4. Rendering Appearance...");
+        if (typeof components.renderAppearanceSection !== 'function') throw new Error("renderAppearanceSection is missing!");
+        const appearanceHTML = components.renderAppearanceSection(settings);
+
+        console.log("5. Rendering Header...");
+        if (typeof components.renderHeaderSection !== 'function') throw new Error("renderHeaderSection is missing!");
+        const headerHTML = components.renderHeaderSection(settings.headerSettings || {});
+
+        console.log("6. Rendering Payment...");
+        if (typeof components.renderPaymentSection !== 'function') throw new Error("renderPaymentSection is missing!");
+        const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
+
+        // --- 3. Final Assembly ---
+        console.log("7. Assembling HTML...");
+        mainContent.innerHTML = `
+            <div class="dashboard-container">
+                <h2>God Mode Dashboard</h2>
+                ${userManagementHTML}
+                ${globalSettingsHTML}
+                ${activeOrdersHTML}
+                ${menuSectionHTML}
+                
+                <section class="dashboard-section">
+                    <h3>Menu Categories</h3>
+                    ${getMenuLayoutHTML()}
+                </section>
+
+                ${headerHTML}
+                ${appearanceHTML}
+                ${paymentHTML}
+            </div>
+        `;
+
+        console.log("8. Attaching Listeners...");
+        if (typeof attachOwnerDashboardListeners !== 'function') throw new Error("attachOwnerDashboardListeners is missing!");
+        attachOwnerDashboardListeners();
+        
+        console.log("9. Initializing Sortable...");
+        if (typeof initializeSortable !== 'function') throw new Error("initializeSortable is missing!");
+        initializeSortable();
+
+        console.log("--- [GodDashboard] Render COMPLETE ---");
+
+    } catch (e) {
+        console.error("CRITICAL DASHBOARD CRASH:", e);
+        mainContent.innerHTML = `<div class="error-message">
+            <h3>Dashboard Crash</h3>
+            <p>${e.message}</p>
+            <p>Check console for details.</p>
+        </div>`;
     }
-
-    // --- 2. Render Components ---
-    // Pass the helpers into the components so they render correctly
-    const globalSettingsHTML = components.renderGlobalSettingsSection(settings);
-    const activeOrdersHTML = components.renderActiveOrdersSection(orders);
-    const menuSectionHTML = components.renderMenuSection(
-        menuItems, 
-        currentSort, 
-        getCategoryColor, 
-        getAllergenBadges, 
-        getSortIcon, 
-        settings.showAllergens
-    );
-    const appearanceHTML = components.renderAppearanceSection(settings);
-    const headerHTML = components.renderHeaderSection(settings.headerSettings || {});
-    const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
-
-    // --- 3. Final Assembly ---
-    mainContent.innerHTML = `
-        <div class="dashboard-container">
-            <h2>God Mode Dashboard</h2>
-            ${userManagementHTML}
-            ${globalSettingsHTML}
-            ${activeOrdersHTML}
-            ${menuSectionHTML}
-            
-            <section class="dashboard-section">
-                <h3>Menu Categories</h3>
-                ${getMenuLayoutHTML()}
-            </section>
-
-            ${headerHTML}
-            ${appearanceHTML}
-            ${paymentHTML}
-        </div>
-    `;
-
-    attachOwnerDashboardListeners();
-    initializeSortable();
 }
