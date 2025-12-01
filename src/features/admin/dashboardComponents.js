@@ -1,8 +1,52 @@
 // src/features/admin/dashboardComponents.js
 import * as uiUtils from '@/utils/uiUtils.js';
 
-// --- 2. MENU ITEMS ---
+// --- 1. ACTIVE ORDERS ---
+export function renderActiveOrdersSection(orders) {
+    // Safety check for input
+    if (!Array.isArray(orders)) return '<p>Loading orders...</p>';
+
+    const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
+    
+    const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
+        const profile = order.profiles || {}; 
+        const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
+        
+        let noteIcon = '';
+        if (profile.staff_note) {
+            noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
+        }
+
+        // FIX: Safety checks for ID and Amount
+        const orderId = order.id ? order.id.slice(0, 4) : '????';
+        const total = parseFloat(order.total_amount || 0).toFixed(2);
+
+        return `
+        <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
+            <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
+                 onclick="window.handleOrderRowClick('${order.user_id}')">
+                <span>#${orderId} - ${displayName} ${noteIcon}</span>
+                <span>$${total}</span>
+            </div>
+            <div style="font-size:0.9rem; color:#666; margin-top:5px;">
+                ${(order.order_items || []).map(i => `${i.quantity}x ${i.menu_items?.name || 'Item'}`).join(', ')}
+            </div>
+        </div>`;
+    }).join('');
+
+    return `
+        <section class="dashboard-section" style="background:#f0f8ff; border:1px solid #d0e8ff;">
+            <h3>Active Orders</h3>
+            ${content}
+        </section>
+    `;
+}
+
+// --- 2. MENU ITEMS TABLE ---
 export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
+    // Default to false if undefined
+    const isEnabled = showAllergens === true;
+
     const sortedItems = [...menuItems].sort((a, b) => {
         const col = sortConfig.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
@@ -22,7 +66,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                 <div style="margin-top:2px;">${getAllergenBadges(item.allergens)}</div>
             </td>
             <td style="padding:10px;">${item.category || 'None'}</td>
-            <td style="padding:10px;">$${parseFloat(item.price).toFixed(2)}</td>
+            <td style="padding:10px;">$${parseFloat(item.price || 0).toFixed(2)}</td>
             <td style="padding:10px;">
                 <button class="button-secondary small edit-item-btn-table">Edit</button>
                 <button class="delete-icon-btn" title="Delete">×</button>
@@ -53,7 +97,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
                 <form id="menu-config-form">
                     <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
-                        <input type="checkbox" name="showAllergens" ${showAllergens ? 'checked' : ''}> 
+                        <input type="checkbox" name="showAllergens" ${isEnabled ? 'checked' : ''}> 
                         Enable Dietary Filters on Menu
                     </label>
                 </form>
@@ -180,19 +224,22 @@ export function renderPaymentSection(paymentConfig) {
     return `
         <section class="dashboard-section" style="border: 2px solid #dc3545;">
             <h3 style="color: #dc3545;">Payment & Emergency Controls</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
+                These settings control what <strong>Customers</strong> see. 
+            </p>
             <form id="payment-settings-form">
                 <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Online Payments</label>
+                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Stripe (Credit Cards)</label>
                     <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
-                        <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> Enable Stripe (Credit Cards)
+                        <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> 
+                        Enable Online Card Payments
                     </label>
-                    <p style="font-size:0.85rem; color:#666; margin-top:5px;">Uncheck to disable card payments immediately.</p>
                 </div>
                 <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Pay on Pickup (Cash)</label>
+                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Customer "Pay on Pickup" Rules</label>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                        <div><label>Restrict to Order Value ($)</label><input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}"></div>
-                        <div><label>Restrict to Item Count</label><input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}"></div>
+                        <div><label>Max Order Value ($)</label><input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}"></div>
+                        <div><label>Max Item Count</label><input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}"></div>
                     </div>
                 </div>
             </form>
@@ -229,12 +276,16 @@ export function renderHeaderSection(headerSettings) {
 
 // --- 7. CLIENT RELATIONSHIPS (For Owner Dashboard) ---
 export function renderClientRelationshipsSection(clients) {
+    // Safety check for null clients
     if (!clients) return '<p>Loading clients...</p>';
     
     const rows = clients.map(client => {
         const lastOrderDate = client.lastOrder ? new Date(client.lastOrder).toLocaleDateString() : '-';
         const displayName = client.internal_nickname || client.full_name || client.email || 'Unknown';
         const noteIcon = client.staff_note ? '📝' : '';
+
+        // FIX: Safety check for totalSpend
+        const spend = parseFloat(client.totalSpend || 0).toFixed(2);
 
         return `
             <tr onclick="window.handleOrderRowClick('${client.id}')" style="cursor:pointer; border-bottom:1px solid #eee;">
@@ -243,7 +294,7 @@ export function renderClientRelationshipsSection(clients) {
                     <div style="font-size:0.8rem; color:#888;">${client.email}</div>
                 </td>
                 <td style="padding:10px;">${client.orderCount}</td>
-                <td style="padding:10px; color:var(--primary-color); font-weight:bold;">$${client.totalSpend.toFixed(2)}</td>
+                <td style="padding:10px; color:var(--primary-color); font-weight:bold;">$${spend}</td>
                 <td style="padding:10px;">${lastOrderDate}</td>
                 <td style="padding:10px;">
                     <button class="button-secondary small" onclick="event.stopPropagation(); window.handleMergeClick('${client.id}')">Merge</button>
