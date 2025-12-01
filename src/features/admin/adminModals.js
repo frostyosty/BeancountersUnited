@@ -158,10 +158,9 @@ export function showEditItemModal(item) {
     const isEditing = !!item;
     const itemData = item || { name: '', price: '', category: '', description: '', allergens: [] };
     const categories = useAppStore.getState().siteSettings.getMenuCategories();
-
-    // Safety check for allergens array
     const currentAllergens = itemData.allergens || [];
 
+    // FIX: Variable name must be modalHTML
     const modalHTML = `
         <div class="modal-form-container">
             <h3>${isEditing ? 'Edit Item' : 'Add New Item'}</h3>
@@ -186,7 +185,6 @@ export function showEditItemModal(item) {
                     <textarea name="description">${itemData.description || ''}</textarea>
                 </div>
 
-                <!-- NEW: Allergen Toggles -->
                 <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:5px; margin-top:10px;">
                     <label style="margin-bottom:8px;">Dietary Tags</label>
                     <div style="display:flex; gap:15px; flex-wrap:wrap;">
@@ -221,8 +219,6 @@ export function showEditItemModal(item) {
         btn.textContent = "Saving...";
 
         const formData = new FormData(e.target);
-
-        // Collect Allergens
         const selectedAllergens = [];
         e.target.querySelectorAll('input[name="allergen"]:checked').forEach(cb => selectedAllergens.push(cb.value));
 
@@ -231,11 +227,11 @@ export function showEditItemModal(item) {
             price: parseFloat(formData.get('price')),
             category: formData.get('category'),
             description: formData.get('description'),
-            allergens: selectedAllergens // Add to object
+            allergens: selectedAllergens
         };
 
         const { data: { session } } = await supabase.auth.getSession();
-
+        
         try {
             if (isEditing) {
                 await api.updateMenuItem(item.id, newItemData, session.access_token);
@@ -244,7 +240,7 @@ export function showEditItemModal(item) {
             }
             uiUtils.showToast('Item saved successfully!', 'success');
             uiUtils.closeModal();
-            useAppStore.getState().menu.fetchMenu(); // Refresh
+            useAppStore.getState().menu.fetchMenu(); 
         } catch (err) {
             console.error(err);
             uiUtils.showToast('Failed to save item.', 'error');

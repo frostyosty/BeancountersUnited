@@ -9,24 +9,23 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: "Server Config Error" });
     }
     
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // --- GET: Fetch Settings ---
     if (req.method === 'GET') {
         try {
-            const { data, error } = await supabaseAdmin
-                .from('site_settings')
-                .select('key, value');
-
+            const { data, error } = await supabaseAdmin.from('site_settings').select('key, value');
             if (error) throw error;
 
             const settingsObject = (data || []).reduce((acc, row) => {
                 try {
-                    // Try to parse JSON, fallback to string if regular text
-                    if (['themeVariables', 'ownerPermissions', 'menuCategories', 'headerSettings', 'paymentConfig'].includes(row.key)) {
+                    // FIX: Added 'uiConfig' and 'aboutUs' to this list
+                    if (['themeVariables', 'ownerPermissions', 'menuCategories', 'headerSettings', 'paymentConfig', 'uiConfig', 'aboutUs'].includes(row.key)) {
                         acc[row.key] = JSON.parse(row.value);
                     } else {
-                        acc[row.key] = row.value;
+                        // Handle booleans stored as strings
+                        if (row.value === 'true') acc[row.key] = true;
+                        else if (row.value === 'false') acc[row.key] = false;
+                        else acc[row.key] = row.value;
                     }
                 } catch (e) {
                     acc[row.key] = row.value;
@@ -36,7 +35,6 @@ export default async function handler(req, res) {
 
             return res.status(200).json(settingsObject);
         } catch (e) {
-            console.error("GET Settings Error:", e);
             return res.status(500).json({ error: e.message });
         }
     }

@@ -1,6 +1,36 @@
 // src/features/admin/dashboardComponents.js
 import * as uiUtils from '@/utils/uiUtils.js';
 
+
+// Helper: Convert Hex to lighter HSL/RGBA
+function getThemeBasedColor(categoryName, settings) {
+    // 1. Get Primary Color from settings (default brown)
+    const hex = settings?.themeVariables?.['--primary-color'] || '#4d2909';
+    
+    // 2. Convert Hex to RGB
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt("0x" + hex[1] + hex[1]);
+        g = parseInt("0x" + hex[2] + hex[2]);
+        b = parseInt("0x" + hex[3] + hex[3]);
+    } else if (hex.length === 7) {
+        r = parseInt("0x" + hex[1] + hex[2]);
+        g = parseInt("0x" + hex[3] + hex[4]);
+        b = parseInt("0x" + hex[5] + hex[6]);
+    }
+
+    // 3. Generate a variance based on category name so they aren't all identical
+    let hash = 0;
+    for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    const variance = (hash % 20); // Small shift
+
+    // 4. Return RGBA with very low opacity (0.05 to 0.15) for a pastel tint
+    // This overlays the color onto the white/grey background
+    const alpha = 0.08 + (Math.abs(variance) / 100); 
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // --- 1. ACTIVE ORDERS ---
 export function renderActiveOrdersSection(orders) {
     // Safety check for input
@@ -43,7 +73,7 @@ export function renderActiveOrdersSection(orders) {
 }
 
 // --- 2. MENU ITEMS TABLE ---
-export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
+export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens, settings) {
     // Default to false if undefined
     const isEnabled = showAllergens === true;
 
@@ -57,7 +87,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
     });
 
     const rows = sortedItems.map(item => `
-        <tr data-item-id="${item.id}" style="background-color: ${getCategoryColor(item.category||'')}; border-bottom:1px solid #fff;">
+        <tr data-item-id="${item.id}" style="background-color: ${getThemeBasedColor(item.category||'', settings)}; border-bottom:1px solid #fff;">
             <td style="padding:10px; width:60px;">
                 <img src="${item.image_url || '/placeholder-coffee.jpg'}" class="admin-item-thumb" style="width:40px; height:40px; object-fit:cover; border-radius:4px; cursor:pointer; border:1px solid #ccc;" onclick="window.handleItemPhotoClick('${item.id}')">
             </td>
