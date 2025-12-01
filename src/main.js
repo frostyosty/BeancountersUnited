@@ -27,6 +27,7 @@ const SPINNER_SVG = `
     </svg>
 </div>`;
 
+
 let isAppInitialized = false;
 
 // --- NEW: Dynamic Desktop Navigation ---
