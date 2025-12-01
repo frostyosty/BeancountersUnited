@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-    const { type } = req.query; 
+    const { type } = req.query;
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         // --- ADMIN CHECKS (God/Owner Only) ---
         if (['manage', 'crm', 'manual_order'].includes(type)) {
             const { data: adminProfile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
-            
+
             // FIX: Check for 'god' instead of 'manager'
             if (!adminProfile || (adminProfile.role !== 'god' && adminProfile.role !== 'owner')) {
                 return res.status(403).json({ error: "Forbidden" });
@@ -45,14 +45,14 @@ export default async function handler(req, res) {
             }
             if (req.method === 'PUT') {
                 const { userId, newRole, isVerifiedBuyer, canSeeOrderHistory } = req.body;
-                
+
                 // FIX: Check for error!
                 const { error } = await supabaseAdmin
                     .from('profiles')
-                    .update({ 
-                        role: newRole, 
-                        is_verified_buyer: isVerifiedBuyer, 
-                        can_see_order_history: canSeeOrderHistory 
+                    .update({
+                        role: newRole,
+                        is_verified_buyer: isVerifiedBuyer,
+                        can_see_order_history: canSeeOrderHistory
                     })
                     .eq('id', userId);
 
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
             if (req.method === 'POST') {
                 const { nickname, note, urgency } = req.body;
                 const { data: old } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
-                
+
                 const updates = {};
                 const auditEntries = [];
                 // ... (Audit logic same as before, just ensuring we save) ...
@@ -103,38 +103,127 @@ export default async function handler(req, res) {
         // TYPE: MANUAL ORDER (Phone/Walk-in)
         // Beast 1: No limits, No email required, Managers Only.
         if (type === 'manual_order') {
-            const { items, total, customerName, dueTime } = req.body;
-            
+            const { items, total, customerName, dueTime, createdAt } = req.body; // Added createdAt
+
             // 1. Insert Order
             // Note: We DO NOT send customer_email here anymore. It will be NULL in the DB.
             const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
-                user_id: user.id, 
-                total_amount: total, 
-                status: 'pending', 
-                payment_status: 'paid', // Assumed paid via cash/terminal in store
-                payment_method: 'manual_entry', // specific tag
+                user_id: user.id,
+                total_amount: total,
+                status: 'completed', // Past orders are auto-completed
+                payment_status: 'paid',
+                payment_method: 'manual_entry',
                 customer_name: customerName || 'Walk-in',
-                pickup_time: dueTime || new Date().toISOString()
+                customer_email: null, // Explicitly null per new DB rule
+                pickup_time: dueTime || new Date().toISOString(),
+                created_at: createdAt || new Date().toISOString() // Allow back-dating
             }]).select().single();
 
             if (orderError || !order) {
                 console.error("Manual Order Header Insert Failed:", orderError);
                 throw new Error("Failed to create order header: " + (orderError?.message || "Unknown error"));
             }
-            
+
             // 2. Insert Items (Unchanged)
-            const itemsData = items.map(i => ({ 
-                order_id: order.id, 
-                menu_item_id: i.id, 
-                quantity: i.quantity, 
+            const itemsData = items.map(i => ({
+                order_id: order.id,
+                menu_item_id: i.id,
+                quantity: i.quantity,
                 price_at_order: i.price
             }));
-            
+
             const { error: itemsError } = await supabaseAdmin.from('order_items').insert(itemsData);
-            
+
             if (itemsError) throw new Error("Failed to create order items: " + itemsError.message);
 
             return res.status(200).json({ success: true, orderId: order.id });
+        }
+
+        // =================================================
+        // TYPE: CLIENTS (CRM Data Aggregation)
+        // =================================================
+        if (type === 'clients') {
+            if (req.method !== 'GET') return res.status(405).end();
+
+            // 1. Fetch Profiles
+            const { data: profiles, error: pError } = await supabaseAdmin
+                .from('profiles')
+                .select('id, email, full_name, internal_nickname, staff_note, created_at');
+
+            if (pError) throw pError;
+
+            // 2. Fetch Order Stats (Grouped)
+            // Note: Supabase JS doesn't do complex SQL GROUP BY easily without Views or RPC.
+            // We will fetch raw order headers and aggregate in JS (fast enough for <10k orders).
+            // For production scaling, create a SQL View in Supabase.
+            const { data: orders, error: oError } = await supabaseAdmin
+                .from('orders')
+                .select('user_id, total_amount, created_at, status');
+
+            if (oError) throw oError;
+
+            // 3. Aggregate Data
+            const clientStats = {}; // { userId: { totalSpend: 0, lastOrder: date, orderCount: 0 } }
+
+            orders.forEach(o => {
+                if (!clientStats[o.user_id]) {
+                    clientStats[o.user_id] = { totalSpend: 0, lastOrder: null, orderCount: 0 };
+                }
+                const stats = clientStats[o.user_id];
+
+                // Only count completed/paid orders? Or all? Let's do all non-cancelled.
+                if (o.status !== 'cancelled') {
+                    stats.totalSpend += o.total_amount || 0;
+                    stats.orderCount += 1;
+
+                    const orderDate = new Date(o.created_at);
+                    if (!stats.lastOrder || orderDate > stats.lastOrder) {
+                        stats.lastOrder = orderDate;
+                    }
+                }
+            });
+
+            // 4. Merge
+            const richClients = profiles.map(p => {
+                const stats = clientStats[p.id] || { totalSpend: 0, lastOrder: null, orderCount: 0 };
+                return {
+                    ...p,
+                    ...stats
+                };
+            });
+
+            // Sort by Total Spend (High to Low) by default
+            richClients.sort((a, b) => b.totalSpend - a.totalSpend);
+
+            return res.status(200).json(richClients);
+        }
+
+        if (type === 'merge_clients') {
+            if (req.method !== 'POST') return res.status(405).end();
+
+            const { sourceId, targetId } = req.body;
+
+            if (!sourceId || !targetId) return res.status(400).json({ error: "Missing IDs" });
+
+            // 1. Move Orders
+            const { error: orderError } = await supabaseAdmin
+                .from('orders')
+                .update({ user_id: targetId })
+                .eq('user_id', sourceId);
+
+            if (orderError) throw orderError;
+
+            // 2. Move Audit Logs (if any)
+            await supabaseAdmin
+                .from('audit_logs')
+                .update({ target_user_id: targetId })
+                .eq('target_user_id', sourceId);
+
+            // 3. Delete Source Profile (Optional, but keeps data clean)
+            // Note: This might fail if other tables ref it, but usually safe after moving orders
+            await supabaseAdmin.from('profiles').delete().eq('id', sourceId);
+
+            return res.status(200).json({ success: true });
         }
 
     } catch (error) {

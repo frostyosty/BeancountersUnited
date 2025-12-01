@@ -129,32 +129,32 @@ export const createOrderHistorySlice = (set, get) => ({
         }
     },
 
-    checkUrgency: () => {
-        // ... (Keep existing logic) ...
+     checkUrgency: () => {
         const role = get().auth.getUserRole();
-        if (role !== 'god' && role !== 'owner') return;
-        if (window.location.hash === '#order-history') return;
-
-        const { orders, notifiedOrderIds } = get().orderHistory;
-        const now = Date.now();
-        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000;
-
+        if (role !== 'manager' && role !== 'owner' && role !== 'god') return; // Updated role check
+        // ...
+        
         orders.forEach(order => {
             if (order.status === 'pending' || order.status === 'preparing') {
                 const createdTime = new Date(order.created_at).getTime();
+                
                 if ((now - createdTime) > URGENCY_THRESHOLD_MS && !notifiedOrderIds.has(order.id)) {
                     
-                    // NEW: Clickable Toast
+                    // 1. Generate Smart Name
+                    const customer = order.customer_name || order.profiles?.full_name || 'Walk-in';
+                    const firstItem = order.order_items?.[0]?.menu_items?.name || 'Order';
+                    const alertText = `⚠️ ${firstItem} for ${customer} is overdue!`;
+
+                    // 2. Click Action
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
-                            `⚠️ Order #${order.id.slice(0,4)} is overdue!`, 
+                            alertText, 
                             'error', 
-                            6000, // Longer duration
+                            8000, // Stay longer
                             () => {
-                                // Navigation Action
+                                // On Click: Go to dashboard
                                 window.location.hash = '#owner-dashboard';
-                                // Optional: Scroll to row? 
-                                // (Requires dashboard to be rendered first, might need a timeout or store flag)
+                                // Optional: You could save a "highlightId" in a store to flash the row later
                             }
                         );
                     });

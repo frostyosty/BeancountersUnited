@@ -2,7 +2,9 @@ import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
 
 export const createAdminSlice = (set, get) => ({
-    users: [],
+    users: [], // Keep specific auth users here
+    clients: [], // NEW: Rich client data with spend stats
+    isLoadingClients: false,
     isLoadingUsers: false,
     error: null,
 
@@ -64,4 +66,15 @@ export const createAdminSlice = (set, get) => ({
             alert(`Failed to update user: ${error.message}`);
         }
     },
+     fetchClients: async () => {
+        set(state => ({ admin: { ...state.admin, isLoadingClients: true } }));
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const data = await api.getClients(session.access_token);
+            set(state => ({ admin: { ...state.admin, clients: data, isLoadingClients: false } }));
+        } catch (e) {
+            console.error("Fetch Clients Failed", e);
+            set(state => ({ admin: { ...state.admin, isLoadingClients: false } }));
+        }
+    }
 });

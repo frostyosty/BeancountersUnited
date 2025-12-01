@@ -154,26 +154,26 @@ setTimeout(() => toast.classList.add('show'), 10);
 export function showModal(htmlContent) {
     closeModal(); // Ensure only one modal exists
 
-    const modalOverlay = document.createElement('div');
-    modalOverlay.id = 'modal-overlay';
+     const modalOverlay = document.createElement('div');
     modalOverlay.className = 'modal-overlay';
-
+    
+    // FIX: Ensure onclick is attached directly to the HTML string or element
     modalOverlay.innerHTML = `
         <div class="modal-content">
-            <button id="modal-close-btn" class="modal-close-btn">&times;</button>
-            <div id="modal-body">${htmlContent}</div>
+            <button class="modal-close-btn" aria-label="Close">&times;</button>
+            ${contentHTML}
         </div>
     `;
 
     document.body.appendChild(modalOverlay);
-    document.body.style.overflow = 'hidden'; 
 
-    requestAnimationFrame(() => modalOverlay.classList.add('open'));
-
-    const closeBtn = document.getElementById('modal-close-btn');
-    closeBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (event) => {
-        if (event.target === modalOverlay) closeModal();
+    // FIX: Attach Close Listeners
+    // 1. X Button
+    modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+    
+    // 2. Background Click
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
     });
 }
 

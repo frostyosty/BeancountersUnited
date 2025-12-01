@@ -1,7 +1,0 @@
-module.exports = {
-  plugins: [
-    require('postcss-merge-rules'),
-    require('css-declaration-sorter')({ order: 'alphabetical' }),
-    require('cssnano')({ preset: 'default' }),
-  ],
-};

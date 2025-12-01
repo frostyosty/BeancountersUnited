@@ -2,7 +2,7 @@
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
-import * as uiUtils from './utils/uiUtils.js'; 
+import * as uiUtils from './utils/uiUtils.js';
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -81,14 +81,14 @@ function renderPersistentUI() {
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-    
-    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
-    
+
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth;
+
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
-        return; 
+        return;
     }
-    
+
     const userRole = getUserRole();
 
     // Re-render nav to update 'active' class state
@@ -97,12 +97,14 @@ function renderPageContent() {
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#about-us': renderAboutUsPage(); break;
-        case '#cart': renderCartPage(); break;
-        case '#checkout': renderCheckoutPage(); break;
+        case '#cart':
+        case '#checkout':
+            renderCartPage();
+            break;
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`;
             break;
         case '#order-history':
             if (isAuthenticated) {
@@ -134,11 +136,11 @@ function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
         if (e.target.matches('#login-signup-btn')) {
             showLoginSignupModal();
-            return; 
+            return;
         }
         if (e.target.matches('#logout-btn')) {
             useAppStore.getState().auth.logout();
-            return; 
+            return;
         }
 
         const navLink = e.target.closest('a[href^="#"]');
@@ -172,7 +174,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@mealmates.dev'; 
+        const godUserEmail = 'manager@mealmates.dev';
 
         if (user?.email === godUserEmail) {
             await logout();
@@ -206,7 +208,7 @@ function setupGodModeTrigger() {
     triggerElement.addEventListener('touchstart', (e) => {
         // FIX: REMOVED e.preventDefault(); 
         // This allows the touch to turn into a 'click' for the hamburger button.
-        
+
         // Optional: Only start timer if touching empty space
         if (!e.target.closest('button') && !e.target.closest('a')) {
             longPressTimer = setTimeout(toggleGodMode, longPressDuration);
@@ -232,7 +234,7 @@ function setupHamburgerMenu() {
 
         let navHTML = '';
         navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
-        
+
         if (aboutEnabled) {
             navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
         }
@@ -316,12 +318,12 @@ async function main() {
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile, 
+            profile: state.auth.profile,
             cartItemCount: state.cart.items.length,
             aboutEnabled: state.siteSettings.settings?.aboutUs?.enabled
         };
     };
-    
+
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
@@ -357,9 +359,9 @@ async function main() {
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
+        useAppStore.getState().orderHistory.fetchOrderHistory(true);
     }
-    
+
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings) {
         if (settings.themeVariables) {

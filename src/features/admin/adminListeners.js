@@ -264,6 +264,15 @@ export function attachOwnerDashboardListeners() {
             document.documentElement.style.setProperty(target.dataset.cssVar, target.value);
             debouncedSave.theme();
         }
+        if (e.target.id === 'client-search') {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#client-table-body tr');
+            
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        }
         
     });
 
@@ -379,4 +388,109 @@ window.handleItemPhotoClick = (itemId) => {
     // For simplicity, let's open the Edit Modal since it already has image upload logic.
     const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
     if (item) showEditItemModal(item);
+};
+
+// --- MERGE CLIENT HANDLER ---
+window.handleMergeClick = (sourceId) => {
+    const targetId = prompt("Enter the User ID (UUID) of the CLIENT you want to keep (The Source will be merged INTO this Target):");
+    
+    if (!targetId) return;
+    if (sourceId === targetId) { alert("Cannot merge into self."); return; }
+
+    if (confirm("WARNING: This will move all orders from this client to the target client and DELETE this profile. This cannot be undone. Proceed?")) {
+        api.request('/user?type=merge_clients', 'POST', { sourceId, targetId }, useAppStore.getState().auth.session?.access_token)
+            .then(() => {
+                uiUtils.showToast("Clients merged successfully.", "success");
+                useAppStore.getState().admin.fetchClients(); // Refresh table
+            })
+            .catch(err => uiUtils.showToast(err.message, "error"));
+    }
+};
+
+window.showAddPastOrderModal = () => {
+    // Reuse the manual order logic but inject a date picker
+    // We can import the function if we exported it, or just copy/modify the logic.
+    // Since manual order logic is in orderHistoryUI.js (user feature), we should actually place this there 
+    // or move the manual order logic to a shared place.
+    
+    // FASTEST FIX: Import the function from orderHistoryUI.js if exported, 
+    // OR create a specialized version here.
+    
+    // Let's create a specialized version here for Admin Past Orders.
+    const { items: menuItems } = useAppStore.getState().menu;
+    
+    const modalHTML = `
+        <div class="modal-form-container">
+            <h3>Add Past Order Record</h3>
+            <div style="margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>
+                    <label>Client Name</label>
+                    <input type="text" id="past-client-name" placeholder="Name">
+                </div>
+                <div>
+                    <label>Date & Time</label>
+                    <input type="datetime-local" id="past-order-date" style="width:100%; padding:8px;">
+                </div>
+            </div>
+            
+            <div style="border:1px solid #ccc; max-height:300px; overflow-y:auto; padding:10px;">
+                ${menuItems.map(item => `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span>${item.name} ($${item.price})</span>
+                        <input type="number" class="past-item-qty" data-id="${item.id}" data-price="${item.price}" value="0" min="0" style="width:50px;">
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div style="margin-top:15px; text-align:right;">
+                <button class="button-primary" id="save-past-order">Save Record</button>
+            </div>
+        </div>
+    `;
+    
+    uiUtils.showModal(modalHTML);
+    
+    // Set default date to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('past-order-date').value = now.toISOString().slice(0,16);
+
+    document.getElementById('save-past-order').onclick = async () => {
+        const name = document.getElementById('past-client-name').value;
+        const dateVal = document.getElementById('past-order-date').value;
+        const createdAt = new Date(dateVal).toISOString();
+        
+        const items = [];
+        let total = 0;
+        
+        document.querySelectorAll('.past-item-qty').forEach(input => {
+            const qty = parseInt(input.value);
+            if (qty > 0) {
+                const price = parseFloat(input.dataset.price);
+                items.push({ id: input.dataset.id, price, quantity: qty });
+                total += qty * price;
+            }
+        });
+        
+        if (items.length === 0) { uiUtils.showToast("No items selected", "error"); return; }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Call API
+        try {
+            await api.createManualOrder({
+                customerName: name || "Past Client",
+                items,
+                total,
+                createdAt, // Passes the back-date
+                dueTime: createdAt // Due time is same as creation for past orders
+            }, session.access_token);
+            
+            uiUtils.showToast("Past order recorded", "success");
+            uiUtils.closeModal();
+            useAppStore.getState().admin.fetchClients(); // Refresh table
+        } catch(e) {
+            uiUtils.showToast(e.message, "error");
+        }
+    };
 };

@@ -6,9 +6,18 @@ import * as components from './dashboardComponents.js';
 // Helpers (Only needed for passing data)
 function getCategoryColor(categoryName) {
     let hash = 0;
-    for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    return `hsl(${hash % 360}, 70%, 95%)`; 
+    for (let i = 0; i < categoryName.length; i++) {
+        hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Math: 180 is Cyan. We allow a variance of 50 degrees (180 to 230).
+    // Math.abs ensures the hash is positive.
+    const h = 180 + (Math.abs(hash) % 50); 
+    
+    // Result: 85% Saturation, 96% Lightness (Very pale blue)
+    return `hsl(${h}, 85%, 96%)`; 
 }
+
 function getAllergenBadges(allergens = []) {
     if (!allergens || allergens.length === 0) return '';
     const map = { 'GF': '#2ecc71', 'V': '#27ae60', 'DF': '#3498db', 'VG': '#9b59b6' };
@@ -60,7 +69,10 @@ export function renderOwnerDashboard() {
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory(); 
-
+// Fetch Clients
+    useAppStore.getState().admin.fetchClients();
+    const { clients } = useAppStore.getState().admin;
+    
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
@@ -90,10 +102,15 @@ export function renderOwnerDashboard() {
     const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
 
     // Render
+// Use the new component
+    // Note: We perform search filtering in the listener, but initial render shows all
+    const clientSectionHTML = components.renderClientRelationshipsSection(clients || []);
+
     mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>Owner Dashboard</h2>
-            ${activeOrdersHTML}
+            
+            ${clientSectionHTML}
             ${menuSectionHTML}
             ${categoriesHTML}
             ${headerHTML}
