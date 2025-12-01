@@ -69,19 +69,32 @@ function createReorderBanner(lastOrder) {
 function handleQuickReorder(order) {
     const { addItem } = useAppStore.getState().cart;
     let count = 0;
-    order.order_items.forEach(item => {
-        if (item.menu_items) {
-            for (let i = 0; i < item.quantity; i++) {
-                addItem(item.menu_items);
+    
+    order.order_items.forEach(orderItem => {
+        const product = orderItem.menu_items; // The nested data from DB
+        
+        // FIX: Ensure we have a valid product object before adding
+        if (product && product.id && product.name) {
+            // Use current price from menu item if available, else fallback
+            const itemToAdd = {
+                id: product.id,
+                name: product.name,
+                price: parseFloat(product.price), // Ensure number
+                image_url: product.image_url
+            };
+
+            for (let i = 0; i < orderItem.quantity; i++) {
+                addItem(itemToAdd);
                 count++;
             }
         }
     });
+
     if (count > 0) {
         uiUtils.showToast(`${count} items added to cart!`, 'success');
-        window.location.hash = '#checkout';
+        window.location.hash = '#cart'; // Go to cart, not checkout (better UX)
     } else {
-        uiUtils.showToast("Could not reorder items.", "error");
+        uiUtils.showToast("Could not reorder items (items may no longer exist).", "error");
     }
 }
 

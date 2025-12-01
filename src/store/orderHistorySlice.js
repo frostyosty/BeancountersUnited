@@ -131,9 +131,15 @@ export const createOrderHistorySlice = (set, get) => ({
 
      checkUrgency: () => {
         const role = get().auth.getUserRole();
-        if (role !== 'manager' && role !== 'owner' && role !== 'god') return; // Updated role check
-        // ...
+        if (role !== 'manager' && role !== 'owner' && role !== 'god') return;
+        if (window.location.hash === '#owner-dashboard') return;
+
+        // FIX: Define orders and notifiedOrderIds
+        const { orders, notifiedOrderIds } = get().orderHistory;
         
+        const now = Date.now();
+        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000;
+
         orders.forEach(order => {
             if (order.status === 'pending' || order.status === 'preparing') {
                 const createdTime = new Date(order.created_at).getTime();

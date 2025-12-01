@@ -22,8 +22,19 @@ export default async function handler(req, res) {
             const { data } = await supabaseAdmin.from('profiles').select('*').eq('id', user.id).single();
             return res.status(200).json(data);
         }
-        if (type === 'orders') {
-            const { data } = await supabaseAdmin.from('orders').select(`*, order_items (*, menu_items (name, image_url))`).eq('user_id', user.id).order('created_at', { ascending: false });
+if (type === 'orders') {
+            // FIX: Added 'id, price' to the nested menu_items select
+            const { data } = await supabaseAdmin
+                .from('orders')
+                .select(`
+                    *,
+                    order_items (
+                        *,
+                        menu_items (id, name, price, image_url)
+                    )
+                `)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
             return res.status(200).json(data);
         }
 
