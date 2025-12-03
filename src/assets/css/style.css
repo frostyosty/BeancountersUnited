@@ -1052,6 +1052,7 @@ input[type="color"] {
 }
 .he-adv-controls.active { display: block; animation: fadeIn 0.2s; }
 
+
 .he-mini-row {
     display: flex;
     gap: 5px;
@@ -1060,3 +1061,8 @@ input[type="color"] {
 }
 .he-mini-label { font-size: 0.7rem; color: #666; width: 40px; }
 .he-mini-input { flex: 1; padding: 2px; font-size: 0.8rem; }
+
+.modal-content{
+    padding: 0.5rem;
+    width: 95%;
+}
