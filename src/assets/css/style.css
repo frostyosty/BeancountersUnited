@@ -761,3 +761,51 @@ body.bg-animate {
     gap: 10px;
     margin-bottom: 15px;
 }
+
+
+#toast-container {
+    position: fixed;
+    /* Vertical position handled by JS (top/bottom) */
+    
+    /* Horizontal: Span full width by default for easy centering */
+    left: 0;
+    right: 0;
+    
+    z-index: 9999;
+    
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    
+    /* CRITICAL: Let clicks pass through the invisible container */
+    pointer-events: none; 
+}
+
+.toast {
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    color: white;
+    width: auto;           /* Don't force 300px, let it fit content */
+    max-width: 90%;        /* But don't overflow mobile screens */
+    min-width: 250px;      /* Consistent look */
+    
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    
+    /* Animation defaults */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease-out;
+    
+    /* CRITICAL: Re-enable clicks on the toast itself */
+    pointer-events: auto; 
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-info { background-color: var(--secondary-color, #666); }
+.toast.toast-success { background-color: #28a745; }
+.toast.toast-error { background-color: #dc3545; }
+.toast.clickable { cursor: pointer; text-decoration: underline; }

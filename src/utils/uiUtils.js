@@ -99,6 +99,7 @@ export function initGlobalSpinner() {
 
 // --- 2. TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', overrideDuration = null, onClick = null) {
+    // 1. Setup Container
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -106,41 +107,54 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         document.body.appendChild(container);
     }
 
-    // 2. Get Settings safely
+    // 2. Get Settings
     let settings = {};
     try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
     const duration = overrideDuration || settings.duration || 3000;
-    const position = settings.position || 'bottom-right';
+    const position = settings.position || 'bottom-center'; // Default
 
-    // 3. Apply Position (Dynamic updates)
-    if (position.includes('bottom')) { container.style.bottom = '20px'; container.style.top = 'auto'; }
-    else { container.style.top = '20px'; container.style.bottom = 'auto'; }
+    // 3. Apply Position (FIXED)
+    // We reset inline styles so CSS can work, only applying specific overrides if needed.
+    container.style.left = '';
+    container.style.right = '';
+    container.style.transform = '';
     
-    if (position.includes('right')) { container.style.right = '20px'; container.style.left = 'auto'; container.style.alignItems = 'flex-end'; }
-    else if (position.includes('left')) { container.style.left = '20px'; container.style.right = 'auto'; container.style.alignItems = 'flex-start'; }
-    else { container.style.left = '50%'; container.style.transform = 'translateX(-50%)'; container.style.alignItems = 'center'; }
+    if (position.includes('bottom')) { 
+        container.style.bottom = '20px'; 
+        container.style.top = 'auto'; 
+    } else { 
+        container.style.top = '20px'; 
+        container.style.bottom = 'auto'; 
+    }
+    
+    if (position.includes('right')) { 
+        container.style.right = '20px'; 
+        container.style.alignItems = 'flex-end'; // Align toasts to right
+    } else if (position.includes('left')) { 
+        container.style.left = '20px'; 
+        container.style.alignItems = 'flex-start'; // Align toasts to left
+    } else { 
+        // CENTER (Default)
+        // We let CSS handles left:0/right:0. We just ensure Flex centers the items.
+        container.style.left = '0'; 
+        container.style.right = '0'; 
+        container.style.alignItems = 'center'; 
+    }
 
-//4 position
+    // ... rest of function (create toast, onClick, animation) ...
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
     
-    // NEW: Click Handler
     if (onClick) {
         toast.classList.add('clickable');
-        toast.addEventListener('click', () => {
-            onClick();
-            // Optional: Remove immediately on click
-            toast.remove(); 
-        });
+        toast.addEventListener('click', () => { onClick(); toast.remove(); });
     }
 
     container.appendChild(toast);
 
-    // 6. Removal Logic (CSS Animation based)
-    // We assume style.css has the keyframes for 'slideIn' (automatic) and 'fadeOut' (manual)
-setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         if (toast.parentNode) {
             toast.classList.remove('show');
@@ -148,9 +162,8 @@ setTimeout(() => toast.classList.add('show'), 10);
                 if (toast.parentNode) toast.parentNode.removeChild(toast);
             });
         }
-    }, overrideDuration || 3000);
+    }, duration);
 }
-
 // --- 3. MODAL SYSTEM ---
 export function showModal(htmlContent) {
     closeModal(); // Ensure only one modal exists
