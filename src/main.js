@@ -180,7 +180,7 @@ function setupGodModeTrigger() {
 
         if (user?.email === godUserEmail) {
             await logout();
-            alert("God Mode Deactivated.");
+            // alert("God Mode Deactivated.");
         } else {
             if (user) {
                 await logout();
@@ -190,7 +190,7 @@ function setupGodModeTrigger() {
             if (error) {
                 alert(`God Mode Login Failed: ${error.message}`);
             } else {
-                alert("God Mode Activated!");
+                // alert("God Mode Activated!");
             }
         }
     };
