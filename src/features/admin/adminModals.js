@@ -1,14 +1,13 @@
+// src/features/admin/adminModals.js
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import { useAppStore } from '@/store/appStore.js';
 
-
-// --- CUSTOMER CRM MODAL ---
+// --- 1. CUSTOMER CRM MODAL ---
 export async function showCustomerCRMModal(userId) {
-    uiUtils.showModal(<div class="loading-spinner">Fetching Client History...</div>);
-    code
-    Code
+    uiUtils.showModal(`<div class="loading-spinner">Fetching Client History...</div>`);
+
     try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Not authenticated");
@@ -29,67 +28,66 @@ export async function showCustomerCRMModal(userId) {
             let changeMsg = log.action_type;
             if (log.action_type === 'UPDATE_NICKNAME') changeMsg = `Nickname: "${log.old_value}" → "${log.new_value}"`;
             if (log.action_type === 'UPDATE_NOTE') changeMsg = `Updated Note`;
-
+            
             return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;"><div style="color:#888; font-size:0.8rem;">${date} by ${actorName}</div><div>${changeMsg}</div></div>`;
         }).join('');
 
-        // FIX: Variable is named 'modalHTML'
         const modalHTML = `
-        <div class="crm-modal-container" style="min-width:350px;">
-            <!-- Header -->
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
-                <h3 style="margin:0 0 5px 0;">${profile.full_name || profile.email || 'Guest'}</h3>
-                <p style="margin:0; font-size:0.85rem; color:#666;">${profile.email || 'No Email'}</p>
-                
-                <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
-                    <label style="font-size:0.9rem;">Nickname:</label>
-                    <input type="text" id="crm-nickname" value="${profile.internal_nickname || ''}" placeholder="e.g. Latte John" style="padding:5px; border:1px solid #ccc; border-radius:4px; flex:1;">
-                </div>
-            </div>
-
-            <!-- Staff Notes -->
-            <div style="background:#f9f9f9; padding:15px; border-radius:6px; margin-bottom:20px;">
-                <label style="font-weight:bold; font-size:0.9rem; display:block; margin-bottom:5px;">Staff Note</label>
-                <textarea id="crm-note" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">${profile.staff_note || ''}</textarea>
-                
-                <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="display:flex; gap:15px;">
-                        <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                            <input type="radio" name="noteUrgency" value="info" ${profile.staff_note_urgency !== 'alert' ? 'checked' : ''}> Info
-                        </label>
-                        <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer; color:#d00;">
-                            <input type="radio" name="noteUrgency" value="alert" ${profile.staff_note_urgency === 'alert' ? 'checked' : ''}> Important
-                        </label>
+            <div class="crm-modal-container" style="min-width:350px;">
+                <!-- Header -->
+                <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
+                    <h3 style="margin:0 0 5px 0;">${profile.full_name || profile.email || 'Guest'}</h3>
+                    <p style="margin:0; font-size:0.85rem; color:#666;">${profile.email || 'No Email'}</p>
+                    
+                    <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+                        <label style="font-size:0.9rem;">Nickname:</label>
+                        <input type="text" id="crm-nickname" value="${profile.internal_nickname || ''}" placeholder="e.g. Latte John" style="padding:5px; border:1px solid #ccc; border-radius:4px; flex:1;">
                     </div>
-                    <button id="crm-save-btn" class="button-primary small">Save Note</button>
+                </div>
+
+                <!-- Staff Notes -->
+                <div style="background:#f9f9f9; padding:15px; border-radius:6px; margin-bottom:20px;">
+                    <label style="font-weight:bold; font-size:0.9rem; display:block; margin-bottom:5px;">Staff Note</label>
+                    <textarea id="crm-note" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">${profile.staff_note || ''}</textarea>
+                    
+                    <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; gap:15px;">
+                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                                <input type="radio" name="noteUrgency" value="info" ${profile.staff_note_urgency !== 'alert' ? 'checked' : ''}> Info
+                            </label>
+                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer; color:#d00;">
+                                <input type="radio" name="noteUrgency" value="alert" ${profile.staff_note_urgency === 'alert' ? 'checked' : ''}> Important
+                            </label>
+                        </div>
+                        <button id="crm-save-btn" class="button-primary small">Save Note</button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div style="margin-bottom:10px; display:flex; gap:10px;">
+                    <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
+                    <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
+                </div>
+
+                <div id="content-orders" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead style="background:#f5f5f5; position:sticky; top:0;">
+                            <tr><th style="padding:8px; text-align:left; font-size:0.8rem;">Date</th><th style="padding:8px; text-align:left; font-size:0.8rem;">Items</th><th style="padding:8px; text-align:left; font-size:0.8rem;">Total</th></tr>
+                        </thead>
+                        <tbody>${historyRows || '<tr><td colspan="3" style="text-align:center; padding:10px;">No history</td></tr>'}</tbody>
+                    </table>
+                </div>
+
+                <div id="content-audit" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px; display:none;">
+                    ${auditRows || '<div style="padding:15px; text-align:center; color:#999; font-size:0.9rem;">No changes recorded.</div>'}
                 </div>
             </div>
+        `;
 
-            <!-- Tabs -->
-            <div style="margin-bottom:10px; display:flex; gap:10px;">
-                <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
-                <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
-            </div>
-
-            <div id="content-orders" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#f5f5f5; position:sticky; top:0;">
-                        <tr><th style="padding:8px; text-align:left; font-size:0.8rem;">Date</th><th style="padding:8px; text-align:left; font-size:0.8rem;">Items</th><th style="padding:8px; text-align:left; font-size:0.8rem;">Total</th></tr>
-                    </thead>
-                    <tbody>${historyRows || '<tr><td colspan="3" style="text-align:center; padding:10px;">No history</td></tr>'}</tbody>
-                </table>
-            </div>
-
-            <div id="content-audit" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px; display:none;">
-                ${auditRows || '<div style="padding:15px; text-align:center; color:#999; font-size:0.9rem;">No changes recorded.</div>'}
-            </div>
-        </div>
-    `;
-
-        // FIX: Use modalHTML variable here
+        // FIX: Variable name match
         uiUtils.showModal(modalHTML);
 
-        // --- Event Listeners ---
+        // Listeners
         const tabOrders = document.getElementById('tab-orders');
         const tabAudit = document.getElementById('tab-audit');
         const contentOrders = document.getElementById('content-orders');
@@ -109,7 +107,7 @@ export async function showCustomerCRMModal(userId) {
         document.getElementById('crm-save-btn').addEventListener('click', async (e) => {
             const btn = e.target;
             btn.textContent = 'Saving...'; btn.disabled = true;
-
+            
             const nickname = document.getElementById('crm-nickname').value;
             const note = document.getElementById('crm-note').value;
             const urgency = document.querySelector('input[name="noteUrgency"]:checked').value;
@@ -117,8 +115,8 @@ export async function showCustomerCRMModal(userId) {
             try {
                 await api.updateCustomerDetails({ userId, nickname, note, urgency }, session.access_token);
                 uiUtils.showToast("Updated!", "success");
-                useAppStore.getState().ui.triggerPageRender();
-                uiUtils.closeModal();
+                useAppStore.getState().ui.triggerPageRender(); 
+                uiUtils.closeModal(); 
             } catch (err) {
                 console.error(err);
                 uiUtils.showToast("Failed.", "error");
@@ -132,14 +130,14 @@ export async function showCustomerCRMModal(userId) {
     }
 }
 
-// --- NEW: EDIT ITEM MODAL WITH ALLERGENS ---
+// --- 2. EDIT ITEM MODAL ---
 export function showEditItemModal(item) {
     const isEditing = !!item;
     const itemData = item || { name: '', price: '', category: '', description: '', allergens: [] };
     const categories = useAppStore.getState().siteSettings.getMenuCategories();
     const currentAllergens = itemData.allergens || [];
 
-    // FIX: Variable name must be modalHTML
+    // Define modalHTML correctly
     const modalHTML = `
         <div class="modal-form-container">
             <h3>${isEditing ? 'Edit Item' : 'Add New Item'}</h3>
@@ -189,6 +187,7 @@ export function showEditItemModal(item) {
         </div>
     `;
 
+    // FIX: Pass 'modalHTML' (defined above), NOT 'contentHTML' (undefined)
     uiUtils.showModal(modalHTML);
 
     document.getElementById('edit-item-form').addEventListener('submit', async (e) => {
@@ -210,7 +209,7 @@ export function showEditItemModal(item) {
         };
 
         const { data: { session } } = await supabase.auth.getSession();
-
+        
         try {
             if (isEditing) {
                 await api.updateMenuItem(item.id, newItemData, session.access_token);
@@ -219,7 +218,7 @@ export function showEditItemModal(item) {
             }
             uiUtils.showToast('Item saved successfully!', 'success');
             uiUtils.closeModal();
-            useAppStore.getState().menu.fetchMenu();
+            useAppStore.getState().menu.fetchMenu(); 
         } catch (err) {
             console.error(err);
             uiUtils.showToast('Failed to save item.', 'error');
@@ -228,9 +227,7 @@ export function showEditItemModal(item) {
     });
 }
 
-
-
-// --- NEW: User Edit Modal (Migrated from godDashboard) ---
+// --- 3. EDIT USER MODAL ---
 export function showEditUserModal(user) {
     const modalHTML = `
         <div class="modal-form-container">
@@ -241,7 +238,7 @@ export function showEditUserModal(user) {
                     <select id="user-role">
                         <option value="customer" ${user.role === 'customer' ? 'selected' : ''}>Customer</option>
                         <option value="owner" ${user.role === 'owner' ? 'selected' : ''}>Owner</option>
-                        <option value="god" ${user.role === 'god' ? 'selected' : ''}>God (God)</option>
+                        <option value="god" ${user.role === 'god' ? 'selected' : ''}>God</option>
                     </select>
                 </div>
                 
@@ -265,16 +262,16 @@ export function showEditUserModal(user) {
             </form>
         </div>
     `;
-
+    
     uiUtils.showModal(modalHTML);
-
+    
     const form = document.getElementById('edit-user-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const newRole = document.getElementById('user-role').value;
         const isVerified = document.getElementById('is-verified').checked;
         const canSeeOrders = document.getElementById('can-see-orders').checked;
-
+        
         await useAppStore.getState().admin.updateUserRole(user.id, newRole, isVerified, canSeeOrders);
         uiUtils.closeModal();
         uiUtils.showToast(`User updated.`, 'success');
