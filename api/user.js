@@ -114,20 +114,23 @@ if (type === 'orders') {
         // TYPE: MANUAL ORDER (Phone/Walk-in)
         // Beast 1: No limits, No email required, Managers Only.
         if (type === 'manual_order') {
-            const { items, total, customerName, dueTime, createdAt } = req.body; // Added createdAt
+            // FIX: Accept targetUserId
+            const { items, total, customerName, dueTime, createdAt, targetUserId } = req.body;
+            
+            // If targetUserId is provided, use it. Otherwise, fallback to the Manager's ID (user.id)
+            // We already verified the requester is a manager/owner above, so this is safe.
+            const assignedUserId = targetUserId || user.id;
 
-            // 1. Insert Order
-            // Note: We DO NOT send customer_email here anymore. It will be NULL in the DB.
             const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
-                user_id: user.id,
-                total_amount: total,
-                status: 'completed', // Past orders are auto-completed
-                payment_status: 'paid',
-                payment_method: 'manual_entry',
+                user_id: assignedUserId, // <--- UPDATED
+                total_amount: total, 
+                status: 'completed', 
+                payment_status: 'paid', 
+                payment_method: 'manual_entry', 
                 customer_name: customerName || 'Walk-in',
-                customer_email: null, // Explicitly null per new DB rule
+                customer_email: null,
                 pickup_time: dueTime || new Date().toISOString(),
-                created_at: createdAt || new Date().toISOString() // Allow back-dating
+                created_at: createdAt || new Date().toISOString()
             }]).select().single();
 
             if (orderError || !order) {

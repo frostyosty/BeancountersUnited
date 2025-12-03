@@ -413,16 +413,7 @@ window.handleMergeClick = (sourceId) => {
     }
 };
 
-window.showAddPastOrderModal = () => {
-    // Reuse the manual order logic but inject a date picker
-    // We can import the function if we exported it, or just copy/modify the logic.
-    // Since manual order logic is in orderHistoryUI.js (user feature), we should actually place this there 
-    // or move the manual order logic to a shared place.
-    
-    // FASTEST FIX: Import the function from orderHistoryUI.js if exported, 
-    // OR create a specialized version here.
-    
-    // Let's create a specialized version here for Admin Past Orders.
+window.showAddPastOrderModal = (prefillProfile = null) => {
     const { items: menuItems } = useAppStore.getState().menu;
     
     const modalHTML = `
@@ -431,7 +422,9 @@ window.showAddPastOrderModal = () => {
             <div style="margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                 <div>
                     <label>Client Name</label>
-                    <input type="text" id="past-client-name" placeholder="Name">
+                    <input type="text" id="past-client-name" placeholder="Name" 
+                           value="${prefillProfile ? (prefillProfile.internal_nickname || prefillProfile.full_name || 'Client') : ''}"
+                           ${prefillProfile ? 'readonly style="background:#eee;"' : ''}>
                 </div>
                 <div>
                     <label>Date & Time</label>
@@ -442,7 +435,7 @@ window.showAddPastOrderModal = () => {
             <div style="border:1px solid #ccc; max-height:300px; overflow-y:auto; padding:10px;">
                 ${menuItems.map(item => `
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <span>${item.name} ($${item.price})</span>
+                        <span>${item.name} ($${parseFloat(item.price).toFixed(2)})</span>
                         <input type="number" class="past-item-qty" data-id="${item.id}" data-price="${item.price}" value="0" min="0" style="width:50px;">
                     </div>
                 `).join('')}
@@ -456,7 +449,7 @@ window.showAddPastOrderModal = () => {
     
     uiUtils.showModal(modalHTML);
     
-    // Set default date to now
+    // Default date
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('past-order-date').value = now.toISOString().slice(0,16);
@@ -482,19 +475,29 @@ window.showAddPastOrderModal = () => {
 
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Call API
         try {
             await api.createManualOrder({
                 customerName: name || "Past Client",
                 items,
                 total,
-                createdAt, // Passes the back-date
-                dueTime: createdAt // Due time is same as creation for past orders
+                createdAt, 
+                dueTime: createdAt,
+                targetUserId: prefillProfile ? prefillProfile.id : null // FIX: Pass ID
             }, session.access_token);
             
             uiUtils.showToast("Past order recorded", "success");
             uiUtils.closeModal();
-            useAppStore.getState().admin.fetchClients(); // Refresh table
+            
+            // Refresh data based on context
+            if (prefillProfile) {
+                // If we are in the CRM view, refresh that view? 
+                // Hard to reach back into the modal from here. 
+                // But we can refresh the main table at least.
+                useAppStore.getState().admin.fetchClients();
+            } else {
+                useAppStore.getState().admin.fetchClients();
+            }
+            
         } catch(e) {
             uiUtils.showToast(e.message, "error");
         }

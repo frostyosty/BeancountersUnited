@@ -63,10 +63,15 @@ export async function showCustomerCRMModal(userId) {
                     </div>
                 </div>
 
-                <!-- Tabs -->
-                <div style="margin-bottom:10px; display:flex; gap:10px;">
-                    <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
-                    <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
+                <!-- Tabs Row -->
+                <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
+                        <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
+                    </div>
+                    
+                    <!-- NEW BUTTON -->
+                    <button id="crm-add-order-btn" class="button-primary small" style="padding: 4px 10px; font-weight:bold;" title="Add Past Order">+</button>
                 </div>
 
                 <div id="content-orders" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px;">
@@ -123,6 +128,21 @@ export async function showCustomerCRMModal(userId) {
                 btn.textContent = 'Save Note'; btn.disabled = false;
             }
         });
+        
+        document.getElementById('crm-add-order-btn').onclick = () => {
+            // Close this modal? Or keep it open?
+            // Modal system usually only supports one at a time.
+            // Let's close this one and open the Order modal, passing the current profile.
+            
+            // We pass the profile object so we have the ID and Name
+            const targetProfile = { 
+                id: userId, // from function arg
+                full_name: profile.full_name, 
+                internal_nickname: profile.internal_nickname 
+            };
+            
+            window.showAddPastOrderModal(targetProfile);
+        };
 
     } catch (e) {
         console.error("CRM Modal Error:", e);

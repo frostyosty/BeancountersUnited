@@ -31,7 +31,7 @@ export function renderCartPage() {
 
     // 3. Totals Calculation
     const total = getCartTotal();
-    
+
     // 4. Build Item List HTML
     const cartItemsHTML = items.map(item => {
         const price = parseFloat(item.price) || 0;
@@ -68,7 +68,7 @@ export function renderCartPage() {
 
     // 5. Payment Logic (Only if Authenticated)
     let paymentSectionHTML = '';
-    
+
     if (!isAuthenticated) {
         paymentSectionHTML = `
             <div style="margin-top:30px; padding:20px; background:#fff3cd; border-radius:8px; text-align:center;">
@@ -81,7 +81,7 @@ export function renderCartPage() {
         const cashRule = canPayWithCash();
         const enableStripe = settings.paymentConfig?.enableStripe !== false;
 
-        const cashBtn = cashRule.allowed 
+        const cashBtn = cashRule.allowed
             ? `<button id="pay-cash-btn" class="button-secondary" style="width:100%; margin-bottom:10px; padding:15px;">Pay on Pickup (Cash)</button>`
             : `<div style="padding:10px; background:#eee; color:#666; font-size:0.9rem; text-align:center; margin-bottom:10px;">Pay on Pickup Unavailable (${cashRule.reason})</div>`;
 
@@ -129,7 +129,7 @@ export function renderCartPage() {
 
 function attachListeners() {
     const mainContent = document.getElementById('main-content');
-    
+
     // A. Cart Item Actions (Quantity / Delete)
     mainContent.addEventListener('click', (e) => {
         // use .closest() to handle clicks on icons inside buttons
@@ -153,17 +153,17 @@ function attachListeners() {
         if (btn.classList.contains('remove-item-btn')) {
             if (confirm("Remove item?")) removeItem(itemId);
         }
-        
+
         // Inline Login Button
         if (btn.id === 'cart-login-btn') {
             import('@/features/auth/authUI.js').then(m => m.showLoginSignupModal());
         }
-        
+
         // Pay Cash
         if (btn.id === 'pay-cash-btn') {
             handleCashPayment(btn);
         }
-        
+
         // Pay Stripe (Open Form)
         if (btn.id === 'pay-stripe-btn') {
             btn.style.display = 'none'; // Hide "Pay with Card" button
@@ -178,7 +178,7 @@ function attachListeners() {
 async function handleCashPayment(btn) {
     btn.disabled = true;
     btn.textContent = "Processing...";
-    
+
     const { submitCashOrder } = useAppStore.getState().checkout;
     const result = await submitCashOrder();
 
@@ -195,12 +195,12 @@ async function handleCashPayment(btn) {
 async function initializeStripeFlow() {
     const total = useAppStore.getState().cart.getCartTotal();
     const errorDiv = document.getElementById('stripe-error');
-    
+
     try {
         // 1. Get Secret
         const res = await fetch('/api/create-payment-intent', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: total })
         });
         const { clientSecret, error } = await res.json();
@@ -217,9 +217,13 @@ async function initializeStripeFlow() {
         submitBtn.onclick = async () => {
             submitBtn.disabled = true;
             submitBtn.textContent = "Processing...";
-            
+
             const result = await stripe.confirmPayment({
                 elements,
+                confirmParams: {
+                    // FIX: Add this line. It redirects back to your site after payment if needed.
+                    return_url: window.location.origin + '/#order-history',
+                },
                 redirect: 'if_required'
             });
 
