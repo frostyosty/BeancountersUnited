@@ -67,51 +67,83 @@ export function initGlobalSpinner() {
 
 // --- 2. TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', overrideDuration = null, onClick = null) {
+    console.group("🍞 Toast Debugger");
+
+    // 1. Setup Container
     let container = document.getElementById('toast-container');
     if (!container) {
+        console.log("Creating new toast container...");
         container = document.createElement('div');
         container.id = 'toast-container';
-        // Ensure baseline styles if CSS is missing/loading
+        // Base critical styles
         container.style.position = 'fixed';
         container.style.zIndex = '9999';
-        container.style.pointerEvents = 'none'; // Click-through
+        container.style.pointerEvents = 'none'; 
         container.style.display = 'flex';
         container.style.flexDirection = 'column';
         container.style.gap = '10px';
         document.body.appendChild(container);
+    } else {
+        console.log("Found existing toast container.");
     }
 
+    // 2. Get Settings
     let settings = {};
-    try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
+    try { 
+        settings = useAppStore.getState().siteSettings?.settings?.toast || {}; 
+    } catch(e) {
+        console.warn("Store not ready yet, using defaults");
+    }
     
     const duration = overrideDuration || settings.duration || 3000;
+    // DEBUG: Log what the database actually says
+    console.log("Raw Settings:", settings); 
+    
     const position = settings.position || 'bottom-center';
+    console.log("Resolved Position:", position);
 
-    // Apply Position
+    // 3. Apply Position (Reset first)
     container.style.left = '';
     container.style.right = '';
+    container.style.top = '';
+    container.style.bottom = '';
     container.style.transform = '';
+    container.style.alignItems = ''; // Reset alignment
+
+    // Vertical Logic
+    if (position.includes('bottom')) { 
+        container.style.bottom = '20px'; 
+        container.style.top = 'auto'; 
+    } else { 
+        container.style.top = '20px'; 
+        container.style.bottom = 'auto'; 
+    }
     
-    if (position.includes('bottom')) { container.style.bottom = '20px'; container.style.top = 'auto'; } 
-    else { container.style.top = '20px'; container.style.bottom = 'auto'; }
-    
+    // Horizontal Logic
     if (position.includes('right')) { 
+        console.log("Applying RIGHT alignment");
         container.style.right = '20px'; 
         container.style.alignItems = 'flex-end'; 
     } else if (position.includes('left')) { 
+        console.log("Applying LEFT alignment");
         container.style.left = '20px'; 
         container.style.alignItems = 'flex-start'; 
     } else { 
         // CENTER
+        console.log("Applying CENTER alignment");
         container.style.left = '0'; 
         container.style.right = '0'; 
         container.style.alignItems = 'center'; 
+        // Force explicit width to ensure centering works
+        container.style.width = '100%'; 
     }
 
+    console.log("Final Container Styles:", container.style.cssText);
+
+    // 4. Create Toast
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    // Ensure toast itself catches clicks
     toast.style.pointerEvents = 'auto'; 
     
     if (onClick) {
@@ -130,6 +162,8 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
             });
         }
     }, duration);
+    
+    console.groupEnd();
 }
 
 // --- 3. MODAL SYSTEM ---
@@ -308,38 +342,63 @@ export function applyGlobalBackground(settings) {
 }
 
 export function generateHeaderSVG(config) {
+    // Safety Fallback
+    if (!config || typeof config !== 'object') {
+        console.warn("Header SVG Config is invalid or string:", config);
+        return ''; 
+    }
+
     const w = 800; 
     const h = 200; 
     
+    // Safe Accessors with Defaults
+    const bgColor = config.bgColor || '#263238';
+    const accentColor = config.accentColor || '#f57c00';
+    const textColor = config.textColor || '#ffffff';
+    
+    // Helper to safely upper case
+    const mainText = (config.mainText || 'MEALMATES').toUpperCase();
+    const subText = (config.subText || '').toUpperCase();
+
+    const mx = config.mainX ?? 50;
+    const my = config.mainY ?? 45;
+    const mFont = config.mainFont || "sans-serif";
+    const mSize = config.mainSize || 40;
+
+    const sx = config.subX ?? 50;
+    const sy = config.subY ?? 70;
+    const sFont = config.subFont || "sans-serif";
+    const sSize = config.subSize || 16;
+
     let defs = '';
     let patternOverlay = '';
 
     if (config.pattern === 'stripes') {
-        defs = `<defs><pattern id="p_stripes" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="20" stroke="${config.accentColor}" stroke-width="10" opacity="0.1" /></pattern></defs>`;
+        defs = `<defs><pattern id="p_stripes" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="20" stroke="${accentColor}" stroke-width="10" opacity="0.1" /></pattern></defs>`;
         patternOverlay = `<rect width="100%" height="100%" fill="url(#p_stripes)" />`;
     } 
     else if (config.pattern === 'circle') {
-        defs = `<defs><pattern id="p_circles" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="2" fill="${config.accentColor}" opacity="0.2" /></pattern></defs>`;
+        defs = `<defs><pattern id="p_circles" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="2" fill="${accentColor}" opacity="0.2" /></pattern></defs>`;
         patternOverlay = `<rect width="100%" height="100%" fill="url(#p_circles)" />`;
     }
 
     return `
         <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" 
-             style="width:100%; height:100%; display:block; background:${config.bgColor};">
+             style="width:100%; height:100%; display:block; background:${bgColor};">
             ${defs}
             ${patternOverlay}
-            <rect x="0" y="${h - 10}" width="${w}" height="10" fill="${config.accentColor}" />
+            <rect x="0" y="${h - 10}" width="${w}" height="10" fill="${accentColor}" />
             
-            <text x="${config.mainX}%" y="${config.mainY}%" text-anchor="middle" dominant-baseline="middle" 
-                  fill="${config.textColor}" font-family="${config.mainFont}" font-weight="bold" 
-                  font-size="${config.mainSize}">
-                ${config.mainText.toUpperCase()}
+            <text x="${mx}%" y="${my}%" text-anchor="middle" dominant-baseline="middle" 
+                  fill="${textColor}" font-family="${mFont}" font-weight="bold" 
+                  font-size="${mSize}">
+                ${mainText}
             </text>
             
-            <text x="${config.subX}%" y="${config.subY}%" text-anchor="middle" dominant-baseline="middle" 
-                  fill="${config.textColor}" font-family="${config.subFont}" font-weight="normal" 
-                  font-size="${config.subSize}" letter-spacing="1">
-                ${config.subText.toUpperCase()}
+            <text x="${sx}%" y="${sy}%" text-anchor="middle" dominant-baseline="middle" 
+                  fill="${textColor}" font-family="${sFont}" font-weight="normal" 
+                  font-size="${sSize}" letter-spacing="1">
+                ${subText}
             </text>
         </svg>
     `;

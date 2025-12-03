@@ -13,16 +13,30 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
         try {
-            const { data, error } = await supabaseAdmin.from('site_settings').select('key, value');
+            const { data, error } = await supabaseAdmin
+                .from('site_settings')
+                .select('key, value');
+
             if (error) throw error;
 
             const settingsObject = (data || []).reduce((acc, row) => {
                 try {
-                    // FIX: Added 'uiConfig' and 'aboutUs' to this list
-                    if (['themeVariables', 'ownerPermissions', 'menuCategories', 'headerSettings', 'paymentConfig', 'uiConfig', 'aboutUs'].includes(row.key)) {
+                    // FIX: Added 'headerLogoConfig' to the whitelist
+                    const jsonKeys = [
+                        'themeVariables', 
+                        'ownerPermissions', 
+                        'menuCategories', 
+                        'headerSettings', 
+                        'paymentConfig', 
+                        'uiConfig', 
+                        'aboutUs',
+                        'headerLogoConfig' // <--- ADD THIS
+                    ];
+
+                    if (jsonKeys.includes(row.key)) {
                         acc[row.key] = JSON.parse(row.value);
                     } else {
-                        // Handle booleans stored as strings
+                        // Handle booleans
                         if (row.value === 'true') acc[row.key] = true;
                         else if (row.value === 'false') acc[row.key] = false;
                         else acc[row.key] = row.value;

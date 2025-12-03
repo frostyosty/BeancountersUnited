@@ -3,7 +3,6 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { useAppStore } from '@/store/appStore.js';
 import { supabase } from '@/supabaseClient.js';
-import { generateHeaderSVG } from '../../utils/uiUtils';
 
 // Default Config
 const DEFAULT_CONFIG = {
@@ -22,11 +21,9 @@ const DEFAULT_CONFIG = {
 };
 
 export function openHeaderLogoEditor() {
-    // 1. Get existing config or default
     const { settings } = useAppStore.getState().siteSettings;
     const currentConfig = settings.headerLogoConfig || { ...DEFAULT_CONFIG };
 
-    // 2. Generate Modal HTML
     const fonts = [
         "'Oswald', sans-serif", "'Roboto Slab', serif", "'Anton', sans-serif", 
         "'Pacifico', cursive", "'Bebas Neue', cursive", "'Righteous', cursive", 
@@ -35,76 +32,117 @@ export function openHeaderLogoEditor() {
     
     const fontOptions = fonts.map(f => `<option value="${f}">${f.split(',')[0].replace(/'/g, '')}</option>`).join('');
 
+    // --- UPDATED HTML STRUCTURE (Using 'he-' classes) ---
     const modalHTML = `
-        <div class="modal-form-container" style="max-width:800px; width:95%;">
-            <h3>Header Logo Creator</h3>
+        <div class="he-modal-wrapper">
+            <h3 class="he-title">Header Logo Creator</h3>
             
-            <!-- PREVIEW AREA -->
-            <div id="header-preview-container" style="border:1px solid #ddd; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+            <!-- PREVIEW -->
+            <div id="header-preview-container" class="he-preview-box">
                 <!-- SVG Injected Here -->
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                <!-- LEFT COLUMN: Colors & Background -->
-                <div>
-                    <h4>Background & Colors</h4>
-                    <div class="he-grid">
-                        <div><label>Background</label><input type="color" id="he-bg-color" value="${currentConfig.bgColor}"></div>
-                        <div><label>Accent</label><input type="color" id="he-accent-color" value="${currentConfig.accentColor}"></div>
-                        <div><label>Text Color</label><input type="color" id="he-text-color" value="${currentConfig.textColor}"></div>
-                        <div>
-                            <label>Pattern</label>
-                            <select id="he-pattern">
-                                <option value="none">None</option>
-                                <option value="stripes">Stripes</option>
-                                <option value="circle">Circles</option>
-                            </select>
+            <div class="he-controls-container">
+                <!-- LEFT COLUMN: Appearance -->
+                <div class="he-column">
+                    <h4 class="he-subtitle">Background & Palette</h4>
+                    
+                    <div class="he-input-group">
+                        <label>Background Color</label>
+                        <div class="he-color-picker-wrapper">
+                            <input type="color" id="he-bg-color" value="${currentConfig.bgColor}">
+                            <span class="he-color-value">${currentConfig.bgColor}</span>
                         </div>
+                    </div>
+
+                    <div class="he-input-group">
+                        <label>Accent / Decor</label>
+                        <div class="he-color-picker-wrapper">
+                            <input type="color" id="he-accent-color" value="${currentConfig.accentColor}">
+                            <span class="he-color-value">${currentConfig.accentColor}</span>
+                        </div>
+                    </div>
+
+                    <div class="he-input-group">
+                        <label>Text Color</label>
+                        <div class="he-color-picker-wrapper">
+                            <input type="color" id="he-text-color" value="${currentConfig.textColor}">
+                            <span class="he-color-value">${currentConfig.textColor}</span>
+                        </div>
+                    </div>
+
+                    <div class="he-input-group">
+                        <label>Pattern Overlay</label>
+                        <select id="he-pattern" class="he-select">
+                            <option value="none">None</option>
+                            <option value="stripes">Stripes (Diagonal)</option>
+                            <option value="circle">Dots</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- RIGHT COLUMN: Text Settings -->
-                <div>
-                    <h4>Main Text</h4>
-                    <input type="text" id="he-main-text" value="${currentConfig.mainText}" style="width:100%; margin-bottom:5px;">
-                    <div class="he-grid">
-                        <select id="he-main-font">${fontOptions}</select>
-                        <input type="number" id="he-main-size" value="${currentConfig.mainSize}">
-                        <div><label>Pos X%</label><input type="range" id="he-main-x" min="0" max="100" value="${currentConfig.mainX}"></div>
-                        <div><label>Pos Y%</label><input type="range" id="he-main-y" min="0" max="100" value="${currentConfig.mainY}"></div>
+                <!-- RIGHT COLUMN: Typography -->
+                <div class="he-column">
+                    <h4 class="he-subtitle">Main Title</h4>
+                    <input type="text" id="he-main-text" value="${currentConfig.mainText}" class="he-text-input" placeholder="Main Text">
+                    
+                    <div class="he-row">
+                        <select id="he-main-font" class="he-select" style="flex:2;">${fontOptions}</select>
+                        <input type="number" id="he-main-size" value="${currentConfig.mainSize}" class="he-number-input" title="Size">
+                    </div>
+                    
+                    <div class="he-range-group">
+                        <label>Position</label>
+                        <div class="he-range-row">
+                            <span>X</span> <input type="range" id="he-main-x" min="0" max="100" value="${currentConfig.mainX}">
+                            <span>Y</span> <input type="range" id="he-main-y" min="0" max="100" value="${currentConfig.mainY}">
+                        </div>
                     </div>
 
-                    <h4 style="margin-top:10px;">Sub Text</h4>
-                    <input type="text" id="he-sub-text" value="${currentConfig.subText}" style="width:100%; margin-bottom:5px;">
-                    <div class="he-grid">
-                        <select id="he-sub-font">${fontOptions}</select>
-                        <input type="number" id="he-sub-size" value="${currentConfig.subSize}">
-                        <div><label>Pos X%</label><input type="range" id="he-sub-x" min="0" max="100" value="${currentConfig.subX}"></div>
-                        <div><label>Pos Y%</label><input type="range" id="he-sub-y" min="0" max="100" value="${currentConfig.subY}"></div>
+                    <div class="he-divider"></div>
+
+                    <h4 class="he-subtitle">Sub-Title</h4>
+                    <input type="text" id="he-sub-text" value="${currentConfig.subText}" class="he-text-input" placeholder="Sub Text">
+                    
+                    <div class="he-row">
+                        <select id="he-sub-font" class="he-select" style="flex:2;">${fontOptions}</select>
+                        <input type="number" id="he-sub-size" value="${currentConfig.subSize}" class="he-number-input" title="Size">
+                    </div>
+
+                    <div class="he-range-group">
+                        <label>Position</label>
+                        <div class="he-range-row">
+                            <span>X</span> <input type="range" id="he-sub-x" min="0" max="100" value="${currentConfig.subX}">
+                            <span>Y</span> <input type="range" id="he-sub-y" min="0" max="100" value="${currentConfig.subY}">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-actions-split" style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
-                <button type="button" id="he-reset-btn" class="button-secondary">Reset to Defaults</button>
-                <button type="button" id="he-save-btn" class="button-primary">Save & Apply Header</button>
+            <div class="he-actions">
+                <button type="button" id="he-reset-btn" class="button-secondary">Reset</button>
+                <button type="button" id="he-save-btn" class="button-primary">Save & Apply</button>
             </div>
         </div>
     `;
 
     uiUtils.showModal(modalHTML);
 
-    // 3. Attach Listeners & Init
-    const inputs = document.querySelectorAll('#header-preview-container ~ div input, #header-preview-container ~ div select');
-    
-    // Set initial selects
+    // --- Init Inputs ---
     document.getElementById('he-pattern').value = currentConfig.pattern;
     document.getElementById('he-main-font').value = currentConfig.mainFont;
     document.getElementById('he-sub-font').value = currentConfig.subFont;
 
+    const inputs = document.querySelectorAll('.he-modal-wrapper input, .he-modal-wrapper select');
+    
     const updateUI = () => {
         const config = scrapeConfig();
-        const svg = generateHeaderSVG(config);
+        // Update color labels
+        document.querySelectorAll('input[type="color"]').forEach(input => {
+            const span = input.nextElementSibling;
+            if (span && span.classList.contains('he-color-value')) span.textContent = input.value;
+        });
+        const svg = uiUtils.generateHeaderSVG(config);
         document.getElementById('header-preview-container').innerHTML = svg;
     };
 
@@ -120,10 +158,7 @@ export function openHeaderLogoEditor() {
         
         try {
             await api.updateSiteSettings({ headerLogoConfig: finalConfig }, session.access_token);
-            
-            // Apply immediately
             uiUtils.applyHeaderLogo(finalConfig);
-            
             uiUtils.showToast("Header logo updated!", "success");
             uiUtils.closeModal();
         } catch (e) {
@@ -137,20 +172,17 @@ export function openHeaderLogoEditor() {
     updateUI();
 }
 
-// Helper to read all inputs
 function scrapeConfig() {
     return {
         bgColor: document.getElementById('he-bg-color').value,
         accentColor: document.getElementById('he-accent-color').value,
         textColor: document.getElementById('he-text-color').value,
         pattern: document.getElementById('he-pattern').value,
-        
         mainText: document.getElementById('he-main-text').value,
         mainFont: document.getElementById('he-main-font').value,
         mainSize: document.getElementById('he-main-size').value,
         mainX: document.getElementById('he-main-x').value,
         mainY: document.getElementById('he-main-y').value,
-
         subText: document.getElementById('he-sub-text').value,
         subFont: document.getElementById('he-sub-font').value,
         subSize: document.getElementById('he-sub-size').value,
@@ -158,4 +190,3 @@ function scrapeConfig() {
         subY: document.getElementById('he-sub-y').value,
     };
 }
-

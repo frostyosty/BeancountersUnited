@@ -809,3 +809,162 @@ body.bg-animate {
 .toast.toast-success { background-color: #28a745; }
 .toast.toast-error { background-color: #dc3545; }
 .toast.clickable { cursor: pointer; text-decoration: underline; }
+
+
+
+/* ==========================================================================
+   HEADER EDITOR (MODAL STYLES)
+   ========================================================================== */
+
+/* The Modal Inner Wrapper */
+.he-modal-wrapper {
+    font-family: var(--font-family-sans-serif);
+    color: #333;
+    width: 100%;
+    /* Ensure it fits on smaller screens */
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.he-title {
+    margin: 0;
+    font-size: 1.25rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.he-subtitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 15px 0 10px 0;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* Preview Box */
+.he-preview-box {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Layout Grid (2 Columns on Desktop) */
+.he-controls-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 700px) {
+    .he-controls-container {
+        grid-template-columns: 1fr; /* Stack on mobile */
+    }
+}
+
+.he-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Input Components */
+.he-input-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.he-input-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+}
+
+.he-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9f9f9;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid #eee;
+}
+
+input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.he-color-value {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.he-text-input, .he-select, .he-number-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.he-text-input { width: 100%; box-sizing: border-box; }
+.he-select { width: 100%; background: white; }
+.he-number-input { width: 60px; text-align: center; }
+
+/* Range Sliders Row */
+.he-range-group {
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+.he-range-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 2px;
+}
+.he-range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+}
+.he-range-row input { flex: 1; }
+
+.he-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.he-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 10px 0;
+}
+
+/* Footer Actions */
+.he-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
