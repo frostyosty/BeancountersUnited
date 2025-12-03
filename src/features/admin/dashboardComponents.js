@@ -278,12 +278,13 @@ export function renderPaymentSection(paymentConfig) {
 }
 
 // --- 6. HEADER SETTINGS ---
+// --- 6. HEADER SETTINGS ---
 export function renderHeaderSection(headerSettings) {
     return `
         <section class="dashboard-section">
             <h3>Header Layout</h3>
             <form id="header-settings-form">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
                     <div>
                         <label>Logo Alignment</label>
                         <select name="logoAlignment">
@@ -298,6 +299,14 @@ export function renderHeaderSection(headerSettings) {
                             <option value="left" ${headerSettings.hamburgerPosition === 'left' ? 'selected' : ''}>Left</option>
                         </select>
                     </div>
+                </div>
+                
+                <!-- NEW BUTTON -->
+                <div style="padding-top:15px; border-top:1px solid #eee;">
+                    <label style="display:block; margin-bottom:5px;">Custom Vector Banner</label>
+                    <button type="button" id="open-header-creator-btn" class="button-secondary" style="width:100%;">
+                        🎨 Create/Edit Header Logo
+                    </button>
                 </div>
             </form>
         </section>

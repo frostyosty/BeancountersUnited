@@ -1,6 +1,7 @@
 // src/utils/uiUtils.js
 import { useAppStore } from '@/store/appStore.js';
 
+
 // --- SPINNER ASSETS ---
 const SPINNER_SVGS = {
     coffee: `
@@ -299,6 +300,29 @@ export function updateSpinnerColor(newColor) {
 }
 
 
+export function applyHeaderLogo(config) {
+    if (!config) return;
+    
+    const h1 = document.querySelector('#main-header h1');
+    if (!h1) return;
+
+    // Check if we are using a simple text/image logo OR this fancy SVG
+    // If config exists, we prefer it over simple text
+    
+    const svgHTML = generateHeaderSVG(config);
+    
+    // Replace content of H1
+    h1.innerHTML = svgHTML;
+    
+    // Remove padding/margins from H1 to let SVG fill the space
+    h1.style.padding = '0';
+    h1.style.height = '60px'; // Match header height
+    h1.style.width = '240px'; // Or '100%' depending on layout alignment
+    h1.style.overflow = 'hidden';
+    h1.style.display = 'flex';
+    h1.style.alignItems = 'center';
+}
+
 
 
 /**
@@ -306,29 +330,9 @@ export function updateSpinnerColor(newColor) {
  * @param {string} name - The text name of the website.
  * @param {string} [logoUrl=null] - The URL of the logo image.
  */
-export function updateSiteTitles(name, logoUrl = null) {
-    const siteTitleElement = document.querySelector('#main-header h1');
-    const siteTitleFooterElement = document.querySelector('#main-footer p');
-    const siteTitleTagElement = document.querySelector('title');
-
-    // 1. Update Text Elements (Title Tag & Footer)
-    if (siteTitleTagElement && name) {
-        siteTitleTagElement.textContent = name;
-    }
-    if (siteTitleFooterElement && name) {
-        siteTitleFooterElement.innerHTML = `&copy; ${new Date().getFullYear()} ${name}`;
-    }
-
-    // 2. Update Header (Logo vs Text)
-    if (siteTitleElement) {
-        if (logoUrl) {
-            // Render Image
-            siteTitleElement.innerHTML = `<img src="${logoUrl}" alt="${name || 'Site Logo'}" class="site-logo" />`;
-        } else if (name) {
-            // Render Text
-            siteTitleElement.textContent = name;
-        }
-    }
+export function updateSiteTitles(name, logoUrl) {
+    if (name) document.title = name;
+   
 }
 
 
@@ -392,3 +396,44 @@ export function applyGlobalBackground(settings) {
     }
 }
 
+
+
+// THE GENERATOR
+export function generateHeaderSVG(config) {
+    const w = 800; // Internal coordinate system width
+    const h = 200; // Internal coordinate system height
+    
+    // Scale patterns
+    let defs = '';
+    let patternOverlay = '';
+
+    if (config.pattern === 'stripes') {
+        defs = `<defs><pattern id="p_stripes" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="20" stroke="${config.accentColor}" stroke-width="10" opacity="0.1" /></pattern></defs>`;
+        patternOverlay = `<rect width="100%" height="100%" fill="url(#p_stripes)" />`;
+    } 
+    else if (config.pattern === 'circle') {
+        defs = `<defs><pattern id="p_circles" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="2" fill="${config.accentColor}" opacity="0.2" /></pattern></defs>`;
+        patternOverlay = `<rect width="100%" height="100%" fill="url(#p_circles)" />`;
+    }
+
+    return `
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" 
+             style="width:100%; height:100%; display:block; background:${config.bgColor};">
+            ${defs}
+            ${patternOverlay}
+            <rect x="0" y="${h - 10}" width="${w}" height="10" fill="${config.accentColor}" />
+            
+            <text x="${config.mainX}%" y="${config.mainY}%" text-anchor="middle" dominant-baseline="middle" 
+                  fill="${config.textColor}" font-family="${config.mainFont}" font-weight="bold" 
+                  font-size="${config.mainSize}">
+                ${config.mainText.toUpperCase()}
+            </text>
+            
+            <text x="${config.subX}%" y="${config.subY}%" text-anchor="middle" dominant-baseline="middle" 
+                  fill="${config.textColor}" font-family="${config.subFont}" font-weight="normal" 
+                  font-size="${config.subSize}" letter-spacing="1">
+                ${config.subText.toUpperCase()}
+            </text>
+        </svg>
+    `;
+}

@@ -3,6 +3,7 @@ import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import * as uiUtils from './utils/uiUtils.js';
+import { applyHeaderLogo } from './utils/uiUtils.js';
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -374,7 +375,16 @@ async function main() {
             }
         }
         if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
-        if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
+
+         // 3. Basic Title
+        if (settings.websiteName || settings.logoUrl) {
+            uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
+        }
+        
+        // 4. Custom Vector Logo (Overrides basic title if exists)
+        if (settings.headerLogoConfig) {
+            uiUtils.applyHeaderLogo(settings.headerLogoConfig);
+        }
         uiUtils.applyGlobalBackground(settings);
     }
 

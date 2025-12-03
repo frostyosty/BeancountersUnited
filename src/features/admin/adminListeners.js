@@ -5,6 +5,7 @@ import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
 import { showCustomerCRMModal, showEditItemModal, showEditUserModal } from './adminModals.js';
+import { openHeaderLogoEditor } from './headerEditor.js';
 
 export let currentSort = { column: 'category', direction: 'asc' };
 
@@ -113,6 +114,11 @@ export function attachOwnerDashboardListeners() {
              document.getElementById('bg-preview').style.display = 'none';
              target.style.display = 'none';
              uiUtils.showToast("Background removed.", "success");
+        }
+
+                // Open Header Editor
+        if (target.id === 'open-header-creator-btn') {
+            openHeaderLogoEditor();
         }
     });
 
