@@ -1,7 +1,6 @@
 // src/utils/uiUtils.js
 import { useAppStore } from '@/store/appStore.js';
 
-
 // --- SPINNER ASSETS ---
 const SPINNER_SVGS = {
     coffee: `
@@ -29,25 +28,12 @@ const SPINNER_SVGS = {
 
 // --- 1. FONTS & BRANDING CONFIG ---
 export const AVAILABLE_FONTS = [
-    "Roboto", 
-    "Open Sans", 
-    "Lato", 
-    "Montserrat", 
-    "Poppins", 
-    "Playfair Display", 
-    "Merriweather", 
-    "Nunito", 
-    "Raleway", 
-    "Oswald"
+    "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", 
+    "Playfair Display", "Merriweather", "Nunito", "Raleway", "Oswald"
 ];
 
-/**
- * Dynamically loads a Google Font and applies it to the document.
- */
 export function applySiteFont(fontName) {
     if (!fontName) return;
-
-    // Prevent duplicate loading if already active
     const existingLink = document.getElementById('dynamic-font-link');
     if (existingLink && existingLink.dataset.font === fontName) return;
     if (existingLink) existingLink.remove();
@@ -59,39 +45,21 @@ export function applySiteFont(fontName) {
     link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;700&display=swap`;
     
     document.head.appendChild(link);
-
-    // Apply to CSS Variable and Body
-    document.documentElement.style.setProperty('--font-family-main', `'${fontName}', sans-serif`);
-    document.body.style.fontFamily = `'${fontName}', sans-serif`;
+    document.documentElement.style.setProperty('--font-family-main-name', fontName);
 }
 
-/**
- * Sets the active spinner type (Coffee or Hammer).
- * Saves to LocalStorage so it persists instantly on reload.
- */
 export function setGlobalSpinner(type) {
     const validTypes = ['coffee', 'hammer'];
     const selectedType = validTypes.includes(type) ? type : 'coffee';
-    
-    // 1. Save for next boot
     localStorage.setItem('site_spinner_type', selectedType);
 
-    // 2. Update DOM immediately if loader is visible
     const container = document.querySelector('.initial-app-loader');
-    if (container) {
-        container.innerHTML = SPINNER_SVGS[selectedType];
-    }
+    if (container) container.innerHTML = SPINNER_SVGS[selectedType];
     
-    // 3. Update Auth Status Spinner (if displayed)
     const authSpinner = document.querySelector('.auth-loading-spinner');
-    if (authSpinner) {
-        authSpinner.innerHTML = SPINNER_SVGS[selectedType];
-    }
+    if (authSpinner) authSpinner.innerHTML = SPINNER_SVGS[selectedType];
 }
 
-/**
- * Called on app boot to inject the correct SVG based on previous choice.
- */
 export function initGlobalSpinner() {
     const savedType = localStorage.getItem('site_spinner_type') || 'coffee';
     setGlobalSpinner(savedType);
@@ -99,53 +67,52 @@ export function initGlobalSpinner() {
 
 // --- 2. TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', overrideDuration = null, onClick = null) {
-    // 1. Setup Container
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
+        // Ensure baseline styles if CSS is missing/loading
+        container.style.position = 'fixed';
+        container.style.zIndex = '9999';
+        container.style.pointerEvents = 'none'; // Click-through
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '10px';
         document.body.appendChild(container);
     }
 
-    // 2. Get Settings
     let settings = {};
     try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
     const duration = overrideDuration || settings.duration || 3000;
-    const position = settings.position || 'bottom-center'; // Default
+    const position = settings.position || 'bottom-center';
 
-    // 3. Apply Position (FIXED)
-    // We reset inline styles so CSS can work, only applying specific overrides if needed.
+    // Apply Position
     container.style.left = '';
     container.style.right = '';
     container.style.transform = '';
     
-    if (position.includes('bottom')) { 
-        container.style.bottom = '20px'; 
-        container.style.top = 'auto'; 
-    } else { 
-        container.style.top = '20px'; 
-        container.style.bottom = 'auto'; 
-    }
+    if (position.includes('bottom')) { container.style.bottom = '20px'; container.style.top = 'auto'; } 
+    else { container.style.top = '20px'; container.style.bottom = 'auto'; }
     
     if (position.includes('right')) { 
         container.style.right = '20px'; 
-        container.style.alignItems = 'flex-end'; // Align toasts to right
+        container.style.alignItems = 'flex-end'; 
     } else if (position.includes('left')) { 
         container.style.left = '20px'; 
-        container.style.alignItems = 'flex-start'; // Align toasts to left
+        container.style.alignItems = 'flex-start'; 
     } else { 
-        // CENTER (Default)
-        // We let CSS handles left:0/right:0. We just ensure Flex centers the items.
+        // CENTER
         container.style.left = '0'; 
         container.style.right = '0'; 
         container.style.alignItems = 'center'; 
     }
 
-    // ... rest of function (create toast, onClick, animation) ...
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
+    // Ensure toast itself catches clicks
+    toast.style.pointerEvents = 'auto'; 
     
     if (onClick) {
         toast.classList.add('clickable');
@@ -164,28 +131,27 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         }
     }, duration);
 }
+
 // --- 3. MODAL SYSTEM ---
 export function showModal(htmlContent) {
-    closeModal(); // Ensure only one modal exists
+    closeModal(); 
 
-     const modalOverlay = document.createElement('div');
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'modal-overlay'; // Add ID for easier selection
     modalOverlay.className = 'modal-overlay';
     
-    // FIX: Ensure onclick is attached directly to the HTML string or element
+    // FIX: Used correct variable 'htmlContent' inside template
     modalOverlay.innerHTML = `
         <div class="modal-content">
             <button class="modal-close-btn" aria-label="Close">&times;</button>
-            ${contentHTML}
+            ${htmlContent}
         </div>
     `;
 
     document.body.appendChild(modalOverlay);
 
-    // FIX: Attach Close Listeners
-    // 1. X Button
+    // Attach Listeners
     modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closeModal);
-    
-    // 2. Background Click
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) closeModal();
     });
@@ -194,27 +160,19 @@ export function showModal(htmlContent) {
 export function closeModal() {
     const modalOverlay = document.getElementById('modal-overlay');
     if (modalOverlay) {
-        modalOverlay.classList.remove('open');
-        setTimeout(() => modalOverlay.remove(), 300);
+        modalOverlay.classList.add('fade-out'); // Optional CSS class if you have it
+        modalOverlay.remove();
     }
-    document.body.style.overflow = 'auto';
 }
 
 // --- 4. THEME & LAYOUT UTILS ---
 
-
-/**
- * Updates a CSS custom property on the :root element.
- */
 export function updateCssVariable(varName, value) {
     if (varName && value !== undefined) {
         document.documentElement.style.setProperty(varName, value);
     }
 }
 
-/**
- * Generates HTML for theme customization controls (Colors + Font).
- */
 export function getThemeControlsHTML(currentVars = {}) {
     const createColorInput = (label, varName) => {
         const currentLiveValue = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -247,71 +205,37 @@ export function getThemeControlsHTML(currentVars = {}) {
             ${createColorInput('Text Color', '--text-color')}
             ${createColorInput('Border Color', '--border-color')}
         </div>
-        <div style="margin-top: 20px; text-align: right;">
-            <button type="button" id="save-theme-settings" class="button-primary">Save Theme Settings</button>
-        </div>
     `;
 }
 
-/**
- * Applies the Header Layout (Logo Alignment / Hamburger Position)
- */
 export function applyHeaderLayout(layoutConfig) {
     const header = document.getElementById('main-header');
     if (!header) return;
 
     const { logoAlignment, hamburgerPosition } = layoutConfig || {};
 
-    // 1. Reset
     header.classList.remove('logo-align-left', 'hamburger-left');
 
-    // 2. Apply Logo Alignment
     if (logoAlignment === 'left') {
         header.classList.add('logo-align-left');
     }
 
-    // 3. Apply Hamburger Position
-    const panel = document.getElementById('mobile-menu-panel');
+    // Handle Hamburger / Mobile Panel logic if needed via CSS classes on body or header
     if (hamburgerPosition === 'left') {
         header.classList.add('hamburger-left');
-        if (panel) {
-            panel.style.right = 'auto';
-            panel.style.left = '0';
-            panel.style.transform = 'translateX(-100%)'; 
-            panel.classList.add('slide-from-left');
-        }
-    } else {
-        if (panel) {
-            panel.style.right = '0';
-            panel.style.left = 'auto';
-            panel.style.transform = 'translateX(100%)';
-            panel.classList.remove('slide-from-left');
-        }
     }
 }
-
-// --- 5. LOADING SPINNER UTILS ---
 
 export function hideInitialLoader() {
     const loader = document.querySelector('.initial-app-loader');
     if (!loader) return;
-
-    void loader.offsetWidth; // Force reflow
+    void loader.offsetWidth; 
     loader.classList.add('fade-out');
-
     setTimeout(() => {
         loader.remove();
         document.body.classList.add('app-loaded'); 
     }, 400); 
 }
-
-export function updateSpinnerColor(newColor) {
-    const spinner = document.querySelector('.dynamic-coffee-spinner');
-    if (spinner && newColor) {
-        spinner.style.color = newColor; 
-    }
-}
-
 
 export function applyHeaderLogo(config) {
     if (!config) return;
@@ -319,43 +243,27 @@ export function applyHeaderLogo(config) {
     const h1 = document.querySelector('#main-header h1');
     if (!h1) return;
 
-    // Check if we are using a simple text/image logo OR this fancy SVG
-    // If config exists, we prefer it over simple text
-    
     const svgHTML = generateHeaderSVG(config);
-    
-    // Replace content of H1
     h1.innerHTML = svgHTML;
     
-    // Remove padding/margins from H1 to let SVG fill the space
+    // Reset styles to accept SVG
     h1.style.padding = '0';
-    h1.style.height = '60px'; // Match header height
-    h1.style.width = '240px'; // Or '100%' depending on layout alignment
-    h1.style.overflow = 'hidden';
+    h1.style.lineHeight = '0';
     h1.style.display = 'flex';
     h1.style.alignItems = 'center';
+    // Remove text content styles if necessary
+    h1.style.fontSize = 'unset'; 
 }
 
-
-
-/**
- * Updates all instances of the site title/logo in the DOM.
- * @param {string} name - The text name of the website.
- * @param {string} [logoUrl=null] - The URL of the logo image.
- */
 export function updateSiteTitles(name, logoUrl) {
     if (name) document.title = name;
-   
+    if (logoUrl) {
+        const favicon = document.getElementById('dynamic-favicon');
+        if (favicon) favicon.href = logoUrl;
+    }
 }
 
-
-
-/**
- * Generates a diagonal text pattern SVG data URI.
- */
 export function generatePatternUrl(text) {
-    // Create a simple SVG that repeats
-    // We use grey text (fill="#999") with low opacity
     const svg = `
     <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -368,55 +276,41 @@ export function generatePatternUrl(text) {
         </defs>
         <rect width="100%" height="100%" fill="url(#textPattern)" />
     </svg>`;
-    
-    // Encode to Data URI
     return `url('data:image/svg+xml;base64,${btoa(svg)}')`;
 }
 
-/**
- * Applies all background logic based on settings.
- */
 export function applyGlobalBackground(settings) {
     const style = document.documentElement.style;
     const body = document.body;
     const uiConfig = settings.uiConfig || {};
     const theme = settings.themeVariables || {};
-    const bgType = uiConfig.backgroundType || 'color'; // 'color', 'image', 'pattern'
+    const bgType = uiConfig.backgroundType || 'color';
 
-    // Reset classes
     body.classList.remove('bg-parallax', 'bg-animate');
 
-    // 1. Handle Background Type
     if (bgType === 'image') {
-        style.setProperty('--body-background-image', theme['--body-background-image'] || 'none');
+        let rawUrl = theme['--body-background-image'] || '';
+        if (rawUrl === 'none') rawUrl = '';
+        style.setProperty('--body-background-image', rawUrl);
         style.setProperty('background-size', 'cover');
-        
-        // Apply Parallax
         if (uiConfig.bgParallax) body.classList.add('bg-parallax');
     
     } else if (bgType === 'pattern') {
         const text = settings.websiteName || 'Mealmates';
         const patternUrl = generatePatternUrl(text);
         style.setProperty('--body-background-image', patternUrl);
-        style.setProperty('background-size', 'auto'); // Pattern needs to repeat naturally
-        
-        // Apply Animation
+        style.setProperty('background-size', 'auto');
         if (uiConfig.bgAnimation) body.classList.add('bg-animate');
     
     } else {
-        // Solid Color
         style.setProperty('--body-background-image', 'none');
     }
 }
 
-
-
-// THE GENERATOR
 export function generateHeaderSVG(config) {
-    const w = 800; // Internal coordinate system width
-    const h = 200; // Internal coordinate system height
+    const w = 800; 
+    const h = 200; 
     
-    // Scale patterns
     let defs = '';
     let patternOverlay = '';
 
