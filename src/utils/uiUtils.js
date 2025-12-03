@@ -341,43 +341,78 @@ export function applyGlobalBackground(settings) {
     }
 }
 
-export function generateHeaderSVG(config) {
-    // Safety Fallback
-    if (!config || typeof config !== 'object') {
-        console.warn("Header SVG Config is invalid or string:", config);
-        return ''; 
+
+// src/utils/uiUtils.js
+
+// Helper to build text content from string OR array
+function buildTextContent(input, defaultColor, defaultFont, defaultSize, defaultWeight) {
+    // Case A: Simple String (Legacy/Default)
+    if (typeof input === 'string') {
+        return input.toUpperCase();
     }
+
+    // Case B: Advanced Letter Array
+    if (Array.isArray(input)) {
+        return input.map(l => {
+            // Fallback to defaults if letter doesn't have specific override
+            const fill = l.color || defaultColor;
+            const font = l.font || defaultFont;
+            const size = l.size || defaultSize;
+            const weight = l.weight || defaultWeight;
+            const rotate = l.rotate || 0;
+            const dy = l.dy || 0; // Vertical shift
+            const dx = l.dx || 0; // Horizontal kerning adjustment
+
+            // SVG <tspan> magic
+            return `<tspan fill="${fill}" font-family="${font}" font-size="${size}" font-weight="${weight}" rotate="${rotate}" dy="${dy}" dx="${dx}">${l.char}</tspan>`;
+        }).join('');
+    }
+    return '';
+}
+
+export function generateHeaderSVG(config) {
+    if (!config || typeof config !== 'object') return '';
 
     const w = 800; 
     const h = 200; 
     
-    // Safe Accessors with Defaults
     const bgColor = config.bgColor || '#263238';
     const accentColor = config.accentColor || '#f57c00';
-    const textColor = config.textColor || '#ffffff';
     
-    // Helper to safely upper case
-    const mainText = (config.mainText || 'MEALMATES').toUpperCase();
-    const subText = (config.subText || '').toUpperCase();
-
-    const mx = config.mainX ?? 50;
-    const my = config.mainY ?? 45;
+    // Defaults
+    const defColor = config.textColor || '#ffffff';
     const mFont = config.mainFont || "sans-serif";
     const mSize = config.mainSize || 40;
+    const mWeight = config.mainWeight || 700; 
+    const mx = config.mainX ?? 50;
+    const my = config.mainY ?? 45;
 
-    const sx = config.subX ?? 50;
-    const sy = config.subY ?? 70;
     const sFont = config.subFont || "sans-serif";
     const sSize = config.subSize || 16;
+    const sWeight = config.subWeight || 400;
+    const sx = config.subX ?? 50;
+    const sy = config.subY ?? 70;
 
+    // Build Content
+    const mainContent = buildTextContent(config.mainText, defColor, mFont, mSize, mWeight);
+    const subContent = buildTextContent(config.subText, defColor, sFont, sSize, sWeight);
+
+    // Image Logic
+    const imgUrl = config.imgUrl || '';
+    const imgSize = config.imgSize || 60;
+    const imgX = config.imgX ?? 80;
+    const imgY = config.imgY ?? 50;
+    const imageTag = imgUrl 
+        ? `<image href="${imgUrl}" x="${imgX}%" y="${imgY}%" width="${imgSize}" height="${imgSize}" transform="translate(-${imgSize/2}, -${imgSize/2})" preserveAspectRatio="xMidYMid meet" />` 
+        : '';
+
+    // Pattern Logic
     let defs = '';
     let patternOverlay = '';
-
     if (config.pattern === 'stripes') {
         defs = `<defs><pattern id="p_stripes" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="20" stroke="${accentColor}" stroke-width="10" opacity="0.1" /></pattern></defs>`;
         patternOverlay = `<rect width="100%" height="100%" fill="url(#p_stripes)" />`;
-    } 
-    else if (config.pattern === 'circle') {
+    } else if (config.pattern === 'circle') {
         defs = `<defs><pattern id="p_circles" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="2" fill="${accentColor}" opacity="0.2" /></pattern></defs>`;
         patternOverlay = `<rect width="100%" height="100%" fill="url(#p_circles)" />`;
     }
@@ -388,17 +423,17 @@ export function generateHeaderSVG(config) {
             ${defs}
             ${patternOverlay}
             <rect x="0" y="${h - 10}" width="${w}" height="10" fill="${accentColor}" />
+            ${imageTag}
             
+            <!-- Note: Default properties set on <text> serve as base for <tspans> -->
             <text x="${mx}%" y="${my}%" text-anchor="middle" dominant-baseline="middle" 
-                  fill="${textColor}" font-family="${mFont}" font-weight="bold" 
-                  font-size="${mSize}">
-                ${mainText}
+                  fill="${defColor}" font-family="${mFont}" font-weight="${mWeight}" font-size="${mSize}">
+                ${mainContent}
             </text>
             
             <text x="${sx}%" y="${sy}%" text-anchor="middle" dominant-baseline="middle" 
-                  fill="${textColor}" font-family="${sFont}" font-weight="normal" 
-                  font-size="${sSize}" letter-spacing="1">
-                ${subText}
+                  fill="${defColor}" font-family="${sFont}" font-weight="${sWeight}" font-size="${sSize}" letter-spacing="1">
+                ${subContent}
             </text>
         </svg>
     `;

@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Bebas+Neue&family=Exo+2:wght@400;700;900&family=Fjalla+One&family=Lato:wght@400;700;900&family=Merriweather:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Oswald:wght@400;700&family=Permanent+Marker&family=Playfair+Display:wght@400;700;900&family=Righteous&family=Roboto+Slab:wght@400;700;900&family=Shadows+Into+Light&family=Teko:wght@400;600;700&family=Ubuntu:wght@400;700&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Allura&family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Exo+2:wght@400;700;900&family=Fjalla+One&family=Great+Vibes&family=Lato:wght@300;400;700;900&family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Oswald:wght@300;400;700&family=Pacifico&family=Parisienne&family=Permanent+Marker&family=Playfair+Display:wght@400;700;900&family=Righteous&family=Roboto+Slab:wght@300;400;700;900&family=Shadows+Into+Light&family=Teko:wght@400;600;700&family=Ubuntu:wght@400;700&display=swap');
 /* ==========================================================================
    1. VARIABLES & THEMING
    ========================================================================== */
@@ -968,3 +967,96 @@ input[type="color"] {
     padding-top: 15px;
     border-top: 1px solid #eee;
 }
+
+
+/* New Helper for Reset Buttons */
+.reset-pos-btn {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    margin-left: 5px;
+}
+.reset-pos-btn:hover {
+    background: #eee;
+    color: #333;
+}
+
+
+/* Header Editor Drop Zone */
+.he-drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    background: #f9f9f9;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.he-drop-zone:hover, .he-drop-zone.drag-over {
+    border-color: var(--primary-color);
+    background: #fffdf5;
+    color: var(--primary-color);
+}
+
+.he-drop-zone p { margin: 0; font-size: 0.9rem; }
+.he-drop-zone small { font-size: 0.75rem; color: #999; }
+
+
+/* --- Header Editor: Letter Selector --- */
+.he-letter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0;
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.he-letter-chip {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.he-letter-chip.selected {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Advanced Controls Panel */
+.he-adv-controls {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fff;
+    display: none; /* Hidden until letter selected */
+}
+.he-adv-controls.active { display: block; animation: fadeIn 0.2s; }
+
+.he-mini-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.he-mini-label { font-size: 0.7rem; color: #666; width: 40px; }
+.he-mini-input { flex: 1; padding: 2px; font-size: 0.8rem; }
