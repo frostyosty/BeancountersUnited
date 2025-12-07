@@ -1,150 +1,232 @@
 // src/features/user/orderHistoryUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
+import { supabase } from '@/supabaseClient.js';
 
-// --- CSS for Stepper (Manual Order Modal) ---
 const STEPPER_CSS = `
 <style>
     .stepper-container { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
-    .stepper-btn {
-        width: 32px; height: 32px; border-radius: 50%; border: none;
-        background-color: #eee; color: #333; font-weight: bold; font-size: 1.2rem;
-        cursor: pointer; display: flex; align-items: center; justify-content: center;
-        line-height: 1; transition: background 0.2s;
-    }
+    .stepper-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background-color: #eee; color: #333; font-weight: bold; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.2s; }
     .stepper-btn:active { background-color: #ddd; transform: scale(0.95); }
     .stepper-btn.plus { background-color: var(--primary-color); color: white; }
     .stepper-val { font-weight: 600; min-width: 20px; text-align: center; }
     .hidden { display: none !important; }
+    
+    /* Archive Table Styles */
+    .archive-section { background-color: #f0f0f0; border-top: 4px solid #ccc; padding: 20px; margin-top: 40px; border-radius: 8px; }
+    .archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #666; }
+    .archive-table { width: 100%; border-collapse: collapse; opacity: 0.8; }
+    .archive-table th { text-align: left; padding: 8px; border-bottom: 2px solid #ccc; font-size: 0.85rem; }
+    .archive-table td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 0.85rem; color: #555; }
+    .archive-table tr:hover { background-color: #e9e9e9; opacity: 1; }
 </style>
 `;
 
-// --- MAIN RENDER FUNCTION ---
 export function renderOrderHistoryPage() {
-    console.log("%c[OrderHistoryUI] render CALLED", "color: pink");
-    
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // 1. Fetch Data
     useAppStore.getState().orderHistory.fetchOrderHistory();
-    // We need menu for manual orders (if admin)
     useAppStore.getState().menu.fetchMenu(); 
 
-    // 2. Get State
     const { orders, isLoading, error } = useAppStore.getState().orderHistory;
     const { getUserRole } = useAppStore.getState().auth;
     const role = getUserRole();
 
-    console.log(`[OrderHistoryUI] Role: ${role}, Orders: ${orders?.length}, Loading: ${isLoading}`);
+    if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading orders...</div>`; return; }
+    if (error) { mainContent.innerHTML = `<div class="error-message"><h3>Error</h3><p>${error}</p><button class="button-primary" onclick="location.reload()">Retry</button></div>`; return; }
 
-    // 3. Handle Loading/Error
-    if (isLoading) {
-        mainContent.innerHTML = `<div class="loading-spinner">Loading orders...</div>`;
-        return;
-    }
-    if (error) {
-        mainContent.innerHTML = `<div class="error-message"><h3>Error</h3><p>${error}</p><button class="button-primary" onclick="location.reload()">Retry</button></div>`;
-        return;
-    }
-
-    // 4. Render based on Role
-    // FIX: Restored the logic to show Admin Table for God/Owner
     if (role === 'god' || role === 'owner') {
-        renderAdminOrderTable(mainContent, orders || []);
+        renderAdminOrderViews(mainContent, orders || [], role);
     } else {
         renderCustomerOrderList(mainContent, orders || []);
     }
 }
 
-// --- ADMIN VIEW: Incoming Orders Table ---
-function renderAdminOrderTable(container, orders) {
-    // Sort: Pending first, then by time
-    const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
-    const pastOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
+// --- ADMIN VIEW (Live + Archive) ---
+function renderAdminOrderViews(container, orders, role) {
+    // 1. Split Orders
+    const liveOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
+    // Archive = Everything else (Completed, Cancelled)
+    const archivedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
     
-    // Sort active oldest first (urgent), past newest first
-    activeOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    pastOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // Sort
+    liveOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // Oldest first (urgent)
+    archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Newest first
+
+    // 2. Live Table HTML
+    const liveRows = liveOrders.map(order => createOrderRow(order, role, true)).join('');
     
-    const displayOrders = [...activeOrders, ...pastOrders];
-
-    const rows = displayOrders.map(order => {
-        const date = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest / Walk-in';
-        
-        // Safely map items
-        const itemsSummary = (order.order_items || []).map(i => 
-            `${i.quantity}x ${i.menu_items?.name || 'Item'}`
-        ).join(', ') || '<span style="color:#999;">No items</span>';
-        
-        let statusClass = 'status-pending';
-        if (order.status === 'completed') statusClass = 'status-completed';
-        if (order.status === 'cancelled') statusClass = 'status-cancelled';
-
-        // Dismiss button only for completed/cancelled to keep history clean? 
-        // Or allow dismissing pending? Usually you 'Complete' pending orders first.
-        // For simplicity, we just allow dismiss (hide from list).
-        
-        return `
-            <tr class="${statusClass}" data-order-id="${order.id}" 
-                style="cursor:pointer;" 
-                onclick="window.handleOrderRowClick('${order.user_id}')"> <!-- FIX: Added Click Handler -->
-                
-                <td>#${order.id.slice(0,4)}</td>
-                <td>${date}</td>
-                <td style="font-weight:500;">${customerName}</td>
-                <td style="font-size:0.9rem;">${itemsSummary}</td>
-                <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
-                <td><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <!-- Prevent row click when clicking dismiss -->
-                <td><button class="delete-icon-btn dismiss-order-btn" title="Dismiss" onclick="event.stopPropagation()">×</button></td>
-            </tr>
-        `;
-    }).join('');
+    // 3. Archive Table HTML
+    const archiveRows = archivedOrders.map(order => createOrderRow(order, role, false)).join('');
 
     container.innerHTML = `
+        ${STEPPER_CSS}
         <div class="dashboard-container">
-            <h2>Incoming Orders (Live)</h2>
             
-            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span><strong>${activeOrders.length}</strong> Active Orders</span>
-                <button id="btn-manual-order" class="button-secondary" style="font-weight: 600;">+ New Walk-in Order</button>
+            <!-- LIVE ORDERS SECTION -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 style="color: var(--primary-color);">Live Orders</h2>
+                <button id="btn-manual-order" class="button-secondary small" style="font-weight: 600;">+ Phone Order</button>
             </div>
 
-            <div class="table-wrapper">
+            <div class="table-wrapper" style="margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                 <table class="admin-orders-table" style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#eee;">
+                    <thead style="background:var(--surface-color); border-bottom: 2px solid var(--primary-color);">
                         <tr>
-                            <th style="padding:10px;">ID</th>
-                            <th style="padding:10px;">Time</th>
-                            <th style="padding:10px;">Customer</th>
-                            <th style="padding:10px;">Items</th>
-                            <th style="padding:10px;">Total</th>
-                            <th style="padding:10px;">Status</th>
-                            <th style="padding:10px;">Dismiss</th>
+                            <th style="padding:12px;">ID</th>
+                            <th style="padding:12px;">Due / Time</th>
+                            <th style="padding:12px;">Customer</th>
+                            <th style="padding:12px;">Items</th>
+                            <th style="padding:12px;">Total</th>
+                            <th style="padding:12px;">Status</th>
+                            <th style="padding:12px;">Action</th>
                         </tr>
                     </thead>
-                    <tbody>${rows.length > 0 ? rows : '<tr><td colspan="7" style="text-align:center; padding:20px;">No orders found.</td></tr>'}</tbody>
+                    <tbody style="background:white;">
+                        ${liveRows.length > 0 ? liveRows : '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">No live orders. Good job!</td></tr>'}
+                    </tbody>
                 </table>
             </div>
+
+            <!-- ARCHIVED ORDERS SECTION -->
+            <div class="archive-section">
+                <div class="archive-header">
+                    <h3 style="margin:0;">Archived Orders (Log)</h3>
+                    <button id="toggle-archive-btn" class="button-secondary small">Show/Hide</button>
+                </div>
+                
+                <div id="archive-table-container" style="display:none;">
+                    <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+                    
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="archive-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Summary</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    ${role === 'god' ? '<th>Delete</th>' : ''}
+                                </tr>
+                            </thead>
+                            <tbody id="archive-tbody">
+                                ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="7">No history found.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     `;
 
-    // Attach Listeners
-    document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
+    // --- Listeners ---
     
-    container.querySelectorAll('.dismiss-order-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    // Manual Order
+    document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
+
+    // Archive Toggle
+    const archiveContainer = document.getElementById('archive-table-container');
+    const toggleBtn = document.getElementById('toggle-archive-btn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            const isHidden = archiveContainer.style.display === 'none';
+            archiveContainer.style.display = isHidden ? 'block' : 'none';
+            toggleBtn.textContent = isHidden ? 'Hide Archive' : 'Show Archive';
+        };
+    }
+
+    // Archive Search
+    const searchInput = document.getElementById('archive-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#archive-tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+    }
+    
+    // Row Actions (Dismiss / Delete)
+    container.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Stop row click
             const orderId = e.target.closest('tr').dataset.orderId;
-            if(confirm("Dismiss this order from the view?")) {
-                // Optimistic remove or call API
-                useAppStore.getState().orderHistory.dismissOrder(orderId);
+            const action = e.target.dataset.action; // 'dismiss' or 'delete'
+
+            if (action === 'dismiss') {
+                if(confirm("Dismiss (Archive) this order?")) {
+                    useAppStore.getState().orderHistory.dismissOrder(orderId);
+                }
+            } else if (action === 'delete') {
+                if(confirm("PERMANENTLY DELETE this record? This cannot be undone.")) {
+                    const { error } = await supabase.from('orders').delete().eq('id', orderId);
+                    if (!error) {
+                        uiUtils.showToast("Record deleted.", "success");
+                        useAppStore.getState().orderHistory.fetchOrderHistory();
+                    } else {
+                        uiUtils.showToast("Delete failed.", "error");
+                    }
+                }
             }
         });
     });
 }
 
+// Helper to create HTML for rows
+function createOrderRow(order, role, isLive) {
+    const time = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const fullDate = new Date(order.created_at).toLocaleDateString() + ' ' + time;
+    
+    const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';
+    
+    // Safe item mapping
+    const itemsSummary = (order.order_items || []).map(i => 
+        `${i.quantity}x ${i.menu_items?.name || 'Item'}`
+    ).join(', ') || 'No items';
+
+    const statusClass = `status-${order.status}`;
+    const clickName = customerName.replace(/'/g, "\\'"); // Escape for JS
+
+    if (isLive) {
+        // LIVE ROW
+        return `
+            <tr class="${statusClass}" data-order-id="${order.id}" 
+                style="cursor:pointer;" 
+                onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
+                
+                <td>#${order.id.slice(0,4)}</td>
+                <td>${time}</td>
+                <td style="font-weight:600;">${customerName}</td>
+                <td>${itemsSummary}</td>
+                <td style="font-weight:bold;">$${parseFloat(order.total_amount).toFixed(2)}</td>
+                <td><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
+                <td><button class="delete-icon-btn action-btn" data-action="dismiss" title="Archive">×</button></td>
+            </tr>
+        `;
+    } else {
+        // ARCHIVE ROW
+        const deleteBtn = role === 'god' 
+            ? `<td><button class="delete-icon-btn action-btn" data-action="delete" title="Permanent Delete" style="color:#d00;">🗑</button></td>` 
+            : '';
+
+        return `
+            <tr data-order-id="${order.id}" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')" style="cursor:pointer;">
+                <td>${fullDate}</td>
+                <td>#${order.id.slice(0,4)}</td>
+                <td>${customerName}</td>
+                <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${itemsSummary}</td>
+                <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
+                <td>${order.status}</td>
+                ${role === 'god' ? deleteBtn : ''}
+            </tr>
+        `;
+    }
+}
 // --- CUSTOMER VIEW: Card List ---
 function renderCustomerOrderList(container, orders) {
     if (orders.length === 0) {

@@ -5,7 +5,7 @@ import { supabase } from '@/supabaseClient.js';
 import { useAppStore } from '@/store/appStore.js';
 
 // --- 1. CUSTOMER CRM MODAL ---
-export async function showCustomerCRMModal(userId) {
+export async function showCustomerCRMModal(userId, manualNameOverride = null) {
     uiUtils.showModal(`<div class="loading-spinner">Fetching Client History...</div>`);
 
     try {
@@ -32,17 +32,26 @@ export async function showCustomerCRMModal(userId) {
             return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;"><div style="color:#888; font-size:0.8rem;">${date} by ${actorName}</div><div>${changeMsg}</div></div>`;
         }).join('');
 
+        // --- NAME LOGIC ---
+        // If we have an override (e.g. "Bob"), use it. Otherwise use profile data.
+        const displayName = manualNameOverride || profile.full_name || profile.email || 'Guest';
+        const subText = manualNameOverride 
+            ? `(Phone/Walk-in Record linked to ${profile.email})` 
+            : (profile.email || 'No Email');
+
         const modalHTML = `
             <div class="crm-modal-container" style="min-width:350px;">
                 <!-- Header -->
                 <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
-                    <h3 style="margin:0 0 5px 0;">${profile.full_name || profile.email || 'Guest'}</h3>
-                    <p style="margin:0; font-size:0.85rem; color:#666;">${profile.email || 'No Email'}</p>
+                    <h3 style="margin:0 0 5px 0;">${displayName}</h3>
+                    <p style="margin:0; font-size:0.85rem; color:#666;">${subText}</p>
                     
+                    <!-- FIX: Only show Nickname input if this is a REAL profile (not an override) -->
+                    ${!manualNameOverride ? `
                     <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
                         <label style="font-size:0.9rem;">Nickname:</label>
                         <input type="text" id="crm-nickname" value="${profile.internal_nickname || ''}" placeholder="e.g. Latte John" style="padding:5px; border:1px solid #ccc; border-radius:4px; flex:1;">
-                    </div>
+                    </div>` : ''}
                 </div>
 
                 <!-- Staff Notes -->
@@ -59,7 +68,7 @@ export async function showCustomerCRMModal(userId) {
                                 <input type="radio" name="noteUrgency" value="alert" ${profile.staff_note_urgency === 'alert' ? 'checked' : ''}> Important
                             </label>
                         </div>
-                        <button id="crm-save-btn" class="button-primary small">Save Note</button>
+                        <button id="crm-save-btn" class="button-primary small">Save</button>
                     </div>
                 </div>
 
@@ -69,8 +78,7 @@ export async function showCustomerCRMModal(userId) {
                         <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
                         <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
                     </div>
-                    
-                    <!-- NEW BUTTON -->
+                    <!-- Add Past Order Button -->
                     <button id="crm-add-order-btn" class="button-primary small" style="padding: 4px 10px; font-weight:bold;" title="Add Past Order">+</button>
                 </div>
 
@@ -89,10 +97,9 @@ export async function showCustomerCRMModal(userId) {
             </div>
         `;
 
-        // FIX: Variable name match
         uiUtils.showModal(modalHTML);
 
-        // Listeners
+        // --- Event Listeners ---
         const tabOrders = document.getElementById('tab-orders');
         const tabAudit = document.getElementById('tab-audit');
         const contentOrders = document.getElementById('content-orders');
@@ -113,12 +120,22 @@ export async function showCustomerCRMModal(userId) {
             const btn = e.target;
             btn.textContent = 'Saving...'; btn.disabled = true;
             
-            const nickname = document.getElementById('crm-nickname').value;
+            // Handle null if input is hidden
+            const nicknameInput = document.getElementById('crm-nickname');
+            const nickname = nicknameInput ? nicknameInput.value : null; 
+            
             const note = document.getElementById('crm-note').value;
             const urgency = document.querySelector('input[name="noteUrgency"]:checked').value;
 
             try {
-                await api.updateCustomerDetails({ userId, nickname, note, urgency }, session.access_token);
+                // Pass undefined for nickname if it wasn't visible, so API ignores it
+                await api.updateCustomerDetails({ 
+                    userId, 
+                    nickname: nickname !== null ? nickname : undefined, 
+                    note, 
+                    urgency 
+                }, session.access_token);
+                
                 uiUtils.showToast("Updated!", "success");
                 useAppStore.getState().ui.triggerPageRender(); 
                 uiUtils.closeModal(); 
@@ -128,19 +145,13 @@ export async function showCustomerCRMModal(userId) {
                 btn.textContent = 'Save Note'; btn.disabled = false;
             }
         });
-        
+
         document.getElementById('crm-add-order-btn').onclick = () => {
-            // Close this modal? Or keep it open?
-            // Modal system usually only supports one at a time.
-            // Let's close this one and open the Order modal, passing the current profile.
-            
-            // We pass the profile object so we have the ID and Name
             const targetProfile = { 
-                id: userId, // from function arg
+                id: userId, 
                 full_name: profile.full_name, 
                 internal_nickname: profile.internal_nickname 
             };
-            
             window.showAddPastOrderModal(targetProfile);
         };
 

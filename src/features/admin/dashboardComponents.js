@@ -32,6 +32,7 @@ function getThemeBasedColor(categoryName, settings) {
 }
 
 // --- 1. ACTIVE ORDERS ---
+// --- 1. ACTIVE ORDERS ---
 export function renderActiveOrdersSection(orders) {
     // Safety check for input
     if (!Array.isArray(orders)) return '<p>Loading orders...</p>';
@@ -40,21 +41,26 @@ export function renderActiveOrdersSection(orders) {
     
     const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
-        const displayName = profile.internal_nickname || profile.full_name || profile.email || 'Guest';
         
+        // Determine Display Name (Prioritize manual name for Phone Orders)
+        const displayName = order.customer_name || profile.internal_nickname || profile.full_name || profile.email || 'Guest';
+        
+        // Prepare Name for Click Handler (Escape quotes)
+        const clickName = displayName.replace(/'/g, "\\'");
+
         let noteIcon = '';
         if (profile.staff_note) {
             noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
         }
 
-        // FIX: Safety checks for ID and Amount
+        // Safety checks for ID and Amount
         const orderId = order.id ? order.id.slice(0, 4) : '????';
         const total = parseFloat(order.total_amount || 0).toFixed(2);
 
         return `
         <div class="order-card" style="background:white; border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:4px;">
             <div class="order-header" style="cursor:pointer; display:flex; justify-content:space-between; font-weight:bold;" 
-                 onclick="window.handleOrderRowClick('${order.user_id}')">
+                 onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
                 <span>#${orderId} - ${displayName} ${noteIcon}</span>
                 <span>$${total}</span>
             </div>
@@ -280,6 +286,8 @@ export function renderPaymentSection(paymentConfig) {
 // --- 6. HEADER SETTINGS ---
 // --- 6. HEADER SETTINGS ---
 export function renderHeaderSection(headerSettings) {
+    const height = headerSettings.height || 60; // Default 60
+
     return `
         <section class="dashboard-section">
             <h3>Header Layout</h3>
@@ -300,8 +308,14 @@ export function renderHeaderSection(headerSettings) {
                         </select>
                     </div>
                 </div>
-                
-                <!-- NEW BUTTON -->
+
+                <!-- NEW: Height Slider -->
+                <div class="form-group">
+                    <label>Header Height: <span id="header-height-val">${height}px</span></label>
+                    <input type="range" name="headerHeight" min="50" max="150" value="${height}" 
+                           oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
+                </div>
+
                 <div style="padding-top:15px; border-top:1px solid #eee;">
                     <label style="display:block; margin-bottom:5px;">Custom Vector Banner</label>
                     <button type="button" id="open-header-creator-btn" class="button-secondary" style="width:100%;">

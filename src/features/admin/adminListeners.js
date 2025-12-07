@@ -179,11 +179,13 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Permissions saved.', 'success', 1000);
         },
 
-        headerLayout: async (form) => {
+         headerLayout: async (form) => {
             const formData = new FormData(form);
             const headerSettings = {
                 logoAlignment: formData.get('logoAlignment'),
-                hamburgerPosition: formData.get('hamburgerPosition')
+                hamburgerPosition: formData.get('hamburgerPosition'),
+                // NEW: Capture Height
+                height: parseInt(formData.get('headerHeight')) || 60
             };
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ headerSettings }, session.access_token);
@@ -319,22 +321,51 @@ export function attachOwnerDashboardListeners() {
         }
 
         // BG Upload
-        if (target.id === 'bg-upload') {
-            const file = target.files[0];
+        if (e.target.id === 'bg-upload') {
+            const file = e.target.files[0];
             if (file) {
                 uiUtils.showToast("Uploading background...", "info");
                 try {
                     const url = await uploadLogo(file);
                     const { data: { session } } = await supabase.auth.getSession();
                     const { settings } = useAppStore.getState().siteSettings;
+                    
+                    // 1. Update the Variable
                     const newTheme = { ...settings.themeVariables, '--body-background-image': `url('${url}')` };
-                    await api.updateSiteSettings({ themeVariables: newTheme }, session.access_token);
+                    
+                    // 2. FIX: Force backgroundType to 'image' so it actually shows
+                    const newUiConfig = { ...settings.uiConfig, backgroundType: 'image' };
+
+                    await api.updateSiteSettings({ themeVariables: newTheme, uiConfig: newUiConfig }, session.access_token);
+                    
+                    // 3. Update DOM
                     document.documentElement.style.setProperty('--body-background-image', `url('${url}')`);
-                    document.getElementById('bg-preview').src = url;
-                    document.getElementById('bg-preview').style.display = 'block';
-                    document.getElementById('clear-bg-btn').style.display = 'inline-block';
+                    
+                    // Update Preview Elements
+                    const preview = document.getElementById('bg-preview');
+                    if (preview) {
+                        preview.src = url;
+                        preview.style.display = 'block';
+                    }
+                    const removeBtn = document.getElementById('clear-bg-btn');
+                    if (removeBtn) removeBtn.style.display = 'inline-block';
+                    
+                    // Update Radio Button UI if visible
+                    const radio = document.querySelector('input[name="backgroundType"][value="image"]');
+                    if (radio) radio.checked = true;
+                    // Show image controls
+                    const ctrl = document.getElementById('bg-ctrl-image');
+                    if (ctrl) ctrl.style.display = 'block';
+
+                    // Re-run global applier to handle parallax settings etc
+                    // We construct a temporary settings object to apply immediately
+                    uiUtils.applyGlobalBackground({ ...settings, themeVariables: newTheme, uiConfig: newUiConfig });
+
                     uiUtils.showToast("Background saved.", "success");
-                } catch (err) { uiUtils.showToast("Upload failed.", "error"); }
+                } catch (err) { 
+                    console.error(err);
+                    uiUtils.showToast("Upload failed.", "error"); 
+                }
             }
             return;
         }
@@ -378,12 +409,20 @@ export function initializeSortable() {
 }
 
 // --- GLOBAL CLICK HANDLER ---
-window.handleOrderRowClick = (userId) => {
+// Updated to accept an optional 'manualName'
+window.handleOrderRowClick = (userId, manualName = null) => {
     const event = window.event; 
     const target = event.target;
+    
     if (target.closest('button')) return;
-    if (!userId || userId === 'null' || userId === 'undefined') { uiUtils.showToast("Guest order - no history available.", "info"); return; }
-    showCustomerCRMModal(userId);
+
+    if (!userId || userId === 'null' || userId === 'undefined') { 
+        uiUtils.showToast("Guest order - no history available.", "info"); 
+        return; 
+    }
+    
+    // Pass the manual name to the modal function
+    showCustomerCRMModal(userId, manualName);
 };
 
 

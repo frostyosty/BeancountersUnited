@@ -132,18 +132,18 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
 
     container.appendChild(toast);
 
-    // Animation
-    // Small timeout ensures CSS transition sees the state change
-    setTimeout(() => toast.classList.add('show'), 10);
-    
-    // Auto-remove
+    // Trigger Entry Animation
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    // Auto-remove logic
     setTimeout(() => {
-        if (toast.parentNode) {
-            toast.classList.remove('show');
-            toast.addEventListener('transitionend', () => {
-                if (toast.parentNode) toast.parentNode.removeChild(toast);
-            });
-        }
+        toast.classList.remove('show');
+        // Force removal after animation time (300ms) + buffer
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 400); 
     }, duration);
 }
 
@@ -227,8 +227,13 @@ export function applyHeaderLayout(layoutConfig) {
     const header = document.getElementById('main-header');
     if (!header) return;
 
-    const { logoAlignment, hamburgerPosition } = layoutConfig || {};
+    const { logoAlignment, hamburgerPosition, height } = layoutConfig || {};
 
+    // Apply Height
+    if (height) {
+        document.documentElement.style.setProperty('--header-height', height + 'px');
+    }
+    
     header.classList.remove('logo-align-left', 'hamburger-left');
 
     if (logoAlignment === 'left') {
