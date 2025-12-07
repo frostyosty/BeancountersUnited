@@ -66,51 +66,30 @@ export function initGlobalSpinner() {
 }
 
 // --- 2. TOAST NOTIFICATIONS ---
+// --- 2. TOAST NOTIFICATIONS ---
 export function showToast(message, type = 'info', overrideDuration = null, onClick = null) {
-    console.group("🍞 Toast Debugger");
-
-    // 1. Setup Container
     let container = document.getElementById('toast-container');
     if (!container) {
-        console.log("Creating new toast container...");
         container = document.createElement('div');
         container.id = 'toast-container';
-        // Base critical styles
-        container.style.position = 'fixed';
-        container.style.zIndex = '9999';
-        container.style.pointerEvents = 'none'; 
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.gap = '10px';
         document.body.appendChild(container);
-    } else {
-        console.log("Found existing toast container.");
     }
 
-    // 2. Get Settings
     let settings = {};
-    try { 
-        settings = useAppStore.getState().siteSettings?.settings?.toast || {}; 
-    } catch(e) {
-        console.warn("Store not ready yet, using defaults");
-    }
+    try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
     const duration = overrideDuration || settings.duration || 3000;
-    // DEBUG: Log what the database actually says
-    console.log("Raw Settings:", settings); 
-    
     const position = settings.position || 'bottom-center';
-    console.log("Resolved Position:", position);
 
-    // 3. Apply Position (Reset first)
+    // Reset layout styles to let CSS/Logic take over
     container.style.left = '';
     container.style.right = '';
     container.style.top = '';
     container.style.bottom = '';
     container.style.transform = '';
-    container.style.alignItems = ''; // Reset alignment
+    container.style.alignItems = ''; 
 
-    // Vertical Logic
+    // Apply Position Logic
     if (position.includes('bottom')) { 
         container.style.bottom = '20px'; 
         container.style.top = 'auto'; 
@@ -119,31 +98,26 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         container.style.bottom = 'auto'; 
     }
     
-    // Horizontal Logic
     if (position.includes('right')) { 
-        console.log("Applying RIGHT alignment");
         container.style.right = '20px'; 
         container.style.alignItems = 'flex-end'; 
     } else if (position.includes('left')) { 
-        console.log("Applying LEFT alignment");
         container.style.left = '20px'; 
         container.style.alignItems = 'flex-start'; 
     } else { 
         // CENTER
-        console.log("Applying CENTER alignment");
         container.style.left = '0'; 
         container.style.right = '0'; 
-        container.style.alignItems = 'center'; 
-        // Force explicit width to ensure centering works
-        container.style.width = '100%'; 
+        container.style.alignItems = 'center'; // Flex centering
+        container.style.width = '100%';        // Force full width span
+        container.style.pointerEvents = 'none'; // Click-through empty space
     }
 
-    console.log("Final Container Styles:", container.style.cssText);
-
-    // 4. Create Toast
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
+    
+    // Interactive settings
     toast.style.pointerEvents = 'auto'; 
     
     if (onClick) {
@@ -153,7 +127,11 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
 
     container.appendChild(toast);
 
+    // Animation
+    // Small timeout ensures CSS transition sees the state change
     setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Auto-remove
     setTimeout(() => {
         if (toast.parentNode) {
             toast.classList.remove('show');
@@ -162,8 +140,6 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
             });
         }
     }, duration);
-    
-    console.groupEnd();
 }
 
 // --- 3. MODAL SYSTEM ---

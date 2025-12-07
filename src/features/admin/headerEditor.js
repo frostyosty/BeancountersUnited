@@ -20,24 +20,58 @@ let editorState = {
 
 export function openHeaderLogoEditor() {
     const { settings } = useAppStore.getState().siteSettings;
-    editorState.config = { ...DEFAULT_CONFIG, ...(settings.headerLogoConfig || {}) };
+    let savedConfig = settings.headerLogoConfig;
+
+    // --- FIX: Safety Parse ---
+    // If API returned a string (due to whitelist miss), parse it manually.
+    if (typeof savedConfig === 'string') {
+        try {
+            savedConfig = JSON.parse(savedConfig);
+        } catch (e) {
+            console.error("Failed to parse header config:", e);
+            savedConfig = {};
+        }
+    }
+    
+    // Debug Log: Check what we are actually loading
+    console.log("[HeaderEditor] Loading Config:", savedConfig);
+
+    // Merge Defaults
+    editorState.config = { ...DEFAULT_CONFIG, ...(savedConfig || {}) };
     
     // Initialize Letters Array
-    // If saved data is a string (old format), convert to array. If array, keep it.
     if (typeof editorState.config.mainText === 'string') {
         editorState.mainLetters = editorState.config.mainText.split('').map(c => ({ char: c }));
     } else if (Array.isArray(editorState.config.mainText)) {
-        editorState.mainLetters = JSON.parse(JSON.stringify(editorState.config.mainText)); // Deep copy
+        editorState.mainLetters = JSON.parse(JSON.stringify(editorState.config.mainText)); 
     } else {
         editorState.mainLetters = [];
     }
 
-    // Sync back immediately so config is consistent
+    // Sync back
     editorState.config.mainText = editorState.mainLetters;
 
     // Font Options
-    const fonts = ["'Oswald', sans-serif", "'Great Vibes', cursive", "'Dancing Script', cursive", "'Pacifico', cursive", "'Parisienne', cursive", "'Allura', cursive", "'Roboto Slab', serif", "'Anton', sans-serif", "'Bebas Neue', cursive", "Arial, sans-serif"];
-    const fontOptions = fonts.map(f => `<option value="${f}">${f.split(',')[0].replace(/'/g, '')}</option>`).join('');
+     const fonts = [
+        "'Oswald', sans-serif",       // Strong / Industrial
+        "'Playfair Display', serif",   // Elegant / Luxury
+        "'Bebas Neue', cursive",      // Tall / Bold
+        "'Dancing Script', cursive",  // Flowing / Artsy
+        "'Pacifico', cursive",        // Friendly / Retro
+        "'Montserrat', sans-serif",   // Modern / Clean
+        "'Roboto Slab', serif",       // Classic / Strong
+        "'Righteous', cursive",       // Modern / Tech
+        "'Merriweather', serif",      // Traditional
+        "Arial, sans-serif"           // Fallback
+    ];
+    
+    // Create dropdown options
+    // Fix: Show clean names in the dropdown (remove quotes and fallbacks for display)
+    const fontOptions = fonts.map(f => {
+        const cleanName = f.split(',')[0].replace(/'/g, '');
+        return `<option value="${f}">${cleanName}</option>`;
+    }).join('');
+
     
     // Helper to get string for input display
     const displayString = editorState.mainLetters.map(l => l.char).join('');

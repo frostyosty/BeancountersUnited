@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Allura&family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Exo+2:wght@400;700;900&family=Fjalla+One&family=Great+Vibes&family=Lato:wght@300;400;700;900&family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Oswald:wght@300;400;700&family=Pacifico&family=Parisienne&family=Permanent+Marker&family=Playfair+Display:wght@400;700;900&family=Righteous&family=Roboto+Slab:wght@300;400;700;900&family=Shadows+Into+Light&family=Teko:wght@400;600;700&family=Ubuntu:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Lato:wght@300;400;700;900&family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Oswald:wght@300;400;700&family=Pacifico&family=Playfair+Display:wght@400;700;900&family=Righteous&family=Roboto+Slab:wght@300;400;700;900&family=Ubuntu:wght@400;700&display=swap');
+
+
 /* ==========================================================================
    1. VARIABLES & THEMING
    ========================================================================== */
@@ -1065,4 +1067,67 @@ input[type="color"] {
 .modal-content{
     padding: 0.5rem;
     width: 95%;
+}
+
+
+/* 2. Sticky Preview Box */
+.he-preview-box {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    
+    /* STICKY MAGIC */
+    position: sticky; 
+    top: 0;
+    z-index: 100; /* Sit above controls */
+    margin-bottom: 20px;
+}
+
+
+
+
+/* --- TOAST FIXES (Force Center) --- */
+
+#toast-container {
+    /* Ensure flexbox behavior overrides any block behavior */
+    display: flex !important;
+    flex-direction: column !important;
+    z-index: 9999 !important;
+    
+    /* When centered, these ensure it spans the screen */
+    /* JS sets specific left/right/align-items, but this is the baseline */
+    box-sizing: border-box !important;
+    padding: 0 20px !important; /* Prevent touching edges on mobile */
+}
+
+.toast {
+    /* Stop fixed widths from previous versions */
+    width: auto !important;
+    max-width: 600px !important; /* Don't stretch too wide on desktop */
+    min-width: 200px !important; /* Don't be too tiny */
+    
+    /* Ensure it doesn't try to fill the container width */
+    align-self: center; /* Fallback centering if container align-items fails */
+    
+    /* Visuals */
+    margin: 0 !important; /* Remove margins pushing it around */
+    text-align: center;   /* Center text inside the toast */
+    
+    /* Animation base state */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease-out;
+}
+
+/* Allow alignment overrides via JS to work */
+/* If JS sets align-items: flex-end (Right), this rule allows it */
+#toast-container[style*="align-items: flex-end"] .toast { align-self: flex-end; }
+#toast-container[style*="align-items: flex-start"] .toast { align-self: flex-start; }
+
+.toast.show {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
 }
