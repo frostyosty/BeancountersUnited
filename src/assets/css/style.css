@@ -1201,3 +1201,35 @@ input[type="color"] {
     background-color: #dc3545;
     color: white;
 }
+
+
+/* --- Order Table Enhancements --- */
+
+/* Clickable Client Name */
+.client-name-btn {
+    display: inline-block;
+    padding: 4px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* Pill shape */
+    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.client-name-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Live Timer Styling */
+.live-timer {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums; /* Prevents jumping numbers */
+}
+.live-timer.overdue { color: #dc3545; } /* Red if overdue */
+.live-timer.due-soon { color: #e67e22; } /* Orange if < 10 mins */
+.live-timer.okay { color: #28a745; }    /* Green otherwise */

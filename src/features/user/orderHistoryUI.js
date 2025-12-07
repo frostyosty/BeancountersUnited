@@ -12,7 +12,6 @@ const STEPPER_CSS = `
     .stepper-val { font-weight: 600; min-width: 20px; text-align: center; }
     .hidden { display: none !important; }
     
-    /* Archive Table Styles */
     .archive-section { background-color: #f0f0f0; border-top: 4px solid #ccc; padding: 20px; margin-top: 40px; border-radius: 8px; }
     .archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #666; }
     .archive-table { width: 100%; border-collapse: collapse; opacity: 0.8; }
@@ -22,9 +21,14 @@ const STEPPER_CSS = `
 </style>
 `;
 
+let timerInterval = null; // Store interval ID to clear it later
+
 export function renderOrderHistoryPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
+
+    // Clear any existing timer when re-rendering
+    if (timerInterval) clearInterval(timerInterval);
 
     useAppStore.getState().orderHistory.fetchOrderHistory();
     useAppStore.getState().menu.fetchMenu(); 
@@ -45,22 +49,32 @@ export function renderOrderHistoryPage() {
 
 // --- ADMIN VIEW (Live + Archive) ---
 function renderAdminOrderViews(container, orders, role) {
-    // 1. Split Orders
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
     const archivedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
     
-    // Sort
+    // Sort: Oldest first (Live), Newest first (Archive)
     activeOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // --- HELPER FUNCTION DEFINITION ---
-    const createOrderRow = (order, isLive) => {
-        const time = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const date = new Date(order.created_at).toLocaleDateString();
-        const displayTime = isLive ? time : `${date} ${time}`;
+    // Helper: Row Generator
+    const createRow = (order, isLive) => {
+        // Time Logic
+        const createdDate = new Date(order.created_at);
+        const filedAt = createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        let dueDisplay = '';
+        if (isLive) {
+            // Placeholder for live timer logic (filled by JS after render)
+            const dueTimeStr = order.pickup_time || order.created_at; // Fallback
+            dueDisplay = `<span class="live-timer" data-due="${dueTimeStr}">...</span>`;
+        } else {
+            // Archive: Show absolute time
+            const dueD = new Date(order.pickup_time || order.created_at);
+            dueDisplay = dueD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
 
         const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';
-        const safeName = customerName.replace(/'/g, ""); 
+        const safeName = customerName.replace(/'/g, "");
         const clickName = customerName.replace(/'/g, "\\'"); 
 
         const itemsSummary = (order.order_items || []).map(i => 
@@ -77,42 +91,47 @@ function renderAdminOrderViews(container, orders, role) {
             : '';
         const actionCell = isLive ? `<td>${dismissBtn}</td>` : (role === 'god' ? `<td>${deleteBtn}</td>` : '<td></td>');
 
+        // Customer Clickable Cell
+        const customerCell = `
+            <td style="padding:12px;">
+                <span class="client-name-btn" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
+                    ${customerName}
+                </span>
+            </td>`;
+
         return `
-            <tr class="${statusClass}" data-order-id="${order.id}" 
-                style="cursor:pointer;" 
-                onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
-                
-                <td style="padding:12px; white-space:nowrap;">${displayTime}</td>
+            <tr class="${statusClass}" data-order-id="${order.id}">
+                <td style="padding:12px; font-weight:bold;">${dueDisplay}</td>
                 <td style="padding:12px; font-size:0.9rem;">${itemsSummary}</td>
-                <td style="padding:12px; font-weight:500;">${customerName}</td>
+                ${customerCell}
                 <td style="padding:12px; font-weight:bold;">${totalFormatted}</td>
                 <td style="padding:12px;"><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
+                <td style="padding:12px; color:#666; font-size:0.85rem;">${filedAt}</td>
                 ${actionCell}
             </tr>
         `;
     };
 
-    // --- HELPER FUNCTION CALLED HERE ---
-    const liveRows = activeOrders.map(o => createOrderRow(o, true)).join('');
-    const archiveRows = archivedOrders.map(o => createOrderRow(o, false)).join('');
+    const liveRows = activeOrders.map(o => createRow(o, true)).join('');
+    const archiveRows = archivedOrders.map(o => createRow(o, false)).join('');
 
-    // Headers
+    // Headers (Reordered)
+    // Removed ID, Added "Filed At" at end
     const headersHTML = `
         <tr>
-            <th style="padding:12px; text-align:left;">Time</th>
+            <th style="padding:12px; text-align:left;">Due</th>
             <th style="padding:12px; text-align:left;">Items</th>
             <th style="padding:12px; text-align:left;">Customer</th>
             <th style="padding:12px; text-align:left;">Total</th>
             <th style="padding:12px; text-align:left;">Status</th>
+            <th style="padding:12px; text-align:left;">Filed At</th>
             <th style="padding:12px; text-align:left;">Action</th>
         </tr>
     `;
 
-    // Render
     container.innerHTML = `
         ${STEPPER_CSS}
         <div class="dashboard-container">
-            
             <!-- LIVE ORDERS -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h2 style="color: var(--primary-color);">Live Orders</h2>
@@ -125,7 +144,7 @@ function renderAdminOrderViews(container, orders, role) {
                         ${headersHTML}
                     </thead>
                     <tbody style="background:white;">
-                        ${liveRows.length > 0 ? liveRows : '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">No live orders.</td></tr>'}
+                        ${liveRows.length > 0 ? liveRows : '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">No live orders.</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -141,11 +160,9 @@ function renderAdminOrderViews(container, orders, role) {
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="archive-table">
-                            <thead>
-                                ${headersHTML}
-                            </thead>
+                            <thead>${headersHTML}</thead>
                             <tbody id="archive-tbody">
-                                ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="6">No history found.</td></tr>'}
+                                ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="7">No history found.</td></tr>'}
                             </tbody>
                         </table>
                     </div>
@@ -153,6 +170,9 @@ function renderAdminOrderViews(container, orders, role) {
             </div>
         </div>
     `;
+
+    // --- Start Live Timer Logic ---
+    startLiveTimers();
 
     // --- Listeners ---
     document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
@@ -193,7 +213,7 @@ function renderAdminOrderViews(container, orders, role) {
             else if (action === 'delete') {
                 const { error } = await supabase.from('orders').delete().eq('id', orderId);
                 if (!error) {
-                    uiUtils.showToast("Record deleted.", "success");
+                    uiUtils.showToast("Deleted.", "success");
                     useAppStore.getState().orderHistory.fetchOrderHistory();
                 } else {
                     uiUtils.showToast("Delete failed.", "error");
@@ -201,6 +221,43 @@ function renderAdminOrderViews(container, orders, role) {
             }
         });
     });
+}
+
+function startLiveTimers() {
+    const update = () => {
+        const now = new Date();
+        document.querySelectorAll('.live-timer').forEach(el => {
+            const dueStr = el.dataset.due;
+            if (!dueStr) return;
+            
+            const due = new Date(dueStr);
+            const diffMs = due - now;
+            const diffMins = Math.ceil(diffMs / 60000);
+
+            // Update Class for color
+            el.classList.remove('overdue', 'due-soon', 'okay');
+            if (diffMins < 0) el.classList.add('overdue');
+            else if (diffMins <= 10) el.classList.add('due-soon');
+            else el.classList.add('okay');
+
+            // Update Text
+            if (diffMins < 0) {
+                el.textContent = `${Math.abs(diffMins)} mins ago`;
+            } else if (diffMins === 0) {
+                el.textContent = "Due Now";
+            } else if (diffMins < 60) {
+                el.textContent = `${diffMins} mins`;
+            } else {
+                // Show hours if long time away
+                const hours = Math.floor(diffMins / 60);
+                const mins = diffMins % 60;
+                el.textContent = `${hours}h ${mins}m`;
+            }
+        });
+    };
+
+    update(); // Run immediately
+    timerInterval = setInterval(update, 60000); // Run every minute
 }
 
 // --- CUSTOMER VIEW ---
