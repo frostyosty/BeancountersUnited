@@ -1089,45 +1089,55 @@ input[type="color"] {
 
 
 
-/* --- TOAST FIXES (Force Center) --- */
+
+
+/* --- FIX: Custom Header SVG Scaling --- */
+#main-header h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* or flex-start based on alignment settings */
+    height: 100%;
+    overflow: hidden; /* Cut off anything sticking out */
+}
+
+#main-header h1 svg {
+    display: block;
+    width: auto;       /* Let width grow naturally */
+    height: 100%;      /* Force height to match header (60px) */
+    max-width: 100%;   /* Don't overflow width */
+    
+    /* Ensure it doesn't stretch weirdly */
+    object-fit: contain; 
+}
+
 
 #toast-container {
-    /* Ensure flexbox behavior overrides any block behavior */
-    display: flex !important;
-    flex-direction: column !important;
-    z-index: 9999 !important;
+    position: fixed;
+    bottom: 20px;
+    z-index: 9999;
     
-    /* When centered, these ensure it spans the screen */
-    /* JS sets specific left/right/align-items, but this is the baseline */
-    box-sizing: border-box !important;
-    padding: 0 20px !important; /* Prevent touching edges on mobile */
+    /* FORCE CENTERING STRATEGY */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    top: auto !important;
+    
+    /* Layout */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    
+    /* Allow it to grow but not overflow */
+    width: auto;
+    max-width: 90vw; 
+    
+    pointer-events: none;
 }
 
 .toast {
-    /* Stop fixed widths from previous versions */
-    width: auto !important;
-    max-width: 600px !important; /* Don't stretch too wide on desktop */
-    min-width: 200px !important; /* Don't be too tiny */
-    
-    /* Ensure it doesn't try to fill the container width */
-    align-self: center; /* Fallback centering if container align-items fails */
-    
-    /* Visuals */
-    margin: 0 !important; /* Remove margins pushing it around */
-    text-align: center;   /* Center text inside the toast */
-    
-    /* Animation base state */
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.3s ease-out;
-}
-
-/* Allow alignment overrides via JS to work */
-/* If JS sets align-items: flex-end (Right), this rule allows it */
-#toast-container[style*="align-items: flex-end"] .toast { align-self: flex-end; }
-#toast-container[style*="align-items: flex-start"] .toast { align-self: flex-start; }
-
-.toast.show {
-    opacity: 1 !important;
-    transform: translateY(0) !important;
+    /* Reset margins */
+    margin: 0 !important;
+    pointer-events: auto;
+    /* ... rest of styles ... */
 }

@@ -75,6 +75,11 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         document.body.appendChild(container);
     }
 
+    // DEBUG LOG
+    const rect = container.getBoundingClientRect();
+    console.log("Toast Container Rect:", rect);
+    console.log("Window Width:", window.innerWidth);
+
     let settings = {};
     try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
@@ -250,19 +255,22 @@ export function hideInitialLoader() {
 export function applyHeaderLogo(config) {
     if (!config) return;
     
+    // NEW: Save to local storage for instant load next time
+    localStorage.setItem('cached_header_config', JSON.stringify(config));
+    
     const h1 = document.querySelector('#main-header h1');
     if (!h1) return;
 
     const svgHTML = generateHeaderSVG(config);
     h1.innerHTML = svgHTML;
     
-    // Reset styles to accept SVG
-    h1.style.padding = '0';
+    // FIX: Reset inline styles so CSS classes control the layout
+ h1.style.padding = '0';
     h1.style.lineHeight = '0';
     h1.style.display = 'flex';
     h1.style.alignItems = 'center';
-    // Remove text content styles if necessary
-    h1.style.fontSize = 'unset'; 
+    h1.style.justifyContent = 'center'; // Ensure SVG centers
+    h1.style.width = '100%';
 }
 
 export function updateSiteTitles(name, logoUrl) {
