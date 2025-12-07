@@ -227,23 +227,18 @@ export function applyHeaderLayout(layoutConfig) {
     const header = document.getElementById('main-header');
     if (!header) return;
 
-    const { logoAlignment, hamburgerPosition, height } = layoutConfig || {};
+    const { logoAlignment, hamburgerPosition, height, bgColor } = layoutConfig || {};
 
     // Apply Height
-    if (height) {
-        document.documentElement.style.setProperty('--header-height', height + 'px');
-    }
+    if (height) document.documentElement.style.setProperty('--header-height', height + 'px');
     
+    // NEW: Apply Background Color
+    if (bgColor) header.style.backgroundColor = bgColor;
+
+    // ... existing alignment classes ...
     header.classList.remove('logo-align-left', 'hamburger-left');
-
-    if (logoAlignment === 'left') {
-        header.classList.add('logo-align-left');
-    }
-
-    // Handle Hamburger / Mobile Panel logic if needed via CSS classes on body or header
-    if (hamburgerPosition === 'left') {
-        header.classList.add('hamburger-left');
-    }
+    if (logoAlignment === 'left') header.classList.add('logo-align-left');
+    if (hamburgerPosition === 'left') header.classList.add('hamburger-left');
 }
 
 export function hideInitialLoader() {

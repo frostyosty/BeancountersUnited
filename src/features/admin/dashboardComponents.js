@@ -286,13 +286,16 @@ export function renderPaymentSection(paymentConfig) {
 // --- 6. HEADER SETTINGS ---
 // --- 6. HEADER SETTINGS ---
 export function renderHeaderSection(headerSettings) {
-    const height = headerSettings.height || 60; // Default 60
+    const height = headerSettings.height || 60;
+    // NEW: Default to white if not set
+    const bgColor = headerSettings.bgColor || '#ffffff'; 
 
     return `
         <section class="dashboard-section">
             <h3>Header Layout</h3>
             <form id="header-settings-form">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <!-- ... Keep Logo/Burger Selects ... -->
                     <div>
                         <label>Logo Alignment</label>
                         <select name="logoAlignment">
@@ -309,15 +312,28 @@ export function renderHeaderSection(headerSettings) {
                     </div>
                 </div>
 
-                <!-- NEW: Height Slider -->
-                <div class="form-group">
-                    <label>Header Height: <span id="header-height-val">${height}px</span></label>
-                    <input type="range" name="headerHeight" min="50" max="150" value="${height}" 
-                           oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <!-- Existing Height Slider -->
+                    <div class="form-group">
+                        <label>Height: <span id="header-height-val">${height}px</span></label>
+                        <input type="range" name="headerHeight" min="50" max="150" value="${height}" 
+                               oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
+                    </div>
+
+                    <!-- NEW: Background Color -->
+                    <div class="form-group">
+                        <label>Header Background</label>
+                        <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
+                            <input type="color" name="headerBgColor" value="${bgColor}" 
+                                   style="width:40px; height:30px; border:none; background:none; cursor:pointer;"
+                                   oninput="document.getElementById('main-header').style.backgroundColor = this.value;">
+                            <span style="font-size:0.8rem; color:#666;">Pick Color</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- ... Custom Vector Banner button ... -->
                 <div style="padding-top:15px; border-top:1px solid #eee;">
-                    <label style="display:block; margin-bottom:5px;">Custom Vector Banner</label>
                     <button type="button" id="open-header-creator-btn" class="button-secondary" style="width:100%;">
                         🎨 Create/Edit Header Logo
                     </button>

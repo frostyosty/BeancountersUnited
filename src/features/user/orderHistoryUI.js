@@ -46,25 +46,74 @@ export function renderOrderHistoryPage() {
 // --- ADMIN VIEW (Live + Archive) ---
 function renderAdminOrderViews(container, orders, role) {
     // 1. Split Orders
-    const liveOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
-    // Archive = Everything else (Completed, Cancelled)
+    const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
     const archivedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
     
     // Sort
-    liveOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // Oldest first (urgent)
-    archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Newest first
+    activeOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // 2. Live Table HTML
-    const liveRows = liveOrders.map(order => createOrderRow(order, role, true)).join('');
-    
-    // 3. Archive Table HTML
-    const archiveRows = archivedOrders.map(order => createOrderRow(order, role, false)).join('');
+    // --- HELPER FUNCTION DEFINITION ---
+    const createOrderRow = (order, isLive) => {
+        const time = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const date = new Date(order.created_at).toLocaleDateString();
+        const displayTime = isLive ? time : `${date} ${time}`;
 
+        const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';
+        const safeName = customerName.replace(/'/g, ""); 
+        const clickName = customerName.replace(/'/g, "\\'"); 
+
+        const itemsSummary = (order.order_items || []).map(i => 
+            `${i.quantity}x ${i.menu_items?.name || 'Item'}`
+        ).join(', ') || 'No items';
+
+        const totalFormatted = `$${parseFloat(order.total_amount).toFixed(2)}`;
+        const statusClass = `status-${order.status}`;
+        
+        // Actions
+        const dismissBtn = `<button class="delete-icon-btn action-btn" data-action="dismiss" data-name="${safeName}" data-total="${totalFormatted}" title="Archive">×</button>`;
+        const deleteBtn = (role === 'god') 
+            ? `<button class="delete-icon-btn action-btn" data-action="delete" title="Permanent Delete" style="color:#d00;">🗑</button>` 
+            : '';
+        const actionCell = isLive ? `<td>${dismissBtn}</td>` : (role === 'god' ? `<td>${deleteBtn}</td>` : '<td></td>');
+
+        return `
+            <tr class="${statusClass}" data-order-id="${order.id}" 
+                style="cursor:pointer;" 
+                onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
+                
+                <td style="padding:12px; white-space:nowrap;">${displayTime}</td>
+                <td style="padding:12px; font-size:0.9rem;">${itemsSummary}</td>
+                <td style="padding:12px; font-weight:500;">${customerName}</td>
+                <td style="padding:12px; font-weight:bold;">${totalFormatted}</td>
+                <td style="padding:12px;"><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
+                ${actionCell}
+            </tr>
+        `;
+    };
+
+    // --- HELPER FUNCTION CALLED HERE ---
+    const liveRows = activeOrders.map(o => createOrderRow(o, true)).join('');
+    const archiveRows = archivedOrders.map(o => createOrderRow(o, false)).join('');
+
+    // Headers
+    const headersHTML = `
+        <tr>
+            <th style="padding:12px; text-align:left;">Time</th>
+            <th style="padding:12px; text-align:left;">Items</th>
+            <th style="padding:12px; text-align:left;">Customer</th>
+            <th style="padding:12px; text-align:left;">Total</th>
+            <th style="padding:12px; text-align:left;">Status</th>
+            <th style="padding:12px; text-align:left;">Action</th>
+        </tr>
+    `;
+
+    // Render
     container.innerHTML = `
         ${STEPPER_CSS}
         <div class="dashboard-container">
             
-            <!-- LIVE ORDERS SECTION -->
+            <!-- LIVE ORDERS -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h2 style="color: var(--primary-color);">Live Orders</h2>
                 <button id="btn-manual-order" class="button-secondary small" style="font-weight: 600;">+ Phone Order</button>
@@ -73,23 +122,15 @@ function renderAdminOrderViews(container, orders, role) {
             <div class="table-wrapper" style="margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                 <table class="admin-orders-table" style="width:100%; border-collapse:collapse;">
                     <thead style="background:var(--surface-color); border-bottom: 2px solid var(--primary-color);">
-                        <tr>
-                            <th style="padding:12px;">ID</th>
-                            <th style="padding:12px;">Due / Time</th>
-                            <th style="padding:12px;">Customer</th>
-                            <th style="padding:12px;">Items</th>
-                            <th style="padding:12px;">Total</th>
-                            <th style="padding:12px;">Status</th>
-                            <th style="padding:12px;">Action</th>
-                        </tr>
+                        ${headersHTML}
                     </thead>
                     <tbody style="background:white;">
-                        ${liveRows.length > 0 ? liveRows : '<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">No live orders. Good job!</td></tr>'}
+                        ${liveRows.length > 0 ? liveRows : '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">No live orders.</td></tr>'}
                     </tbody>
                 </table>
             </div>
 
-            <!-- ARCHIVED ORDERS SECTION -->
+            <!-- ARCHIVE -->
             <div class="archive-section">
                 <div class="archive-header">
                     <h3 style="margin:0;">Archived Orders (Log)</h3>
@@ -98,37 +139,24 @@ function renderAdminOrderViews(container, orders, role) {
                 
                 <div id="archive-table-container" style="display:none;">
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
-                    
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="archive-table">
                             <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>ID</th>
-                                    <th>Customer</th>
-                                    <th>Summary</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    ${role === 'god' ? '<th>Delete</th>' : ''}
-                                </tr>
+                                ${headersHTML}
                             </thead>
                             <tbody id="archive-tbody">
-                                ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="7">No history found.</td></tr>'}
+                                ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="6">No history found.</td></tr>'}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-
         </div>
     `;
 
     // --- Listeners ---
-    
-    // Manual Order
     document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
 
-    // Archive Toggle
     const archiveContainer = document.getElementById('archive-table-container');
     const toggleBtn = document.getElementById('toggle-archive-btn');
     if (toggleBtn) {
@@ -139,103 +167,46 @@ function renderAdminOrderViews(container, orders, role) {
         };
     }
 
-    // Archive Search
     const searchInput = document.getElementById('archive-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#archive-tbody tr');
-            rows.forEach(row => {
+            document.querySelectorAll('#archive-tbody tr').forEach(row => {
                 row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
             });
         });
     }
     
-    // Row Actions (Dismiss / Delete)
+    // Row Actions
     container.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // Stop row click
+            e.stopPropagation(); 
             const orderId = e.target.closest('tr').dataset.orderId;
-            const action = e.target.dataset.action; // 'dismiss' or 'delete'
+            const action = e.target.dataset.action;
+            const name = e.target.dataset.name || 'Order';
+            const total = e.target.dataset.total || '';
 
             if (action === 'dismiss') {
-                if(confirm("Dismiss (Archive) this order?")) {
-                    useAppStore.getState().orderHistory.dismissOrder(orderId);
-                }
-            } else if (action === 'delete') {
-                if(confirm("PERMANENTLY DELETE this record? This cannot be undone.")) {
-                    const { error } = await supabase.from('orders').delete().eq('id', orderId);
-                    if (!error) {
-                        uiUtils.showToast("Record deleted.", "success");
-                        useAppStore.getState().orderHistory.fetchOrderHistory();
-                    } else {
-                        uiUtils.showToast("Delete failed.", "error");
-                    }
+                useAppStore.getState().orderHistory.dismissOrder(orderId);
+                uiUtils.showToast(`Dismissed ${name}'s ${total} Order`, "info");
+            } 
+            else if (action === 'delete') {
+                const { error } = await supabase.from('orders').delete().eq('id', orderId);
+                if (!error) {
+                    uiUtils.showToast("Record deleted.", "success");
+                    useAppStore.getState().orderHistory.fetchOrderHistory();
+                } else {
+                    uiUtils.showToast("Delete failed.", "error");
                 }
             }
         });
     });
 }
 
-// Helper to create HTML for rows
-function createOrderRow(order, role, isLive) {
-    const time = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const fullDate = new Date(order.created_at).toLocaleDateString() + ' ' + time;
-    
-    const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';
-    
-    // Safe item mapping
-    const itemsSummary = (order.order_items || []).map(i => 
-        `${i.quantity}x ${i.menu_items?.name || 'Item'}`
-    ).join(', ') || 'No items';
-
-    const statusClass = `status-${order.status}`;
-    const clickName = customerName.replace(/'/g, "\\'"); // Escape for JS
-
-    if (isLive) {
-        // LIVE ROW
-        return `
-            <tr class="${statusClass}" data-order-id="${order.id}" 
-                style="cursor:pointer;" 
-                onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
-                
-                <td>#${order.id.slice(0,4)}</td>
-                <td>${time}</td>
-                <td style="font-weight:600;">${customerName}</td>
-                <td>${itemsSummary}</td>
-                <td style="font-weight:bold;">$${parseFloat(order.total_amount).toFixed(2)}</td>
-                <td><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <td><button class="delete-icon-btn action-btn" data-action="dismiss" title="Archive">×</button></td>
-            </tr>
-        `;
-    } else {
-        // ARCHIVE ROW
-        const deleteBtn = role === 'god' 
-            ? `<td><button class="delete-icon-btn action-btn" data-action="delete" title="Permanent Delete" style="color:#d00;">🗑</button></td>` 
-            : '';
-
-        return `
-            <tr data-order-id="${order.id}" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')" style="cursor:pointer;">
-                <td>${fullDate}</td>
-                <td>#${order.id.slice(0,4)}</td>
-                <td>${customerName}</td>
-                <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${itemsSummary}</td>
-                <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
-                <td>${order.status}</td>
-                ${role === 'god' ? deleteBtn : ''}
-            </tr>
-        `;
-    }
-}
-// --- CUSTOMER VIEW: Card List ---
+// --- CUSTOMER VIEW ---
 function renderCustomerOrderList(container, orders) {
     if (orders.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <h2>No Past Orders</h2>
-                <p>You haven't placed any orders yet.</p>
-                <a href="#menu" class="button-primary">Browse Menu</a>
-            </div>`;
+        container.innerHTML = `<div class="empty-state"><h2>No Past Orders</h2><p>You haven't placed any orders yet.</p><a href="#menu" class="button-primary">Browse Menu</a></div>`;
         return;
     }
 
@@ -262,15 +233,10 @@ function renderCustomerOrderList(container, orders) {
     `;
     }).join('');
 
-    container.innerHTML = `
-        <div class="dashboard-container">
-            <h2>Your Order History</h2>
-            <div class="order-history-list">${ordersHTML}</div>
-        </div>
-    `;
+    container.innerHTML = `<div class="dashboard-container"><h2>Your Order History</h2><div class="order-history-list">${ordersHTML}</div></div>`;
 }
 
-// --- MANUAL ORDER MODAL (Copied from your snippet) ---
+// --- MANUAL ORDER MODAL ---
 function showManualOrderModal() {
     const { items: menuItems } = useAppStore.getState().menu;
     
@@ -288,17 +254,8 @@ function showManualOrderModal() {
     `).join('');
 
     const modalHTML = `
-        <style>
-            .stepper-container { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
-            .stepper-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background-color: #eee; color: #333; font-weight: bold; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.2s; }
-            .stepper-btn:active { background-color: #ddd; transform: scale(0.95); }
-            .stepper-btn.plus { background-color: var(--primary-color); color: white; }
-            .stepper-val { font-weight: 600; min-width: 20px; text-align: center; }
-            .hidden { display: none !important; }
-        </style>
         <div class="modal-form-container">
             <h3>Create Phone Order</h3>
-            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-weight:600; display:block; margin-bottom:5px;">Customer Name</label>
@@ -317,17 +274,12 @@ function showManualOrderModal() {
                     <input type="time" id="manual-due-time-input" style="display:none; width:100%; margin-top:5px; padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </div>
             </div>
-
-            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">
-                ${itemRows}
-            </div>
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">${itemRows}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-top:10px; border-top:2px solid #eee;">
                 <span style="font-size:1.1rem;">Total Amount:</span>
                 <span style="font-size:1.5rem; font-weight:bold;">$<span id="manual-order-total">0.00</span></span>
             </div>
-            <div class="form-actions">
-                <button id="submit-manual-order" class="button-primary" style="width:100%; padding:12px;" disabled>Add Items to Order</button>
-            </div>
+            <div class="form-actions"><button id="submit-manual-order" class="button-primary" style="width:100%; padding:12px;" disabled>Add Items to Order</button></div>
         </div>
     `;
     
@@ -341,24 +293,20 @@ function showManualOrderModal() {
     const dueTimeInput = document.getElementById('manual-due-time-input');
     const selections = {}; 
 
-    // --- Due Time Logic ---
     dueSelect.addEventListener('change', (e) => {
         if (e.target.value === 'other') {
             dueTimeInput.style.display = 'block';
-            // Set default to now in HH:MM format
             const now = new Date();
-            const timeString = now.toTimeString().substring(0,5);
-            dueTimeInput.value = timeString;
+            dueTimeInput.value = now.toTimeString().substring(0,5);
         } else {
             dueTimeInput.style.display = 'none';
         }
     });
 
-    // --- Stepper Logic ---
     const updateTotal = () => {
         let total = 0;
         let count = 0;
-        menuItems.forEach(item => {
+        useAppStore.getState().menu.items.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 total += qty * parseFloat(item.price);
@@ -383,6 +331,7 @@ function showManualOrderModal() {
         const minusBtn = row.querySelector('.minus');
         const valSpan = row.querySelector('.stepper-val');
         valSpan.textContent = qty;
+        
         if (qty > 0) {
             minusBtn.classList.remove('hidden');
             valSpan.classList.remove('hidden');
@@ -395,12 +344,11 @@ function showManualOrderModal() {
         updateTotal();
     });
 
-    // --- Submit Logic ---
     submitBtn.addEventListener('click', async () => {
         const items = [];
         let total = 0;
         
-        menuItems.forEach(item => {
+        useAppStore.getState().menu.items.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 items.push({ id: item.id, price: parseFloat(item.price), quantity: qty });
@@ -408,18 +356,12 @@ function showManualOrderModal() {
             }
         });
 
-        // Calculate Due Time
         let dueTimestamp = new Date();
         const dueOption = dueSelect.value;
-        
         if (dueOption === 'other') {
-            // Parse HH:MM from input and set it on today's date
             const [hours, minutes] = dueTimeInput.value.split(':');
             dueTimestamp.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            // If time is in the past (e.g. entered 1AM at 9PM), assume tomorrow? 
-            // For simplicity, let's assume today.
         } else {
-            // Add minutes
             dueTimestamp = new Date(dueTimestamp.getTime() + parseInt(dueOption) * 60000);
         }
 
@@ -428,7 +370,7 @@ function showManualOrderModal() {
         
         const success = await useAppStore.getState().orderHistory.createManualOrder({
             customerName: nameInput.value.trim() || "Phone Order",
-            dueTime: dueTimestamp.toISOString(), // Pass ISO string
+            dueTime: dueTimestamp.toISOString(),
             items,
             total
         });

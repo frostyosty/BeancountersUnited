@@ -184,9 +184,11 @@ export function attachOwnerDashboardListeners() {
             const headerSettings = {
                 logoAlignment: formData.get('logoAlignment'),
                 hamburgerPosition: formData.get('hamburgerPosition'),
-                // NEW: Capture Height
-                height: parseInt(formData.get('headerHeight')) || 60
+                height: parseInt(formData.get('headerHeight')) || 60,
+                // NEW: Capture Color
+                bgColor: formData.get('headerBgColor')
             };
+            // ... save to API ...
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ headerSettings }, session.access_token);
             uiUtils.applyHeaderLayout(headerSettings);

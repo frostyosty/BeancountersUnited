@@ -50,13 +50,22 @@ const createMenuItemHTML = (item) => {
 function createReorderBanner(lastOrder) {
     if (!lastOrder || !lastOrder.order_items || lastOrder.order_items.length === 0) return '';
     const totalItems = lastOrder.order_items.reduce((sum, i) => sum + i.quantity, 0);
+    
     const firstItem = lastOrder.order_items[0];
-    const firstItemName = firstItem.menu_items?.name || 'Item';
+    const rawName = firstItem.menu_items?.name || 'Item';
     const firstItemQty = firstItem.quantity;
+
+    // FIX: Simple Pluralization
+    // If quantity > 1 and name doesn't already end in 's', add 's'
+    let displayName = rawName;
+    if (firstItemQty > 1 && !rawName.endsWith('s')) {
+        displayName += 's';
+    }
+
     const remainingCount = totalItems - firstItemQty;
     const summaryText = remainingCount > 0 
-        ? `${firstItemQty}x ${firstItemName} + ${remainingCount} more`
-        : `${firstItemQty}x ${firstItemName}`;
+        ? `${firstItemQty}x ${displayName} + ${remainingCount} more`
+        : `${firstItemQty}x ${displayName}`;
 
     return `
         <div class="reorder-banner" style="background: var(--surface-color); border: 1px solid var(--primary-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
