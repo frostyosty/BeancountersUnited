@@ -49,28 +49,53 @@ export function renderOrderHistoryPage() {
 
 // --- ADMIN VIEW (Live + Archive) ---
 function renderAdminOrderViews(container, orders, role) {
+    // 1. Split Orders
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
     const archivedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
     
-    // Sort: Oldest first (Live), Newest first (Archive)
+    // Sort
     activeOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // Helper: Row Generator
-    const createRow = (order, isLive) => {
-        // Time Logic
-        const createdDate = new Date(order.created_at);
-        const filedAt = createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // --- Helper: Date Formatter ---
+    const formatDueTime = (isoString) => {
+        const date = new Date(isoString);
+        const now = new Date();
         
+        // Reset times to midnight for day comparison
+        const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        // Check if same day
+        if (d1.getTime() === d2.getTime()) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Calculate difference in days
+        const diffTime = Math.abs(d2 - d1);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        if (diffDays === 1) return 'Yesterday';
+        return `${diffDays} days ago`;
+    };
+
+    // --- Helper: Row Generator ---
+    const createRow = (order, isLive) => {
+        // 1. Filed At (Full Timestamp)
+        // Format: "12/09/2025, 10:30 AM"
+        const filedAt = new Date(order.created_at).toLocaleString([], { 
+            year: 'numeric', month: 'numeric', day: 'numeric', 
+            hour: '2-digit', minute: '2-digit' 
+        });
+
+        // 2. Due Time Logic
         let dueDisplay = '';
         if (isLive) {
-            // Placeholder for live timer logic (filled by JS after render)
-            const dueTimeStr = order.pickup_time || order.created_at; // Fallback
+            const dueTimeStr = order.pickup_time || order.created_at;
             dueDisplay = `<span class="live-timer" data-due="${dueTimeStr}">...</span>`;
         } else {
-            // Archive: Show absolute time
-            const dueD = new Date(order.pickup_time || order.created_at);
-            dueDisplay = dueD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Use custom formatter (Same day vs Days ago)
+            dueDisplay = formatDueTime(order.pickup_time || order.created_at);
         }
 
         const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';
@@ -101,12 +126,12 @@ function renderAdminOrderViews(container, orders, role) {
 
         return `
             <tr class="${statusClass}" data-order-id="${order.id}">
-                <td style="padding:12px; font-weight:bold;">${dueDisplay}</td>
+                <td style="padding:12px; font-weight:bold; white-space:nowrap;">${dueDisplay}</td>
                 <td style="padding:12px; font-size:0.9rem;">${itemsSummary}</td>
                 ${customerCell}
                 <td style="padding:12px; font-weight:bold;">${totalFormatted}</td>
                 <td style="padding:12px;"><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <td style="padding:12px; color:#666; font-size:0.85rem;">${filedAt}</td>
+                <td style="padding:12px; color:#666; font-size:0.85rem; white-space:nowrap;">${filedAt}</td>
                 ${actionCell}
             </tr>
         `;
@@ -115,8 +140,7 @@ function renderAdminOrderViews(container, orders, role) {
     const liveRows = activeOrders.map(o => createRow(o, true)).join('');
     const archiveRows = archivedOrders.map(o => createRow(o, false)).join('');
 
-    // Headers (Reordered)
-    // Removed ID, Added "Filed At" at end
+    // Headers
     const headersHTML = `
         <tr>
             <th style="padding:12px; text-align:left;">Due</th>
@@ -132,6 +156,7 @@ function renderAdminOrderViews(container, orders, role) {
     container.innerHTML = `
         ${STEPPER_CSS}
         <div class="dashboard-container">
+            
             <!-- LIVE ORDERS -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h2 style="color: var(--primary-color);">Live Orders</h2>
@@ -160,7 +185,9 @@ function renderAdminOrderViews(container, orders, role) {
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="archive-table">
-                            <thead>${headersHTML}</thead>
+                            <thead>
+                                ${headersHTML}
+                            </thead>
                             <tbody id="archive-tbody">
                                 ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="7">No history found.</td></tr>'}
                             </tbody>
@@ -170,9 +197,6 @@ function renderAdminOrderViews(container, orders, role) {
             </div>
         </div>
     `;
-
-    // --- Start Live Timer Logic ---
-    startLiveTimers();
 
     // --- Listeners ---
     document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
@@ -213,7 +237,7 @@ function renderAdminOrderViews(container, orders, role) {
             else if (action === 'delete') {
                 const { error } = await supabase.from('orders').delete().eq('id', orderId);
                 if (!error) {
-                    uiUtils.showToast("Deleted.", "success");
+                    uiUtils.showToast("Record deleted.", "success");
                     useAppStore.getState().orderHistory.fetchOrderHistory();
                 } else {
                     uiUtils.showToast("Delete failed.", "error");

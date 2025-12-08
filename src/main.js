@@ -1,9 +1,9 @@
-// src/main.js (FINAL)
+// src/main.js (FINAL & COMPLETE)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import * as uiUtils from './utils/uiUtils.js';
-import { applyHeaderLogo } from './utils/uiUtils.js';
+import { applyHeaderLogo } from './utils/uiUtils.js'; // Ensure this is imported
 
 // --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
@@ -28,10 +28,9 @@ const SPINNER_SVG = `
     </svg>
 </div>`;
 
-
 let isAppInitialized = false;
 
-// --- NEW: Dynamic Desktop Navigation ---
+// --- DYNAMIC DESKTOP NAV ---
 function renderDesktopNav() {
     const container = document.getElementById('desktop-nav-links');
     if (!container) return;
@@ -42,7 +41,6 @@ function renderDesktopNav() {
     const aboutEnabled = settings?.aboutUs?.enabled || false;
     const currentHash = window.location.hash || '#menu';
 
-    // Helper to create link
     const makeLink = (hash, label) => {
         const activeClass = currentHash === hash ? 'active' : '';
         return `<a href="${hash}" class="nav-link ${activeClass}">${label}</a>`;
@@ -58,55 +56,51 @@ function renderDesktopNav() {
         if (profile.can_see_order_history) {
             html += makeLink('#order-history', 'Orders');
         }
-        // Owner Dashboard
         if (profile.role === 'owner' || profile.role === 'god') {
             html += makeLink('#owner-dashboard', 'Dashboard');
         }
-        // God Mode
         if (profile.role === 'god') {
             html += makeLink('#god-dashboard', 'God Mode');
         }
     }
 
     html += `<a href="#cart" class="nav-link ${currentHash === '#cart' ? 'active' : ''}">Cart (<span id="cart-count">${cartCount}</span>)</a>`;
-
     container.innerHTML = html;
 }
 
 // Updates persistent elements like the header
 function renderPersistentUI() {
     renderAuthStatus();
-    renderDesktopNav(); // <--- Update Desktop Nav dynamically
+    renderDesktopNav();
+    const cartCountSpan = document.getElementById('cart-count');
+    if (cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
     if (window.buildMobileMenu) window.buildMobileMenu();
 }
 
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-
-    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth;
-
+    
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
+    
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
-        return;
+        return; 
     }
-
+    
     const userRole = getUserRole();
 
-    // Re-render nav to update 'active' class state
     renderDesktopNav();
 
     switch (hash) {
         case '#menu': renderMenuPage(); break;
         case '#about-us': renderAboutUsPage(); break;
-        case '#cart':
-        case '#checkout':
-            renderCartPage();
-            break;
+        case '#cart': 
+        case '#checkout': renderCartPage(); break;
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`;
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
             break;
         case '#order-history':
             if (isAuthenticated) {
@@ -136,26 +130,16 @@ function renderPageContent() {
 
 function setupNavigationAndInteractions() {
     document.body.addEventListener('click', (e) => {
-        if (e.target.matches('#login-signup-btn')) {
-            showLoginSignupModal();
-            return;
-        }
-        if (e.target.matches('#logout-btn')) {
-            useAppStore.getState().auth.logout();
-            return;
-        }
+        if (e.target.matches('#login-signup-btn')) { showLoginSignupModal(); return; }
+        if (e.target.matches('#logout-btn')) { useAppStore.getState().auth.logout(); return; }
 
         const navLink = e.target.closest('a[href^="#"]');
         if (navLink) {
             e.preventDefault();
             const categoryFilter = navLink.dataset.categoryFilter;
-            if (categoryFilter) {
-                useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
-            }
+            if (categoryFilter) useAppStore.getState().ui.setActiveMenuCategory(categoryFilter);
             const newHash = navLink.getAttribute('href');
-            if (window.location.hash !== newHash) {
-                window.location.hash = newHash;
-            }
+            if (window.location.hash !== newHash) window.location.hash = newHash;
         }
     });
 }
@@ -170,53 +154,40 @@ function setupGodModeTrigger() {
     const longPressDuration = 3000;
 
     const toggleGodMode = async () => {
-        // ... (Keep existing toggle logic) ...
         clearTimeout(clickTimer);
         clearTimeout(longPressTimer);
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@mealmates.dev';
+        const godUserEmail = 'manager@mealmates.dev'; 
 
         if (user?.email === godUserEmail) {
             await logout();
-            // alert("God Mode Deactivated.");
+            uiUtils.showToast("God Mode Deactivated", "info");
         } else {
             if (user) {
                 await logout();
                 await new Promise(res => setTimeout(res, 500));
             }
             const { error } = await login(godUserEmail, 'password123');
-            if (error) {
-                alert(`God Mode Login Failed: ${error.message}`);
-            } else {
-                // alert("God Mode Activated!");
-            }
+            if (error) uiUtils.showToast(`Login Failed: ${error.message}`, "error");
+            else uiUtils.showToast("God Mode Activated!", "success");
         }
     };
 
     triggerElement.addEventListener('click', (e) => {
-        // Optional: Don't count clicks on buttons/links as god mode attempts
         if (e.target.closest('button') || e.target.closest('a')) return;
-
         clickCount++;
         clearTimeout(clickTimer);
         clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
-        if (clickCount === 3) {
-            toggleGodMode();
-        }
+        if (clickCount === 3) toggleGodMode();
     });
 
     triggerElement.addEventListener('touchstart', (e) => {
-        // FIX: REMOVED e.preventDefault(); 
-        // This allows the touch to turn into a 'click' for the hamburger button.
-
-        // Optional: Only start timer if touching empty space
         if (!e.target.closest('button') && !e.target.closest('a')) {
             longPressTimer = setTimeout(toggleGodMode, longPressDuration);
         }
     });
-
     triggerElement.addEventListener('touchend', () => clearTimeout(longPressTimer));
     triggerElement.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
 }
@@ -234,38 +205,21 @@ function setupHamburgerMenu() {
         const { settings } = useAppStore.getState().siteSettings;
         const aboutEnabled = settings?.aboutUs?.enabled || false;
 
-        let navHTML = '';
-        navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
-
-        if (aboutEnabled) {
-            navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
-        }
-
+        let navHTML = `<a href="#menu" class="nav-link">Menu</a>`;
+        if (aboutEnabled) navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
         navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;
 
         if (isAuthenticated && profile) {
-            if (profile.can_see_order_history) {
-                navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
-            }
-            if (profile.role === 'owner' || profile.role === 'god') {
-                navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
-            }
-            if (profile.role === 'god') {
-                navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
-            }
+            if (profile.can_see_order_history) navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
+            if (profile.role === 'owner' || profile.role === 'god') navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
         }
 
-        let authSectionHTML = '';
-        if (isAuthenticated) {
-            authSectionHTML = `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`;
-        } else {
-            authSectionHTML = `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
-        }
+        let authSectionHTML = isAuthenticated 
+            ? `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`
+            : `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
 
-        const newHTML = navHTML + authSectionHTML;
-        if (mobileNavContainer.innerHTML !== newHTML) {
-            mobileNavContainer.innerHTML = newHTML;
-        }
+        mobileNavContainer.innerHTML = navHTML + authSectionHTML;
     };
 
     window.buildMobileMenu = buildMobileMenu;
@@ -289,15 +243,33 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
+    // --- 1. PRE-CALCULATE LOGO (Anti-Jolt Fix) ---
+    // This reads LocalStorage immediately so we can paint the SVG instantly
+    let logoHTML = 'Mealmates';
+    let logoStyle = '';
+    
+    const cachedHeader = localStorage.getItem('cached_header_config');
+    if (cachedHeader) {
+        try {
+            const config = JSON.parse(cachedHeader);
+            logoHTML = uiUtils.generateHeaderSVG(config);
+            // Ensure the container centers the SVG correctly
+            logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; justify-content:center;';
+        } catch (e) {
+            console.error("Cache load failed", e);
+        }
+    }
+
+    // --- 2. RENDER SHELL ---
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
             <header id="main-header">
-                <h1>Mealmates</h1>
+                <!-- INJECT PRE-CALCULATED LOGO HERE -->
+                <h1 style="${logoStyle}">${logoHTML}</h1>
+                
                 <nav>
-                    <!-- FIX: Replaced hardcoded links with a dynamic container -->
                     <div id="desktop-nav-links" class="desktop-nav-group"></div>
-                    
                     <div id="auth-status-container">${SPINNER_SVG}</div>
                     <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
                 </nav>
@@ -308,6 +280,7 @@ async function main() {
         `;
     }
 
+    // 3. Listeners
     setupHamburgerMenu();
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
@@ -315,17 +288,18 @@ async function main() {
 
     window.addEventListener('hashchange', renderPageContent);
 
+    // 4. Subscriptions
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile,
+            profile: state.auth.profile, 
             cartItemCount: state.cart.items.length,
             aboutEnabled: state.siteSettings.settings?.aboutUs?.enabled
         };
     };
-
+    
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
@@ -354,6 +328,7 @@ async function main() {
         window.location.hash = '#menu';
     }
 
+    // 5. Initial Data
     await Promise.all([
         useAppStore.getState().auth.listenToAuthChanges(),
         useAppStore.getState().menu.fetchMenu(),
@@ -361,9 +336,10 @@ async function main() {
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true);
+        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
     }
-
+    
+    // 6. Apply Settings (Hydration)
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings) {
         if (settings.themeVariables) {
@@ -375,16 +351,13 @@ async function main() {
             }
         }
         if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
-
-         // 3. Basic Title
-        if (settings.websiteName || settings.logoUrl) {
-            uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
-        }
+        if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
         
-        // 4. Custom Vector Logo (Overrides basic title if exists)
+        // Ensure Header is consistent with DB settings (if cache was stale)
         if (settings.headerLogoConfig) {
             uiUtils.applyHeaderLogo(settings.headerLogoConfig);
         }
+        
         uiUtils.applyGlobalBackground(settings);
     }
 

@@ -1,4 +1,3 @@
-// src/store/checkoutSlice.js
 import { supabase } from '@/supabaseClient.js'; 
 
 export const createCheckoutSlice = (set, get) => ({
@@ -7,14 +6,11 @@ export const createCheckoutSlice = (set, get) => ({
     lastSuccessfulOrderId: null,
 
     // --- VALIDATION HELPER ---
-    // Checks if the current cart allows "Pay on Pickup" based on Owner settings
     canPayWithCash: () => {
-        // Safely access settings (handle case where settings might not be loaded yet)
         const settings = get().siteSettings.settings || {};
         const { paymentConfig } = settings;
         const { getCartTotal, items } = get().cart;
 
-        // Default rules if settings haven't loaded or config is missing
         const config = paymentConfig || { enableCash: true, maxCashAmount: 100, maxCashItems: 10 };
 
         if (!config.enableCash) {
@@ -35,7 +31,6 @@ export const createCheckoutSlice = (set, get) => ({
 
     // --- ACTION: PAY ON PICKUP ---
     submitCashOrder: async () => {
-        // 1. Run Validation
         const validation = get().checkout.canPayWithCash();
         if (!validation.allowed) {
             return { success: false, error: validation.reason };
@@ -44,10 +39,14 @@ export const createCheckoutSlice = (set, get) => ({
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
-            const { user } = get().auth;
+            // FIX: Get Profile too
+            const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
             if (!user) throw new Error("You must be logged in to place an order.");
+            
+            // FIX: Determine Name
+            const customerName = profile?.full_name || profile?.email || 'Customer';
 
             // 2. Insert Order Header
             const { data: orderData, error: orderError } = await supabase
@@ -55,9 +54,12 @@ export const createCheckoutSlice = (set, get) => ({
                 .insert([{
                     user_id: user.id,
                     total_amount: getCartTotal(),
-                    status: 'pending',         // Kitchen Status
-                    payment_status: 'pending', // Payment Status (Not paid yet)
-                    payment_method: 'cash'     // Method
+                    status: 'pending',         
+                    payment_status: 'pending', 
+                    payment_method: 'cash',
+                    // FIX: Include Name
+                    customer_name: customerName,
+                    customer_email: user.email // Good practice to include if we have it
                 }])
                 .select()
                 .single();
@@ -69,7 +71,8 @@ export const createCheckoutSlice = (set, get) => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
-                price_at_time: item.price
+                // Ensure price is captured at time of sale
+                price_at_order: parseFloat(item.price) 
             }));
 
             const { error: itemsError } = await supabase
@@ -88,8 +91,7 @@ export const createCheckoutSlice = (set, get) => ({
                 } 
             }));
             
-            // Refresh history so it shows up immediately
-            get().orderHistory.refreshOrderHistory();
+            get().orderHistory.fetchOrderHistory();
             
             return { success: true, orderId: orderData.id };
 
@@ -101,15 +103,18 @@ export const createCheckoutSlice = (set, get) => ({
     },
 
     // --- ACTION: STRIPE PAYMENT SUCCESS ---
-    // Called only after Stripe confirms the card charge on the frontend
     submitPaidOrder: async (paymentIntent) => {
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
-            const { user } = get().auth;
+            // FIX: Get Profile
+            const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
             if (!user) throw new Error("User session missing during payment finalization.");
+            
+            // FIX: Determine Name
+            const customerName = profile?.full_name || profile?.email || 'Customer';
 
             // 1. Insert Order Header (Marked as PAID)
             const { data: orderData, error: orderError } = await supabase
@@ -117,10 +122,12 @@ export const createCheckoutSlice = (set, get) => ({
                 .insert([{
                     user_id: user.id,
                     total_amount: getCartTotal(),
-                    status: 'pending',        // Kitchen Status
-                    payment_status: 'paid',   // <--- PAID
-                    payment_method: 'stripe', // <--- STRIPE
-                    // Optional: You could store paymentIntent.id in a 'transaction_id' column if you added one
+                    status: 'pending',        
+                    payment_status: 'paid',   
+                    payment_method: 'stripe',
+                    // FIX: Include Name
+                    customer_name: customerName,
+                    customer_email: user.email
                 }])
                 .select()
                 .single();
@@ -132,7 +139,8 @@ export const createCheckoutSlice = (set, get) => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
-                price_at_time: item.price
+                // Ensure price is captured at time of sale
+                price_at_order: parseFloat(item.price)
             }));
 
             const { error: itemsError } = await supabase
@@ -151,14 +159,12 @@ export const createCheckoutSlice = (set, get) => ({
                 } 
             }));
 
-            get().orderHistory.refreshOrderHistory();
+            get().orderHistory.fetchOrderHistory();
 
             return { success: true, orderId: orderData.id };
 
         } catch (error) {
             console.error("Stripe Order Save Failed:", error);
-            // Note: The payment went through, but DB save failed. 
-            // In a real app, you'd want a backup log or alert here.
             set(state => ({ checkout: { ...state.checkout, isProcessing: false, error: "Payment successful, but saving order failed." } }));
             return { success: false, error: error.message };
         }
