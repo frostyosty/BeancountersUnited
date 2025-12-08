@@ -1329,3 +1329,9 @@ input[type="color"] {
     /* FIX: Force text to stay on one line so the panel widens */
     white-space: nowrap; 
 }
+
+
+.dashboard-section {
+
+    margin-bottom: 5px;
+}
