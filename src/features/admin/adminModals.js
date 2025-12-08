@@ -450,3 +450,153 @@ export function showEditUserModal(user) {
         uiUtils.showToast(`User updated.`, 'success');
     });
 }
+
+
+export function showImageEditorModal(item) {
+    const currentImg = item.image_url || '/placeholder-coffee.jpg';
+
+    const modalHTML = `
+        <div class="modal-form-container" style="max-width: 500px; text-align:center;">
+            <h3>Edit Image: ${item.name}</h3>
+            
+            <div style="margin: 20px auto; width: 200px; height: 200px; border: 1px solid #ddd; background: #f0f0f0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; position: relative;">
+                <!-- Checkerboard background for transparency check -->
+                <div style="position: absolute; inset: 0; background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; opacity: 0.3; z-index: 0;"></div>
+                
+                <img id="img-editor-preview" src="${currentImg}" style="max-width: 100%; max-height: 100%; position: relative; z-index: 1;">
+            </div>
+
+            <div id="img-drop-zone" style="border: 2px dashed #ccc; padding: 20px; border-radius: 8px; cursor: pointer; background: #fafafa; margin-bottom: 20px;">
+                <p style="margin:0; font-weight:500;">Drag & Drop New Image</p>
+                <p style="margin:0; font-size:0.8rem; color:#666;">or click to upload</p>
+                <input type="file" id="img-editor-input" accept="image/*" style="display:none;">
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-remove-bg" class="button-secondary" style="background: #6f42c1; color: white;">✨ Remove Background</button>
+                <button id="btn-save-img" class="button-primary">Save Changes</button>
+            </div>
+            
+            <div id="ai-status" style="margin-top: 15px; font-size: 0.9rem; color: #666;"></div>
+        </div>
+    `;
+
+    uiUtils.showModal(modalHTML);
+
+    const preview = document.getElementById('img-editor-preview');
+    const fileInput = document.getElementById('img-editor-input');
+    const dropZone = document.getElementById('img-drop-zone');
+    const status = document.getElementById('ai-status');
+    const removeBgBtn = document.getElementById('btn-remove-bg');
+    
+    let pendingFile = null;
+
+    // --- Drag & Drop Logic ---
+    dropZone.onclick = () => fileInput.click();
+    
+    fileInput.onchange = (e) => {
+        if (e.target.files[0]) handleFileSelection(e.target.files[0]);
+    };
+    
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = '#4d2909'; };
+    dropZone.ondragleave = () => { dropZone.style.borderColor = '#ccc'; };
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        if (e.dataTransfer.files[0]) handleFileSelection(e.dataTransfer.files[0]);
+    };
+
+    function handleFileSelection(file) {
+        pendingFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => preview.src = e.target.result;
+        reader.readAsDataURL(file);
+        status.textContent = "New image selected. Click Save to apply.";
+    }
+
+    // --- AI Background Removal Logic ---
+    removeBgBtn.onclick = async () => {
+        const src = preview.src;
+        if (!src || src.includes('placeholder')) {
+            uiUtils.showToast("No valid image to process.", "error");
+            return;
+        }
+
+        status.innerHTML = `<span class="loading-spinner" style="font-size:1em;"></span> Processing AI removal... (This may take a moment)`;
+        removeBgBtn.disabled = true;
+
+        try {
+            // Dynamically load imgly from CDN
+            if (!window.imglyRemoveBackground) {
+                await loadScript("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.3.0/dist/imgly-background-removal.min.js");
+            }
+
+            // Process
+            // Note: imgly expects a URL or Blob
+            const blob = await imglyRemoveBackground(src);
+            const url = URL.createObjectURL(blob);
+            
+            preview.src = url;
+            
+            // Convert Blob to File for upload
+            pendingFile = new File([blob], `${item.name}-nobg.png`, { type: "image/png" });
+            
+            status.textContent = "✨ Background removed! Looks good? Click Save.";
+            uiUtils.showToast("Background removed!", "success");
+
+        } catch (err) {
+            console.error("AI Error:", err);
+            status.innerHTML = `<span style="color:red">Failed to remove background. ${err.message}</span>`;
+            uiUtils.showToast("AI Removal Failed.", "error");
+        } finally {
+            removeBgBtn.disabled = false;
+        }
+    };
+
+    // --- Save Logic ---
+    document.getElementById('btn-save-img').onclick = async () => {
+        if (!pendingFile) {
+            uiUtils.closeModal();
+            return;
+        }
+
+        status.textContent = "Uploading...";
+        const btn = document.getElementById('btn-save-img');
+        btn.disabled = true;
+
+        try {
+            const fileName = `menu-items/${item.id}-${Date.now()}.png`;
+            const { error } = await supabase.storage.from('menu-images').upload(fileName, pendingFile);
+            
+            if (error) throw error;
+            
+            const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+            
+            // Update DB
+            const { data: { session } } = await supabase.auth.getSession();
+            await api.updateMenuItem(item.id, { image_url: data.publicUrl }, session.access_token);
+
+            uiUtils.showToast("Image updated!", "success");
+            useAppStore.getState().menu.fetchMenu(); // Refresh UI
+            uiUtils.closeModal();
+
+        } catch (err) {
+            console.error(err);
+            uiUtils.showToast("Upload failed.", "error");
+            status.textContent = "Error saving image.";
+            btn.disabled = false;
+        }
+    };
+}
+
+// Helper for dynamic script loading
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}

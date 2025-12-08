@@ -14,6 +14,8 @@ import { renderGodDashboard } from './features/admin/godDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 import { renderAboutUsPage } from './features/about/aboutUsUI.js';
+import { renderUserProfilePage } from './features/user/userProfileUI.js';
+
 
 uiUtils.initGlobalSpinner();
 
@@ -80,28 +82,42 @@ function renderPersistentUI() {
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-    
-    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
-    
+
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth;
+
+    // 1. Wait for Auth to finish loading before routing
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
-        return; 
+        return;
     }
-    
+
     const userRole = getUserRole();
 
+    // 2. Update Desktop Nav Active State
     renderDesktopNav();
 
+    // 3. Route Switch
     switch (hash) {
-        case '#menu': renderMenuPage(); break;
-        case '#about-us': renderAboutUsPage(); break;
-        case '#cart': 
-        case '#checkout': renderCartPage(); break;
+        case '#menu':
+            renderMenuPage();
+            break;
+
+        case '#about-us':
+            renderAboutUsPage();
+            break;
+
+        case '#cart':
+        case '#checkout':
+            // Merged view
+            renderCartPage();
+            break;
+
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`;
             break;
+
         case '#order-history':
             if (isAuthenticated) {
                 renderOrderHistoryPage();
@@ -109,6 +125,15 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
+
+        case '#my-account':
+            if (isAuthenticated) {
+                renderUserProfilePage();
+            } else {
+                window.location.hash = '#menu';
+            }
+            break;
+
         case '#owner-dashboard':
             if (userRole === 'owner' || userRole === 'god') {
                 renderOwnerDashboard();
@@ -116,6 +141,7 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
+
         case '#god-dashboard':
             if (userRole === 'god') {
                 renderGodDashboard();
@@ -124,7 +150,10 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-        default: renderMenuPage(); break;
+
+        default:
+            renderMenuPage();
+            break;
     }
 }
 
@@ -159,7 +188,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@mealmates.dev'; 
+        const godUserEmail = 'manager@mealmates.dev';
 
         if (user?.email === godUserEmail) {
             await logout();
@@ -203,23 +232,52 @@ function setupHamburgerMenu() {
     const buildMobileMenu = () => {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
         const { settings } = useAppStore.getState().siteSettings;
+        const cartCount = useAppStore.getState().cart.getTotalItemCount();
+
         const aboutEnabled = settings?.aboutUs?.enabled || false;
+        const siteName = settings?.websiteName || 'Mealmates';
 
-        let navHTML = `<a href="#menu" class="nav-link">Menu</a>`;
-        if (aboutEnabled) navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
-        navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;
+        let navHTML = '';
 
+        // 1. Standard Links
+        navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
+        navHTML += `<a href="#cart" class="nav-link">Cart (${cartCount})</a>`;
+
+        // 2. Authenticated User Links
         if (isAuthenticated && profile) {
-            if (profile.can_see_order_history) navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
-            if (profile.role === 'owner' || profile.role === 'god') navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
-            if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
+            // New "My Account" Link
+            navHTML += `<a href="#my-account" class="nav-link">My ${siteName}</a>`;
+
+            if (profile.can_see_order_history) {
+                navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
+            }
+            if (profile.role === 'owner' || profile.role === 'god') {
+                navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            }
+            if (profile.role === 'god') {
+                navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
+            }
         }
 
-        let authSectionHTML = isAuthenticated 
-            ? `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`
-            : `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
+        // 3. About Us (At the bottom of links)
+        if (aboutEnabled) {
+            navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
+        }
 
-        mobileNavContainer.innerHTML = navHTML + authSectionHTML;
+        // 4. Auth Buttons (Login/Logout)
+        let authSectionHTML = '';
+        if (isAuthenticated) {
+            authSectionHTML = `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`;
+        } else {
+            authSectionHTML = `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
+        }
+
+        const newHTML = navHTML + authSectionHTML;
+
+        // Prevent unnecessary DOM thrashing
+        if (mobileNavContainer.innerHTML !== newHTML) {
+            mobileNavContainer.innerHTML = newHTML;
+        }
     };
 
     window.buildMobileMenu = buildMobileMenu;
@@ -247,7 +305,7 @@ async function main() {
     // This reads LocalStorage immediately so we can paint the SVG instantly
     let logoHTML = 'Mealmates';
     let logoStyle = '';
-    
+
     const cachedHeader = localStorage.getItem('cached_header_config');
     if (cachedHeader) {
         try {
@@ -294,12 +352,12 @@ async function main() {
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile, 
+            profile: state.auth.profile,
             cartItemCount: state.cart.items.length,
             aboutEnabled: state.siteSettings.settings?.aboutUs?.enabled
         };
     };
-    
+
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
@@ -336,9 +394,9 @@ async function main() {
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
+        useAppStore.getState().orderHistory.fetchOrderHistory(true);
     }
-    
+
     // 6. Apply Settings (Hydration)
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings) {
@@ -352,12 +410,12 @@ async function main() {
         }
         if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
         if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
-        
+
         // Ensure Header is consistent with DB settings (if cache was stale)
         if (settings.headerLogoConfig) {
             uiUtils.applyHeaderLogo(settings.headerLogoConfig);
         }
-        
+
         uiUtils.applyGlobalBackground(settings);
     }
 

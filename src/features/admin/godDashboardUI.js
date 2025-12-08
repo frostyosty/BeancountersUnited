@@ -156,24 +156,27 @@ export function renderGodDashboard() {
 
         // --- 3. Final Assembly ---
         console.log("7. Assembling HTML...");
-        mainContent.innerHTML = `
-            <div class="dashboard-container">
-                <h2>God Mode Dashboard</h2>
-                ${userManagementHTML}
-                ${globalSettingsHTML}
-                ${activeOrdersHTML}
-                ${menuSectionHTML}
-                
-                <section class="dashboard-section">
-                    <h3>Menu Categories</h3>
-                    ${getMenuLayoutHTML()}
-                </section>
+            const aboutHTML = components.renderAboutConfigSection(settings); // NEW
 
-                ${headerHTML}
-                ${appearanceHTML}
-                ${paymentHTML}
-            </div>
-        `;
+    mainContent.innerHTML = `
+        <div class="dashboard-container">
+            <h2>God Mode Dashboard</h2>
+            ${userManagementHTML}
+            ${globalSettingsHTML}
+            ${clientSectionHTML}
+            ${menuSectionHTML}
+            
+            <section class="dashboard-section">
+                <h3>Menu Categories</h3>
+                ${getMenuLayoutHTML()}
+            </section>
+
+            ${headerHTML}
+            ${appearanceHTML}
+            ${aboutHTML}  <!-- Add here -->
+            ${paymentHTML}
+        </div>
+    `;
 
         console.log("8. Attaching Listeners...");
         if (typeof attachOwnerDashboardListeners !== 'function') throw new Error("attachOwnerDashboardListeners is missing!");

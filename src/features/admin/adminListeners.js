@@ -4,12 +4,11 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
-import { showCustomerCRMModal, showEditItemModal, showEditUserModal } from './adminModals.js';
+import { showCustomerCRMModal, showEditItemModal, showEditUserModal, showImageEditorModal } from './adminModals.js'; 
 import { openHeaderLogoEditor } from './headerEditor.js';
 
 export let currentSort = { column: 'category', direction: 'asc' };
 
-// --- UTILITY: Debounce ---
 function debounce(func, delay) {
     let timer;
     return (...args) => {
@@ -18,7 +17,6 @@ function debounce(func, delay) {
     };
 }
 
-// --- HELPER: Logo Upload ---
 async function uploadLogo(file) {
     const fileExt = file.name.split('.').pop();
     const fileName = `logos/site-logo-${Date.now()}.${fileExt}`;
@@ -28,25 +26,20 @@ async function uploadLogo(file) {
     return data.publicUrl;
 }
 
-// --- MAIN LISTENER FUNCTION ---
 export function attachOwnerDashboardListeners() {
     const container = document.querySelector('.dashboard-container');
     if (!container || container.dataset.listenersAttached) return;
 
-    // =========================================================
-    // 1. CLICK DELEGATION
-    // =========================================================
+    // --- 1. CLICKS ---
     container.addEventListener('click', async (e) => {
         const target = e.target;
 
-        // Item Actions
         if (target.closest('.edit-item-btn-table')) {
             const itemId = target.closest('tr').dataset.itemId;
             const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (item) showEditItemModal(item);
         }
         if (target.closest('#add-new-item-btn')) showEditItemModal(null);
-        
         if (target.closest('.delete-icon-btn')) {
             const itemId = target.closest('tr').dataset.itemId;
             const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
@@ -55,23 +48,17 @@ export function attachOwnerDashboardListeners() {
                 await useAppStore.getState().menu.deleteMenuItemOptimistic(itemId, session.access_token);
             }
         }
-
-        // User Actions
         if (target.closest('.edit-user-btn')) {
             const userId = target.closest('tr').dataset.userId;
             const user = useAppStore.getState().admin.users.find(u => u.id === userId);
             if (user) showEditUserModal(user);
         }
-
-        // Sorting
         if (target.closest('.sortable')) {
             const col = target.closest('.sortable').dataset.sortCol;
             currentSort.direction = (currentSort.column === col && currentSort.direction === 'asc') ? 'desc' : 'asc';
             currentSort.column = col;
             useAppStore.getState().ui.triggerPageRender();
         }
-
-        // Category Actions
         if(target.matches('#add-category-btn')) {
             const input = document.getElementById('new-category-name');
             const newCat = input.value.trim();
@@ -84,7 +71,6 @@ export function attachOwnerDashboardListeners() {
             input.value = '';
             uiUtils.showToast('Category added.', 'success');
         }
-
         if (target.closest('.delete-category-btn')) {
             const catToDelete = target.closest('.category-list-item').dataset.categoryName;
             if (confirm(`Delete category "${catToDelete}"?`)) {
@@ -95,8 +81,6 @@ export function attachOwnerDashboardListeners() {
                 uiUtils.showToast('Category deleted.', 'success');
             }
         }
-        
-        // Clear Logo/BG Buttons
         if (target.matches('#clear-logo-btn')) {
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ logoUrl: '' }, session.access_token);
@@ -104,7 +88,6 @@ export function attachOwnerDashboardListeners() {
             useAppStore.getState().siteSettings.fetchSiteSettings();
             uiUtils.showToast('Logo removed.', 'success');
         }
-        
         if (target.matches('#clear-bg-btn')) {
              const { data: { session } } = await supabase.auth.getSession();
              const { settings } = useAppStore.getState().siteSettings;
@@ -115,38 +98,22 @@ export function attachOwnerDashboardListeners() {
              target.style.display = 'none';
              uiUtils.showToast("Background removed.", "success");
         }
-
-                // Open Header Editor
         if (target.id === 'open-header-creator-btn') {
             openHeaderLogoEditor();
         }
     });
 
-    // =========================================================
-    // 2. AUTOSAVE LOGIC
-    // =========================================================
-    
-// Define the save functions
+    // --- 2. AUTOSAVE ---
     const saveFunctions = {
         globalSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
-            
-            // Need current settings to preserve existing About Us content (title/text)
             const currentSettings = useAppStore.getState().siteSettings.settings;
-            const currentAbout = currentSettings.aboutUs || {};
 
             const settingsUpdate = { 
                 websiteName: formData.get('websiteName'), 
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
-                // showAllergens removed from here (handled by menuConfig now)
-                logoUrl: currentSettings.logoUrl, 
-                
-                // Merge enabled status with existing content
-                aboutUs: {
-                    ...currentAbout,
-                    enabled: formData.get('enableAboutUs') === 'on'
-                }
+                logoUrl: currentSettings.logoUrl
             };
             
             await api.updateSiteSettings(settingsUpdate, session.access_token);
@@ -154,18 +121,12 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Settings saved.', 'success', 1000);
         },
 
-        // --- NEW: Handles the Allergen Toggle in the Menu Section ---
         menuConfig: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
-            
-            const settingsUpdate = { 
-                showAllergens: formData.get('showAllergens') === 'on'
-            };
-            
+            const settingsUpdate = { showAllergens: formData.get('showAllergens') === 'on' };
             await api.updateSiteSettings(settingsUpdate, session.access_token);
             uiUtils.showToast('Menu settings saved.', 'success', 1000);
-            // Force refresh so the UI (God/Owner dashboard) sees the checkbox update state if needed
             useAppStore.getState().siteSettings.fetchSiteSettings();
         },
         
@@ -179,16 +140,14 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Permissions saved.', 'success', 1000);
         },
 
-         headerLayout: async (form) => {
+        headerLayout: async (form) => {
             const formData = new FormData(form);
             const headerSettings = {
                 logoAlignment: formData.get('logoAlignment'),
                 hamburgerPosition: formData.get('hamburgerPosition'),
                 height: parseInt(formData.get('headerHeight')) || 60,
-                // NEW: Capture Color
                 bgColor: formData.get('headerBgColor')
             };
-            // ... save to API ...
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ headerSettings }, session.access_token);
             uiUtils.applyHeaderLayout(headerSettings);
@@ -229,13 +188,11 @@ export function attachOwnerDashboardListeners() {
             const uiConfig = {
                 pageTransition: formData.get('pageTransition'),
                 staggerMenu: formData.get('staggerMenu') === 'on',
-                // New BG Settings
                 backgroundType: formData.get('backgroundType'),
                 bgParallax: formData.get('bgParallax') === 'on',
                 bgAnimation: formData.get('bgAnimation') === 'on'
             };
             
-            // Save Theme Variables (Color)
             const themeVariables = { ...settings.themeVariables };
             container.querySelectorAll('[data-css-var]').forEach(input => {
                 themeVariables[input.dataset.cssVar] = input.value;
@@ -243,16 +200,29 @@ export function attachOwnerDashboardListeners() {
 
             await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
             
-            // Update Live View
             const currentSettings = useAppStore.getState().siteSettings.settings;
-            const newSettings = { 
-                ...currentSettings, 
-                uiConfig, 
-                themeVariables: { ...currentSettings.themeVariables, ...themeVariables }
-            };
+            const newSettings = { ...currentSettings, uiConfig, themeVariables: { ...currentSettings.themeVariables, ...themeVariables } };
             
             uiUtils.applyGlobalBackground(newSettings);
             uiUtils.showToast('Appearance saved.', 'success', 1000);
+        },
+
+        // NEW: About Config Autosave
+        aboutConfig: async (form) => {
+            const formData = new FormData(form);
+            const { data: { session } } = await supabase.auth.getSession();
+            const currentSettings = useAppStore.getState().siteSettings.settings;
+            const currentAbout = currentSettings.aboutUs || {};
+
+            const settingsUpdate = {
+                aboutUs: {
+                    ...currentAbout,
+                    enabled: formData.get('enableAboutUs') === 'on'
+                }
+            };
+            await api.updateSiteSettings(settingsUpdate, session.access_token);
+            uiUtils.showToast('About settings saved.', 'success', 1000);
+            useAppStore.getState().siteSettings.fetchSiteSettings(); // Refresh links
         }
     };
 
@@ -262,7 +232,6 @@ export function attachOwnerDashboardListeners() {
         theme: debounce(saveFunctions.visualTheme, 800)
     };
 
-    // --- INPUT LISTENER ---
     container.addEventListener('input', (e) => {
         const target = e.target;
         const form = target.closest('form');
@@ -274,34 +243,11 @@ export function attachOwnerDashboardListeners() {
             document.documentElement.style.setProperty(target.dataset.cssVar, target.value);
             debouncedSave.theme();
         }
-        if (e.target.id === 'client-search') {
-            const term = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#client-table-body tr');
-            
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(term) ? '' : 'none';
-            });
-        }
-        
     });
 
-    // --- CHANGE LISTENER ---
- container.addEventListener('change', async (e) => {
+    container.addEventListener('change', async (e) => {
         const target = e.target;
         const form = target.closest('form');
-
-        // 1. Background Type Switching (Show/Hide Inputs)
-        if (target.name === 'backgroundType') {
-            // Hide all
-            container.querySelectorAll('.bg-control-group').forEach(el => el.style.display = 'none');
-            // Show selected
-            const type = target.value; // color, image, pattern
-            const el = document.getElementById(`bg-ctrl-${type}`);
-            if (el) el.style.display = 'block';
-            
-            // Auto-save logic handled below
-        }
 
         // Logo Upload
         if (target.id === 'logo-upload') {
@@ -323,77 +269,75 @@ export function attachOwnerDashboardListeners() {
         }
 
         // BG Upload
-        if (e.target.id === 'bg-upload') {
-            const file = e.target.files[0];
+        if (target.id === 'bg-upload') {
+            const file = target.files[0];
             if (file) {
                 uiUtils.showToast("Uploading background...", "info");
                 try {
                     const url = await uploadLogo(file);
                     const { data: { session } } = await supabase.auth.getSession();
                     const { settings } = useAppStore.getState().siteSettings;
-                    
-                    // 1. Update the Variable
                     const newTheme = { ...settings.themeVariables, '--body-background-image': `url('${url}')` };
-                    
-                    // 2. FIX: Force backgroundType to 'image' so it actually shows
+                    // Fix: Ensure we set type to image so it displays
                     const newUiConfig = { ...settings.uiConfig, backgroundType: 'image' };
 
                     await api.updateSiteSettings({ themeVariables: newTheme, uiConfig: newUiConfig }, session.access_token);
-                    
-                    // 3. Update DOM
                     document.documentElement.style.setProperty('--body-background-image', `url('${url}')`);
+                    document.getElementById('bg-preview').src = url;
+                    document.getElementById('bg-preview').style.display = 'block';
+                    document.getElementById('clear-bg-btn').style.display = 'inline-block';
                     
-                    // Update Preview Elements
-                    const preview = document.getElementById('bg-preview');
-                    if (preview) {
-                        preview.src = url;
-                        preview.style.display = 'block';
-                    }
-                    const removeBtn = document.getElementById('clear-bg-btn');
-                    if (removeBtn) removeBtn.style.display = 'inline-block';
-                    
-                    // Update Radio Button UI if visible
+                    // Update Radio
                     const radio = document.querySelector('input[name="backgroundType"][value="image"]');
                     if (radio) radio.checked = true;
-                    // Show image controls
                     const ctrl = document.getElementById('bg-ctrl-image');
                     if (ctrl) ctrl.style.display = 'block';
 
-                    // Re-run global applier to handle parallax settings etc
-                    // We construct a temporary settings object to apply immediately
-                    uiUtils.applyGlobalBackground({ ...settings, themeVariables: newTheme, uiConfig: newUiConfig });
-
                     uiUtils.showToast("Background saved.", "success");
-                } catch (err) { 
-                    console.error(err);
-                    uiUtils.showToast("Upload failed.", "error"); 
-                }
+                } catch (err) { uiUtils.showToast("Upload failed.", "error"); }
             }
             return;
         }
 
-        // Font Selection
+        // Font
         if (target.id === 'font-selector') {
             uiUtils.applySiteFont(target.value);
             saveFunctions.visualTheme();
             return;
         }
 
+        // Background Type Toggle Logic
+        if (target.name === 'backgroundType') {
+            container.querySelectorAll('.bg-control-group').forEach(el => el.style.display = 'none');
+            const type = target.value; 
+            const el = document.getElementById(`bg-ctrl-${type}`);
+            if (el) el.style.display = 'block';
+            saveFunctions.appearanceSettings(form); // Autosave type change
+            return;
+        }
+
         // Form Autosaves
-         // Form Autosaves
         if (form?.id === 'global-settings-form') saveFunctions.globalSettings(form);
         if (form?.id === 'menu-config-form') saveFunctions.menuConfig(form);
         if (form?.id === 'owner-permissions-form') saveFunctions.ownerPermissions(form);
         if (form?.id === 'header-settings-form') saveFunctions.headerLayout(form);
         if (form?.id === 'payment-settings-form') saveFunctions.paymentSettings(form);
         if (form?.id === 'appearance-settings-form') saveFunctions.appearanceSettings(form);
-    
+        if (form?.id === 'about-config-form') saveFunctions.aboutConfig(form); // <--- Add this
     });
 
     container.dataset.listenersAttached = 'true';
 }
 
-// --- SORTABLE ---
+
+// --- ADD: Row Click Handler ---
+window.handleItemRowClick = (itemId) => {
+    const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
+    if (item) showEditItemModal(item);
+};
+
+
+
 export function initializeSortable() {
     const list = document.getElementById('category-list');
     if (!list || list.dataset.sortableInitialized === 'true') return;
@@ -410,45 +354,38 @@ export function initializeSortable() {
     list.dataset.sortableInitialized = 'true';
 }
 
-// --- GLOBAL CLICK HANDLER ---
-// Updated to accept an optional 'manualName'
-window.handleOrderRowClick = (userId, manualName = null) => {
+window.handleOrderRowClick = (userId, manualNameOverride = null) => {
     const event = window.event; 
     const target = event.target;
-    
     if (target.closest('button')) return;
 
     if (!userId || userId === 'null' || userId === 'undefined') { 
         uiUtils.showToast("Guest order - no history available.", "info"); 
         return; 
     }
-    
-    // Pass the manual name to the modal function
-    showCustomerCRMModal(userId, manualName);
+    showCustomerCRMModal(userId, manualNameOverride);
 };
 
-
-// --- PHOTO CLICK HANDLER ---
+// Add Photo Handler
 window.handleItemPhotoClick = (itemId) => {
-    // Open the Edit Item Modal directly to the image section? 
-    // Or just trigger the file input logic.
-    // For simplicity, let's open the Edit Modal since it already has image upload logic.
     const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
-    if (item) showEditItemModal(item);
+    if (item) {
+        // FIX: Call the specific Image Editor Modal
+        showImageEditorModal(item);
+    }
 };
 
-// --- MERGE CLIENT HANDLER ---
+// Add Merge Handler
 window.handleMergeClick = (sourceId) => {
-    const targetId = prompt("Enter the User ID (UUID) of the CLIENT you want to keep (The Source will be merged INTO this Target):");
-    
+    const targetId = prompt("Enter the User ID (UUID) of the CLIENT you want to keep:");
     if (!targetId) return;
     if (sourceId === targetId) { alert("Cannot merge into self."); return; }
 
-    if (confirm("WARNING: This will move all orders from this client to the target client and DELETE this profile. This cannot be undone. Proceed?")) {
+    if (confirm("Merge clients? This cannot be undone.")) {
         api.request('/user?type=merge_clients', 'POST', { sourceId, targetId }, useAppStore.getState().auth.session?.access_token)
             .then(() => {
-                uiUtils.showToast("Clients merged successfully.", "success");
-                useAppStore.getState().admin.fetchClients(); // Refresh table
+                uiUtils.showToast("Merged.", "success");
+                useAppStore.getState().admin.fetchClients();
             })
             .catch(err => uiUtils.showToast(err.message, "error"));
     }

@@ -1,37 +1,6 @@
 // src/features/admin/dashboardComponents.js
 import * as uiUtils from '@/utils/uiUtils.js';
 
-
-// Helper: Convert Hex to lighter HSL/RGBA
-function getThemeBasedColor(categoryName, settings) {
-    // 1. Get Primary Color from settings (default brown)
-    const hex = settings?.themeVariables?.['--primary-color'] || '#4d2909';
-    
-    // 2. Convert Hex to RGB
-    let r = 0, g = 0, b = 0;
-    if (hex.length === 4) {
-        r = parseInt("0x" + hex[1] + hex[1]);
-        g = parseInt("0x" + hex[2] + hex[2]);
-        b = parseInt("0x" + hex[3] + hex[3]);
-    } else if (hex.length === 7) {
-        r = parseInt("0x" + hex[1] + hex[2]);
-        g = parseInt("0x" + hex[3] + hex[4]);
-        b = parseInt("0x" + hex[5] + hex[6]);
-    }
-
-    // 3. Generate a variance based on category name so they aren't all identical
-    let hash = 0;
-    for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    const variance = (hash % 20); // Small shift
-
-    // 4. Return RGBA with very low opacity (0.05 to 0.15) for a pastel tint
-    // This overlays the color onto the white/grey background
-    const alpha = 0.08 + (Math.abs(variance) / 100); 
-    
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// --- 1. ACTIVE ORDERS ---
 // --- 1. ACTIVE ORDERS ---
 export function renderActiveOrdersSection(orders) {
     // Safety check for input
@@ -41,11 +10,7 @@ export function renderActiveOrdersSection(orders) {
     
     const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
-        
-        // Determine Display Name (Prioritize manual name for Phone Orders)
         const displayName = order.customer_name || profile.internal_nickname || profile.full_name || profile.email || 'Guest';
-        
-        // Prepare Name for Click Handler (Escape quotes)
         const clickName = displayName.replace(/'/g, "\\'");
 
         let noteIcon = '';
@@ -53,7 +18,6 @@ export function renderActiveOrdersSection(orders) {
             noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
         }
 
-        // Safety checks for ID and Amount
         const orderId = order.id ? order.id.slice(0, 4) : '????';
         const total = parseFloat(order.total_amount || 0).toFixed(2);
 
@@ -79,10 +43,7 @@ export function renderActiveOrdersSection(orders) {
 }
 
 // --- 2. MENU ITEMS TABLE ---
-export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens, settings) {
-    // Default to false if undefined
-    const isEnabled = showAllergens === true;
-
+export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
     const sortedItems = [...menuItems].sort((a, b) => {
         const col = sortConfig.column;
         const valA = col === 'price' ? parseFloat(a[col]) : (a[col] || '').toLowerCase();
@@ -93,17 +54,30 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
     });
 
     const rows = sortedItems.map(item => `
-        <tr data-item-id="${item.id}" style="background-color: ${getThemeBasedColor(item.category||'', settings)}; border-bottom:1px solid #fff;">
-            <td style="padding:10px; width:60px;">
-                <img src="${item.image_url || '/placeholder-coffee.jpg'}" class="admin-item-thumb" style="width:40px; height:40px; object-fit:cover; border-radius:4px; cursor:pointer; border:1px solid #ccc;" onclick="window.handleItemPhotoClick('${item.id}')">
+        <tr data-item-id="${item.id}" 
+            style="background-color: ${getCategoryColor(item.category||'')}; border-bottom:1px solid #fff; cursor:pointer;"
+            onclick="window.handleItemRowClick('${item.id}')"> <!-- Row Click triggers Edit Details -->
+            
+            <!-- Image Column: Stop Propagation so it doesn't trigger row click -->
+            <td style="padding:10px; width:60px;" onclick="event.stopPropagation()">
+                <div style="position:relative; width:40px; height:40px;">
+                    <img src="${item.image_url || '/placeholder-coffee.jpg'}" 
+                         class="admin-item-thumb" 
+                         style="width:100%; height:100%; object-fit:cover; border-radius:4px; cursor:pointer; border:1px solid #ccc;" 
+                         onclick="window.handleItemPhotoClick('${item.id}')" 
+                         title="Click to Edit Photo">
+                </div>
             </td>
+            
             <td style="padding:10px;">
                 <div style="font-weight:500;">${item.name}</div>
                 <div style="margin-top:2px;">${getAllergenBadges(item.allergens)}</div>
             </td>
             <td style="padding:10px;">${item.category || 'None'}</td>
-            <td style="padding:10px;">$${parseFloat(item.price || 0).toFixed(2)}</td>
-            <td style="padding:10px;">
+            <td style="padding:10px;">$${parseFloat(item.price).toFixed(2)}</td>
+            
+            <!-- Actions: Stop Propagation so buttons work -->
+            <td style="padding:10px;" onclick="event.stopPropagation()">
                 <button class="button-secondary small edit-item-btn-table">Edit</button>
                 <button class="delete-icon-btn" title="Delete">×</button>
             </td>
@@ -116,6 +90,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                 <h3>Menu Items</h3>
                 <button id="add-new-item-btn" class="button-primary">+ Add New Item</button>
             </div>
+            
             <div class="table-wrapper">
                 <table style="width:100%; border-collapse:collapse;">
                     <thead style="background:white; border-bottom:2px solid #ddd;">
@@ -130,10 +105,12 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                     <tbody>${rows}</tbody>
                 </table>
             </div>
+
+            <!-- Allergen Toggle -->
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
                 <form id="menu-config-form">
                     <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
-                        <input type="checkbox" name="showAllergens" ${isEnabled ? 'checked' : ''}> 
+                        <input type="checkbox" name="showAllergens" ${showAllergens === true ? 'checked' : ''}> 
                         Enable Dietary Filters on Menu
                     </label>
                 </form>
@@ -146,7 +123,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
 export function renderGlobalSettingsSection(settings) {
     const currentLogo = settings.logoUrl || '';
     const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
-    const aboutEnabled = settings.aboutUs?.enabled || false;
+    // Removed aboutEnabled logic from here
 
     return `
         <section class="dashboard-section" style="border-color: #7b2cbf;">
@@ -174,10 +151,6 @@ export function renderGlobalSettingsSection(settings) {
                             <label><input type="radio" name="hamburgerMenuContent" value="main-nav" ${hamburgerConfig==='main-nav'?'checked':''}> Simple Menu</label>
                             <label><input type="radio" name="hamburgerMenuContent" value="categories" ${hamburgerConfig==='categories'?'checked':''}> Category List</label>
                         </div>
-                        <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="enableAboutUs" ${aboutEnabled ? 'checked' : ''}> 
-                            Enable "About Us" Page
-                        </label>
                     </div>
                 </div>
             </form>
@@ -185,8 +158,35 @@ export function renderGlobalSettingsSection(settings) {
     `;
 }
 
-// --- 4. APPEARANCE ---
+// --- 4. ABOUT CONFIG (NEW) ---
+export function renderAboutConfigSection(settings) {
+    const aboutEnabled = settings.aboutUs?.enabled || false;
+    
+    return `
+        <section class="dashboard-section">
+            <h3>About Page Configuration</h3>
+            <form id="about-config-form">
+                <div class="form-group">
+                    <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="enableAboutUs" ${aboutEnabled ? 'checked' : ''}> 
+                        Enable "About Us" Page
+                    </label>
+                    <p style="font-size:0.85rem; color:#666; margin-top:5px; margin-left: 24px;">
+                        When enabled, an "About" link appears in the bottom of the menu. 
+                        <br>To edit the content, navigate to the About page and click "Edit Content".
+                    </p>
+                    <div style="margin-top:10px; margin-left:24px;">
+                        <a href="#about-us" class="button-secondary small">Go to About Page</a>
+                    </div>
+                </div>
+            </form>
+        </section>
+    `;
+}
+
+// --- 5. APPEARANCE ---
 export function renderAppearanceSection(settings) {
+    // ... (No changes here, keep existing code from previous response) ...
     const bgImage = settings.themeVariables?.['--body-background-image']?.replace(/url\(['"]?|['"]?\)/g, '') || '';
     const bgColor = settings.themeVariables?.['--background-color'] || '#ffffff';
     const uiConfig = settings.uiConfig || {}; 
@@ -254,7 +254,7 @@ export function renderAppearanceSection(settings) {
     `;
 }
 
-// --- 5. PAYMENT SETTINGS ---
+// --- 6. PAYMENT SETTINGS ---
 export function renderPaymentSection(paymentConfig) {
     const enableStripe = paymentConfig.enableStripe !== false;
     return `
@@ -283,11 +283,9 @@ export function renderPaymentSection(paymentConfig) {
     `;
 }
 
-// --- 6. HEADER SETTINGS ---
-// --- 6. HEADER SETTINGS ---
+// --- 7. HEADER SETTINGS ---
 export function renderHeaderSection(headerSettings) {
     const height = headerSettings.height || 60;
-    // NEW: Default to white if not set
     const bgColor = headerSettings.bgColor || '#ffffff'; 
 
     return `
@@ -295,7 +293,6 @@ export function renderHeaderSection(headerSettings) {
             <h3>Header Layout</h3>
             <form id="header-settings-form">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <!-- ... Keep Logo/Burger Selects ... -->
                     <div>
                         <label>Logo Alignment</label>
                         <select name="logoAlignment">
@@ -313,14 +310,11 @@ export function renderHeaderSection(headerSettings) {
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <!-- Existing Height Slider -->
                     <div class="form-group">
                         <label>Height: <span id="header-height-val">${height}px</span></label>
                         <input type="range" name="headerHeight" min="50" max="150" value="${height}" 
                                oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
                     </div>
-
-                    <!-- NEW: Background Color -->
                     <div class="form-group">
                         <label>Header Background</label>
                         <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
@@ -332,8 +326,8 @@ export function renderHeaderSection(headerSettings) {
                     </div>
                 </div>
 
-                <!-- ... Custom Vector Banner button ... -->
                 <div style="padding-top:15px; border-top:1px solid #eee;">
+                    <label style="display:block; margin-bottom:5px;">Custom Vector Banner</label>
                     <button type="button" id="open-header-creator-btn" class="button-secondary" style="width:100%;">
                         🎨 Create/Edit Header Logo
                     </button>
@@ -343,17 +337,14 @@ export function renderHeaderSection(headerSettings) {
     `;
 }
 
-// --- 7. CLIENT RELATIONSHIPS (For Owner Dashboard) ---
+// --- 8. CLIENT RELATIONSHIPS (Owner) ---
 export function renderClientRelationshipsSection(clients) {
-    // Safety check for null clients
     if (!clients) return '<p>Loading clients...</p>';
     
     const rows = clients.map(client => {
         const lastOrderDate = client.lastOrder ? new Date(client.lastOrder).toLocaleDateString() : '-';
         const displayName = client.internal_nickname || client.full_name || client.email || 'Unknown';
         const noteIcon = client.staff_note ? '📝' : '';
-
-        // FIX: Safety check for totalSpend
         const spend = parseFloat(client.totalSpend || 0).toFixed(2);
 
         return `

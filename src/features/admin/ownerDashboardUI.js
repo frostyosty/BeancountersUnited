@@ -66,27 +66,33 @@ export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
+    // Fetch Data
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory(); 
-// Fetch Clients
-    useAppStore.getState().admin.fetchClients();
+    useAppStore.getState().admin.fetchClients(); // New
+
     const { clients } = useAppStore.getState().admin;
-    
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
 
-    if (isLoadingMenu || isLoadingSettings) { mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`; return; }
-    if (error) { mainContent.innerHTML = `<div class="error-message"><h2>Error</h2><p>${error}</p></div>`; return; }
+    if (isLoadingMenu || isLoadingSettings) {
+        mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
+        return;
+    }
+    if (error) {
+        mainContent.innerHTML = `<div class="error-message"><h2>Error</h2><p>${error}</p></div>`;
+        return;
+    }
 
     const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
     
-    // Assemble Sections
-    const activeOrdersHTML = components.renderActiveOrdersSection(orders);
+    // Components
+    const clientSectionHTML = components.renderClientRelationshipsSection(clients || []);
     
     const menuSectionHTML = components.renderMenuSection(
-        menuItems, currentSort, getCategoryColor, getAllergenBadges, getSortIcon, settings.showAllergens
+        menuItems, currentSort, getCategoryColor, getAllergenBadges, getSortIcon, settings.showAllergens, settings
     );
 
     const categoriesHTML = ownerPermissions.canEditCategories 
@@ -99,22 +105,20 @@ export function renderOwnerDashboard() {
 
     const headerHTML = components.renderHeaderSection(settings.headerSettings || {});
     
+    // New About Config at bottom
+    const aboutHTML = components.renderAboutConfigSection(settings);
+    
     const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
-
-    // Render
-// Use the new component
-    // Note: We perform search filtering in the listener, but initial render shows all
-    const clientSectionHTML = components.renderClientRelationshipsSection(clients || []);
 
     mainContent.innerHTML = `
         <div class="dashboard-container">
             <h2>Owner Dashboard</h2>
-            
             ${clientSectionHTML}
             ${menuSectionHTML}
             ${categoriesHTML}
             ${headerHTML}
             ${appearanceHTML}
+            ${aboutHTML}
             ${paymentHTML}
         </div>
     `;
