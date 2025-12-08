@@ -94,6 +94,11 @@ function renderOptionsHTML(activeGroups, currentOptions) {
 }
 
 
+
+
+
+// --- 2. EDIT ITEM MODAL ---
+
 // --- 4. MODAL FUNCTION ---
 export function showEditItemModal(item) {
     const isEditing = !!item;
@@ -258,144 +263,6 @@ export function showEditItemModal(item) {
     });
 }
 
-
-// --- 2. EDIT ITEM MODAL ---
-
-export function showEditItemModal(item) {
-    const isEditing = !!item;
-    const itemData = item || { name: '', price: '', category: '', description: '', allergens: [], available_options: [] };
-    const categories = useAppStore.getState().siteSettings.getMenuCategories();
-    const currentAllergens = itemData.allergens || [];
-    
-    // Ensure array exists
-    const currentOptions = itemData.available_options || [];
-
-    // --- GENERATE GROUPED OPTIONS HTML ---
-    const groupsHTML = Object.entries(OPTION_GROUPS).map(([groupName, options]) => {
-        const checkboxes = options.map(opt => `
-            <label style="font-weight:normal; display:flex; gap:6px; align-items:center; cursor:pointer; margin-bottom:4px; font-size:0.9rem; color:#444;">
-                <input type="checkbox" name="option_tag" value="${opt}" ${currentOptions.includes(opt) ? 'checked' : ''}> 
-                ${opt}
-            </label>
-        `).join('');
-
-        return `
-            <div style="flex: 1 1 200px; margin-bottom:10px; min-width: 140px;">
-                <h5 style="margin:0 0 5px 0; color:var(--primary-color); font-size:0.85rem; border-bottom:1px solid #ddd; padding-bottom:3px;">${groupName}</h5>
-                <div style="display:flex; flex-direction:column;">${checkboxes}</div>
-            </div>
-        `;
-    }).join('');
-
-    const modalHTML = `
-        <div class="modal-form-container" style="max-width: 700px;"> <!-- Made wider for columns -->
-            <h3>${isEditing ? 'Edit Item' : 'Add New Item'}</h3>
-            <form id="edit-item-form">
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-row">
-                        <label>Name</label>
-                        <input type="text" name="name" value="${itemData.name}" required>
-                    </div>
-                    <div class="form-row">
-                        <label>Category</label>
-                        <select name="category" required>
-                            <option value="">Select Category...</option>
-                            ${categories.map(cat => `<option value="${cat}" ${itemData.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label>Price ($)</label>
-                    <input type="number" name="price" value="${itemData.price}" step="0.01" required style="width: 50%;">
-                </div>
-
-                <div class="form-row">
-                    <label>Description</label>
-                    <textarea name="description" style="height:60px;">${itemData.description || ''}</textarea>
-                </div>
-
-                <!-- OPTIONS SECTION -->
-                <div class="form-group" style="background:#f8f9fa; padding:15px; border-radius:6px; margin-top:15px; border:1px solid #e9ecef;">
-                    <label style="margin-bottom:10px; display:block; font-weight:bold;">Allowed Customizations</label>
-                    <p style="font-size:0.8rem; color:#666; margin-top:-5px; margin-bottom:10px;">Select which options the customer can choose for this item.</p>
-                    
-                    <div style="display:flex; flex-wrap:wrap; gap:20px;">
-                        ${groupsHTML}
-                    </div>
-                </div>
-
-                <!-- DIETARY TAGS -->
-                <div class="form-group" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:5px; margin-top:10px;">
-                    <label style="margin-bottom:8px;">Dietary Tags</label>
-                    <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                        <label style="font-weight:normal; display:flex; gap:5px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="allergen" value="GF" ${currentAllergens.includes('GF') ? 'checked' : ''}> Gluten Free
-                        </label>
-                        <label style="font-weight:normal; display:flex; gap:5px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="allergen" value="V" ${currentAllergens.includes('V') ? 'checked' : ''}> Vegetarian
-                        </label>
-                        <label style="font-weight:normal; display:flex; gap:5px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="allergen" value="VG" ${currentAllergens.includes('VG') ? 'checked' : ''}> Vegan
-                        </label>
-                        <label style="font-weight:normal; display:flex; gap:5px; align-items:center; cursor:pointer;">
-                            <input type="checkbox" name="allergen" value="DF" ${currentAllergens.includes('DF') ? 'checked' : ''}> Dairy Free
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-actions-split" style="justify-content: flex-end; margin-top:20px;">
-                    <button type="submit" class="button-primary">${isEditing ? 'Save Changes' : 'Create Item'}</button>
-                </div>
-            </form>
-        </div>
-    `;
-
-    uiUtils.showModal(modalHTML);
-
-    document.getElementById('edit-item-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.textContent = "Saving...";
-
-        const formData = new FormData(e.target);
-        
-        const selectedAllergens = [];
-        e.target.querySelectorAll('input[name="allergen"]:checked').forEach(cb => selectedAllergens.push(cb.value));
-
-        // Collect Options
-        const selectedOptions = [];
-        e.target.querySelectorAll('input[name="option_tag"]:checked').forEach(cb => selectedOptions.push(cb.value));
-
-        const newItemData = {
-            name: formData.get('name'),
-            price: parseFloat(formData.get('price')),
-            category: formData.get('category'),
-            description: formData.get('description'),
-            allergens: selectedAllergens,
-            available_options: selectedOptions // Save back to DB
-        };
-
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        try {
-            if (isEditing) {
-                await api.updateMenuItem(item.id, newItemData, session.access_token);
-            } else {
-                await useAppStore.getState().menu.addMenuItemOptimistic(newItemData, session.access_token);
-            }
-            uiUtils.showToast('Item saved successfully!', 'success');
-            uiUtils.closeModal();
-            useAppStore.getState().menu.fetchMenu(); 
-        } catch (err) {
-            console.error(err);
-            uiUtils.showToast('Failed to save item.', 'error');
-            btn.disabled = false;
-        }
-    });
-}
 
 // --- 3. EDIT USER MODAL ---
 export function showEditUserModal(user) {
