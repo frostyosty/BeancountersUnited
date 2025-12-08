@@ -67,14 +67,13 @@ export const createCheckoutSlice = (set, get) => ({
             if (orderError) throw orderError;
 
             // 3. Insert Order Items
-            const orderItems = items.map(item => ({
+const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
-                // Ensure price is captured at time of sale
-                price_at_order: parseFloat(item.price) 
+                price_at_order: parseFloat(item.price),
+                selected_options: item.selectedOptions || [] // <--- SAVE THIS
             }));
-
             const { error: itemsError } = await supabase
                 .from('order_items')
                 .insert(orderItems);
@@ -135,12 +134,12 @@ export const createCheckoutSlice = (set, get) => ({
             if (orderError) throw orderError;
 
             // 2. Insert Order Items
-            const orderItems = items.map(item => ({
+const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
-                // Ensure price is captured at time of sale
-                price_at_order: parseFloat(item.price)
+                price_at_order: parseFloat(item.price),
+                selected_options: item.selectedOptions || [] // <--- SAVE THIS
             }));
 
             const { error: itemsError } = await supabase

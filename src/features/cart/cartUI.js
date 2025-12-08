@@ -33,24 +33,40 @@ export function renderCartPage() {
     // Build Items
     const cartItemsHTML = items.map(item => {
         const price = parseFloat(item.price) || 0;
+        
+        // Generate Options HTML
+        const optionsDisplay = (item.selectedOptions && item.selectedOptions.length > 0)
+            ? `<div style="font-size:0.8rem; color:#d63384; margin-top:2px; line-height:1.2;">+ ${item.selectedOptions.join(', ')}</div>`
+            : '';
+
+        // Note: Using item.cartId for the wrapper, but item.id might be needed for the buttons if your logic expects DB IDs.
+        // Best practice: The buttons should use the cartId too if you want to support multiple variants of the same item.
+        // Assuming your cartSlice logic uses cartId now:
+        const btnId = item.cartId || item.id;
+
         return `
-        <div class="cart-item" data-item-id="${item.id}" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
+        <div class="cart-item" data-item-id="${btnId}" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
+            
+            <!-- Left: Image & Info -->
             <div style="display:flex; gap:15px; align-items:center;">
                 <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" 
                      style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
                 <div>
                     <h4 style="margin:0; font-size:1rem;">${item.name}</h4>
+                    ${optionsDisplay} <!-- Injected Here -->
                     <p style="margin:0; color:#666; font-size:0.9rem;">$${price.toFixed(2)}</p>
                 </div>
             </div>
+
+            <!-- Right: Controls -->
             <div style="display:flex; align-items:center; gap:15px;">
                 <div class="quantity-selector" style="display:flex; align-items:center; border:1px solid #ddd; border-radius:4px;">
-                    <button class="quantity-btn decrease-qty" data-item-id="${item.id}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">-</button>
+                    <button class="quantity-btn decrease-qty" data-item-id="${btnId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">-</button>
                     <span style="padding:0 5px; min-width:20px; text-align:center;">${item.quantity}</span>
-                    <button class="quantity-btn increase-qty" data-item-id="${item.id}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
+                    <button class="quantity-btn increase-qty" data-item-id="${btnId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
                 </div>
                 <span style="font-weight:600; width:60px; text-align:right;">$${(price * item.quantity).toFixed(2)}</span>
-                <button class="delete-icon-btn remove-item-btn" data-item-id="${item.id}" title="Remove">×</button>
+                <button class="delete-icon-btn remove-item-btn" data-item-id="${btnId}" title="Remove">×</button>
             </div>
         </div>`;
     }).join('');

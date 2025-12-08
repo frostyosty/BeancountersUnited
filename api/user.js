@@ -22,7 +22,7 @@ export default async function handler(req, res) {
             const { data } = await supabaseAdmin.from('profiles').select('*').eq('id', user.id).single();
             return res.status(200).json(data);
         }
-if (type === 'orders') {
+        if (type === 'orders') {
             // FIX: Added 'id, price' to the nested menu_items select
             const { data } = await supabaseAdmin
                 .from('orders')
@@ -116,17 +116,17 @@ if (type === 'orders') {
         if (type === 'manual_order') {
             // FIX: Accept targetUserId
             const { items, total, customerName, dueTime, createdAt, targetUserId } = req.body;
-            
+
             // If targetUserId is provided, use it. Otherwise, fallback to the Manager's ID (user.id)
             // We already verified the requester is a manager/owner above, so this is safe.
             const assignedUserId = targetUserId || user.id;
 
             const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
                 user_id: assignedUserId, // <--- UPDATED
-                total_amount: total, 
-                status: 'completed', 
-                payment_status: 'paid', 
-                payment_method: 'manual_entry', 
+                total_amount: total,
+                status: 'completed',
+                payment_status: 'paid',
+                payment_method: 'manual_entry',
                 customer_name: customerName || 'Walk-in',
                 customer_email: null,
                 pickup_time: dueTime || new Date().toISOString(),
@@ -138,12 +138,13 @@ if (type === 'orders') {
                 throw new Error("Failed to create order header: " + (orderError?.message || "Unknown error"));
             }
 
-            // 2. Insert Items (Unchanged)
+            // 2. Insert Items
             const itemsData = items.map(i => ({
                 order_id: order.id,
                 menu_item_id: i.id,
                 quantity: i.quantity,
-                price_at_order: i.price
+                price_at_order: i.price,
+                selected_options: i.selectedOptions || [] // <--- SAVE THIS
             }));
 
             const { error: itemsError } = await supabaseAdmin.from('order_items').insert(itemsData);

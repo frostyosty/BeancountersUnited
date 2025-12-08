@@ -102,9 +102,12 @@ function renderAdminOrderViews(container, orders, role) {
         const safeName = customerName.replace(/'/g, "");
         const clickName = customerName.replace(/'/g, "\\'"); 
 
-        const itemsSummary = (order.order_items || []).map(i => 
-            `${i.quantity}x ${i.menu_items?.name || 'Item'}`
-        ).join(', ') || 'No items';
+        const itemsSummary = (order.order_items || []).map(i => {
+            const opts = (i.selected_options && i.selected_options.length > 0) 
+                ? ` <span style="color:#d63384; font-size:0.85em;">(${i.selected_options.join(', ')})</span>` 
+                : '';
+            return `${i.quantity}x ${i.menu_items?.name || 'Item'}${opts}`;
+        }).join(', ') || 'No items';
 
         const totalFormatted = `$${parseFloat(order.total_amount).toFixed(2)}`;
         const statusClass = `status-${order.status}`;

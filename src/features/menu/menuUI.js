@@ -27,6 +27,25 @@ const createMenuItemHTML = (item) => {
         `<span class="allergen-badge ${tag}">${tag}</span>`
     ).join('');
 
+    // NEW: Options Logic
+    let optionsHTML = '';
+    if (item.available_options && item.available_options.length > 0) {
+        const checkboxes = item.available_options.map(opt => `
+            <label style="display:block; margin-top:5px; font-size:0.9rem; cursor:pointer;">
+                <input type="checkbox" class="item-option-checkbox" value="${opt}"> ${opt}
+            </label>
+        `).join('');
+
+        optionsHTML = `
+            <details class="item-options-details" style="margin-top:10px; border-top:1px dashed #eee; padding-top:5px;">
+                <summary style="cursor:pointer; color:var(--primary-color); font-size:0.85rem; font-weight:600;">Specific Requirements ▾</summary>
+                <div style="padding: 5px 0 10px 10px; background:#fcfcfc;">
+                    ${checkboxes}
+                </div>
+            </details>
+        `;
+    }
+
     return `
         <div class="menu-item-card" data-item-id="${item.id}">
             <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" class="menu-item-image">
@@ -36,6 +55,10 @@ const createMenuItemHTML = (item) => {
                     <div class="allergen-container">${allergenBadges}</div>
                 </div>
                 <p class="menu-item-description">${item.description || ''}</p>
+                
+                <!-- NEW: Options Section -->
+                ${optionsHTML}
+                
                 <div class="menu-item-footer">
                     <p class="menu-item-price">$${parseFloat(item.price).toFixed(2)}</p>
                     <button class="add-to-cart-btn button-primary" data-item-id="${item.id}">Add to Cart</button>
@@ -131,14 +154,28 @@ function attachMenuListeners() {
         const target = event.target;
         const menuItemCard = target.closest('.menu-item-card');
         
-        if (menuItemCard && target.closest('.add-to-cart-btn')) {
+ if (menuItemCard && target.closest('.add-to-cart-btn')) {
             const itemId = menuItemCard.dataset.itemId;
             const menuItem = useAppStore.getState().menu.items.find(i => i.id === itemId);
             if (menuItem) {
-                useAppStore.getState().cart.addItem(menuItem);
-                uiUtils.showToast(`${menuItem.name} added to cart!`, 'success');
+                // NEW: Collect selected options
+                const selectedOptions = [];
+                menuItemCard.querySelectorAll('.item-option-checkbox:checked').forEach(cb => {
+                    selectedOptions.push(cb.value);
+                });
+
+                // Pass options to cart
+                useAppStore.getState().cart.addItem(menuItem, selectedOptions);
+                uiUtils.showToast(`${menuItem.name} added!`, 'success');
+                
+                // Optional: Reset checkboxes after add?
+                menuItemCard.querySelectorAll('.item-option-checkbox').forEach(cb => cb.checked = false);
+                const details = menuItemCard.querySelector('details');
+                if(details) details.removeAttribute('open');
             }
         }
+
+        
         else if (menuItemCard && target.closest('.edit-item-btn')) {
             alert(`Use the Owner Dashboard to edit this item.`);
         }
