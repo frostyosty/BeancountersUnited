@@ -64,27 +64,34 @@ function getMenuLayoutHTML() {
             </ul>
         </div>`;
 }
-
-
+// --- MAIN RENDER FUNCTION (God Mode) ---
 export function renderGodDashboard() {
     console.log("--- [GodDashboard] Render START ---");
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Fetch Data (Safely)
-    const { users } = useAppStore.getState().admin;
-    if (!users || users.length === 0) {
-        console.log("[GodDashboard] Fetching Users...");
+    // 1. Fetch Data
+    const adminState = useAppStore.getState().admin;
+    
+    // Fetch Users (for User Management)
+    if (!adminState.users || adminState.users.length === 0) {
         useAppStore.getState().admin.fetchAllUsers(); 
+    }
+    // Fetch Clients (for Client Relationships) - FIX: Added this
+    if (!adminState.clients || adminState.clients.length === 0) {
+        useAppStore.getState().admin.fetchClients();
     }
 
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
 
+    // 2. Retrieve State
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
-    const { orders } = useAppStore.getState().orderHistory;
+    // We don't strictly need 'orders' here anymore as we use 'clients', but keeping for safety
+    const { orders } = useAppStore.getState().orderHistory; 
+    const { users, clients } = useAppStore.getState().admin;
 
     if (isLoadingMenu || isLoadingSettings) {
         mainContent.innerHTML = `<div class="loading-spinner">Loading God Dashboard...</div>`;
@@ -96,7 +103,9 @@ export function renderGodDashboard() {
     }
 
     try {
-        // --- 1. User Management ---
+        // --- 3. Render HTML Components ---
+
+        // User Management (Exclusive)
         let userManagementHTML = '';
         if (users) {
             const userRows = users.map(user => `
@@ -120,70 +129,64 @@ export function renderGodDashboard() {
                 </section>`;
         }
 
-        // --- 2. Render Components (With Logging) ---
         console.log("1. Rendering Global Settings...");
-        if (typeof components.renderGlobalSettingsSection !== 'function') throw new Error("renderGlobalSettingsSection is missing!");
         const globalSettingsHTML = components.renderGlobalSettingsSection(settings);
 
-        console.log("2. Rendering Active Orders...");
+        console.log("2. Rendering Client Relationships...");
         if (typeof components.renderClientRelationshipsSection !== 'function') {
             throw new Error("renderClientRelationshipsSection not found in dashboardComponents.js");
         }
-        const activeOrdersHTML = components.renderClientRelationshipsSection(orders);
+        // FIX: Renamed variable to match template and passed 'clients' data
+        const clientSectionHTML = components.renderClientRelationshipsSection(clients || []);
 
         console.log("3. Rendering Menu...");
-        if (typeof components.renderMenuSection !== 'function') throw new Error("renderMenuSection is missing!");
         const menuSectionHTML = components.renderMenuSection(
             menuItems, 
             currentSort, 
             getCategoryColor, 
             getAllergenBadges, 
             getSortIcon, 
-            settings.showAllergens
+            settings.showAllergens,
+            settings // Pass settings for color theme logic
         );
 
         console.log("4. Rendering Appearance...");
-        if (typeof components.renderAppearanceSection !== 'function') throw new Error("renderAppearanceSection is missing!");
         const appearanceHTML = components.renderAppearanceSection(settings);
 
         console.log("5. Rendering Header...");
-        if (typeof components.renderHeaderSection !== 'function') throw new Error("renderHeaderSection is missing!");
         const headerHTML = components.renderHeaderSection(settings.headerSettings || {});
 
-        console.log("6. Rendering Payment...");
-        if (typeof components.renderPaymentSection !== 'function') throw new Error("renderPaymentSection is missing!");
+        console.log("6. Rendering About & Payment...");
+        const aboutHTML = components.renderAboutConfigSection(settings);
         const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
 
-        // --- 3. Final Assembly ---
+        // --- 4. Final Assembly ---
         console.log("7. Assembling HTML...");
-            const aboutHTML = components.renderAboutConfigSection(settings); // NEW
 
-    mainContent.innerHTML = `
-        <div class="dashboard-container">
-            <h2>God Mode Dashboard</h2>
-            ${userManagementHTML}
-            ${globalSettingsHTML}
-            ${clientSectionHTML}
-            ${menuSectionHTML}
-            
-            <section class="dashboard-section">
-                <h3>Menu Categories</h3>
-                ${getMenuLayoutHTML()}
-            </section>
+        mainContent.innerHTML = `
+            <div class="dashboard-container">
+                <h2>God Mode Dashboard</h2>
+                ${userManagementHTML}
+                ${globalSettingsHTML}
+                ${clientSectionHTML} <!-- Client Table -->
+                ${menuSectionHTML}
+                
+                <section class="dashboard-section">
+                    <h3>Menu Categories</h3>
+                    ${getMenuLayoutHTML()}
+                </section>
 
-            ${headerHTML}
-            ${appearanceHTML}
-            ${aboutHTML}  <!-- Add here -->
-            ${paymentHTML}
-        </div>
-    `;
+                ${headerHTML}
+                ${appearanceHTML}
+                ${aboutHTML}
+                ${paymentHTML}
+            </div>
+        `;
 
         console.log("8. Attaching Listeners...");
-        if (typeof attachOwnerDashboardListeners !== 'function') throw new Error("attachOwnerDashboardListeners is missing!");
         attachOwnerDashboardListeners();
         
         console.log("9. Initializing Sortable...");
-        if (typeof initializeSortable !== 'function') throw new Error("initializeSortable is missing!");
         initializeSortable();
 
         console.log("--- [GodDashboard] Render COMPLETE ---");
