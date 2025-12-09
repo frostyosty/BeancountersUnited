@@ -1335,3 +1335,32 @@ input[type="color"] {
 
     margin-bottom: 5px;
 }
+
+
+
+@media (max-width: 768px) {
+    /* ... existing mobile styles ... */
+
+    /* FIX: Force Logo to absolute center on mobile */
+    #main-header h1 {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto; /* Let it size itself */
+        margin: 0;
+        grid-column: unset; /* Detach from grid */
+        white-space: nowrap;
+        pointer-events: none; /* Let clicks pass through if it overlaps buttons */
+    }
+    
+    /* Ensure hamburger stays clickable on top */
+    .hamburger-button {
+        z-index: 2200;
+        margin-left: auto; /* Push to right */
+    }
+    
+    /* Ensure Nav container is right-aligned */
+    #main-header nav {
+        justify-content: flex-end;
+    }
+}

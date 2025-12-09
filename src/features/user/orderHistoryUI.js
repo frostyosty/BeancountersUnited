@@ -12,26 +12,33 @@ const STEPPER_CSS = `
     .stepper-val { font-weight: 600; min-width: 20px; text-align: center; }
     .hidden { display: none !important; }
     
+    /* Archive Table Styles */
     .archive-section { background-color: #f0f0f0; border-top: 4px solid #ccc; padding: 20px; margin-top: 40px; border-radius: 8px; }
     .archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #666; }
     .archive-table { width: 100%; border-collapse: collapse; opacity: 0.8; }
     .archive-table th { text-align: left; padding: 8px; border-bottom: 2px solid #ccc; font-size: 0.85rem; }
     .archive-table td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 0.85rem; color: #555; }
     .archive-table tr:hover { background-color: #e9e9e9; opacity: 1; }
+
+    /* Modal Tabs */
+    .modal-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; }
+    .modal-tab { padding: 6px 12px; border-radius: 20px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+    .modal-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 </style>
 `;
 
-let timerInterval = null; // Store interval ID to clear it later
+let timerInterval = null;
 
 export function renderOrderHistoryPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Clear any existing timer when re-rendering
     if (timerInterval) clearInterval(timerInterval);
 
     useAppStore.getState().orderHistory.fetchOrderHistory();
     useAppStore.getState().menu.fetchMenu(); 
+    // Ensure settings are loaded for categories
+    useAppStore.getState().siteSettings.fetchSiteSettings(); 
 
     const { orders, isLoading, error } = useAppStore.getState().orderHistory;
     const { getUserRole } = useAppStore.getState().auth;
@@ -49,52 +56,34 @@ export function renderOrderHistoryPage() {
 
 // --- ADMIN VIEW (Live + Archive) ---
 function renderAdminOrderViews(container, orders, role) {
-    // 1. Split Orders
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
     const archivedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'preparing');
     
-    // Sort
     activeOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     archivedOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // --- Helper: Date Formatter ---
     const formatDueTime = (isoString) => {
         const date = new Date(isoString);
         const now = new Date();
-        
-        // Reset times to midnight for day comparison
         const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        // Check if same day
-        if (d1.getTime() === d2.getTime()) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-        
-        // Calculate difference in days
-        const diffTime = Math.abs(d2 - d1);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        
+        if (d1.getTime() === d2.getTime()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const diffDays = Math.ceil(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24)); 
         if (diffDays === 1) return 'Yesterday';
         return `${diffDays} days ago`;
     };
 
-    // --- Helper: Row Generator ---
     const createRow = (order, isLive) => {
-        // 1. Filed At (Full Timestamp)
-        // Format: "12/09/2025, 10:30 AM"
-        const filedAt = new Date(order.created_at).toLocaleString([], { 
-            year: 'numeric', month: 'numeric', day: 'numeric', 
-            hour: '2-digit', minute: '2-digit' 
-        });
+        const time = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const date = new Date(order.created_at).toLocaleDateString();
+        const displayTime = isLive ? time : `${date} ${time}`;
 
-        // 2. Due Time Logic
         let dueDisplay = '';
         if (isLive) {
+            // FIX: Ensure a fallback if pickup_time is missing
             const dueTimeStr = order.pickup_time || order.created_at;
             dueDisplay = `<span class="live-timer" data-due="${dueTimeStr}">...</span>`;
         } else {
-            // Use custom formatter (Same day vs Days ago)
             dueDisplay = formatDueTime(order.pickup_time || order.created_at);
         }
 
@@ -102,24 +91,19 @@ function renderAdminOrderViews(container, orders, role) {
         const safeName = customerName.replace(/'/g, "");
         const clickName = customerName.replace(/'/g, "\\'"); 
 
-        const itemsSummary = (order.order_items || []).map(i => {
-            const opts = (i.selected_options && i.selected_options.length > 0) 
-                ? ` <span style="color:#d63384; font-size:0.85em;">(${i.selected_options.join(', ')})</span>` 
-                : '';
-            return `${i.quantity}x ${i.menu_items?.name || 'Item'}${opts}`;
-        }).join(', ') || 'No items';
+        const itemsSummary = (order.order_items || []).map(i => 
+            `${i.quantity}x ${i.menu_items?.name || 'Item'}`
+        ).join(', ') || 'No items';
 
         const totalFormatted = `$${parseFloat(order.total_amount).toFixed(2)}`;
         const statusClass = `status-${order.status}`;
         
-        // Actions
         const dismissBtn = `<button class="delete-icon-btn action-btn" data-action="dismiss" data-name="${safeName}" data-total="${totalFormatted}" title="Archive">×</button>`;
         const deleteBtn = (role === 'god') 
             ? `<button class="delete-icon-btn action-btn" data-action="delete" title="Permanent Delete" style="color:#d00;">🗑</button>` 
             : '';
         const actionCell = isLive ? `<td>${dismissBtn}</td>` : (role === 'god' ? `<td>${deleteBtn}</td>` : '<td></td>');
 
-        // Customer Clickable Cell
         const customerCell = `
             <td style="padding:12px;">
                 <span class="client-name-btn" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">
@@ -134,7 +118,7 @@ function renderAdminOrderViews(container, orders, role) {
                 ${customerCell}
                 <td style="padding:12px; font-weight:bold;">${totalFormatted}</td>
                 <td style="padding:12px;"><span class="badge ${statusClass}">${order.status.toUpperCase()}</span></td>
-                <td style="padding:12px; color:#666; font-size:0.85rem; white-space:nowrap;">${filedAt}</td>
+                <td style="padding:12px; color:#666; font-size:0.85rem; white-space:nowrap;">${displayTime}</td>
                 ${actionCell}
             </tr>
         `;
@@ -143,7 +127,6 @@ function renderAdminOrderViews(container, orders, role) {
     const liveRows = activeOrders.map(o => createRow(o, true)).join('');
     const archiveRows = archivedOrders.map(o => createRow(o, false)).join('');
 
-    // Headers
     const headersHTML = `
         <tr>
             <th style="padding:12px; text-align:left;">Due</th>
@@ -159,8 +142,6 @@ function renderAdminOrderViews(container, orders, role) {
     container.innerHTML = `
         ${STEPPER_CSS}
         <div class="dashboard-container">
-            
-            <!-- LIVE ORDERS -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h2 style="color: var(--primary-color);">Live Orders</h2>
                 <button id="btn-manual-order" class="button-secondary small" style="font-weight: 600;">+ Phone Order</button>
@@ -177,20 +158,16 @@ function renderAdminOrderViews(container, orders, role) {
                 </table>
             </div>
 
-            <!-- ARCHIVE -->
             <div class="archive-section">
                 <div class="archive-header">
                     <h3 style="margin:0;">Archived Orders (Log)</h3>
                     <button id="toggle-archive-btn" class="button-secondary small">Show/Hide</button>
                 </div>
-                
                 <div id="archive-table-container" style="display:none;">
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="archive-table">
-                            <thead>
-                                ${headersHTML}
-                            </thead>
+                            <thead>${headersHTML}</thead>
                             <tbody id="archive-tbody">
                                 ${archiveRows.length > 0 ? archiveRows : '<tr><td colspan="7">No history found.</td></tr>'}
                             </tbody>
@@ -201,47 +178,44 @@ function renderAdminOrderViews(container, orders, role) {
         </div>
     `;
 
-    // --- Listeners ---
-    document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
+    // FIX: Start Timers!
+    startLiveTimers();
 
+    document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
+    // ... (toggle/search/action listeners remain same as previous code) ...
+    // Just to ensure completeness, re-attaching common listeners:
     const archiveContainer = document.getElementById('archive-table-container');
     const toggleBtn = document.getElementById('toggle-archive-btn');
-    if (toggleBtn) {
-        toggleBtn.onclick = () => {
-            const isHidden = archiveContainer.style.display === 'none';
-            archiveContainer.style.display = isHidden ? 'block' : 'none';
-            toggleBtn.textContent = isHidden ? 'Hide Archive' : 'Show Archive';
-        };
-    }
+    if (toggleBtn) toggleBtn.onclick = () => {
+        const isHidden = archiveContainer.style.display === 'none';
+        archiveContainer.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.textContent = isHidden ? 'Hide Archive' : 'Show Archive';
+    };
 
     const searchInput = document.getElementById('archive-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('#archive-tbody tr').forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-            });
+    if (searchInput) searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('#archive-tbody tr').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
         });
-    }
+    });
     
-    // Row Actions
     container.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation(); 
             const orderId = e.target.closest('tr').dataset.orderId;
             const action = e.target.dataset.action;
-            const name = e.target.dataset.name || 'Order';
-            const total = e.target.dataset.total || '';
+            const name = e.target.dataset.name;
+            const total = e.target.dataset.total;
 
             if (action === 'dismiss') {
                 useAppStore.getState().orderHistory.dismissOrder(orderId);
                 uiUtils.showToast(`Dismissed ${name}'s ${total} Order`, "info");
-            } 
-            else if (action === 'delete') {
+            } else if (action === 'delete') {
                 const { error } = await supabase.from('orders').delete().eq('id', orderId);
                 if (!error) {
                     uiUtils.showToast("Record deleted.", "success");
-                    useAppStore.getState().orderHistory.fetchOrderHistory();
+                    useAppStore.getState().orderHistory.fetchOrderHistory(true);
                 } else {
                     uiUtils.showToast("Delete failed.", "error");
                 }
@@ -323,9 +297,18 @@ function renderCustomerOrderList(container, orders) {
 // --- MANUAL ORDER MODAL ---
 function showManualOrderModal() {
     const { items: menuItems } = useAppStore.getState().menu;
+    // Get Categories
+    const { getMenuCategories } = useAppStore.getState().siteSettings;
+    const categories = ['All', ...getMenuCategories()];
     
+    // --- 1. Category Tabs HTML ---
+    const tabsHtml = categories.map(cat => 
+        `<button class="modal-tab ${cat === 'All' ? 'active' : ''}" data-category="${cat}">${cat}</button>`
+    ).join('');
+
+    // --- 2. Items HTML (All items rendered initially, filtered by CSS) ---
     const itemRows = menuItems.map(item => `
-        <div class="manual-order-row" data-item-id="${item.id}" data-price="${item.price}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
+        <div class="manual-order-row" data-category="${item.category || 'Uncategorized'}" data-item-id="${item.id}" data-price="${item.price}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
             <div style="flex:2; font-weight:500;">${item.name} <span style="color:#666; font-size:0.9rem; font-weight:normal;">($${parseFloat(item.price).toFixed(2)})</span></div>
             <div style="flex:1;">
                 <div class="stepper-container">
@@ -340,6 +323,7 @@ function showManualOrderModal() {
     const modalHTML = `
         <div class="modal-form-container">
             <h3>Create Phone Order</h3>
+            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-weight:600; display:block; margin-bottom:5px;">Customer Name</label>
@@ -358,12 +342,23 @@ function showManualOrderModal() {
                     <input type="time" id="manual-due-time-input" style="display:none; width:100%; margin-top:5px; padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </div>
             </div>
-            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">${itemRows}</div>
+
+            <!-- TABS CONTAINER -->
+            <div class="modal-tabs" id="manual-order-tabs">
+                ${tabsHtml}
+            </div>
+
+            <div id="manual-items-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">
+                ${itemRows}
+            </div>
+            
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-top:10px; border-top:2px solid #eee;">
                 <span style="font-size:1.1rem;">Total Amount:</span>
                 <span style="font-size:1.5rem; font-weight:bold;">$<span id="manual-order-total">0.00</span></span>
             </div>
-            <div class="form-actions"><button id="submit-manual-order" class="button-primary" style="width:100%; padding:12px;" disabled>Add Items to Order</button></div>
+            <div class="form-actions">
+                <button id="submit-manual-order" class="button-primary" style="width:100%; padding:12px;" disabled>Add Items to Order</button>
+            </div>
         </div>
     `;
     
@@ -376,6 +371,27 @@ function showManualOrderModal() {
     const dueSelect = document.getElementById('manual-due-select');
     const dueTimeInput = document.getElementById('manual-due-time-input');
     const selections = {}; 
+
+    // --- Tab Switching Logic ---
+    const tabsContainer = document.getElementById('manual-order-tabs');
+    tabsContainer.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('modal-tab')) return;
+        
+        // Active Class
+        tabsContainer.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Filter Items
+        const cat = e.target.dataset.category;
+        const rows = document.querySelectorAll('.manual-order-row');
+        rows.forEach(row => {
+            if (cat === 'All' || row.dataset.category === cat) {
+                row.style.display = 'flex';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
 
     dueSelect.addEventListener('change', (e) => {
         if (e.target.value === 'other') {
@@ -390,7 +406,7 @@ function showManualOrderModal() {
     const updateTotal = () => {
         let total = 0;
         let count = 0;
-        useAppStore.getState().menu.items.forEach(item => {
+        menuItems.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 total += qty * parseFloat(item.price);
@@ -429,10 +445,13 @@ function showManualOrderModal() {
     });
 
     submitBtn.addEventListener('click', async () => {
+        // Validation: Check Name
+        const customerName = nameInput.value.trim();
+        console.log("Submitting Name:", customerName); // Debug Log
+
         const items = [];
         let total = 0;
-        
-        useAppStore.getState().menu.items.forEach(item => {
+        menuItems.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 items.push({ id: item.id, price: parseFloat(item.price), quantity: qty });
@@ -453,7 +472,7 @@ function showManualOrderModal() {
         submitBtn.disabled = true;
         
         const success = await useAppStore.getState().orderHistory.createManualOrder({
-            customerName: nameInput.value.trim() || "Phone Order",
+            customerName: customerName || "Phone Order",
             dueTime: dueTimestamp.toISOString(),
             items,
             total
@@ -467,4 +486,49 @@ function showManualOrderModal() {
             submitBtn.disabled = false;
         }
     });
+}
+
+function renderCustomerOrderList(container, orders) {
+    if (orders.length === 0) {
+        container.innerHTML = `<div class="empty-state"><h2>No Past Orders</h2><p>You haven't placed any orders yet.</p><a href="#menu" class="button-primary">Browse Menu</a></div>`;
+        return;
+    }
+    const ordersHTML = orders.map(order => `
+        <div class="order-history-card" style="margin-bottom:15px; padding:15px; border:1px solid #eee; border-radius:8px;">
+            <div class="order-card-header" style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
+                <div><h4 style="margin:0;">Order #${order.id.slice(0,4)}</h4><small style="color:#666;">${new Date(order.created_at).toLocaleDateString()}</small></div>
+                <div style="text-align:right;"><span class="status-badge ${order.status}" style="font-weight:bold; color:var(--primary-color);">${order.status.toUpperCase()}</span><div style="font-weight:bold;">$${parseFloat(order.total_amount).toFixed(2)}</div></div>
+            </div>
+            <ul class="order-card-items" style="list-style:none; padding:0;">${(order.order_items||[]).map(i => `<li style="margin-bottom:5px;">${i.quantity} x ${i.menu_items?.name || 'Item'}</li>`).join('')}</ul>
+        </div>
+    `).join('');
+    container.innerHTML = `<div class="dashboard-container"><h2>Your Order History</h2><div class="order-history-list">${ordersHTML}</div></div>`;
+}
+
+// Ensure timer logic is present
+function startLiveTimers() {
+    const update = () => {
+        const now = new Date();
+        document.querySelectorAll('.live-timer').forEach(el => {
+            const dueStr = el.dataset.due;
+            if (!dueStr) return;
+            const due = new Date(dueStr);
+            const diffMs = due - now;
+            const diffMins = Math.ceil(diffMs / 60000);
+            el.classList.remove('overdue', 'due-soon', 'okay');
+            if (diffMins < 0) el.classList.add('overdue');
+            else if (diffMins <= 10) el.classList.add('due-soon');
+            else el.classList.add('okay');
+            if (diffMins < 0) el.textContent = `${Math.abs(diffMins)}m ago`;
+            else if (diffMins === 0) el.textContent = "Due Now";
+            else if (diffMins < 60) el.textContent = `${diffMins}m`;
+            else {
+                const hours = Math.floor(diffMins / 60);
+                const mins = diffMins % 60;
+                el.textContent = `${hours}h ${mins}m`;
+            }
+        });
+    };
+    update(); 
+    timerInterval = setInterval(update, 60000); 
 }

@@ -4,7 +4,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
-import { showCustomerCRMModal, showEditItemModal, showEditUserModal, showImageEditorModal } from './adminModals.js'; 
+import { showCustomerCRMModal, showEditItemModal, showEditUserModal, showImageEditorModal } from './adminModals.js';
 import { openHeaderLogoEditor } from './headerEditor.js';
 
 export let currentSort = { column: 'category', direction: 'asc' };
@@ -59,7 +59,7 @@ export function attachOwnerDashboardListeners() {
             currentSort.column = col;
             useAppStore.getState().ui.triggerPageRender();
         }
-        if(target.matches('#add-category-btn')) {
+        if (target.matches('#add-category-btn')) {
             const input = document.getElementById('new-category-name');
             const newCat = input.value.trim();
             if (!newCat) return;
@@ -89,14 +89,14 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Logo removed.', 'success');
         }
         if (target.matches('#clear-bg-btn')) {
-             const { data: { session } } = await supabase.auth.getSession();
-             const { settings } = useAppStore.getState().siteSettings;
-             const newTheme = { ...settings.themeVariables, '--body-background-image': 'none' };
-             await api.updateSiteSettings({ themeVariables: newTheme }, session.access_token);
-             document.documentElement.style.setProperty('--body-background-image', 'none');
-             document.getElementById('bg-preview').style.display = 'none';
-             target.style.display = 'none';
-             uiUtils.showToast("Background removed.", "success");
+            const { data: { session } } = await supabase.auth.getSession();
+            const { settings } = useAppStore.getState().siteSettings;
+            const newTheme = { ...settings.themeVariables, '--body-background-image': 'none' };
+            await api.updateSiteSettings({ themeVariables: newTheme }, session.access_token);
+            document.documentElement.style.setProperty('--body-background-image', 'none');
+            document.getElementById('bg-preview').style.display = 'none';
+            target.style.display = 'none';
+            uiUtils.showToast("Background removed.", "success");
         }
         if (target.id === 'open-header-creator-btn') {
             openHeaderLogoEditor();
@@ -110,12 +110,12 @@ export function attachOwnerDashboardListeners() {
             const { data: { session } } = await supabase.auth.getSession();
             const currentSettings = useAppStore.getState().siteSettings.settings;
 
-            const settingsUpdate = { 
-                websiteName: formData.get('websiteName'), 
+            const settingsUpdate = {
+                websiteName: formData.get('websiteName'),
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
                 logoUrl: currentSettings.logoUrl
             };
-            
+
             await api.updateSiteSettings(settingsUpdate, session.access_token);
             uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
@@ -129,7 +129,7 @@ export function attachOwnerDashboardListeners() {
             uiUtils.showToast('Menu settings saved.', 'success', 1000);
             useAppStore.getState().siteSettings.fetchSiteSettings();
         },
-        
+
         ownerPermissions: async (form) => {
             const permissions = {
                 canEditTheme: form.canEditTheme.checked,
@@ -164,7 +164,9 @@ export function attachOwnerDashboardListeners() {
             };
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ paymentConfig }, session.access_token);
-            uiUtils.showToast('Payment saved.', 'success', 1000);
+
+            // FIX: Changed text
+            uiUtils.showToast('Payment settings updated.', 'success', 1000);
         },
 
         visualTheme: async () => {
@@ -192,17 +194,17 @@ export function attachOwnerDashboardListeners() {
                 bgParallax: formData.get('bgParallax') === 'on',
                 bgAnimation: formData.get('bgAnimation') === 'on'
             };
-            
+
             const themeVariables = { ...settings.themeVariables };
             container.querySelectorAll('[data-css-var]').forEach(input => {
                 themeVariables[input.dataset.cssVar] = input.value;
             });
 
             await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
-            
+
             const currentSettings = useAppStore.getState().siteSettings.settings;
             const newSettings = { ...currentSettings, uiConfig, themeVariables: { ...currentSettings.themeVariables, ...themeVariables } };
-            
+
             uiUtils.applyGlobalBackground(newSettings);
             uiUtils.showToast('Appearance saved.', 'success', 1000);
         },
@@ -238,7 +240,7 @@ export function attachOwnerDashboardListeners() {
 
         if (form?.id === 'global-settings-form' && target.type === 'text') debouncedSave.global(form);
         if (form?.id === 'payment-settings-form' && target.type === 'number') debouncedSave.payment(form);
-        
+
         if (target.matches('[data-css-var]')) {
             document.documentElement.style.setProperty(target.dataset.cssVar, target.value);
             debouncedSave.theme();
@@ -286,7 +288,7 @@ export function attachOwnerDashboardListeners() {
                     document.getElementById('bg-preview').src = url;
                     document.getElementById('bg-preview').style.display = 'block';
                     document.getElementById('clear-bg-btn').style.display = 'inline-block';
-                    
+
                     // Update Radio
                     const radio = document.querySelector('input[name="backgroundType"][value="image"]');
                     if (radio) radio.checked = true;
@@ -309,7 +311,7 @@ export function attachOwnerDashboardListeners() {
         // Background Type Toggle Logic
         if (target.name === 'backgroundType') {
             container.querySelectorAll('.bg-control-group').forEach(el => el.style.display = 'none');
-            const type = target.value; 
+            const type = target.value;
             const el = document.getElementById(`bg-ctrl-${type}`);
             if (el) el.style.display = 'block';
             saveFunctions.appearanceSettings(form); // Autosave type change
@@ -341,9 +343,9 @@ window.handleItemRowClick = (itemId) => {
 export function initializeSortable() {
     const list = document.getElementById('category-list');
     if (!list || list.dataset.sortableInitialized === 'true') return;
-    new Sortable(list, { 
-        animation: 150, 
-        handle: '.drag-handle-wrapper', 
+    new Sortable(list, {
+        animation: 150,
+        handle: '.drag-handle-wrapper',
         onEnd: async (evt) => {
             const items = Array.from(list.children);
             const newOrder = items.map(li => li.dataset.categoryName);
@@ -355,13 +357,13 @@ export function initializeSortable() {
 }
 
 window.handleOrderRowClick = (userId, manualNameOverride = null) => {
-    const event = window.event; 
+    const event = window.event;
     const target = event.target;
     if (target.closest('button')) return;
 
-    if (!userId || userId === 'null' || userId === 'undefined') { 
-        uiUtils.showToast("Guest order - no history available.", "info"); 
-        return; 
+    if (!userId || userId === 'null' || userId === 'undefined') {
+        uiUtils.showToast("Guest order - no history available.", "info");
+        return;
     }
     showCustomerCRMModal(userId, manualNameOverride);
 };
@@ -393,7 +395,7 @@ window.handleMergeClick = (sourceId) => {
 
 window.showAddPastOrderModal = (prefillProfile = null) => {
     const { items: menuItems } = useAppStore.getState().menu;
-    
+
     const modalHTML = `
         <div class="modal-form-container">
             <h3>Add Past Order Record</h3>
@@ -424,22 +426,22 @@ window.showAddPastOrderModal = (prefillProfile = null) => {
             </div>
         </div>
     `;
-    
+
     uiUtils.showModal(modalHTML);
-    
+
     // Default date
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('past-order-date').value = now.toISOString().slice(0,16);
+    document.getElementById('past-order-date').value = now.toISOString().slice(0, 16);
 
     document.getElementById('save-past-order').onclick = async () => {
         const name = document.getElementById('past-client-name').value;
         const dateVal = document.getElementById('past-order-date').value;
         const createdAt = new Date(dateVal).toISOString();
-        
+
         const items = [];
         let total = 0;
-        
+
         document.querySelectorAll('.past-item-qty').forEach(input => {
             const qty = parseInt(input.value);
             if (qty > 0) {
@@ -448,24 +450,24 @@ window.showAddPastOrderModal = (prefillProfile = null) => {
                 total += qty * price;
             }
         });
-        
+
         if (items.length === 0) { uiUtils.showToast("No items selected", "error"); return; }
 
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         try {
             await api.createManualOrder({
                 customerName: name || "Past Client",
                 items,
                 total,
-                createdAt, 
+                createdAt,
                 dueTime: createdAt,
                 targetUserId: prefillProfile ? prefillProfile.id : null // FIX: Pass ID
             }, session.access_token);
-            
+
             uiUtils.showToast("Past order recorded", "success");
             uiUtils.closeModal();
-            
+
             // Refresh data based on context
             if (prefillProfile) {
                 // If we are in the CRM view, refresh that view? 
@@ -475,8 +477,8 @@ window.showAddPastOrderModal = (prefillProfile = null) => {
             } else {
                 useAppStore.getState().admin.fetchClients();
             }
-            
-        } catch(e) {
+
+        } catch (e) {
             uiUtils.showToast(e.message, "error");
         }
     };

@@ -102,20 +102,18 @@ const orderItems = items.map(item => ({
     },
 
     // --- ACTION: STRIPE PAYMENT SUCCESS ---
+     // --- ACTION: STRIPE PAYMENT SUCCESS ---
     submitPaidOrder: async (paymentIntent) => {
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
-            // FIX: Get Profile
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            if (!user) throw new Error("User session missing during payment finalization.");
-            
-            // FIX: Determine Name
+            if (!user) throw new Error("User session missing.");
             const customerName = profile?.full_name || profile?.email || 'Customer';
 
-            // 1. Insert Order Header (Marked as PAID)
+            // 1. Insert Order Header
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([{
@@ -124,9 +122,9 @@ const orderItems = items.map(item => ({
                     status: 'pending',        
                     payment_status: 'paid',   
                     payment_method: 'stripe',
-                    // FIX: Include Name
                     customer_name: customerName,
-                    customer_email: user.email
+                    customer_email: user.email,
+                    pickup_time: new Date().toISOString() // <--- ADD THIS LINE
                 }])
                 .select()
                 .single();
