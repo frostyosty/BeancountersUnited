@@ -261,38 +261,6 @@ function startLiveTimers() {
     timerInterval = setInterval(update, 60000); // Run every minute
 }
 
-// --- CUSTOMER VIEW ---
-function renderCustomerOrderList(container, orders) {
-    if (orders.length === 0) {
-        container.innerHTML = `<div class="empty-state"><h2>No Past Orders</h2><p>You haven't placed any orders yet.</p><a href="#menu" class="button-primary">Browse Menu</a></div>`;
-        return;
-    }
-
-    const ordersHTML = orders.map(order => {
-        const date = new Date(order.created_at).toLocaleDateString();
-        const items = order.order_items || [];
-        
-        return `
-        <div class="order-history-card" style="margin-bottom:15px; padding:15px; border:1px solid #eee; border-radius:8px;">
-            <div class="order-card-header" style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
-                <div>
-                    <h4 style="margin:0;">Order #${order.id.slice(0,4)}</h4>
-                    <small style="color:#666;">${date}</small>
-                </div>
-                <div style="text-align:right;">
-                    <span class="status-badge ${order.status}" style="font-weight:bold; color:var(--primary-color);">${order.status.toUpperCase()}</span>
-                    <div style="font-weight:bold;">$${parseFloat(order.total_amount).toFixed(2)}</div>
-                </div>
-            </div>
-            <ul class="order-card-items" style="list-style:none; padding:0;">
-                ${items.map(i => `<li style="margin-bottom:5px;">${i.quantity} x ${i.menu_items?.name || 'Item'}</li>`).join('')}
-            </ul>
-        </div>
-    `;
-    }).join('');
-
-    container.innerHTML = `<div class="dashboard-container"><h2>Your Order History</h2><div class="order-history-list">${ordersHTML}</div></div>`;
-}
 
 // --- MANUAL ORDER MODAL ---
 function showManualOrderModal() {
@@ -488,6 +456,7 @@ function showManualOrderModal() {
     });
 }
 
+
 function renderCustomerOrderList(container, orders) {
     if (orders.length === 0) {
         container.innerHTML = `<div class="empty-state"><h2>No Past Orders</h2><p>You haven't placed any orders yet.</p><a href="#menu" class="button-primary">Browse Menu</a></div>`;
@@ -503,6 +472,34 @@ function renderCustomerOrderList(container, orders) {
         </div>
     `).join('');
     container.innerHTML = `<div class="dashboard-container"><h2>Your Order History</h2><div class="order-history-list">${ordersHTML}</div></div>`;
+}
+
+// Ensure timer logic is present
+function startLiveTimers() {
+    const update = () => {
+        const now = new Date();
+        document.querySelectorAll('.live-timer').forEach(el => {
+            const dueStr = el.dataset.due;
+            if (!dueStr) return;
+            const due = new Date(dueStr);
+            const diffMs = due - now;
+            const diffMins = Math.ceil(diffMs / 60000);
+            el.classList.remove('overdue', 'due-soon', 'okay');
+            if (diffMins < 0) el.classList.add('overdue');
+            else if (diffMins <= 10) el.classList.add('due-soon');
+            else el.classList.add('okay');
+            if (diffMins < 0) el.textContent = `${Math.abs(diffMins)}m ago`;
+            else if (diffMins === 0) el.textContent = "Due Now";
+            else if (diffMins < 60) el.textContent = `${diffMins}m`;
+            else {
+                const hours = Math.floor(diffMins / 60);
+                const mins = diffMins % 60;
+                el.textContent = `${hours}h ${mins}m`;
+            }
+        });
+    };
+    update(); 
+    timerInterval = setInterval(update, 60000); 
 }
 
 // Ensure timer logic is present
