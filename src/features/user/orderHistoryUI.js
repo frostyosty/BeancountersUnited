@@ -224,43 +224,6 @@ function renderAdminOrderViews(container, orders, role) {
     });
 }
 
-function startLiveTimers() {
-    const update = () => {
-        const now = new Date();
-        document.querySelectorAll('.live-timer').forEach(el => {
-            const dueStr = el.dataset.due;
-            if (!dueStr) return;
-            
-            const due = new Date(dueStr);
-            const diffMs = due - now;
-            const diffMins = Math.ceil(diffMs / 60000);
-
-            // Update Class for color
-            el.classList.remove('overdue', 'due-soon', 'okay');
-            if (diffMins < 0) el.classList.add('overdue');
-            else if (diffMins <= 10) el.classList.add('due-soon');
-            else el.classList.add('okay');
-
-            // Update Text
-            if (diffMins < 0) {
-                el.textContent = `${Math.abs(diffMins)} mins ago`;
-            } else if (diffMins === 0) {
-                el.textContent = "Due Now";
-            } else if (diffMins < 60) {
-                el.textContent = `${diffMins} mins`;
-            } else {
-                // Show hours if long time away
-                const hours = Math.floor(diffMins / 60);
-                const mins = diffMins % 60;
-                el.textContent = `${hours}h ${mins}m`;
-            }
-        });
-    };
-
-    update(); // Run immediately
-    timerInterval = setInterval(update, 60000); // Run every minute
-}
-
 
 // --- MANUAL ORDER MODAL ---
 function showManualOrderModal() {
@@ -472,34 +435,6 @@ function renderCustomerOrderList(container, orders) {
         </div>
     `).join('');
     container.innerHTML = `<div class="dashboard-container"><h2>Your Order History</h2><div class="order-history-list">${ordersHTML}</div></div>`;
-}
-
-// Ensure timer logic is present
-function startLiveTimers() {
-    const update = () => {
-        const now = new Date();
-        document.querySelectorAll('.live-timer').forEach(el => {
-            const dueStr = el.dataset.due;
-            if (!dueStr) return;
-            const due = new Date(dueStr);
-            const diffMs = due - now;
-            const diffMins = Math.ceil(diffMs / 60000);
-            el.classList.remove('overdue', 'due-soon', 'okay');
-            if (diffMins < 0) el.classList.add('overdue');
-            else if (diffMins <= 10) el.classList.add('due-soon');
-            else el.classList.add('okay');
-            if (diffMins < 0) el.textContent = `${Math.abs(diffMins)}m ago`;
-            else if (diffMins === 0) el.textContent = "Due Now";
-            else if (diffMins < 60) el.textContent = `${diffMins}m`;
-            else {
-                const hours = Math.floor(diffMins / 60);
-                const mins = diffMins % 60;
-                el.textContent = `${hours}h ${mins}m`;
-            }
-        });
-    };
-    update(); 
-    timerInterval = setInterval(update, 60000); 
 }
 
 // Ensure timer logic is present
