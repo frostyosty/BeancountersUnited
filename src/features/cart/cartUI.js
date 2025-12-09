@@ -4,13 +4,10 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-
 // --- CSS for Responsive Cart ---
 const CART_CSS = `
 <style>
-    /* Hide subtotal on mobile, show on desktop */
     .cart-subtotal-col { display: none; }
-    
     @media (min-width: 768px) {
         .cart-subtotal-col { 
             display: block; 
@@ -22,6 +19,7 @@ const CART_CSS = `
     }
 </style>
 `;
+
 export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -52,10 +50,11 @@ export function renderCartPage() {
             ? `<div style="font-size:0.8rem; color:#d63384; margin-top:2px; line-height:1.2;">+ ${item.selectedOptions.join(', ')}</div>`
             : '';
 
+        // Use cartId if present (new items), else fallback to DB id (legacy items)
         const uniqueId = item.cartId || item.id;
 
         return `
-        <div class="cart-item" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
+        <div class="cart-item" data-unique-id="${uniqueId}" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
             
             <!-- Left: Image & Info -->
             <div style="display:flex; gap:15px; align-items:center; overflow:hidden;">
@@ -65,7 +64,7 @@ export function renderCartPage() {
                 <div style="min-width:0;">
                     <h4 style="margin:0; font-size:1rem; line-height:1.2;">${item.name}</h4>
                     ${optionsDisplay}
-                    <!-- Mobile Sleek Price: Small Grey Text -->
+                    <!-- Mobile Sleek Price -->
                     <p style="margin:2px 0 0 0; color:#666; font-size:0.9rem;">$${price.toFixed(2)}</p>
                 </div>
             </div>
@@ -80,7 +79,7 @@ export function renderCartPage() {
                     <button class="quantity-btn increase-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
                 </div>
 
-                <!-- Desktop Only: Subtotal Column -->
+                <!-- Desktop Subtotal -->
                 <span class="cart-subtotal-col">$${subtotal.toFixed(2)}</span>
 
                 <!-- Delete Button -->
@@ -151,38 +150,52 @@ export function renderCartPage() {
     attachListeners();
 }
 
-// ... (attachListeners, handleCashPayment, initializeStripeFlow remain unchanged) ...
 function attachListeners() {
     const mainContent = document.getElementById('main-content');
+    
+    // Cleanup any old listeners if this function is called multiple times on the same element?
+    // Using {once:false} or cloning element is robust, but here we just rely on replacement.
     
     mainContent.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
 
-        const uniqueId = btn.dataset.uniqueId;
-        const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
-        const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
-
-        if (btn.classList.contains('increase-qty') && currentItem) {
-            updateItemQuantity(uniqueId, currentItem.quantity + 1);
-        } 
-        else if (btn.classList.contains('decrease-qty') && currentItem) {
-            updateItemQuantity(uniqueId, currentItem.quantity - 1);
-        } 
-        else if (btn.classList.contains('remove-item-btn')) {
-            if (confirm("Remove item?")) removeItem(uniqueId);
-        }
-        
-        else if (btn.id === 'cart-login-btn') {
+        // Payment Buttons (IDs)
+        if (btn.id === 'cart-login-btn') {
             import('@/features/auth/authUI.js').then(m => m.showLoginSignupModal());
+            return;
         }
-        else if (btn.id === 'pay-cash-btn') {
+        if (btn.id === 'pay-cash-btn') {
             handleCashPayment(btn);
+            return;
         }
-        else if (btn.id === 'pay-stripe-btn') {
+        if (btn.id === 'pay-stripe-btn') {
             btn.style.display = 'none'; 
             document.getElementById('stripe-container').style.display = 'block'; 
             initializeStripeFlow();
+            return;
+        }
+
+        // Item Actions (Classes)
+        const uniqueId = btn.dataset.uniqueId;
+        if (!uniqueId) return; // Not an item button
+
+        const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
+        
+        // Match using cartId or fallback to id
+        const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
+        
+        if (!currentItem) return;
+
+        if (btn.classList.contains('increase-qty')) {
+            updateItemQuantity(uniqueId, currentItem.quantity + 1);
+        } 
+        else if (btn.classList.contains('decrease-qty')) {
+            updateItemQuantity(uniqueId, currentItem.quantity - 1);
+        } 
+        else if (btn.classList.contains('remove-item-btn')) {
+            // FIX: Removed Confirmation Alert
+            removeItem(uniqueId);
         }
     });
 }
@@ -216,6 +229,11 @@ async function initializeStripeFlow() {
         });
         const { clientSecret, error } = await res.json();
         if (error) throw new Error(error);
+
+        // FIX: Check if mount point exists before using it
+        // This handles cases where user navigated away during fetch
+        const mountPoint = document.getElementById('stripe-element-mount');
+        if (!mountPoint) return; 
 
         const stripe = await stripePromise;
         const elements = stripe.elements({ clientSecret, appearance: { theme: 'stripe' } });
@@ -252,6 +270,6 @@ async function initializeStripeFlow() {
         };
     } catch (e) {
         console.error(e);
-        errorDiv.textContent = "Payment System Error.";
+        if (errorDiv) errorDiv.textContent = "Payment System Error.";
     }
 }
