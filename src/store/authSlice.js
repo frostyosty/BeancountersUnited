@@ -27,6 +27,9 @@ export const createAuthSlice = (set, get) => ({
 
     
     listenToAuthChanges: () => {
+
+
+        
         supabase.auth.onAuthStateChange(async (event, session) => {
             if (get().auth.isImpersonating()) return;
 
@@ -38,6 +41,11 @@ export const createAuthSlice = (set, get) => ({
                     const profile = await api.getUserProfile(token);
                     get().auth.setUserAndProfile(session.user, profile);
 
+                    if (profile.dietary_preferences) {
+                        useAppStore.setState(state => ({
+                            ui: { ...state.ui, activeAllergenFilters: profile.dietary_preferences }
+                        }));
+                    }
                     // --- FIX: SMARTER REDIRECT ---
                     // Only redirect if we are strictly logging in (SIGNED_IN) 
                     // OR if it's initial load but we are on the login page/root.
@@ -147,6 +155,23 @@ export const createAuthSlice = (set, get) => ({
                 originalProfile: null 
             }
         }), false, 'auth/stop-impersonating');
+    },
+
+ fetchProfileOnly: async () => {
+        const { session } = await supabase.auth.getSession();
+        if (session) {
+            const profile = await api.getUserProfile(session.access_token);
+            get().auth.setUserAndProfile(session.user, profile);
+            
+            // NEW: Sync Dietary Prefs to UI Filter
+            if (profile.dietary_preferences && profile.dietary_preferences.length > 0) {
+                // We access the UI slice directly or via get() if available in this scope?
+                // Zustand 'set' usually allows setting other slices if designed that way, 
+                // but here 'set' is scoped to auth.
+                // We can access the store globally if needed, or dispatch.
+                // Easiest: The Menu UI reads from Auth Profile as a fallback/default.
+            }
+        }
     },
 
     getUserRole: () => get().auth.profile?.role || 'guest',

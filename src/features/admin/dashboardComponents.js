@@ -349,8 +349,15 @@ export function renderHeaderSection(headerSettings) {
 
 // --- 8. CLIENT RELATIONSHIPS (Owner) ---
 export function renderClientRelationshipsSection(clients) {
-    if (!clients) return '<p>Loading clients...</p>';
-    
+
+    if (!clients || clients.length === 0) {
+        return `
+        <section class="dashboard-section">
+            <h3>Client Relationships</h3>
+            <p style="color:#666; font-style:italic;">No clients found or loading...</p>
+        </section>`;
+    }
+
     const rows = clients.map(client => {
         const lastOrderDate = client.lastOrder ? new Date(client.lastOrder).toLocaleDateString() : '-';
         const displayName = client.internal_nickname || client.full_name || client.email || 'Unknown';

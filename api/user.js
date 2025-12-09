@@ -158,61 +158,44 @@ const { data: order, error: orderError } = await supabaseAdmin.from('orders').in
         // =================================================
         // TYPE: CLIENTS (CRM Data Aggregation)
         // =================================================
-        if (type === 'clients') {
-            if (req.method !== 'GET') return res.status(405).end();
-
+                if (type === 'clients') {
             // 1. Fetch Profiles
             const { data: profiles, error: pError } = await supabaseAdmin
                 .from('profiles')
-                .select('id, email, full_name, internal_nickname, staff_note, created_at');
-
+                .select('*'); // Get everything
             if (pError) throw pError;
 
-            // 2. Fetch Order Stats (Grouped)
-            // Note: Supabase JS doesn't do complex SQL GROUP BY easily without Views or RPC.
-            // We will fetch raw order headers and aggregate in JS (fast enough for <10k orders).
-            // For production scaling, create a SQL View in Supabase.
+            // 2. Fetch Orders
             const { data: orders, error: oError } = await supabaseAdmin
                 .from('orders')
                 .select('user_id, total_amount, created_at, status');
-
             if (oError) throw oError;
 
-            // 3. Aggregate Data
-            const clientStats = {}; // { userId: { totalSpend: 0, lastOrder: date, orderCount: 0 } }
-
+            // 3. Aggregate
+            const clientStats = {}; 
             orders.forEach(o => {
-                if (!clientStats[o.user_id]) {
-                    clientStats[o.user_id] = { totalSpend: 0, lastOrder: null, orderCount: 0 };
-                }
+                if (!clientStats[o.user_id]) clientStats[o.user_id] = { totalSpend: 0, lastOrder: null, orderCount: 0 };
                 const stats = clientStats[o.user_id];
-
-                // Only count completed/paid orders? Or all? Let's do all non-cancelled.
                 if (o.status !== 'cancelled') {
-                    stats.totalSpend += o.total_amount || 0;
+                    stats.totalSpend += (o.total_amount || 0);
                     stats.orderCount += 1;
-
-                    const orderDate = new Date(o.created_at);
-                    if (!stats.lastOrder || orderDate > stats.lastOrder) {
-                        stats.lastOrder = orderDate;
-                    }
+                    const d = new Date(o.created_at);
+                    if (!stats.lastOrder || d > stats.lastOrder) stats.lastOrder = d;
                 }
             });
 
             // 4. Merge
-            const richClients = profiles.map(p => {
-                const stats = clientStats[p.id] || { totalSpend: 0, lastOrder: null, orderCount: 0 };
-                return {
-                    ...p,
-                    ...stats
-                };
-            });
+            const richClients = profiles.map(p => ({
+                ...p,
+                ...(clientStats[p.id] || { totalSpend: 0, lastOrder: null, orderCount: 0 })
+            }));
 
-            // Sort by Total Spend (High to Low) by default
+            // Sort by spend
             richClients.sort((a, b) => b.totalSpend - a.totalSpend);
-
+            
             return res.status(200).json(richClients);
         }
+
 
         if (type === 'merge_clients') {
             if (req.method !== 'POST') return res.status(405).end();

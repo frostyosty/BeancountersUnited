@@ -60,3 +60,5 @@ export const createManualOrder = (orderData, token) =>
 console.log("--- [2] apiService.js: END ---");
 
 export const getClients = (token) => request('/user?type=clients', 'GET', null, token);
+
+export const updateUserProfile = (data, token) => request('/user?type=profile', 'PUT', data, token);

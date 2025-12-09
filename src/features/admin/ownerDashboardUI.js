@@ -66,13 +66,19 @@ export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // Fetch Data
+// Fetch Data
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory(); 
-    useAppStore.getState().admin.fetchClients(); // New
+    
+    // FIX: Force fetch and check loading
+    const { clients, isLoadingClients } = useAppStore.getState().admin;
+    if (!clients || clients.length === 0) {
+        useAppStore.getState().admin.fetchClients();
+    }
 
-    const { clients } = useAppStore.getState().admin;
+
+
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
