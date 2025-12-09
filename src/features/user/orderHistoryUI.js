@@ -14,8 +14,19 @@ const STEPPER_CSS = `
     .hidden { display: none !important; }
     
     /* Archive Table Styles */
-    .archive-section { background-color: #f0f0f0; border-top: 4px solid #ccc; padding: 20px; margin-top: 40px; border-radius: 8px; }
-    .archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #666; }
+ .archive-section { background-color: #f0f0f0; border-top: 4px solid #ccc; padding: 20px; margin-top: 40px; border-radius: 8px; }
+    
+    /* FIX: Added flex-wrap and gap */
+    .archive-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        flex-wrap: wrap; /* Allows stacking on mobile */
+        gap: 10px;       /* Spacing when stacked */
+        margin-bottom: 15px; 
+        color: #666; 
+    }
+    
     .archive-table { width: 100%; border-collapse: collapse; opacity: 0.8; }
     .archive-table th { text-align: left; padding: 8px; border-bottom: 2px solid #ccc; font-size: 0.85rem; }
     .archive-table td { padding: 8px; border-bottom: 1px solid #ddd; font-size: 0.85rem; color: #555; }
@@ -73,7 +84,7 @@ function renderAdminOrderViews(container, orders, role, settings) {
     const now = Date.now();
 
  const { highlightOrderId, setHighlightOrderId } = useAppStore.getState().ui;
-
+ 
     // 2. Split Orders (With Time Logic)
     const liveOrders = [];
     const archivedOrders = [];
@@ -185,7 +196,7 @@ function renderAdminOrderViews(container, orders, role, settings) {
                 </table>
             </div>
 
-            <!-- ARCHIVE -->
+<!-- ARCHIVE -->
             <div class="archive-section">
                 <div class="archive-header">
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -193,9 +204,10 @@ function renderAdminOrderViews(container, orders, role, settings) {
                         <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙️ Settings</button>
                     </div>
                     
-                    <!-- Margin added here -->
-                    <button id="toggle-archive-btn" class="button-secondary small" style="margin-left: 15px;">Show/Hide</button>
+                    <!-- FIX: Removed inline margin-left -->
+                    <button id="toggle-archive-btn" class="button-secondary small">Show/Hide</button>
                 </div>
+
                 
                 <!-- NEW: Info Text -->
                 <p style="margin-top:-10px; margin-bottom:15px; color:#888; font-style:italic; font-size:0.85rem;">

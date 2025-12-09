@@ -4,6 +4,24 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
+
+// --- CSS for Responsive Cart ---
+const CART_CSS = `
+<style>
+    /* Hide subtotal on mobile, show on desktop */
+    .cart-subtotal-col { display: none; }
+    
+    @media (min-width: 768px) {
+        .cart-subtotal-col { 
+            display: block; 
+            font-weight: 600; 
+            width: 80px; 
+            text-align: right; 
+            margin-right: 15px;
+        }
+    }
+</style>
+`;
 export function renderCartPage() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
@@ -27,13 +45,13 @@ export function renderCartPage() {
     // 2. Build Items List
     const cartItemsHTML = items.map(item => {
         const price = parseFloat(item.price) || 0;
+        const subtotal = price * item.quantity;
         
         // Options Display (Pink Text)
         const optionsDisplay = (item.selectedOptions && item.selectedOptions.length > 0)
             ? `<div style="font-size:0.8rem; color:#d63384; margin-top:2px; line-height:1.2;">+ ${item.selectedOptions.join(', ')}</div>`
             : '';
 
-        // CRITICAL: Use cartId if available (for custom orders), fallback to DB id
         const uniqueId = item.cartId || item.id;
 
         return `
@@ -47,6 +65,7 @@ export function renderCartPage() {
                 <div style="min-width:0;">
                     <h4 style="margin:0; font-size:1rem; line-height:1.2;">${item.name}</h4>
                     ${optionsDisplay}
+                    <!-- Mobile Sleek Price: Small Grey Text -->
                     <p style="margin:2px 0 0 0; color:#666; font-size:0.9rem;">$${price.toFixed(2)}</p>
                 </div>
             </div>
@@ -60,6 +79,9 @@ export function renderCartPage() {
                     <span style="padding:0 5px; min-width:20px; text-align:center;">${item.quantity}</span>
                     <button class="quantity-btn increase-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
                 </div>
+
+                <!-- Desktop Only: Subtotal Column -->
+                <span class="cart-subtotal-col">$${subtotal.toFixed(2)}</span>
 
                 <!-- Delete Button -->
                 <button class="delete-icon-btn remove-item-btn" data-unique-id="${uniqueId}" title="Remove">×</button>
@@ -110,6 +132,7 @@ export function renderCartPage() {
 
     // 4. Final Render
     mainContent.innerHTML = `
+        ${CART_CSS}
         <div class="cart-container" style="max-width:800px; margin:0 auto;">
             <h2>Your Order</h2>
             <div class="cart-items-wrapper" style="background:white; padding:0 20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
@@ -128,6 +151,7 @@ export function renderCartPage() {
     attachListeners();
 }
 
+// ... (attachListeners, handleCashPayment, initializeStripeFlow remain unchanged) ...
 function attachListeners() {
     const mainContent = document.getElementById('main-content');
     
@@ -135,11 +159,8 @@ function attachListeners() {
         const btn = e.target.closest('button');
         if (!btn) return;
 
-        // Use the new data attribute "data-unique-id"
         const uniqueId = btn.dataset.uniqueId;
         const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
-        
-        // FIX: Find item by cartId OR id (legacy support)
         const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
 
         if (btn.classList.contains('increase-qty') && currentItem) {
@@ -152,7 +173,6 @@ function attachListeners() {
             if (confirm("Remove item?")) removeItem(uniqueId);
         }
         
-        // ... (Payment buttons logic) ...
         else if (btn.id === 'cart-login-btn') {
             import('@/features/auth/authUI.js').then(m => m.showLoginSignupModal());
         }
