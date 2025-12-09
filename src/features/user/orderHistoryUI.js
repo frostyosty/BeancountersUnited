@@ -59,7 +59,8 @@ export function renderOrderHistoryPage() {
 function renderAdminOrderViews(container, orders, role, settings) {
     // 1. Get Archive Settings (Default 48 hours)
     const archiveConfig = settings.archiveSettings || { autoArchiveHours: 48 };
-    const maxAgeMs = archiveConfig.autoArchiveHours * 60 * 60 * 1000;
+    const archiveHours = archiveConfig.autoArchiveHours;
+    const maxAgeMs = archiveHours * 60 * 60 * 1000;
     const now = Date.now();
 
     // 2. Split Orders (With Time Logic)
@@ -110,7 +111,6 @@ function renderAdminOrderViews(container, orders, role, settings) {
         const totalFormatted = `$${parseFloat(order.total_amount).toFixed(2)}`;
         const statusClass = `status-${order.status}`;
         
-        // Actions
         const dismissBtn = `<button class="delete-icon-btn action-btn" data-action="dismiss" data-name="${safeName}" data-total="${totalFormatted}" title="Archive">×</button>`;
         const deleteBtn = (role === 'god') 
             ? `<button class="delete-icon-btn action-btn" data-action="delete" title="Permanent Delete" style="color:#d00;">🗑</button>` 
@@ -147,6 +147,9 @@ function renderAdminOrderViews(container, orders, role, settings) {
         </tr>
     `;
 
+    // Format Hours Text
+    const hoursText = archiveHours === 1 ? '1 hour' : `${archiveHours} hours`;
+
     container.innerHTML = `
         ${STEPPER_CSS}
         <div class="dashboard-container">
@@ -171,11 +174,18 @@ function renderAdminOrderViews(container, orders, role, settings) {
             <div class="archive-section">
                 <div class="archive-header">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <h3 style="margin:0;">Archived Orders</h3>
+                        <h3 style="margin:0;">Archived Orders (Log)</h3>
                         <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙️ Settings</button>
                     </div>
-                    <button id="toggle-archive-btn" class="button-secondary small">Show/Hide</button>
+                    
+                    <!-- Margin added here -->
+                    <button id="toggle-archive-btn" class="button-secondary small" style="margin-left: 15px;">Show/Hide</button>
                 </div>
+                
+                <!-- NEW: Info Text -->
+                <p style="margin-top:-10px; margin-bottom:15px; color:#888; font-style:italic; font-size:0.85rem;">
+                    Orders moved here automatically after ${hoursText}.
+                </p>
                 
                 <div id="archive-table-container" style="display:none;">
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
@@ -192,20 +202,17 @@ function renderAdminOrderViews(container, orders, role, settings) {
         </div>
     `;
 
-    // --- EXECUTE: Start Timers ---
+    // --- Listeners ---
+    
+    // Start Live Timers
     startLiveTimers();
 
-    // --- LISTENERS ---
-    
-    // 1. Manual Order
     document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);
     
-    // 2. Archive Settings
     document.getElementById('btn-archive-settings')?.addEventListener('click', () => {
-        showArchiveSettingsModal(archiveConfig);
+        showArchiveSettingsModal(settings.archiveSettings || {});
     });
 
-    // 3. Archive Toggle
     const archiveContainer = document.getElementById('archive-table-container');
     const toggleBtn = document.getElementById('toggle-archive-btn');
     if (toggleBtn) {
@@ -216,7 +223,6 @@ function renderAdminOrderViews(container, orders, role, settings) {
         };
     }
 
-    // 4. Archive Search
     const searchInput = document.getElementById('archive-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -227,14 +233,13 @@ function renderAdminOrderViews(container, orders, role, settings) {
         });
     }
     
-    // 5. Row Actions (Dismiss / Delete)
     container.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation(); 
             const orderId = e.target.closest('tr').dataset.orderId;
             const action = e.target.dataset.action;
-            const name = e.target.dataset.name || 'Order';
-            const total = e.target.dataset.total || '';
+            const name = e.target.dataset.name;
+            const total = e.target.dataset.total;
 
             if (action === 'dismiss') {
                 useAppStore.getState().orderHistory.dismissOrder(orderId);
@@ -249,15 +254,12 @@ function renderAdminOrderViews(container, orders, role, settings) {
                     setTimeout(() => row.remove(), 300);
                 }
 
-                // Database Delete
                 const { error } = await supabase.from('orders').delete().eq('id', orderId);
                 if (!error) {
                     uiUtils.showToast("Record deleted.", "success");
-                    // Silent sync to ensure count is correct later
                     useAppStore.getState().orderHistory.fetchOrderHistory(true);
                 } else {
                     uiUtils.showToast("Delete failed.", "error");
-                    // Restore if failed
                     useAppStore.getState().orderHistory.fetchOrderHistory();
                 }
             }

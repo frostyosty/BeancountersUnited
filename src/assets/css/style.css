@@ -1170,9 +1170,9 @@ input[type="color"] {
     /* Ensure relative positioning so the close button sticks to this box */
     position: relative; 
     background: var(--background-color);
-    padding: 2rem;
+    padding: 1rem;
     border-radius: var(--border-radius);
-    width: 90%; 
+    width: 95%; 
     max-width: 500px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }

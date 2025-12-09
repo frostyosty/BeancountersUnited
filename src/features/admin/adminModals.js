@@ -107,38 +107,36 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
 
         const { profile, history, logs } = await api.getCustomerDetails(userId, session.access_token);
 
-        // Build History Rows
+        // ... (Keep existing historyRows and auditRows logic) ...
         const historyRows = history.map(order => {
             const date = new Date(order.created_at).toLocaleDateString();
             const itemsSummary = order.order_items.map(i => `${i.quantity}x ${i.menu_items?.name}`).join(', ');
             return `<tr style="border-bottom:1px solid #eee; font-size:0.9rem;"><td style="padding:8px;">${date}</td><td style="padding:8px; color:#666;">${itemsSummary}</td><td style="padding:8px;">$${order.total_amount.toFixed(2)}</td></tr>`;
         }).join('');
 
-        // Build Audit Rows
         const auditRows = (logs || []).map(log => {
             const date = new Date(log.created_at).toLocaleString();
             const actorName = log.profiles?.email || 'Manager';
             let changeMsg = log.action_type;
             if (log.action_type === 'UPDATE_NICKNAME') changeMsg = `Nickname: "${log.old_value}" → "${log.new_value}"`;
             if (log.action_type === 'UPDATE_NOTE') changeMsg = `Updated Note`;
-            
             return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;"><div style="color:#888; font-size:0.8rem;">${date} by ${actorName}</div><div>${changeMsg}</div></div>`;
         }).join('');
+        // ... (End existing row logic) ...
 
-        // Name Logic
         const displayName = manualNameOverride || profile.full_name || profile.email || 'Guest';
         const subText = manualNameOverride 
             ? `(Phone/Walk-in Record linked to ${profile.email})` 
             : (profile.email || 'No Email');
 
         const modalHTML = `
-            <div class="crm-modal-container" style="min-width:350px;">
-                <!-- Header -->
+            <div class="crm-modal-container" style="min-width:350px; padding-bottom: 50px;"> <!-- Padding for sticky footer -->
+                
+                <!-- 1. Header -->
                 <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
                     <h3 style="margin:0 0 5px 0;">${displayName}</h3>
                     <p style="margin:0; font-size:0.85rem; color:#666;">${subText}</p>
                     
-                    <!-- Only show Nickname input if NOT an override view -->
                     ${!manualNameOverride ? `
                     <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
                         <label style="font-size:0.9rem;">Nickname:</label>
@@ -146,32 +144,27 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
                     </div>` : ''}
                 </div>
 
-                <!-- Staff Notes -->
+                <!-- 2. Notes Section -->
                 <div style="background:#f9f9f9; padding:15px; border-radius:6px; margin-bottom:20px;">
                     <label style="font-weight:bold; font-size:0.9rem; display:block; margin-bottom:5px;">Staff Note</label>
-                    <textarea id="crm-note" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">${profile.staff_note || ''}</textarea>
+                    <textarea id="crm-note" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-family:inherit;">${profile.staff_note || ''}</textarea>
                     
-                    <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; gap:15px;">
-                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                <input type="radio" name="noteUrgency" value="info" ${profile.staff_note_urgency !== 'alert' ? 'checked' : ''}> Info
-                            </label>
-                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer; color:#d00;">
-                                <input type="radio" name="noteUrgency" value="alert" ${profile.staff_note_urgency === 'alert' ? 'checked' : ''}> Important
-                            </label>
-                        </div>
-                        <button id="crm-save-btn" class="button-primary small">Save</button>
+                    <div style="margin-top:8px; display:flex; gap:15px;">
+                        <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="radio" name="noteUrgency" value="info" ${profile.staff_note_urgency !== 'alert' ? 'checked' : ''}> Info
+                        </label>
+                        <label style="font-size:0.85rem; display:flex; align-items:center; gap:5px; cursor:pointer; color:#d00;">
+                            <input type="radio" name="noteUrgency" value="alert" ${profile.staff_note_urgency === 'alert' ? 'checked' : ''}> Important
+                        </label>
                     </div>
                 </div>
 
-                <!-- Tabs Row -->
+                <!-- 3. Tabs & History -->
                 <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <button id="tab-orders" class="button-secondary small" style="background:#ddd; color:#333;">Order History</button>
                         <button id="tab-audit" class="button-secondary small" style="background:transparent; color:#666; border:1px solid #ddd;">Audit Log</button>
                     </div>
-                    
-                    <!-- Add Past Order Button -->
                     <button id="crm-add-order-btn" class="button-primary small" style="padding: 4px 10px; font-weight:bold;" title="Add Past Order">+</button>
                 </div>
 
@@ -187,6 +180,23 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
                 <div id="content-audit" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:4px; display:none;">
                     ${auditRows || '<div style="padding:15px; text-align:center; color:#999; font-size:0.9rem;">No changes recorded.</div>'}
                 </div>
+
+                <!-- 4. STICKY FOOTER SAVE BUTTON -->
+                <div style="
+                    position: sticky; 
+                    bottom: -20px; /* Offset parent padding */
+                    margin: 20px -20px -20px -20px; /* Stretch full width */
+                    padding: 15px;
+                    background: white;
+                    border-top: 1px solid #eee;
+                    text-align: right;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                ">
+                    <button id="crm-save-btn" class="button-primary" style="width:100%;">Save Changes</button>
+                </div>
+
             </div>
         `;
 
@@ -229,15 +239,18 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
                 
                 uiUtils.showToast("Updated!", "success");
                 useAppStore.getState().ui.triggerPageRender(); 
-                uiUtils.closeModal(); 
+                // Don't close immediately so they can see it saved
+                setTimeout(() => {
+                    btn.textContent = 'Save Changes'; 
+                    btn.disabled = false;
+                }, 1000);
             } catch (err) {
                 console.error(err);
                 uiUtils.showToast("Failed.", "error");
-                btn.textContent = 'Save'; btn.disabled = false;
+                btn.textContent = 'Save Changes'; btn.disabled = false;
             }
         });
 
-        // Add Past Order Link
         document.getElementById('crm-add-order-btn').onclick = () => {
             const targetProfile = { 
                 id: userId, 

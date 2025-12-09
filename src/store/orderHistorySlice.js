@@ -150,19 +150,26 @@ export const createOrderHistorySlice = (set, get) => ({
                 if (now - createdTime > MAX_AGE_MS) return;
 
                 if ((now - createdTime) > URGENCY_THRESHOLD_MS && !notifiedOrderIds.has(order.id)) {
-
+                    
                     const customer = order.customer_name || order.profiles?.full_name || 'Walk-in';
                     const firstItem = order.order_items?.[0]?.menu_items?.name || 'Order';
-                    const alertText = `⚠️ ${firstItem} for ${customer} is overdue!`;
+                    
+                    // 2. CHECK CLIENT IMPORTANCE
+                    const isImportant = order.profiles?.staff_note_urgency === 'alert';
+                    
+                    let alertText = `⚠️ ${firstItem} for ${customer} is overdue!`;
+                    
+                    if (isImportant) {
+                        alertText = `🚨 VIP/IMPORTANT: ${firstItem} for ${customer} is overdue!`;
+                    }
 
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
-                            alertText,
-                            'error',
-                            8000,
+                            alertText, 
+                            'error', // Always red for overdue
+                            isImportant ? 12000 : 8000, // Stay longer if important
                             () => {
-                                // FIX: Go to Incoming Orders page
-                                window.location.hash = '#order-history';
+                                window.location.hash = '#owner-dashboard';
                             }
                         );
                     });

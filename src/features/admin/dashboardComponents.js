@@ -10,13 +10,23 @@ export function renderActiveOrdersSection(orders) {
     
     const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
-        const displayName = order.customer_name || profile.internal_nickname || profile.full_name || profile.email || 'Guest';
-        const clickName = displayName.replace(/'/g, "\\'");
-
+        
+        // --- NOTE ICON INTEGRATION ---
         let noteIcon = '';
         if (profile.staff_note) {
-            noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
+            if (profile.staff_note_urgency === 'alert') {
+                // Red Exclamation for Important
+                noteIcon = `<span title="IMPORTANT CLIENT NOTE" style="font-size:1.2rem; vertical-align:middle; margin-left:5px;">❗</span>`;
+            } else {
+                // Blue Info for regular notes
+                noteIcon = `<span title="Client Note" style="font-size:1rem; vertical-align:middle; margin-left:5px;">ℹ️</span>`;
+            }
         }
+        // -----------------------------
+
+        // Determine Name
+        const displayName = order.customer_name || profile.internal_nickname || profile.full_name || profile.email || 'Guest';
+        const clickName = displayName.replace(/'/g, "\\'"); // Escape for JS click handler
 
         const orderId = order.id ? order.id.slice(0, 4) : '????';
         const total = parseFloat(order.total_amount || 0).toFixed(2);
