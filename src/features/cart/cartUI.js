@@ -123,7 +123,7 @@ export function renderCartPage() {
     mainContent.innerHTML = `
         <div class="cart-container" style="max-width:800px; margin:0 auto;">
             <h2>Your Order</h2>
-            <div class="cart-items-wrapper" style="background:white; padding:0 20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <div class="cart-items-wrapper" style="background:white; padding:0 0px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                 ${cartItemsHTML}
             </div>
             

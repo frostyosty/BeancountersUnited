@@ -444,23 +444,50 @@ function startLiveTimers() {
         document.querySelectorAll('.live-timer').forEach(el => {
             const dueStr = el.dataset.due;
             if (!dueStr) return;
+            
             const due = new Date(dueStr);
             const diffMs = due - now;
-            const diffMins = Math.ceil(diffMs / 60000);
+            const diffMins = Math.ceil(diffMs / 60000); // Negative = Past, Positive = Future
+            const absMins = Math.abs(diffMins);
+
+            // 1. Update Colors
             el.classList.remove('overdue', 'due-soon', 'okay');
-            if (diffMins < 0) el.classList.add('overdue');
-            else if (diffMins <= 10) el.classList.add('due-soon');
-            else el.classList.add('okay');
-            if (diffMins < 0) el.textContent = `${Math.abs(diffMins)}m ago`;
-            else if (diffMins === 0) el.textContent = "Due Now";
-            else if (diffMins < 60) el.textContent = `${diffMins}m`;
-            else {
-                const hours = Math.floor(diffMins / 60);
-                const mins = diffMins % 60;
-                el.textContent = `${hours}h ${mins}m`;
+            if (diffMins < 0) el.classList.add('overdue');      // Late
+            else if (diffMins <= 10) el.classList.add('due-soon'); // <10 mins left
+            else el.classList.add('okay');                      // Plenty of time
+
+            // 2. Format Text
+            if (diffMins < 0) {
+                // --- PAST (Overdue) ---
+                if (absMins < 60) {
+                    el.textContent = `${absMins}m ago`;
+                } else if (absMins < 1440) { // Less than 24 hours
+                    const hours = Math.floor(absMins / 60);
+                    el.textContent = `${hours}h ago`;
+                } else {
+                    const days = Math.floor(absMins / 1440);
+                    el.textContent = `${days}d ago`;
+                }
+            } else {
+                // --- FUTURE (Due In) ---
+                if (diffMins === 0) {
+                    el.textContent = "Due Now";
+                } else if (diffMins < 60) {
+                    el.textContent = `${diffMins}m`;
+                } else if (diffMins < 1440) {
+                    const hours = Math.floor(diffMins / 60);
+                    const mins = diffMins % 60;
+                    el.textContent = `${hours}h ${mins}m`;
+                } else {
+                    const days = Math.floor(diffMins / 1440);
+                    el.textContent = `In ${days}d`;
+                }
             }
         });
     };
+
     update(); 
+    // Clear previous interval if this function is called multiple times
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(update, 60000); 
 }
