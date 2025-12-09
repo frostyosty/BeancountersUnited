@@ -72,6 +72,8 @@ function renderAdminOrderViews(container, orders, role, settings) {
     const maxAgeMs = archiveHours * 60 * 60 * 1000;
     const now = Date.now();
 
+ const { highlightOrderId, setHighlightOrderId } = useAppStore.getState().ui;
+
     // 2. Split Orders (With Time Logic)
     const liveOrders = [];
     const archivedOrders = [];
@@ -127,6 +129,8 @@ function renderAdminOrderViews(container, orders, role, settings) {
         const actionCell = isLive ? `<td>${dismissBtn}</td>` : (role === 'god' ? `<td>${deleteBtn}</td>` : '<td></td>');
         
         const customerCell = `<td style="padding:12px;"><span class="client-name-btn" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">${customerName}</span></td>`;
+
+        const highlightClass = (order.id === highlightOrderId) ? 'flash-highlight' : '';
 
         return `
             <tr class="${statusClass}" data-order-id="${order.id}">
@@ -213,7 +217,17 @@ function renderAdminOrderViews(container, orders, role, settings) {
 
     // --- Listeners ---
     
-    // Start Live Timers
+// FIX: Clear the highlight ID after render so it doesn't persist
+    if (highlightOrderId) {
+        setTimeout(() => {
+            setHighlightOrderId(null);
+            
+            // Optional: Scroll to it
+            const row = container.querySelector(`tr[data-order-id="${highlightOrderId}"]`);
+            if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500); // Wait for DOM
+    }
+
     startLiveTimers();
 
     document.getElementById('btn-manual-order')?.addEventListener('click', showManualOrderModal);

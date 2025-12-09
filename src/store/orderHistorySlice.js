@@ -129,65 +129,67 @@ export const createOrderHistorySlice = (set, get) => ({
         }
     },
 
-    checkUrgency: () => {
+checkUrgency: () => {
         const role = get().auth.getUserRole();
         if (role !== 'manager' && role !== 'owner' && role !== 'god') return;
-
-        // Don't alert if we are already looking at the list
+        
+        // Don't alert if we are already looking at the list (optional, but requested previously)
         if (window.location.hash === '#order-history') return;
 
         const { orders, notifiedOrderIds } = get().orderHistory;
-
+        
         const now = Date.now();
-        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000; // 15 mins
-        const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000;
+        const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+        // Clone set to track what we add in this cycle
+        const newNotifiedSet = new Set(notifiedOrderIds);
+        let hasNewAlerts = false;
 
         orders.forEach(order => {
             if (order.status === 'pending' || order.status === 'preparing') {
                 const createdTime = new Date(order.created_at).getTime();
-
-                // FIX: Ignore orders older than 24 hours
                 if (now - createdTime > MAX_AGE_MS) return;
 
-                if ((now - createdTime) > URGENCY_THRESHOLD_MS && !notifiedOrderIds.has(order.id)) {
+                if ((now - createdTime) > URGENCY_THRESHOLD_MS && !newNotifiedSet.has(order.id)) {
                     
+                    // Mark as notified immediately in local set
+                    newNotifiedSet.add(order.id);
+                    hasNewAlerts = true;
+
                     const customer = order.customer_name || order.profiles?.full_name || 'Walk-in';
                     const firstItem = order.order_items?.[0]?.menu_items?.name || 'Order';
-                    
-                    // 2. CHECK CLIENT IMPORTANCE
                     const isImportant = order.profiles?.staff_note_urgency === 'alert';
                     
                     let alertText = `⚠️ ${firstItem} for ${customer} is overdue!`;
-                    
-                    if (isImportant) {
-                        alertText = `🚨 VIP/IMPORTANT: ${firstItem} for ${customer} is overdue!`;
-                    }
+                    if (isImportant) alertText = `🚨 VIP: ${firstItem} for ${customer} is overdue!`;
 
+                    // Dynamic Import to avoid circles
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
                             alertText, 
                             'error', 
                             isImportant ? 12000 : 8000, 
                             () => {
-                                // FIX: Handle navigation reliably
+                                // --- CLICK ACTION ---
+                                // 1. Set Highlight ID
+                                get().ui.setHighlightOrderId(order.id);
+                                // 2. Navigate
                                 if (window.location.hash === '#order-history') {
-                                    // Already here? Just refresh the data/view
                                     get().ui.triggerPageRender();
                                 } else {
-                                    // Go there
                                     window.location.hash = '#order-history';
                                 }
                             }
                         );
                     });
-
-                    set(state => {
-                        const newSet = new Set(state.orderHistory.notifiedOrderIds);
-                        newSet.add(order.id);
-                        return { orderHistory: { ...state.orderHistory, notifiedOrderIds: newSet } };
-                    });
                 }
             }
         });
+
+        // Update state once if changed
+        if (hasNewAlerts) {
+            set(state => ({ orderHistory: { ...state.orderHistory, notifiedOrderIds: newNotifiedSet } }));
+        }
     }
 });

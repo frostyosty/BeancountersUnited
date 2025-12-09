@@ -920,10 +920,12 @@ input[type="color"] {
 }
 
 .he-text-input, .he-select, .he-number-input {
+
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 0.9rem;
+    margin-left: 10px;
 }
 
 .he-text-input { width: 100%; box-sizing: border-box; }
@@ -1410,4 +1412,16 @@ input[type="color"] {
 @keyframes floatUp {
     from { transform: translate(-50%, 100%); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+
+/* --- Row Highlighting Animation --- */
+@keyframes flashRedFade {
+    0% { background-color: rgba(220, 53, 69, 0.4); } /* Reddish */
+    50% { background-color: rgba(220, 53, 69, 0.1); }
+    100% { background-color: transparent; }
+}
+
+tr.flash-highlight {
+    animation: flashRedFade 2s ease-out forwards;
 }
