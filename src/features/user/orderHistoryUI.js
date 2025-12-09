@@ -57,9 +57,18 @@ export function renderOrderHistoryPage() {
 
 // --- ADMIN VIEW (Live + Archive) ---
 function renderAdminOrderViews(container, orders, role, settings) {
-    // 1. Get Archive Settings (Default 48 hours)
-    const archiveConfig = settings.archiveSettings || { autoArchiveHours: 48 };
-    const archiveHours = archiveConfig.autoArchiveHours;
+// 1. Get Archive Settings (Defensive Parsing)
+    let archiveConfig = settings.archiveSettings;
+    
+    // Safety: If API sent a string (legacy data), parse it manually
+    if (typeof archiveConfig === 'string') {
+        try { archiveConfig = JSON.parse(archiveConfig); } catch (e) { archiveConfig = {}; }
+    }
+
+    // Default to 48 if missing
+    archiveConfig = archiveConfig || { autoArchiveHours: 48 };
+    const archiveHours = archiveConfig.autoArchiveHours || 48; // Fallback if property missing
+    
     const maxAgeMs = archiveHours * 60 * 60 * 1000;
     const now = Date.now();
 
@@ -326,19 +335,45 @@ function showArchiveSettingsModal(currentConfig) {
 // --- MANUAL ORDER MODAL ---
 function showManualOrderModal() {
     const { items: menuItems } = useAppStore.getState().menu;
-    // Get Categories
+    const { orders } = useAppStore.getState().orderHistory; // Need orders for stats
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = ['All', ...getMenuCategories()];
     
+    // --- 0. Calculate Popularity ---
+    const popularityMap = {};
+    if (orders) {
+        orders.forEach(order => {
+            if (order.status !== 'cancelled' && order.order_items) {
+                order.order_items.forEach(oi => {
+                    // Count frequency of menu_item_id
+                    const id = oi.menu_item_id;
+                    popularityMap[id] = (popularityMap[id] || 0) + (oi.quantity || 1);
+                });
+            }
+        });
+    }
+
+    // Sort items: High popularity -> Low popularity, then Alphabetical
+    const sortedItems = [...menuItems].sort((a, b) => {
+        const countA = popularityMap[a.id] || 0;
+        const countB = popularityMap[b.id] || 0;
+        if (countB !== countA) return countB - countA; // Most popular first
+        return a.name.localeCompare(b.name); // Fallback to A-Z
+    });
+
     // --- 1. Category Tabs HTML ---
     const tabsHtml = categories.map(cat => 
         `<button class="modal-tab ${cat === 'All' ? 'active' : ''}" data-category="${cat}">${cat}</button>`
     ).join('');
 
-    // --- 2. Items HTML (All items rendered initially, filtered by CSS) ---
-    const itemRows = menuItems.map(item => `
+    // --- 2. Items HTML (Using SORTED items) ---
+    const itemRows = sortedItems.map(item => `
         <div class="manual-order-row" data-category="${item.category || 'Uncategorized'}" data-item-id="${item.id}" data-price="${item.price}" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
-            <div style="flex:2; font-weight:500;">${item.name} <span style="color:#666; font-size:0.9rem; font-weight:normal;">($${parseFloat(item.price).toFixed(2)})</span></div>
+            <div style="flex:2; font-weight:500;">
+                ${item.name} 
+                <span style="color:#666; font-size:0.9rem; font-weight:normal;">($${parseFloat(item.price).toFixed(2)})</span>
+                ${(popularityMap[item.id] > 5) ? '<span style="font-size:0.7rem; color:orange; margin-left:5px;">★</span>' : ''} 
+            </div>
             <div style="flex:1;">
                 <div class="stepper-container">
                     <button class="stepper-btn minus hidden" data-action="minus">-</button>
@@ -349,10 +384,15 @@ function showManualOrderModal() {
         </div>
     `).join('');
 
+    // ... (Rest of the function: modalHTML, listeners, submit logic remains exactly the same) ...
+    // Copy the rest of showManualOrderModal from your current file here.
+    // The key change was sorting the 'sortedItems' array before mapping 'itemRows'.
+    
+    // For completeness of the function logic structure:
     const modalHTML = `
         <div class="modal-form-container">
-            <h3>Create Order</h3>
-            
+            <h3>Create Phone Order</h3>
+            <!-- ... inputs for name/time ... -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-weight:600; display:block; margin-bottom:5px;">Customer Name</label>
@@ -372,10 +412,7 @@ function showManualOrderModal() {
                 </div>
             </div>
 
-            <!-- TABS CONTAINER -->
-            <div class="modal-tabs" id="manual-order-tabs">
-                ${tabsHtml}
-            </div>
+            <div class="modal-tabs" id="manual-order-tabs">${tabsHtml}</div>
 
             <div id="manual-items-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background:#fff;">
                 ${itemRows}
@@ -390,9 +427,28 @@ function showManualOrderModal() {
             </div>
         </div>
     `;
-    
-    uiUtils.showModal(modalHTML);
 
+    uiUtils.showModal(modalHTML);
+    // ... attach listeners (copy from previous implementation) ...
+    // Note: The rest of the logic (tabs, stepper, submit) is identical to before.
+    
+    // Quick refresher on the Tab Logic to ensure it works with sorted items:
+    const tabsContainer = document.getElementById('manual-order-tabs');
+    if(tabsContainer) {
+        tabsContainer.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('modal-tab')) return;
+            tabsContainer.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            const cat = e.target.dataset.category;
+            document.querySelectorAll('.manual-order-row').forEach(row => {
+                if (cat === 'All' || row.dataset.category === cat) row.style.display = 'flex';
+                else row.style.display = 'none';
+            });
+        });
+    }
+    
+    // ... (Keep existing stepper/submit logic) ...
+    // Setup variables for listeners
     const container = document.querySelector('.modal-form-container');
     const totalEl = document.getElementById('manual-order-total');
     const submitBtn = document.getElementById('submit-manual-order');
@@ -401,27 +457,7 @@ function showManualOrderModal() {
     const dueTimeInput = document.getElementById('manual-due-time-input');
     const selections = {}; 
 
-    // --- Tab Switching Logic ---
-    const tabsContainer = document.getElementById('manual-order-tabs');
-    tabsContainer.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('modal-tab')) return;
-        
-        // Active Class
-        tabsContainer.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        // Filter Items
-        const cat = e.target.dataset.category;
-        const rows = document.querySelectorAll('.manual-order-row');
-        rows.forEach(row => {
-            if (cat === 'All' || row.dataset.category === cat) {
-                row.style.display = 'flex';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-
+    // Due Time Toggle
     dueSelect.addEventListener('change', (e) => {
         if (e.target.value === 'other') {
             dueTimeInput.style.display = 'block';
@@ -435,7 +471,8 @@ function showManualOrderModal() {
     const updateTotal = () => {
         let total = 0;
         let count = 0;
-        menuItems.forEach(item => {
+        // Iterate over sortedItems to ensure we catch everything
+        sortedItems.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 total += qty * parseFloat(item.price);
@@ -474,13 +511,9 @@ function showManualOrderModal() {
     });
 
     submitBtn.addEventListener('click', async () => {
-        // Validation: Check Name
-        const customerName = nameInput.value.trim();
-        console.log("Submitting Name:", customerName); // Debug Log
-
         const items = [];
         let total = 0;
-        menuItems.forEach(item => {
+        sortedItems.forEach(item => {
             const qty = selections[item.id] || 0;
             if (qty > 0) {
                 items.push({ id: item.id, price: parseFloat(item.price), quantity: qty });
@@ -501,7 +534,7 @@ function showManualOrderModal() {
         submitBtn.disabled = true;
         
         const success = await useAppStore.getState().orderHistory.createManualOrder({
-            customerName: customerName || "Phone Order",
+            customerName: nameInput.value.trim() || "Phone Order",
             dueTime: dueTimestamp.toISOString(),
             items,
             total

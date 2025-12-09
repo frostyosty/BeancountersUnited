@@ -255,22 +255,28 @@ export function hideInitialLoader() {
 export function applyHeaderLogo(config) {
     if (!config) return;
     
-    // NEW: Save to local storage for instant load next time
-    localStorage.setItem('cached_header_config', JSON.stringify(config));
-    
     const h1 = document.querySelector('#main-header h1');
+    const header = document.getElementById('main-header'); // Select the parent header
+    
     if (!h1) return;
 
     const svgHTML = generateHeaderSVG(config);
     h1.innerHTML = svgHTML;
     
-    // FIX: Reset inline styles so CSS classes control the layout
- h1.style.padding = '0';
+    // Reset H1 styles
+    h1.style.padding = '0';
     h1.style.lineHeight = '0';
     h1.style.display = 'flex';
     h1.style.alignItems = 'center';
-    h1.style.justifyContent = 'center'; // Ensure SVG centers
+    h1.style.justifyContent = 'center';
     h1.style.width = '100%';
+
+    // FIX: Apply the Logo's background color to the entire Header Bar
+    if (header && config.bgColor) {
+        header.style.backgroundColor = config.bgColor;
+        // Optional: Remove border if you want a totally seamless look
+        // header.style.borderBottom = 'none'; 
+    }
 }
 
 export function updateSiteTitles(name, logoUrl) {

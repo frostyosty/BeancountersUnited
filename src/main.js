@@ -301,18 +301,22 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-    // --- 1. PRE-CALCULATE LOGO (Anti-Jolt Fix) ---
-    // This reads LocalStorage immediately so we can paint the SVG instantly
+     // --- 1. PRE-CALCULATE LOGO & BACKGROUND (Anti-Jolt Fix) ---
     let logoHTML = 'Mealmates';
     let logoStyle = '';
-
+    let headerStyle = ''; // NEW variable for the container
+    
     const cachedHeader = localStorage.getItem('cached_header_config');
     if (cachedHeader) {
         try {
             const config = JSON.parse(cachedHeader);
             logoHTML = uiUtils.generateHeaderSVG(config);
-            // Ensure the container centers the SVG correctly
             logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; justify-content:center;';
+            
+            // FIX: Pre-calculate the background color
+            if (config.bgColor) {
+                headerStyle = `background-color: ${config.bgColor};`;
+            }
         } catch (e) {
             console.error("Cache load failed", e);
         }
@@ -322,8 +326,8 @@ async function main() {
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
-            <header id="main-header">
-                <!-- INJECT PRE-CALCULATED LOGO HERE -->
+            <!-- FIX: Apply the calculated headerStyle -->
+            <header id="main-header" style="${headerStyle}">
                 <h1 style="${logoStyle}">${logoHTML}</h1>
                 
                 <nav>
@@ -337,6 +341,7 @@ async function main() {
             <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
         `;
     }
+
 
     // 3. Listeners
     setupHamburgerMenu();

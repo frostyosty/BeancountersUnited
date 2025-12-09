@@ -30,7 +30,8 @@ export default async function handler(req, res) {
                         'paymentConfig', 
                         'uiConfig', 
                         'aboutUs',
-                        'headerLogoConfig' // <--- ADD THIS
+                        'headerLogoConfig',
+                        'archiveSettings'
                     ];
 
                     if (jsonKeys.includes(row.key)) {
