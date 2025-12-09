@@ -376,7 +376,7 @@ export function renderClientRelationshipsSection(clients) {
     return `
         <section class="dashboard-section">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3>Client Relationships</h3>
+                <h3>Clients</h3>
                 <div style="display:flex; gap:10px;">
                     <input type="text" id="client-search" placeholder="Search..." style="padding:5px; border:1px solid #ccc; border-radius:4px;">
                     <button class="button-primary small" onclick="window.showAddPastOrderModal()">+ Past Order</button>

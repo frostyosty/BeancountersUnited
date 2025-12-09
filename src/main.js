@@ -1,11 +1,10 @@
-// src/main.js (FINAL & COMPLETE)
+// src/main.js (Updated with Name Change)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
 import * as uiUtils from './utils/uiUtils.js';
-import { applyHeaderLogo } from './utils/uiUtils.js'; // Ensure this is imported
+import { applyHeaderLogo } from './utils/uiUtils.js';
 
-// --- Import Feature Modules ---
 import { renderMenuPage } from './features/menu/menuUI.js';
 import { renderCartPage, renderCheckoutPage } from './features/cart/cartUI.js';
 import { renderAuthStatus, showLoginSignupModal } from './features/auth/authUI.js';
@@ -14,8 +13,6 @@ import { renderGodDashboard } from './features/admin/godDashboardUI.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderOrderHistoryPage } from './features/user/orderHistoryUI.js';
 import { renderAboutUsPage } from './features/about/aboutUsUI.js';
-import { renderUserProfilePage } from './features/user/userProfileUI.js';
-
 
 uiUtils.initGlobalSpinner();
 
@@ -56,7 +53,9 @@ function renderDesktopNav() {
 
     if (isAuthenticated && profile) {
         if (profile.can_see_order_history) {
-            html += makeLink('#order-history', 'Orders');
+            // FIX: Dynamic Naming
+            const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
+            html += makeLink('#order-history', label);
         }
         if (profile.role === 'owner' || profile.role === 'god') {
             html += makeLink('#owner-dashboard', 'Dashboard');
@@ -70,7 +69,6 @@ function renderDesktopNav() {
     container.innerHTML = html;
 }
 
-// Updates persistent elements like the header
 function renderPersistentUI() {
     renderAuthStatus();
     renderDesktopNav();
@@ -82,42 +80,28 @@ function renderPersistentUI() {
 function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
     const hash = window.location.hash || '#menu';
-
-    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth;
-
-    // 1. Wait for Auth to finish loading before routing
+    
+    const { getUserRole, isAuthLoading, isAuthenticated } = useAppStore.getState().auth; 
+    
     if (isAuthLoading) {
         console.log("[Router] Auth loading... waiting.");
-        return;
+        return; 
     }
-
+    
     const userRole = getUserRole();
 
-    // 2. Update Desktop Nav Active State
     renderDesktopNav();
 
-    // 3. Route Switch
     switch (hash) {
-        case '#menu':
-            renderMenuPage();
-            break;
-
-        case '#about-us':
-            renderAboutUsPage();
-            break;
-
-        case '#cart':
-        case '#checkout':
-            // Merged view
-            renderCartPage();
-            break;
-
+        case '#menu': renderMenuPage(); break;
+        case '#about-us': renderAboutUsPage(); break;
+        case '#cart': 
+        case '#checkout': renderCartPage(); break;
         case '#order-confirmation':
             const mainContent = document.getElementById('main-content');
             const { lastSuccessfulOrderId } = useAppStore.getState().checkout;
-            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`;
+            if (mainContent) mainContent.innerHTML = lastSuccessfulOrderId ? `...` : `...`; 
             break;
-
         case '#order-history':
             if (isAuthenticated) {
                 renderOrderHistoryPage();
@@ -125,15 +109,13 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-
         case '#my-account':
             if (isAuthenticated) {
-                renderUserProfilePage();
+                import('./features/user/userProfileUI.js').then(m => m.renderUserProfilePage());
             } else {
                 window.location.hash = '#menu';
             }
             break;
-
         case '#owner-dashboard':
             if (userRole === 'owner' || userRole === 'god') {
                 renderOwnerDashboard();
@@ -141,7 +123,6 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-
         case '#god-dashboard':
             if (userRole === 'god') {
                 renderGodDashboard();
@@ -150,10 +131,7 @@ function renderPageContent() {
                 window.location.hash = '#menu';
             }
             break;
-
-        default:
-            renderMenuPage();
-            break;
+        default: renderMenuPage(); break;
     }
 }
 
@@ -188,7 +166,7 @@ function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@mealmates.dev';
+        const godUserEmail = 'manager@mealmates.dev'; 
 
         if (user?.email === godUserEmail) {
             await logout();
@@ -232,52 +210,30 @@ function setupHamburgerMenu() {
     const buildMobileMenu = () => {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
         const { settings } = useAppStore.getState().siteSettings;
-        const cartCount = useAppStore.getState().cart.getTotalItemCount();
-
         const aboutEnabled = settings?.aboutUs?.enabled || false;
         const siteName = settings?.websiteName || 'Mealmates';
 
-        let navHTML = '';
+        let navHTML = `<a href="#menu" class="nav-link">Menu</a>`;
+        navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;
 
-        // 1. Standard Links
-        navHTML += `<a href="#menu" class="nav-link">Menu</a>`;
-        navHTML += `<a href="#cart" class="nav-link">Cart (${cartCount})</a>`;
-
-        // 2. Authenticated User Links
         if (isAuthenticated && profile) {
-            // New "My Account" Link
+            // FIX: Dynamic Naming
+            const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
+            
             navHTML += `<a href="#my-account" class="nav-link">My ${siteName}</a>`;
-
-            if (profile.can_see_order_history) {
-                navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
-            }
-            if (profile.role === 'owner' || profile.role === 'god') {
-                navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
-            }
-            if (profile.role === 'god') {
-                navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
-            }
+            
+            if (profile.can_see_order_history) navHTML += `<a href="#order-history" class="nav-link">${label}</a>`;
+            if (profile.role === 'owner' || profile.role === 'god') navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
         }
 
-        // 3. About Us (At the bottom of links)
-        if (aboutEnabled) {
-            navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
-        }
+        if (aboutEnabled) navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
 
-        // 4. Auth Buttons (Login/Logout)
-        let authSectionHTML = '';
-        if (isAuthenticated) {
-            authSectionHTML = `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`;
-        } else {
-            authSectionHTML = `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
-        }
+        let authSectionHTML = isAuthenticated 
+            ? `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`
+            : `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
 
-        const newHTML = navHTML + authSectionHTML;
-
-        // Prevent unnecessary DOM thrashing
-        if (mobileNavContainer.innerHTML !== newHTML) {
-            mobileNavContainer.innerHTML = newHTML;
-        }
+        mobileNavContainer.innerHTML = navHTML + authSectionHTML;
     };
 
     window.buildMobileMenu = buildMobileMenu;
@@ -301,10 +257,9 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
-     // --- 1. PRE-CALCULATE LOGO & BACKGROUND (Anti-Jolt Fix) ---
     let logoHTML = 'Mealmates';
     let logoStyle = '';
-    let headerStyle = ''; // NEW variable for the container
+    let headerStyle = '';
     
     const cachedHeader = localStorage.getItem('cached_header_config');
     if (cachedHeader) {
@@ -312,24 +267,17 @@ async function main() {
             const config = JSON.parse(cachedHeader);
             logoHTML = uiUtils.generateHeaderSVG(config);
             logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; justify-content:center;';
-            
-            // FIX: Pre-calculate the background color
-            if (config.bgColor) {
-                headerStyle = `background-color: ${config.bgColor};`;
-            }
+            if (config.bgColor) headerStyle = `background-color: ${config.bgColor};`;
         } catch (e) {
             console.error("Cache load failed", e);
         }
     }
 
-    // --- 2. RENDER SHELL ---
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
-            <!-- FIX: Apply the calculated headerStyle -->
             <header id="main-header" style="${headerStyle}">
                 <h1 style="${logoStyle}">${logoHTML}</h1>
-                
                 <nav>
                     <div id="desktop-nav-links" class="desktop-nav-group"></div>
                     <div id="auth-status-container">${SPINNER_SVG}</div>
@@ -342,8 +290,6 @@ async function main() {
         `;
     }
 
-
-    // 3. Listeners
     setupHamburgerMenu();
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
@@ -351,18 +297,17 @@ async function main() {
 
     window.addEventListener('hashchange', renderPageContent);
 
-    // 4. Subscriptions
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
             isAuthLoading: state.auth.isAuthLoading,
             isAuthenticated: state.auth.isAuthenticated,
-            profile: state.auth.profile,
+            profile: state.auth.profile, 
             cartItemCount: state.cart.items.length,
             aboutEnabled: state.siteSettings.settings?.aboutUs?.enabled
         };
     };
-
+    
     let previousUIState = getPersistentUIState();
     useAppStore.subscribe(() => {
         const currentUIState = getPersistentUIState();
@@ -391,7 +336,6 @@ async function main() {
         window.location.hash = '#menu';
     }
 
-    // 5. Initial Data
     await Promise.all([
         useAppStore.getState().auth.listenToAuthChanges(),
         useAppStore.getState().menu.fetchMenu(),
@@ -399,10 +343,9 @@ async function main() {
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true);
+        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
     }
-
-    // 6. Apply Settings (Hydration)
+    
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings) {
         if (settings.themeVariables) {
@@ -415,12 +358,7 @@ async function main() {
         }
         if (settings.headerSettings) uiUtils.applyHeaderLayout(settings.headerSettings);
         if (settings.websiteName || settings.logoUrl) uiUtils.updateSiteTitles(settings.websiteName, settings.logoUrl);
-
-        // Ensure Header is consistent with DB settings (if cache was stale)
-        if (settings.headerLogoConfig) {
-            uiUtils.applyHeaderLogo(settings.headerLogoConfig);
-        }
-
+        if (settings.headerLogoConfig) uiUtils.applyHeaderLogo(settings.headerLogoConfig);
         uiUtils.applyGlobalBackground(settings);
     }
 

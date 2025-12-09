@@ -166,10 +166,17 @@ export const createOrderHistorySlice = (set, get) => ({
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
                             alertText, 
-                            'error', // Always red for overdue
-                            isImportant ? 12000 : 8000, // Stay longer if important
+                            'error', 
+                            isImportant ? 12000 : 8000, 
                             () => {
-                                window.location.hash = '#owner-dashboard';
+                                // FIX: Handle navigation reliably
+                                if (window.location.hash === '#order-history') {
+                                    // Already here? Just refresh the data/view
+                                    get().ui.triggerPageRender();
+                                } else {
+                                    // Go there
+                                    window.location.hash = '#order-history';
+                                }
                             }
                         );
                     });
