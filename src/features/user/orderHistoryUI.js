@@ -130,10 +130,12 @@ function renderAdminOrderViews(container, orders, role, settings) {
         
         const customerCell = `<td style="padding:12px;"><span class="client-name-btn" onclick="window.handleOrderRowClick('${order.user_id}', '${clickName}')">${customerName}</span></td>`;
 
+
+// FIX: Calculate if this row should flash
         const highlightClass = (order.id === highlightOrderId) ? 'flash-highlight' : '';
 
         return `
-            <tr class="${statusClass}" data-order-id="${order.id}">
+            <tr class="${statusClass} ${highlightClass}" data-order-id="${order.id}">
                 <td style="padding:12px; font-weight:bold; white-space:nowrap;">${dueDisplay}</td>
                 <td style="padding:12px; font-size:0.9rem;">${itemsSummary}</td>
                 ${customerCell}
