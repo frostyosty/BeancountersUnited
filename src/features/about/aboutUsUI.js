@@ -13,7 +13,15 @@ export function renderAboutUsPage() {
     const userRole = auth.getUserRole();
     const isOwner = userRole === 'owner' || userRole === 'god';
 
-    const aboutConfig = settings.aboutUs || { enabled: false, title: 'About Us', content: '', imageUrl: '' };
+    // Default config structure
+    const aboutConfig = settings.aboutUs || { 
+        enabled: false, 
+        title: 'About Us', 
+        content: '', 
+        imageUrl: '',
+        enablePhone: false, // NEW
+        phoneNumber: ''     // NEW
+    };
 
     // 1. Access Control
     if (!aboutConfig.enabled && !isOwner) {
@@ -23,7 +31,7 @@ export function renderAboutUsPage() {
 
     // 2. Render View Mode
     const editButtonHTML = isOwner 
-        ? `<button id="edit-about-btn" class="button-secondary small" style="margin-bottom:20px;">✏️ Edit Content</button>` 
+        ? `<button id="edit-about-btn" class="button-secondary small" style="margin-bottom:20px;">✏️ Edit Page</button>` 
         : '';
 
     const imageHTML = aboutConfig.imageUrl 
@@ -31,11 +39,24 @@ export function renderAboutUsPage() {
         : '';
 
     const contentHTML = aboutConfig.content 
-        ? `<div style="line-height:1.6; white-space: pre-wrap;">${aboutConfig.content}</div>` 
+        ? `<div style="line-height:1.6; white-space: pre-wrap; font-size:1.05rem; color:#444;">${aboutConfig.content}</div>` 
         : `<p style="color:#666; font-style:italic;">No content yet.</p>`;
 
+    // --- NEW: Phone Button Logic ---
+    let phoneButtonHTML = '';
+    if (aboutConfig.enablePhone && aboutConfig.phoneNumber) {
+        const cleanNumber = aboutConfig.phoneNumber.replace(/\s+/g, ''); // Remove spaces for href
+        phoneButtonHTML = `
+            <div style="text-align:center; margin-top:10px;">
+                <a href="tel:${cleanNumber}" class="about-phone-btn mobile-sticky">
+                    📞 Call Us: ${aboutConfig.phoneNumber}
+                </a>
+            </div>
+        `;
+    }
+
     mainContent.innerHTML = `
-        <div class="about-container" style="max-width:800px; margin:0 auto; background:white; padding:2rem; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <div class="about-container" style="max-width:800px; margin:0 auto; background:white; padding:2rem; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05); position:relative;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h2 style="margin:0;">${aboutConfig.title}</h2>
                 ${editButtonHTML}
@@ -43,8 +64,18 @@ export function renderAboutUsPage() {
             
             ${imageHTML}
             ${contentHTML}
+            ${phoneButtonHTML}
+            
+            <!-- Spacer for mobile to prevent content being hidden behind sticky button -->
+            <div style="height: 60px; display:none;" class="mobile-spacer"></div>
         </div>
     `;
+    
+    // Helper style to show spacer only on mobile
+    if (window.innerWidth <= 768 && aboutConfig.enablePhone) {
+        const spacer = mainContent.querySelector('.mobile-spacer');
+        if(spacer) spacer.style.display = 'block';
+    }
 
     // 3. Attach Edit Listener
     const editBtn = document.getElementById('edit-about-btn');
@@ -75,7 +106,20 @@ function renderEditMode(config) {
 
                 <div class="form-group">
                     <label>Content / Story</label>
-                    <textarea name="content" style="width:100%; height:200px; padding:10px; border:1px solid #ddd; border-radius:4px;">${config.content}</textarea>
+                    <textarea name="content" style="width:100%; height:200px; padding:10px; border:1px solid #ddd; border-radius:4px; font-family:inherit;">${config.content}</textarea>
+                </div>
+
+                <!-- NEW: Phone Settings -->
+                <div class="form-group" style="background:#f9f9f9; padding:15px; border-radius:6px; border:1px solid #eee;">
+                    <label style="margin-bottom:10px; display:block;">Call to Action</label>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="checkbox" name="enablePhone" ${config.enablePhone ? 'checked' : ''}> 
+                            Show Call Button
+                        </label>
+                        <input type="tel" name="phoneNumber" value="${config.phoneNumber || ''}" placeholder="e.g. 021 123 4567" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <p style="font-size:0.8rem; color:#666; margin-top:5px;">This button will stick to the bottom of the screen on mobile devices.</p>
                 </div>
 
                 <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
@@ -117,18 +161,28 @@ function renderEditMode(config) {
 
         // Save Settings
         const newConfig = {
-            enabled: config.enabled, // Keep existing enabled state
+            enabled: config.enabled, // Preserve global enabled state
             title: formData.get('title'),
             content: formData.get('content'),
-            imageUrl: finalImageUrl
+            imageUrl: finalImageUrl,
+            // NEW FIELDS
+            enablePhone: formData.get('enablePhone') === 'on',
+            phoneNumber: formData.get('phoneNumber')
         };
 
         const { data: { session } } = await supabase.auth.getSession();
-        await api.updateSiteSettings({ aboutUs: newConfig }, session.access_token);
         
-        // Refresh Store & UI
-        await useAppStore.getState().siteSettings.fetchSiteSettings();
-        uiUtils.showToast("About page updated!", "success");
-        renderAboutUsPage();
+        try {
+            await api.updateSiteSettings({ aboutUs: newConfig }, session.access_token);
+            
+            // Refresh Store & UI
+            await useAppStore.getState().siteSettings.fetchSiteSettings();
+            uiUtils.showToast("About page updated!", "success");
+            renderAboutUsPage();
+        } catch (err) {
+            console.error(err);
+            uiUtils.showToast("Save failed", "error");
+            btn.disabled = false;
+        }
     });
 }

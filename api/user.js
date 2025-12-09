@@ -121,11 +121,12 @@ export default async function handler(req, res) {
             // We already verified the requester is a manager/owner above, so this is safe.
             const assignedUserId = targetUserId || user.id;
 
-            const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
-                user_id: assignedUserId, // <--- UPDATED
-                total_amount: total,
-                status: 'completed',
-                payment_status: 'paid',
+const { data: order, error: orderError } = await supabaseAdmin.from('orders').insert([{
+                user_id: user.id, 
+                total_amount: total, 
+                // FIX: Change 'completed' to 'pending' so it shows in Live Orders
+                status: 'pending', 
+                payment_status: 'paid', 
                 payment_method: 'manual_entry',
                 customer_name: customerName || 'Walk-in',
                 customer_email: null,

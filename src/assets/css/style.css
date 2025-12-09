@@ -1367,3 +1367,47 @@ input[type="color"] {
         justify-content: flex-end;
     }
 }
+
+
+/* --- About Us Phone Button --- */
+.about-phone-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background-color: #28a745; /* Green for Call */
+    color: white;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 12px 25px;
+    border-radius: 50px; /* Pill shape */
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 20px;
+}
+
+.about-phone-btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Mobile Specific: Make it a Floating "Sticky" Button */
+@media (max-width: 768px) {
+    .about-phone-btn.mobile-sticky {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%; /* Prominent width */
+        max-width: 300px;
+        z-index: 900; /* Above content, below toasts/modals */
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        font-size: 1.1rem;
+        animation: floatUp 0.5s ease-out;
+    }
+}
+
+@keyframes floatUp {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
