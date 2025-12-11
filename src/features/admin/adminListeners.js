@@ -105,26 +105,26 @@ export function attachOwnerDashboardListeners() {
 
     // --- 2. AUTOSAVE ---
     const saveFunctions = {
-globalSettings: async (form) => {
+        globalSettings: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
-            
+
             // Get current logo to preserve it
             const currentSettings = useAppStore.getState().siteSettings.settings;
 
-            const settingsUpdate = { 
-                websiteName: formData.get('websiteName'), 
+            const settingsUpdate = {
+                websiteName: formData.get('websiteName'),
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
                 // We keep logoUrl here so it doesn't get wiped
                 logoUrl: currentSettings.logoUrl
                 // REMOVED: aboutUs logic (It is handled by saveFunctions.aboutConfig now)
             };
-            
+
             await api.updateSiteSettings(settingsUpdate, session.access_token);
             uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
         },
-        
+
         menuConfig: async (form) => {
             const formData = new FormData(form);
             const { data: { session } } = await supabase.auth.getSession();
