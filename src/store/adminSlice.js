@@ -66,14 +66,19 @@ export const createAdminSlice = (set, get) => ({
             alert(`Failed to update user: ${error.message}`);
         }
     },
-     fetchClients: async () => {
+fetchClients: async () => {
+        console.log("[AdminSlice] fetchClients called"); // <--- LOG 7
         set(state => ({ admin: { ...state.admin, isLoadingClients: true } }));
+        
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const data = await api.getClients(session.access_token);
+            
+            console.log("[AdminSlice] Received Data:", data); // <--- LOG 8
+
             set(state => ({ admin: { ...state.admin, clients: data, isLoadingClients: false } }));
         } catch (e) {
-            console.error("Fetch Clients Failed", e);
+            console.error("[AdminSlice] Fetch Failed:", e); // <--- LOG 9
             set(state => ({ admin: { ...state.admin, isLoadingClients: false } }));
         }
     }

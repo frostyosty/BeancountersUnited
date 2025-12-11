@@ -70,18 +70,16 @@ export function renderGodDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    // 1. Fetch Data
+// Fetch Data Logic
     const adminState = useAppStore.getState().admin;
     
-    // Fetch Users (for User Management)
-    if (!adminState.users || adminState.users.length === 0) {
-        useAppStore.getState().admin.fetchAllUsers(); 
-    }
-    // Fetch Clients (for Client Relationships) - FIX: Added this
+    console.log("[GodUI] Admin State Clients:", adminState.clients); // <--- LOG 10
+
     if (!adminState.clients || adminState.clients.length === 0) {
+        console.log("[GodUI] Triggering fetch..."); // <--- LOG 11
         useAppStore.getState().admin.fetchClients();
     }
-
+    
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();

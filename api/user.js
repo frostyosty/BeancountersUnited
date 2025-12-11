@@ -173,18 +173,31 @@ const { data: order, error: orderError } = await supabaseAdmin.from('orders').in
         // =================================================
         // TYPE: CLIENTS (CRM Data Aggregation)
         // =================================================
-                if (type === 'clients') {
+                 if (type === 'clients') {
+            console.log("[API] Fetching Clients..."); // <--- LOG 1
+            
             // 1. Fetch Profiles
             const { data: profiles, error: pError } = await supabaseAdmin
                 .from('profiles')
-                .select('*'); // Get everything
-            if (pError) throw pError;
+                .select('*');
+            
+            if (pError) {
+                console.error("[API] Profile Fetch Error:", pError); // <--- LOG 2
+                throw pError;
+            }
+            console.log(`[API] Found ${profiles?.length || 0} profiles`); // <--- LOG 3
 
             // 2. Fetch Orders
             const { data: orders, error: oError } = await supabaseAdmin
                 .from('orders')
                 .select('user_id, total_amount, created_at, status');
-            if (oError) throw oError;
+            
+            if (oError) {
+                console.error("[API] Orders Fetch Error:", oError); // <--- LOG 4
+                throw oError;
+            }
+            console.log(`[API] Found ${orders?.length || 0} orders`); // <--- LOG 5
+
 
             // 3. Aggregate
             const clientStats = {}; 
@@ -208,6 +221,7 @@ const { data: order, error: orderError } = await supabaseAdmin.from('orders').in
             // Sort by spend
             richClients.sort((a, b) => b.totalSpend - a.totalSpend);
             
+            console.log(`[API] Returning ${richClients.length} rich clients`); // <--- LOG 6
             return res.status(200).json(richClients);
         }
 
