@@ -284,27 +284,40 @@ async function main() {
     let logoStyle = '';
     let headerStyle = '';
     
+    // 1. Try to get HEIGHT from Site Settings Cache
+    try {
+        const cachedSettings = localStorage.getItem('cached_site_settings');
+        if (cachedSettings) {
+            const parsed = JSON.parse(cachedSettings);
+            const h = parsed.headerSettings?.height;
+            if (h) {
+                // Pre-set the CSS variable inline
+                headerStyle += `--header-height: ${h}px; height: ${h}px; `;
+            }
+        }
+    } catch (e) {}
+
+    // 2. Try to get LOGO & BG COLOR from Header Config Cache
     const cachedHeader = localStorage.getItem('cached_header_config');
     if (cachedHeader) {
         try {
             const config = JSON.parse(cachedHeader);
             logoHTML = uiUtils.generateHeaderSVG(config);
-            
-            // FIX: Added height:100% and overflow:hidden to match final CSS
-            logoStyle = 'padding:0; margin:0; line-height:0; display:flex; align-items:center; width:100%; height:100%; justify-content:center; overflow:hidden;';
-            
-            if (config.bgColor) headerStyle = `background-color: ${config.bgColor};`;
-        } catch (e) {
-            console.error("Cache load failed", e);
-        }
+            logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; height:100%; justify-content:center; overflow:hidden;';
+            if (config.bgColor) {
+                headerStyle += `background-color: ${config.bgColor};`;
+            }
+        } catch (e) { console.error("Cache load failed", e); }
     }
 
-    // --- 2. RENDER SHELL ---
+    // --- RENDER SHELL ---
     const appElement = document.getElementById('app');
     if (appElement) {
+        // Inject the combined headerStyle
         appElement.innerHTML = `
             <header id="main-header" style="${headerStyle}">
                 <h1 style="${logoStyle}">${logoHTML}</h1>
+                
                 <nav>
                     <div id="desktop-nav-links" class="desktop-nav-group"></div>
                     <div id="auth-status-container">${SPINNER_SVG}</div>

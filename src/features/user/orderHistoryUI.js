@@ -116,7 +116,24 @@ function renderAdminOrderViews(container, orders, role, settings) {
             const dueTimeStr = order.pickup_time || order.created_at;
             dueDisplay = `<span class="live-timer" data-due="${dueTimeStr}">...</span>`;
         } else {
-            dueDisplay = new Date(order.pickup_time || order.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            // ARCHIVE DATE LOGIC
+            const dueD = new Date(order.pickup_time || order.created_at);
+            const timeStr = dueD.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            
+            // Calculate Day Diff
+            const now = new Date();
+            // Reset to midnight for clean day comparison
+            const d1 = new Date(dueD.getFullYear(), dueD.getMonth(), dueD.getDate());
+            const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const diffDays = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+            
+            let dayLabel = '';
+            if (diffDays === 0) dayLabel = ''; // Today
+            else if (diffDays === 1) dayLabel = ' <span style="font-size:0.8em; color:#888;">(Yest)</span>';
+            else if (diffDays < 7) dayLabel = ` <span style="font-size:0.8em; color:#888;">(${diffDays}d)</span>`;
+            else dayLabel = ` <span style="font-size:0.8em; color:#888;">(${dueD.getDate()}/${dueD.getMonth()+1})</span>`;
+
+            dueDisplay = `${timeStr}${dayLabel}`;
         }
 
         const customerName = order.customer_name || order.profiles?.full_name || order.profiles?.email || 'Guest';

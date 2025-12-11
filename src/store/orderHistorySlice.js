@@ -129,31 +129,36 @@ export const createOrderHistorySlice = (set, get) => ({
         }
     },
 
-checkUrgency: () => {
+ checkUrgency: () => {
         const role = get().auth.getUserRole();
         if (role !== 'manager' && role !== 'owner' && role !== 'god') return;
         
-        // Don't alert if we are already looking at the list (optional, but requested previously)
         if (window.location.hash === '#order-history') return;
 
         const { orders, notifiedOrderIds } = get().orderHistory;
         
         const now = Date.now();
-        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000;
-        const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000; // 15 mins past due
+        const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours (Zombie limit)
 
-        // Clone set to track what we add in this cycle
         const newNotifiedSet = new Set(notifiedOrderIds);
         let hasNewAlerts = false;
 
         orders.forEach(order => {
             if (order.status === 'pending' || order.status === 'preparing') {
+                
                 const createdTime = new Date(order.created_at).getTime();
+                const pickupTime = new Date(order.pickup_time || order.created_at).getTime();
+
+                // 1. ZOMBIE CHECK: If order was created > 24h ago, ignore it completely.
                 if (now - createdTime > MAX_AGE_MS) return;
 
-                if ((now - createdTime) > URGENCY_THRESHOLD_MS && !newNotifiedSet.has(order.id)) {
+                // 2. FUTURE CHECK: If pickup time is in the future, ignore.
+                if (pickupTime > now) return;
+
+                // 3. OVERDUE CHECK: If current time is > 15 mins past pickup time
+                if ((now - pickupTime) > URGENCY_THRESHOLD_MS && !newNotifiedSet.has(order.id)) {
                     
-                    // Mark as notified immediately in local set
                     newNotifiedSet.add(order.id);
                     hasNewAlerts = true;
 
@@ -161,20 +166,16 @@ checkUrgency: () => {
                     const firstItem = order.order_items?.[0]?.menu_items?.name || 'Order';
                     const isImportant = order.profiles?.staff_note_urgency === 'alert';
                     
-                    let alertText = `⚠️ ${firstItem} for ${customer} is overdue!`;
-                    if (isImportant) alertText = `🚨 VIP: ${firstItem} for ${customer} is overdue!`;
+                    // FIX: Updated Text Format
+                    let alertText = `⚠️ ${firstItem} for ${customer} Due`;
+                    if (isImportant) alertText = `🚨 VIP: ${firstItem} for ${customer} Due`;
 
-                    // Dynamic Import to avoid circles
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
                             alertText, 
                             'error', 
                             isImportant ? 12000 : 8000, 
                             () => {
-                                // --- CLICK ACTION ---
-                                // 1. Set Highlight ID
-                                get().ui.setHighlightOrderId(order.id);
-                                // 2. Navigate
                                 if (window.location.hash === '#order-history') {
                                     get().ui.triggerPageRender();
                                 } else {
@@ -187,9 +188,7 @@ checkUrgency: () => {
             }
         });
 
-        // Update state once if changed
         if (hasNewAlerts) {
             set(state => ({ orderHistory: { ...state.orderHistory, notifiedOrderIds: newNotifiedSet } }));
         }
     }
-});
