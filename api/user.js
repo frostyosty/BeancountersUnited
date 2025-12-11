@@ -22,19 +22,34 @@ export default async function handler(req, res) {
             const { data } = await supabaseAdmin.from('profiles').select('*').eq('id', user.id).single();
             return res.status(200).json(data);
         }
+        // TYPE: ORDERS (History / Live View)
         if (type === 'orders') {
-            // FIX: Added 'id, price' to the nested menu_items select
-            const { data } = await supabaseAdmin
+            if (req.method !== 'GET') return res.status(405).end();
+
+            // Check if Admin
+            const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
+            const isAdmin = profile && (profile.role === 'manager' || profile.role === 'owner' || profile.role === 'god');
+
+            let query = supabaseAdmin
                 .from('orders')
                 .select(`
                     *,
                     order_items (
                         *,
-                        menu_items (id, name, price, image_url)
-                    )
+                        menu_items (name, image_url)
+                    ),
+                    profiles (email, full_name, internal_nickname, staff_note, staff_note_urgency) -- Fetch Client Info
                 `)
-                .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
+
+            // FIX: Only filter by user_id if NOT an admin
+            if (!isAdmin) {
+                query = query.eq('user_id', user.id);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            
             return res.status(200).json(data);
         }
 

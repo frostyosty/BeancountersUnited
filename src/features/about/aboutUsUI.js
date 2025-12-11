@@ -132,7 +132,7 @@ function renderEditMode(config) {
 
     document.getElementById('cancel-edit-btn').onclick = () => renderAboutUsPage();
 
-    document.getElementById('about-us-form').addEventListener('submit', async (e) => {
+document.getElementById('about-us-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
         btn.textContent = "Saving...";
@@ -161,24 +161,24 @@ function renderEditMode(config) {
 
         // Save Settings
         const newConfig = {
-            enabled: config.enabled, // Preserve global enabled state
+            enabled: config.enabled,
             title: formData.get('title'),
             content: formData.get('content'),
             imageUrl: finalImageUrl,
-            // NEW FIELDS
             enablePhone: formData.get('enablePhone') === 'on',
             phoneNumber: formData.get('phoneNumber')
         };
-
-        const { data: { session } } = await supabase.auth.getSession();
         
+        // FIX: Use Store Action for Optimistic Update
+        const { updateSiteSettings } = useAppStore.getState().siteSettings;
+        const { data: { session } } = await supabase.auth.getSession();
+
         try {
-            await api.updateSiteSettings({ aboutUs: newConfig }, session.access_token);
+            // This updates local state immediately, then calls API
+            await updateSiteSettings({ aboutUs: newConfig }, session.access_token);
             
-            // Refresh Store & UI
-            await useAppStore.getState().siteSettings.fetchSiteSettings();
             uiUtils.showToast("About page updated!", "success");
-            renderAboutUsPage();
+            renderAboutUsPage(); // Re-render with new state immediately
         } catch (err) {
             console.error(err);
             uiUtils.showToast("Save failed", "error");

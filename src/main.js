@@ -280,7 +280,7 @@ async function main() {
     }
 
     // --- 1. PRE-CALCULATE LOGO (Anti-Jolt Fix) ---
-    let logoHTML = 'Mealmates';
+     let logoHTML = 'Mealmates';
     let logoStyle = '';
     let headerStyle = '';
     
@@ -289,7 +289,10 @@ async function main() {
         try {
             const config = JSON.parse(cachedHeader);
             logoHTML = uiUtils.generateHeaderSVG(config);
-            logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; justify-content:center;';
+            
+            // FIX: Added height:100% and overflow:hidden to match final CSS
+            logoStyle = 'padding:0; margin:0; line-height:0; display:flex; align-items:center; width:100%; height:100%; justify-content:center; overflow:hidden;';
+            
             if (config.bgColor) headerStyle = `background-color: ${config.bgColor};`;
         } catch (e) {
             console.error("Cache load failed", e);
