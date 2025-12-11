@@ -254,7 +254,6 @@ function setupHamburgerMenu() {
         if (mobileMenuPanel.classList.contains('open')) toggleMenu();
     });
 }
-
 async function main() {
     if (isAppInitialized) return;
     isAppInitialized = true;
