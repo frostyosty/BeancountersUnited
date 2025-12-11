@@ -129,7 +129,7 @@ export const createOrderHistorySlice = (set, get) => ({
         }
     },
 
- checkUrgency: () => {
+checkUrgency: () => {
         const role = get().auth.getUserRole();
         if (role !== 'manager' && role !== 'owner' && role !== 'god') return;
         
@@ -192,3 +192,4 @@ export const createOrderHistorySlice = (set, get) => ({
             set(state => ({ orderHistory: { ...state.orderHistory, notifiedOrderIds: newNotifiedSet } }));
         }
     }
+});
