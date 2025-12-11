@@ -11,9 +11,13 @@ async function request(endpoint, method = 'GET', body = null, token = null) {
     try {
         // Note: endpoint already contains the query params
         const response = await fetch(`/api${endpoint}`, config);
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: response.statusText }));
-            throw new Error(errorData.message || `API request failed`);
+if (!response.ok) {
+            // FIX: Check for 'error' OR 'message'
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error || errorData.message || response.statusText;
+            
+            console.error(`[ApiService] Server Error (${response.status}):`, errorMessage);
+            throw new Error(errorMessage);
         }
         if (response.status === 204) return null;
         return await response.json();
