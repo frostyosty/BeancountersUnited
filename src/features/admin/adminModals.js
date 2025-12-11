@@ -335,6 +335,7 @@ export function showEditUserModal(user) {
 export async function showImageEditorModal(item) {
     const currentImg = item.image_url || '/placeholder-coffee.jpg';
 
+    // 1. Load Cropper.js Dependencies if not present
     if (!window.Cropper) {
         uiUtils.showToast("Loading editor tools...", "info");
         await loadCSS('https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css');
@@ -344,55 +345,131 @@ export async function showImageEditorModal(item) {
     const modalHTML = `
         <div class="modal-form-container" style="max-width: 600px; text-align:center;">
             <h3>Edit Image: ${item.name}</h3>
-            <div style="margin: 20px auto; width: 300px; height: 300px; background: #333; overflow: hidden; border-radius: 8px; position: relative;">
-                <img id="img-editor-target" src="${currentImg}" crossorigin="anonymous" style="max-width: 100%; display: block;">
+            
+            <!-- EDITOR CANVAS -->
+            <!-- We put the background color on this wrapper div during preview -->
+            <div id="cropper-wrapper" style="margin: 20px auto; width: 300px; height: 300px; background-color: transparent; overflow: hidden; border-radius: 8px; position: relative; border: 1px solid #ccc;">
+                <!-- Checkerboard pattern (always behind the color) for transparency reference -->
+                <div style="position: absolute; inset: 0; background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; z-index: 0; pointer-events:none;"></div>
+                
+                <!-- The Image -->
+                <img id="img-editor-target" src="${currentImg}" crossorigin="anonymous" style="max-width: 100%; display: block; position: relative; z-index: 1;">
             </div>
-            <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;">
+
+            <!-- CONTROLS ROW 1: Movement -->
+            <div style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
                 <button type="button" class="button-secondary small" id="btn-zoom-in" title="Zoom In">➕</button>
                 <button type="button" class="button-secondary small" id="btn-zoom-out" title="Zoom Out">➖</button>
                 <button type="button" class="button-secondary small" id="btn-rotate" title="Rotate">🔄</button>
                 <button type="button" class="button-secondary small" id="btn-reset" title="Reset">Reset</button>
             </div>
+
+            <!-- CONTROLS ROW 2: Background -->
+            <div style="background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 15px; border: 1px solid #eee;">
+                <span style="font-size: 0.9rem; font-weight: 600; color: #555;">Canvas Background:</span>
+                
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem;">
+                    <input type="checkbox" id="bg-transparent-check" checked> Transparent
+                </label>
+
+                <div id="bg-color-picker-group" style="display:none; align-items: center; gap: 5px;">
+                    <input type="color" id="bg-color-input" value="#ffffff" style="cursor: pointer; border: none; width: 30px; height: 30px; padding: 0;">
+                    <span id="bg-color-val" style="font-family: monospace; font-size: 0.8rem;">#ffffff</span>
+                </div>
+            </div>
+
+            <!-- UPLOAD -->
             <div id="img-drop-zone" style="border: 2px dashed #ccc; padding: 15px; border-radius: 8px; cursor: pointer; background: #fafafa; margin-bottom: 20px;">
                 <p style="margin:0; font-weight:500; font-size:0.9rem;">Drag & Drop New Image</p>
                 <input type="file" id="img-editor-input" accept="image/*" style="display:none;">
             </div>
+
+            <!-- ACTIONS -->
             <div style="display: flex; gap: 10px; justify-content: center; border-top:1px solid #eee; padding-top:20px;">
                 <button id="btn-remove-bg" class="button-secondary" style="background: #6f42c1; color: white;">✨ Remove Background</button>
                 <button id="btn-save-img" class="button-primary">Save Changes</button>
             </div>
+            
             <div id="ai-status" style="margin-top: 15px; font-size: 0.9rem; color: #666;"></div>
         </div>
     `;
 
     uiUtils.showModal(modalHTML);
 
+    // --- ELEMENTS ---
     const imageEl = document.getElementById('img-editor-target');
+    const cropperWrapper = document.getElementById('cropper-wrapper');
     const fileInput = document.getElementById('img-editor-input');
     const dropZone = document.getElementById('img-drop-zone');
     const status = document.getElementById('ai-status');
+    
+    // Background controls
+    const bgCheck = document.getElementById('bg-transparent-check');
+    const bgGroup = document.getElementById('bg-color-picker-group');
+    const bgColorInput = document.getElementById('bg-color-input');
+    const bgColorVal = document.getElementById('bg-color-val');
+
     let cropper = null;
 
+    // --- INIT CROPPER ---
     const initCropper = () => {
         if (cropper) cropper.destroy();
         cropper = new Cropper(imageEl, {
             aspectRatio: 1, 
-            viewMode: 1,    
+            // viewMode 0 allows image to be smaller than the canvas (freely movable)
+            viewMode: 0,    
             dragMode: 'move', 
-            autoCropArea: 1,
-            background: false, 
-            checkCrossOrigin: false 
+            autoCropArea: 0.8,
+            background: false, // Turn off default grid so our custom CSS background shows through
+            checkCrossOrigin: false,
+            // Ensure the crop box stays full size of the container so we capture the background
+            ready: function() {
+                // Optional: Force crop box to fill container if you want "What you see is what you get"
+                // this.cropper.setCropBoxData({ left: 0, top: 0, width: 300, height: 300 });
+            }
         });
     };
 
     imageEl.onload = () => initCropper();
     if (imageEl.complete) initCropper();
 
+    // --- BACKGROUND LOGIC ---
+    const updateBackground = () => {
+        if (bgCheck.checked) {
+            bgGroup.style.display = 'none';
+            // CSS: Transparent allows the checkerboard under it to show
+            // Note: We apply this to the specific Cropper element class that holds the image
+            const canvasEl = document.querySelector('.cropper-canvas'); 
+            if(canvasEl) canvasEl.style.backgroundColor = 'transparent';
+            
+            // Also update our wrapper for visual consistency
+            cropperWrapper.style.backgroundColor = 'transparent';
+        } else {
+            bgGroup.style.display = 'flex';
+            const color = bgColorInput.value;
+            bgColorVal.textContent = color;
+            
+            // Apply color to the cropper canvas (behind the image)
+            const canvasEl = document.querySelector('.cropper-canvas'); 
+            if(canvasEl) canvasEl.style.backgroundColor = color;
+
+            cropperWrapper.style.backgroundColor = color;
+        }
+    };
+
+    bgCheck.addEventListener('change', updateBackground);
+    bgColorInput.addEventListener('input', updateBackground);
+
+    // --- ZOOM / ROTATE ---
     document.getElementById('btn-zoom-in').onclick = () => cropper.zoom(0.1);
     document.getElementById('btn-zoom-out').onclick = () => cropper.zoom(-0.1);
     document.getElementById('btn-rotate').onclick = () => cropper.rotate(90);
-    document.getElementById('btn-reset').onclick = () => cropper.reset();
+    document.getElementById('btn-reset').onclick = () => {
+        cropper.reset();
+        updateBackground(); // Re-apply background after reset
+    };
 
+    // --- DRAG & DROP ---
     dropZone.onclick = () => fileInput.click();
     
     const handleFile = (file) => {
@@ -400,6 +477,8 @@ export async function showImageEditorModal(item) {
         reader.onload = (e) => {
             if (cropper) {
                 cropper.replace(e.target.result);
+                // Wait a tick for replace to finish before re-applying background styles
+                setTimeout(updateBackground, 100);
             } else {
                 imageEl.src = e.target.result;
                 initCropper();
@@ -418,6 +497,7 @@ export async function showImageEditorModal(item) {
         if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     };
 
+    // --- REMOVE BACKGROUND ---
     document.getElementById('btn-remove-bg').onclick = async () => {
         const btn = document.getElementById('btn-remove-bg');
         if (!cropper) return;
@@ -428,8 +508,9 @@ export async function showImageEditorModal(item) {
         btn.disabled = true;
 
         try {
-            const croppedCanvas = cropper.getCroppedCanvas({ width: 500, height: 500, fillColor: '#ffffff' });
-            const blob = await new Promise(resolve => croppedCanvas.toBlob(resolve));
+            // Get data from current view (ignoring background setting, we want raw image processing)
+            // We use the original image, not the canvas, for better AI results
+            const blob = await fetch(imageEl.src).then(r => r.blob());
             const url = URL.createObjectURL(blob);
 
             if (!window.imglyRemoveBackground) {
@@ -440,6 +521,8 @@ export async function showImageEditorModal(item) {
             const resultUrl = URL.createObjectURL(resultBlob);
             
             cropper.replace(resultUrl);
+            setTimeout(updateBackground, 100); // Re-apply background settings
+            
             status.textContent = "✨ Background removed!";
             uiUtils.showToast("Background removed!", "success");
         } catch (err) {
@@ -448,17 +531,31 @@ export async function showImageEditorModal(item) {
         } finally { btn.disabled = false; }
     };
 
+    // --- SAVE ---
     document.getElementById('btn-save-img').onclick = async () => {
         if (!cropper) return;
         const btn = document.getElementById('btn-save-img');
         btn.textContent = "Uploading..."; btn.disabled = true;
 
         try {
-            const canvas = cropper.getCroppedCanvas({ width: 600, height: 600, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+            // Determine Fill Color
+            // If transparent checked, use 'transparent' (which results in PNG alpha)
+            // If color picked, use that hex code.
+            const fillColor = bgCheck.checked ? 'transparent' : bgColorInput.value;
+
+            const canvas = cropper.getCroppedCanvas({ 
+                width: 600, height: 600, 
+                imageSmoothingEnabled: true, 
+                imageSmoothingQuality: 'high',
+                fillColor: fillColor // <--- THIS BAKES THE COLOR IN
+            });
+
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             const fileName = `menu-items/${item.id}-${Date.now()}.png`;
+
             const { error } = await supabase.storage.from('menu-images').upload(fileName, blob);
             if (error) throw error;
+            
             const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName);
             
             const { data: { session } } = await supabase.auth.getSession();
@@ -467,6 +564,7 @@ export async function showImageEditorModal(item) {
             uiUtils.showToast("Image updated!", "success");
             useAppStore.getState().menu.fetchMenu();
             uiUtils.closeModal();
+
         } catch (err) {
             console.error(err);
             uiUtils.showToast("Save failed.", "error");
