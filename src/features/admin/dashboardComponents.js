@@ -135,10 +135,25 @@ export function renderGlobalSettingsSection(settings) {
     const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
     // Removed aboutEnabled logic from here
 
+     const staticMode = settings.staticMode === true;
+
     return `
         <section class="dashboard-section" style="border-color: #7b2cbf;">
             <h3 style="color:#7b2cbf;">Global Site Settings</h3>
             <form id="global-settings-form">
+                
+                <!-- DISASTER RECOVERY TOGGLE -->
+                <div class="form-group" style="background:#000; color:#fff; padding:10px; border-radius:4px; margin-bottom:15px;">
+                    <label style="font-weight:bold; display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="staticMode" ${staticMode ? 'checked' : ''}> 
+                        🚨 Enable Static Mode (Disaster Recovery)
+                    </label>
+                    <p style="font-size:0.75rem; color:#ccc; margin-top:5px;">
+                        Turns the site Black & White and disables all ordering/database features. 
+                        Use this if the backend fails. 
+                        <br><strong>To exit this mode later, go to: /?mode=admin</strong>
+                    </p>
+                </div>
                 <div class="form-group">
                     <label>Website Name</label>
                     <input type="text" name="websiteName" value="${settings.websiteName || 'Mealmates'}" required>

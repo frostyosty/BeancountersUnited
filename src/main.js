@@ -1,4 +1,7 @@
 // src/main.js (Updated with Name Change)
+
+import './assets/css/static.css'; // Import the CSS
+import { renderStaticSite } from './features/static/staticUI.js';
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import { useAppStore } from './store/appStore.js';
@@ -257,6 +260,27 @@ async function main() {
     isAppInitialized = true;
     console.log("[App] Main initialization started.");
 
+    // --- CHECK FOR ADMIN OVERRIDE ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceAdmin = urlParams.get('mode') === 'admin';
+
+    // --- 0. STATIC MODE CHECK ---
+    let isStaticMode = false;
+    try {
+        const cachedSettings = localStorage.getItem('cached_site_settings'); 
+        if (cachedSettings) {
+            const parsed = JSON.parse(cachedSettings);
+            isStaticMode = parsed.staticMode === true;
+        }
+    } catch(e) {}
+
+    // IF STATIC & NOT ADMIN OVERRIDE -> RENDER STATIC & STOP
+    if (isStaticMode && !forceAdmin) {
+        renderStaticSite();
+        return; // Stop the rest of the app from loading
+    }
+
+    // --- 1. PRE-CALCULATE LOGO (Anti-Jolt Fix) ---
     let logoHTML = 'Mealmates';
     let logoStyle = '';
     let headerStyle = '';
@@ -273,6 +297,7 @@ async function main() {
         }
     }
 
+    // --- 2. RENDER SHELL ---
     const appElement = document.getElementById('app');
     if (appElement) {
         appElement.innerHTML = `
@@ -290,6 +315,7 @@ async function main() {
         `;
     }
 
+    // 3. Listeners
     setupHamburgerMenu();
     setupNavigationAndInteractions();
     initializeImpersonationToolbar();
@@ -297,6 +323,7 @@ async function main() {
 
     window.addEventListener('hashchange', renderPageContent);
 
+    // 4. Subscriptions
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
@@ -336,16 +363,28 @@ async function main() {
         window.location.hash = '#menu';
     }
 
+    // 5. Initial Data (With Caching Logic)
     await Promise.all([
         useAppStore.getState().auth.listenToAuthChanges(),
-        useAppStore.getState().menu.fetchMenu(),
-        useAppStore.getState().siteSettings.fetchSiteSettings()
+        
+        // Fetch Menu & Cache it
+        useAppStore.getState().menu.fetchMenu().then(() => {
+            const items = useAppStore.getState().menu.items;
+            localStorage.setItem('backup_menu_items', JSON.stringify(items));
+        }),
+        
+        // Fetch Settings & Cache it
+        useAppStore.getState().siteSettings.fetchSiteSettings().then(() => {
+            const current = useAppStore.getState().siteSettings.settings;
+            localStorage.setItem('cached_site_settings', JSON.stringify(current));
+        })
     ]);
 
     if (useAppStore.getState().auth.isAuthenticated) {
         useAppStore.getState().orderHistory.fetchOrderHistory(true); 
     }
     
+    // 6. Apply Settings
     const settings = useAppStore.getState().siteSettings.settings;
     if (settings) {
         if (settings.themeVariables) {

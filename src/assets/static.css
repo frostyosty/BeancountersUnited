@@ -1,0 +1,55 @@
+/* src/assets/css/static.css */
+
+/* Scope everything to body.static-mode */
+body.static-mode {
+    /* Force Black & White */
+    filter: grayscale(100%);
+    background-color: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+    font-family: "Courier New", Courier, monospace !important; /* "Printed Menu" vibe */
+}
+
+/* Hide Interactivity */
+body.static-mode .add-to-cart-btn,
+body.static-mode .edit-item-btn,
+body.static-mode .delete-item-btn,
+body.static-mode #cart-count,
+body.static-mode .nav-link[href="#cart"],
+body.static-mode .nav-link[href="#order-history"],
+body.static-mode .mobile-auth-section,
+body.static-mode #login-signup-btn,
+body.static-mode #auth-status-container {
+    display: none !important;
+}
+
+/* Simplify Header */
+body.static-mode #main-header {
+    border-bottom: 2px solid #000;
+    justify-content: center;
+}
+
+body.static-mode #main-header nav {
+    flex-grow: 0;
+}
+
+/* Static Card Styling */
+body.static-mode .menu-item-card {
+    border: 1px solid #000;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+body.static-mode .menu-item-image {
+    filter: contrast(1.2); /* Enhance B&W images */
+}
+
+body.static-mode .static-notice {
+    text-align: center;
+    padding: 10px;
+    background: #000;
+    color: #fff;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}

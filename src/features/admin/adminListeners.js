@@ -110,13 +110,22 @@ export function attachOwnerDashboardListeners() {
             const { data: { session } } = await supabase.auth.getSession();
             const currentSettings = useAppStore.getState().siteSettings.settings;
 
-            const settingsUpdate = {
-                websiteName: formData.get('websiteName'),
+const settingsUpdate = { 
+                websiteName: formData.get('websiteName'), 
                 hamburgerMenuContent: formData.get('hamburgerMenuContent'),
-                logoUrl: currentSettings.logoUrl
+                logoUrl: currentSettings.logoUrl,
+                aboutUs: { ...currentAbout, enabled: formData.get('enableAboutUs') === 'on' },
+                
+                // NEW: Static Mode
+                staticMode: formData.get('staticMode') === 'on'
             };
-
+            
             await api.updateSiteSettings(settingsUpdate, session.access_token);
+            
+            // Update LocalStorage immediately so it takes effect on reload
+            const newCached = { ...currentSettings, ...settingsUpdate };
+            localStorage.setItem('cached_site_settings', JSON.stringify(newCached));
+            
             uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
             uiUtils.showToast('Settings saved.', 'success', 1000);
         },
