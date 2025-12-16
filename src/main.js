@@ -73,7 +73,10 @@ async function main() {
 
     // Page Refresh Subscription
     useAppStore.subscribe(
-        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}-${state.auth.isAuthLoading}`,
+        // FIX: Added state.auth.isAuthenticated to the key string
+        // This ensures the router runs immediately when you log in OR out
+        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}-${state.auth.isAuthLoading}-${state.auth.isAuthenticated}`,
+        
         (keyString) => {
             console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
             renderPageContent();
