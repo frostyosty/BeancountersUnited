@@ -1,17 +1,30 @@
 // src/core/events.js
+// src/core/events.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
 export function setupGlobalListeners() {
-    document.body.addEventListener('click', (e) => {
+    document.body.addEventListener('click', async (e) => {
         // Login
         if (e.target.matches('#login-signup-btn')) {
             import('@/features/auth/authUI.js').then(m => m.showLoginSignupModal());
             return;
         }
-        // Logout
+
+        // Logout (FIXED)
         if (e.target.matches('#logout-btn')) {
-            useAppStore.getState().auth.logout();
+            const { logout } = useAppStore.getState().auth;
+            
+            // Show toast immediately for feedback
+            uiUtils.showToast("Logged out successfully.", "success");
+            
+            // Perform logout
+            await logout();
+            
+            // Redirect to home/menu to ensure we aren't left on a protected page
+            if (window.location.hash !== '#menu') {
+                window.location.hash = '#menu';
+            }
             return;
         }
 
