@@ -218,7 +218,10 @@ export function renderMenuPage() {
     }
 
     // 2. Load/Error/Empty
-    if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading menu...</div>`; return; }
+    if (isLoading) {
+        mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Menu...");
+        return;
+    }
     if (error) { mainContent.innerHTML = `<div class="error-message"><h2>Could not load menu</h2><p>${error}</p></div>`; return; }
     if (items.length === 0) { mainContent.innerHTML = `<div class="empty-state"><h2>Our menu is currently empty</h2></div>`; return; }
 

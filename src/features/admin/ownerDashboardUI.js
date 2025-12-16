@@ -84,8 +84,9 @@ export function renderOwnerDashboard() {
     const { orders } = useAppStore.getState().orderHistory;
 
     if (isLoadingMenu || isLoadingSettings) {
-        mainContent.innerHTML = `<div class="loading-spinner">Loading Dashboard...</div>`;
+mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
         return;
+        
     }
     if (error) {
         mainContent.innerHTML = `<div class="error-message"><h2>Error</h2><p>${error}</p></div>`;

@@ -191,6 +191,7 @@ export function attachOwnerDashboardListeners() {
             const { data: { session } } = await supabase.auth.getSession();
             const { settings } = useAppStore.getState().siteSettings;
 
+            // Existing UI Config
             const uiConfig = {
                 pageTransition: formData.get('pageTransition'),
                 staggerMenu: formData.get('staggerMenu') === 'on',
@@ -199,12 +200,20 @@ export function attachOwnerDashboardListeners() {
                 bgAnimation: formData.get('bgAnimation') === 'on'
             };
 
-            const themeVariables = { ...settings.themeVariables };
-            container.querySelectorAll('[data-css-var]').forEach(input => {
-                themeVariables[input.dataset.cssVar] = input.value;
-            });
+            // NEW: Loader Config
+            // We read the custom URL from the DOM or state if not in form data directly (uploads handled separately)
+            // But we can store the current setting from state to preserve URL if not uploading new one
+            const currentLoader = settings.loaderConfig || {};
+            const loaderConfig = {
+                type: formData.get('loaderType'),
+                animation: formData.get('loaderAnimation'),
+                customUrl: currentLoader.customUrl // Persist URL
+            };
 
-            await api.updateSiteSettings({ uiConfig, themeVariables }, session.access_token);
+            await api.updateSiteSettings({ uiConfig, loaderConfig }, session.access_token);
+            
+            // Update LocalStorage for instant access
+            uiUtils.setGlobalSpinnerConfig(loaderConfig);
 
             const currentSettings = useAppStore.getState().siteSettings.settings;
             const newSettings = { ...currentSettings, uiConfig, themeVariables: { ...currentSettings.themeVariables, ...themeVariables } };
@@ -254,6 +263,42 @@ export function attachOwnerDashboardListeners() {
     container.addEventListener('change', async (e) => {
         const target = e.target;
         const form = target.closest('form');
+
+
+
+        // Toggle Custom Loader Input visibility
+        if (target.name === 'loaderType') {
+            const customGroup = document.getElementById('loader-custom-group');
+            if (customGroup) customGroup.style.display = (target.value === 'custom') ? 'block' : 'none';
+            saveFunctions.appearanceSettings(form);
+            return;
+        }
+
+        // Loader Image Upload
+        if (target.id === 'loader-upload') {
+            const file = target.files[0];
+            if (file) {
+                uiUtils.showToast("Uploading loader...", "info");
+                try {
+                    const url = await uploadLogo(file);
+                    // Save immediately
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const { settings } = useAppStore.getState().siteSettings;
+                    const newLoaderConfig = { ...settings.loaderConfig, customUrl: url, type: 'custom' };
+                    
+                    await api.updateSiteSettings({ loaderConfig: newLoaderConfig }, session.access_token);
+                    uiUtils.setGlobalSpinnerConfig(newLoaderConfig);
+                    
+                    // Update Preview
+                    document.getElementById('loader-preview').src = url;
+                    
+                    uiUtils.showToast("Loader updated.", "success");
+                } catch (e) {
+                    uiUtils.showToast("Upload failed.", "error");
+                }
+            }
+            return;
+        }
 
         // Logo Upload
         if (target.id === 'logo-upload') {
@@ -329,7 +374,7 @@ export function attachOwnerDashboardListeners() {
         if (form?.id === 'header-settings-form') saveFunctions.headerLayout(form);
         if (form?.id === 'payment-settings-form') saveFunctions.paymentSettings(form);
         if (form?.id === 'appearance-settings-form') saveFunctions.appearanceSettings(form);
-        if (form?.id === 'about-config-form') saveFunctions.aboutConfig(form); // <--- Add this
+        if (form?.id === 'about-config-form') saveFunctions.aboutConfig(form);
     });
 
     container.dataset.listenersAttached = 'true';

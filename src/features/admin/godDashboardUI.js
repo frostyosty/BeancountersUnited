@@ -98,7 +98,7 @@ export function renderGodDashboard() {
     const { users, clients } = useAppStore.getState().admin;
 
     if (isLoadingMenu || isLoadingSettings) {
-        mainContent.innerHTML = `<div class="loading-spinner">Loading God Dashboard...</div>`;
+mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
         return;
     }
     if (error) {

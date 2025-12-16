@@ -56,7 +56,11 @@ export function renderOrderHistoryPage() {
     const { getUserRole } = useAppStore.getState().auth;
     const role = getUserRole();
 
-    if (isLoading) { mainContent.innerHTML = `<div class="loading-spinner">Loading orders...</div>`; return; }
+if (isLoading) {
+
+        mainContent.innerHTML = uiUtils.getLoaderHTML("Loading orders...");
+        return;
+    }
     if (error) { mainContent.innerHTML = `<div class="error-message"><h3>Error</h3><p>${error}</p></div>`; return; }
 
     if (role === 'god' || role === 'owner') {
