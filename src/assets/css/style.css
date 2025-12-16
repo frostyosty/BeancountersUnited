@@ -1492,3 +1492,62 @@ tr.flash-highlight {
     justify-content: center;
     margin-top: 20px;
 }
+
+
+/* --- CENTRAL LOADING SPINNER --- */
+.loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh; /* Center in the available view area */
+    width: 100%;
+    color: var(--primary-color);
+}
+
+.loader-icon {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.loader-text {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* --- ANIMATIONS --- */
+.anim-pulse {
+    animation: spin-pulse 2s infinite ease-in-out;
+}
+.anim-bounce {
+    animation: spin-bounce 1s infinite ease-in-out;
+}
+.anim-fade {
+    animation: spin-fade 1.5s infinite ease-in-out;
+}
+.anim-spin {
+    animation: spin-rotate 1.5s infinite linear;
+}
+
+@keyframes spin-pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+@keyframes spin-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+@keyframes spin-fade {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+@keyframes spin-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

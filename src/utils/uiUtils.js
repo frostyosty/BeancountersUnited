@@ -2,9 +2,10 @@
 import { useAppStore } from '@/store/appStore.js';
 
 // --- SPINNER ASSETS ---
+// --- SPINNER ASSETS ---
 const SPINNER_SVGS = {
     coffee: `
-        <svg class="dynamic-coffee-spinner" viewBox="0 0 100 100">
+        <svg class="loader-icon" viewBox="0 0 100 100">
             <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
             <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
             <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
@@ -13,7 +14,7 @@ const SPINNER_SVGS = {
         </svg>
     `,
     hammer: `
-        <svg class="dynamic-hammer-spinner" viewBox="0 0 100 100">
+        <svg class="loader-icon" viewBox="0 0 100 100">
             <g class="nail-body">
                 <rect x="48" y="55" width="4" height="25" fill="currentColor" />
                 <rect x="44" y="55" width="12" height="4" fill="currentColor" />
@@ -25,6 +26,52 @@ const SPINNER_SVGS = {
         </svg>
     `
 };
+
+/**
+ * Returns the HTML for the loading screen based on saved config.
+ */
+export function getLoaderHTML(loadingText = "Loading...") {
+    // Read config from LocalStorage for speed (or default)
+    let config = { type: 'coffee', animation: 'pulse', customUrl: '' };
+    try {
+        const saved = localStorage.getItem('site_loader_config');
+        if (saved) config = { ...config, ...JSON.parse(saved) };
+    } catch (e) {}
+
+    let iconHTML = '';
+
+    if (config.type === 'custom' && config.customUrl) {
+        iconHTML = `<img src="${config.customUrl}" class="loader-icon" alt="Loading">`;
+    } else if (SPINNER_SVGS[config.type]) {
+        iconHTML = SPINNER_SVGS[config.type];
+    } else {
+        iconHTML = SPINNER_SVGS['coffee']; // Fallback
+    }
+
+    // Wrap in Animation Class
+    const animClass = config.animation ? `anim-${config.animation}` : '';
+
+    return `
+        <div class="loader-container">
+            <div class="${animClass}" style="color:var(--primary-color);">
+                ${iconHTML}
+            </div>
+            ${loadingText ? `<div class="loader-text">${loadingText}</div>` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Saves loader config and updates global spinner if visible.
+ */
+export function setGlobalSpinnerConfig(config) {
+    localStorage.setItem('site_loader_config', JSON.stringify(config));
+}
+
+// ... (Rest of file: initGlobalSpinner can call getLoaderHTML logic if needed, showToast, etc.) ...
+export function initGlobalSpinner() {
+    // Optional: Pre-inject styles if needed, but getLoaderHTML handles the generation now.
+}
 
 // --- 1. FONTS & BRANDING CONFIG ---
 export const AVAILABLE_FONTS = [

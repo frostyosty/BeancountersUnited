@@ -259,6 +259,35 @@ export function renderAppearanceSection(settings) {
                         <input type="checkbox" name="bgAnimation" ${bgAnimation ? 'checked' : ''}> Animate (Slow Scroll)
                     </label>
                 </div>
+                <!-- NEW: LOADER SETTINGS -->
+                <h4 style="margin-top:20px;">Loading Screen</h4>
+                <div class="form-group" style="display:flex; gap:15px;">
+                    <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="loaderType" value="coffee" ${loaderConfig.type==='coffee'?'checked':''}> Coffee Cup</label>
+                    <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="loaderType" value="hammer" ${loaderConfig.type==='hammer'?'checked':''}> Hammer</label>
+                    <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="loaderType" value="custom" ${loaderConfig.type==='custom'?'checked':''}> Custom Image</label>
+                </div>
+                
+                <!-- Custom Loader Upload -->
+                <div class="form-group" id="loader-custom-group" style="display:${loaderConfig.type==='custom'?'block':'none'}">
+                    <label>Custom Loader Image</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img id="loader-preview" src="${loaderConfig.customUrl || ''}" style="width:40px; height:40px; object-fit:contain; border:1px solid #ddd; background:#eee;">
+                        <label for="loader-upload" class="button-secondary small" style="cursor:pointer;">Upload</label>
+                        <input type="file" id="loader-upload" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Animation Style</label>
+                    <select name="loaderAnimation">
+                        <option value="pulse" ${loaderConfig.animation==='pulse'?'selected':''}>Gentle Pulse</option>
+                        <option value="bounce" ${loaderConfig.animation==='bounce'?'selected':''}>Bounce</option>
+                        <option value="fade" ${loaderConfig.animation==='fade'?'selected':''}>Fade In/Out</option>
+                        <option value="spin" ${loaderConfig.animation==='spin'?'selected':''}>Spin (Rotation)</option>
+                        <option value="none" ${loaderConfig.animation==='none'?'selected':''}>None (Static)</option>
+                    </select>
+                </div>
+
                 <h4 style="margin-top:20px;">UI Transitions</h4>
                 <div class="form-group">
                     <label>Page Transition</label>
