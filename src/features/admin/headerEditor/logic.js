@@ -1,19 +1,28 @@
+// src/features/admin/headerEditor/logic.js
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
+import { useAppStore } from '@/store/appStore.js'; // Need store access
 import { DEFAULT_CONFIG } from './defaults.js';
 
 // Local State
 let editorState = {
     config: {},
     selectedMainIndex: -1,
-    mainLetters: []
+    mainLetters: [],
+    isDirty: false // Track changes
 };
 
 export function initEditorLogic(initialConfig) {
-    // 1. Setup State
-    editorState.config = { ...DEFAULT_CONFIG, ...(initialConfig || {}) };
+    // 1. Reset State Completely (Fixes "Loading previous one" bug)
+    editorState = {
+        config: { ...DEFAULT_CONFIG, ...(initialConfig || {}) },
+        selectedMainIndex: -1,
+        mainLetters: [],
+        isDirty: false
+    };
 
+    // Deep copy the letters array to avoid reference bugs
     if (typeof editorState.config.mainText === 'string') {
         editorState.mainLetters = editorState.config.mainText.split('').map(c => ({ char: c }));
     } else if (Array.isArray(editorState.config.mainText)) {
@@ -22,7 +31,7 @@ export function initEditorLogic(initialConfig) {
         editorState.mainLetters = [];
     }
     
-    // Initial sync
+    // Sync
     editorState.config.mainText = editorState.mainLetters;
 
     // 2. Attach Listeners
@@ -32,10 +41,92 @@ export function initEditorLogic(initialConfig) {
     attachImageUpload();
     attachSaveButton();
 
-    // 3. Initial Render
-    document.getElementById('he-pattern').value = editorState.config.pattern;
+    // 3. Hijack Close Logic (For Unsaved Prompt)
+    hijackCloseBehavior();
+
+    // 4. Initial Render
+    const patternSelect = document.getElementById('he-pattern');
+    if (patternSelect) patternSelect.value = editorState.config.pattern;
+    
     renderChips();
     updatePreview();
+}
+
+function markDirty() {
+    editorState.isDirty = true;
+}
+
+function hijackCloseBehavior() {
+    // We need to replace the default close listeners with our own check
+    const modalContent = document.querySelector('.modal-content');
+    const closeBtn = document.querySelector('.modal-close-btn');
+    const overlay = document.querySelector('.modal-overlay');
+
+    const handleAttemptClose = (e) => {
+        e.stopPropagation();
+        if (editorState.isDirty) {
+            showUnsavedPrompt();
+        } else {
+            uiUtils.closeModal();
+        }
+    };
+
+    // Replace Close Button
+    if (closeBtn) {
+        const newBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newBtn, closeBtn);
+        newBtn.addEventListener('click', handleAttemptClose);
+    }
+
+    // Replace Overlay Click
+    if (overlay) {
+        // uiUtils attaches click to overlay. We can't easily remove that anonymous function.
+        // But we can intercept the click if we capture it on the wrapper or stop propagation?
+        // Easier: Just overwrite the overlay's onclick if it was set via JS property, 
+        // but uiUtils uses addEventListener.
+        // Strategy: Clone the overlay inner content to a new overlay? Too complex.
+        
+        // Simple Strategy: Add a capture listener that stops prop if dirty
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (editorState.isDirty) {
+                    e.stopImmediatePropagation(); // Stop uiUtils listener
+                    e.preventDefault();
+                    showUnsavedPrompt();
+                }
+            }
+        }, true); // Capture phase!
+    }
+}
+
+function showUnsavedPrompt() {
+    // Check if already open
+    if (document.querySelector('.he-unsaved-overlay')) return;
+
+    const wrapper = document.querySelector('.he-modal-wrapper');
+    const overlay = document.createElement('div');
+    overlay.className = 'he-unsaved-overlay';
+    overlay.innerHTML = `
+        <div class="he-unsaved-box">
+            <h4>Unsaved Changes</h4>
+            <p>You have unsaved changes. Do you want to save them before closing?</p>
+            <div class="he-unsaved-actions">
+                <button id="he-prompt-discard" class="button-danger small">Discard</button>
+                <button id="he-prompt-cancel" class="button-secondary small">Cancel</button>
+                <button id="he-prompt-save" class="button-primary small">Save</button>
+            </div>
+        </div>
+    `;
+    
+    // Make relative to position absolute overlay
+    if (wrapper) {
+        wrapper.style.position = 'relative';
+        wrapper.appendChild(overlay);
+    }
+
+    document.getElementById('he-prompt-cancel').onclick = () => overlay.remove();
+    document.getElementById('he-prompt-discard').onclick = () => uiUtils.closeModal();
+    document.getElementById('he-prompt-save').onclick = () => document.getElementById('he-save-btn').click();
 }
 
 function updatePreview() {
@@ -44,7 +135,6 @@ function updatePreview() {
     const container = document.getElementById('header-preview-container');
     if (container) container.innerHTML = svg;
 
-    // Update color labels
     document.querySelectorAll('input[type="color"]').forEach(input => {
         const span = input.nextElementSibling;
         if (span && span.classList.contains('he-color-value')) span.textContent = input.value;
@@ -55,10 +145,10 @@ function attachGlobalInputs() {
     const bind = (id, key) => {
         const el = document.getElementById(id);
         if (el) {
-            // Safer default handling
             if (editorState.config[key] !== undefined) el.value = editorState.config[key];
             el.addEventListener('input', (e) => {
                 editorState.config[key] = e.target.value;
+                markDirty();
                 updatePreview();
             });
         }
@@ -83,6 +173,7 @@ function attachMainTextInput() {
         });
         editorState.mainLetters = newArr;
         editorState.selectedMainIndex = -1; 
+        markDirty();
         renderChips();
         updatePreview();
     });
@@ -130,6 +221,7 @@ function attachLetterControls() {
             if (editorState.selectedMainIndex === -1) return;
             const key = id.replace('hl-', '');
             editorState.mainLetters[editorState.selectedMainIndex][key] = e.target.value;
+            markDirty();
             updatePreview();
         });
     });
@@ -139,6 +231,7 @@ function attachLetterControls() {
         const char = editorState.mainLetters[editorState.selectedMainIndex].char;
         editorState.mainLetters[editorState.selectedMainIndex] = { char };
         populateLetterControls({ char });
+        markDirty();
         updatePreview();
     };
 }
@@ -166,6 +259,7 @@ function attachImageUpload() {
             const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName);
             editorState.config.imgUrl = data.publicUrl;
             dropZone.innerHTML = "✅ Loaded";
+            markDirty();
             updatePreview();
         } catch (e) {
             console.error(e);
@@ -176,6 +270,7 @@ function attachImageUpload() {
     removeBtn.onclick = () => {
         editorState.config.imgUrl = '';
         dropZone.innerHTML = "Drop Icon Here";
+        markDirty();
         updatePreview();
     };
 }
@@ -188,8 +283,15 @@ function attachSaveButton() {
             editorState.config.mainText = editorState.mainLetters;
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ headerLogoConfig: editorState.config }, session.access_token);
+            
+            // FIX: Refresh the store immediately so subsequent opens get the new data
+            await useAppStore.getState().siteSettings.fetchSiteSettings(true);
+
             uiUtils.applyHeaderLogo(editorState.config);
             uiUtils.showToast("Header Saved!", "success");
+            
+            // Clear dirty flag so we can close without prompt
+            editorState.isDirty = false;
             uiUtils.closeModal();
         } catch (e) {
             uiUtils.showToast("Save Failed", "error");
