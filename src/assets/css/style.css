@@ -1551,3 +1551,20 @@ tr.flash-highlight {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+
+/* src/assets/css/style.css */
+
+/* Slower, gentler rise */
+.mini-steam {
+    stroke: currentColor;
+    opacity: 0;
+    /* Changed from 1.5s to 2.5s for a more relaxed vibe */
+    animation: steamRise 2.5s infinite ease-in-out;
+}
+
+@keyframes steamRise {
+    0% { transform: translateY(0); opacity: 0; }
+    50% { opacity: 0.8; }
+    100% { transform: translateY(-15px); opacity: 0; }
+}

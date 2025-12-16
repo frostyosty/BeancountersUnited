@@ -3,14 +3,21 @@ import { useAppStore } from '@/store/appStore.js';
 
 // --- SPINNER ASSETS ---
 // --- SPINNER ASSETS ---
+
 const SPINNER_SVGS = {
     coffee: `
         <svg class="loader-icon" viewBox="0 0 100 100">
-            <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
-            <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
-            <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
-            <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
-            <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
+            <!-- Cup & Saucer -->
+            <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" stroke-linejoin="round" />
+            <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+            
+            <!-- Squiggly Steam (S-Curves) -->
+            <!-- Left Stream -->
+            <path class="mini-steam" d="M38 35 C 34 28, 42 22, 38 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+            <!-- Center Stream -->
+            <path class="mini-steam" d="M50 35 C 54 28, 46 22, 50 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+            <!-- Right Stream -->
+            <path class="mini-steam" d="M62 35 C 58 28, 66 22, 62 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
         </svg>
     `,
     hammer: `
