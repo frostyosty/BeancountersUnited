@@ -68,10 +68,7 @@ export function setGlobalSpinnerConfig(config) {
     localStorage.setItem('site_loader_config', JSON.stringify(config));
 }
 
-// ... (Rest of file: initGlobalSpinner can call getLoaderHTML logic if needed, showToast, etc.) ...
-export function initGlobalSpinner() {
-    // Optional: Pre-inject styles if needed, but getLoaderHTML handles the generation now.
-}
+
 
 // --- 1. FONTS & BRANDING CONFIG ---
 export const AVAILABLE_FONTS = [
