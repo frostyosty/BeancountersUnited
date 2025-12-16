@@ -1,3 +1,4 @@
+// src/store/checkoutSlice.js
 import { supabase } from '@/supabaseClient.js'; 
 
 export const createCheckoutSlice = (set, get) => ({
@@ -39,16 +40,14 @@ export const createCheckoutSlice = (set, get) => ({
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
-            // FIX: Get Profile too
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
             if (!user) throw new Error("You must be logged in to place an order.");
             
-            // FIX: Determine Name
             const customerName = profile?.full_name || profile?.email || 'Customer';
 
-            // 2. Insert Order Header
+            // 1. Insert Order Header
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([{
@@ -57,30 +56,40 @@ export const createCheckoutSlice = (set, get) => ({
                     status: 'pending',         
                     payment_status: 'pending', 
                     payment_method: 'cash',
-                    // FIX: Include Name
                     customer_name: customerName,
-                    customer_email: user.email // Good practice to include if we have it
+                    customer_email: user.email,
+                    pickup_time: new Date().toISOString() 
                 }])
                 .select()
                 .single();
                 
             if (orderError) throw orderError;
 
-            // 3. Insert Order Items
-const orderItems = items.map(item => ({
+            // 2. Insert Order Items
+            const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
                 price_at_order: parseFloat(item.price),
-                selected_options: item.selectedOptions || [] // <--- SAVE THIS
+                selected_options: item.selectedOptions || []
             }));
+
             const { error: itemsError } = await supabase
                 .from('order_items')
                 .insert(orderItems);
 
-            if (itemsError) throw itemsError;
+            // FIX: Handle "Item Deleted" error and Rollback
+            if (itemsError) {
+                // Rollback: Delete the header we just made so we don't have empty ghost orders
+                await supabase.from('orders').delete().eq('id', orderData.id);
 
-            // 4. Success Cleanup
+                if (itemsError.code === '23503') {
+                    throw new Error("One or more items in your cart no longer exist on the menu. Please clear your cart and try again.");
+                }
+                throw itemsError;
+            }
+
+            // 3. Success Cleanup
             clearCart();
             set(state => ({ 
                 checkout: { 
@@ -102,7 +111,6 @@ const orderItems = items.map(item => ({
     },
 
     // --- ACTION: STRIPE PAYMENT SUCCESS ---
-     // --- ACTION: STRIPE PAYMENT SUCCESS ---
     submitPaidOrder: async (paymentIntent) => {
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
@@ -110,7 +118,8 @@ const orderItems = items.map(item => ({
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            if (!user) throw new Error("User session missing.");
+            if (!user) throw new Error("User session missing during payment finalization.");
+            
             const customerName = profile?.full_name || profile?.email || 'Customer';
 
             // 1. Insert Order Header
@@ -124,7 +133,7 @@ const orderItems = items.map(item => ({
                     payment_method: 'stripe',
                     customer_name: customerName,
                     customer_email: user.email,
-                    pickup_time: new Date().toISOString() // <--- ADD THIS LINE
+                    pickup_time: new Date().toISOString()
                 }])
                 .select()
                 .single();
@@ -132,19 +141,28 @@ const orderItems = items.map(item => ({
             if (orderError) throw orderError;
 
             // 2. Insert Order Items
-const orderItems = items.map(item => ({
+            const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
                 quantity: item.quantity,
                 price_at_order: parseFloat(item.price),
-                selected_options: item.selectedOptions || [] // <--- SAVE THIS
+                selected_options: item.selectedOptions || []
             }));
 
             const { error: itemsError } = await supabase
                 .from('order_items')
                 .insert(orderItems);
 
-            if (itemsError) throw itemsError;
+            // FIX: Handle "Item Deleted" error and Rollback
+            if (itemsError) {
+                // Rollback: Delete the header
+                await supabase.from('orders').delete().eq('id', orderData.id);
+
+                if (itemsError.code === '23503') {
+                    throw new Error("Item no longer available. Please update your cart.");
+                }
+                throw itemsError;
+            }
 
             // 3. Cleanup
             clearCart();
@@ -162,7 +180,7 @@ const orderItems = items.map(item => ({
 
         } catch (error) {
             console.error("Stripe Order Save Failed:", error);
-            set(state => ({ checkout: { ...state.checkout, isProcessing: false, error: "Payment successful, but saving order failed." } }));
+            set(state => ({ checkout: { ...state.checkout, isProcessing: false, error: "Order save failed: " + error.message } }));
             return { success: false, error: error.message };
         }
     }
