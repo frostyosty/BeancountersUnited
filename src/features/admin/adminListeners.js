@@ -5,7 +5,7 @@ import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import Sortable from 'sortablejs';
 import { showCustomerCRMModal, showEditItemModal, showEditUserModal, showImageEditorModal } from './adminModals.js';
-import { openHeaderLogoEditor } from './headerEditor.js';
+import { openHeaderLogoEditor } from './headerEditor/index.js';
 
 export let currentSort = { column: 'category', direction: 'asc' };
 
