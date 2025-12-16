@@ -71,15 +71,21 @@ export function renderGodDashboard() {
     if (!mainContent) return;
 
 // Fetch Data Logic
-    const adminState = useAppStore.getState().admin;
+     const adminState = useAppStore.getState().admin;
     
-    console.log("[GodUI] Admin State Clients:", adminState.clients); // <--- LOG 10
-
+    // 1. Fetch Users (User Management)
+    if (!adminState.users || adminState.users.length === 0) {
+        console.log("[GodDashboard] Fetching Users...");
+        useAppStore.getState().admin.fetchAllUsers(); 
+    }
+    
+    // 2. Fetch Clients (Client Relationships)
     if (!adminState.clients || adminState.clients.length === 0) {
-        console.log("[GodUI] Triggering fetch..."); // <--- LOG 11
+        console.log("[GodDashboard] Fetching Clients...");
         useAppStore.getState().admin.fetchClients();
     }
     
+    // 3. Other Data
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
