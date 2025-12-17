@@ -12,6 +12,7 @@ import { renderPageContent } from './core/router.js';
 import { setupGlobalListeners, setupGodModeTrigger } from './core/events.js';
 import { initializeImpersonationToolbar } from './features/admin/godTaskbarUI.js';
 import { renderStaticSite } from './features/static/staticUI.js';
+import { renderAboutUsPage } from './features/about/aboutUsUI.js';
 
 let isAppInitialized = false;
 

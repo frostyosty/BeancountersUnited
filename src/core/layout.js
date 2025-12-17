@@ -2,6 +2,8 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
+
+
 const SPINNER_SVG = `
 <div class="auth-loading-spinner">
     <svg viewBox="0 0 100 100">

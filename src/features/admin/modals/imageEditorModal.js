@@ -15,7 +15,8 @@ export async function showImageEditorModal(item) {
     }
 
     const modalHTML = `
-        <div class="modal-form-container" style="max-width: 600px; text-align:center;">
+        <!-- Add onmousedown="event.stopPropagation()" to the main container -->
+        <div class="modal-form-container" style="max-width: 600px; text-align:center;" onmousedown="event.stopPropagation()">
             <h3>Edit Image: ${item.name}</h3>
             
             <!-- EDITOR CANVAS -->

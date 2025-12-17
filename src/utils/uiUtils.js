@@ -2,7 +2,6 @@
 import { useAppStore } from '@/store/appStore.js';
 
 // --- SPINNER ASSETS ---
-// --- SPINNER ASSETS ---
 
 const SPINNER_SVGS = {
     coffee: `
@@ -274,19 +273,69 @@ export function getThemeControlsHTML(currentVars = {}) {
     `;
 }
 
+// --- 5. COLOR CONTRAST HELPER ---
+function getContrastColor(hexColor) {
+    // Default to black if invalid
+    if (!hexColor || hexColor[0] !== '#') return '#000000';
+    
+    const r = parseInt(hexColor.substr(1, 2), 16);
+    const g = parseInt(hexColor.substr(3, 2), 16);
+    const b = parseInt(hexColor.substr(5, 2), 16);
+    
+    // YIQ equation
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#000000' : '#ffffff';
+}
+
+// --- 6 & 7. HEADER PATTERN GENERATOR ---
+function getHeaderPatternStyle(patternType, bgColor) {
+    // Generate a slightly darker/lighter version of bg for the pattern
+    const color = getContrastColor(bgColor) === '#ffffff' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+    
+    switch (patternType) {
+        case 'stripes':
+            return `repeating-linear-gradient(45deg, transparent, transparent 10px, ${color} 10px, ${color} 20px)`;
+        case 'dots':
+            return `radial-gradient(${color} 1px, transparent 1px)`;
+        case 'grid':
+            return `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
+        case 'zigzag':
+            return `linear-gradient(135deg, ${color} 25%, transparent 25%) -10px 0, linear-gradient(225deg, ${color} 25%, transparent 25%) -10px 0, linear-gradient(315deg, ${color} 25%, transparent 25%), linear-gradient(45deg, ${color} 25%, transparent 25%)`;
+        default:
+            return 'none';
+    }
+}
+
 export function applyHeaderLayout(layoutConfig) {
     const header = document.getElementById('main-header');
     if (!header) return;
 
-    const { logoAlignment, hamburgerPosition, height, bgColor } = layoutConfig || {};
+    const { logoAlignment, hamburgerPosition, height, bgColor, bgPattern } = layoutConfig || {};
 
-    // Apply Height
+    // 1. Height
     if (height) document.documentElement.style.setProperty('--header-height', height + 'px');
     
-    // NEW: Apply Background Color
-    if (bgColor) header.style.backgroundColor = bgColor;
+    // 2. Background Color & Pattern
+    if (bgColor) {
+        header.style.backgroundColor = bgColor;
+        
+        // Apply Contrast to Links
+        const textColor = getContrastColor(bgColor);
+        document.documentElement.style.setProperty('--header-text-color', textColor);
+        
+        // Apply Nav Link Colors
+        header.querySelectorAll('.nav-link').forEach(el => el.style.color = textColor);
+        
+        // Apply Pattern
+        if (bgPattern && bgPattern !== 'none') {
+            header.style.backgroundImage = getHeaderPatternStyle(bgPattern, bgColor);
+            header.style.backgroundSize = bgPattern === 'dots' ? '20px 20px' : (bgPattern === 'grid' ? '20px 20px' : (bgPattern === 'zigzag' ? '20px 20px' : 'auto'));
+        } else {
+            header.style.backgroundImage = 'none';
+        }
+    }
 
-    // ... existing alignment classes ...
+    // 3. Alignment
     header.classList.remove('logo-align-left', 'hamburger-left');
     if (logoAlignment === 'left') header.classList.add('logo-align-left');
     if (hamburgerPosition === 'left') header.classList.add('hamburger-left');

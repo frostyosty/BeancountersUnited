@@ -18,8 +18,9 @@ When offering feedback, please bear in mind the following types of shortcomings 
 6. You also have an unfortunate tendency to give full files back when small snippet updates would be a better path.
 7. When returning snippets, if it's a full file, please ensure that the relative path to the file is printed at the top in the format // src/store/siteSettingsSlice.js
 8. If using placeholders for brevity (please prioritise full snippet dumps), please add an adendum to the bottom of the response saying where the placeholders are in the response.
+9. When giving snippets, please give the prior line as the start of your snippet and the line after the snippet at the end, so i know exactly where to paste it.
 
-Please be aware of these shortcomings and consider them before offering drastic measures.
+Please be aware of these sorts of shortcomings and consider them before offering drastic measures.
 
 You also rarely ask for files to analyse as your not programmed desire more information unless absolutely necessary.
 If you would like to see a file, ask.

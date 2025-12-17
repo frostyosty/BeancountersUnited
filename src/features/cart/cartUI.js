@@ -241,6 +241,16 @@ async function initializeStripeFlow() {
         paymentElement.mount('#stripe-element-mount');
 
         const submitBtn = document.getElementById('stripe-submit-btn');
+        
+        // FIX: Disable initially, Enable when ready
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Loading payment options...";
+        
+        paymentElement.on('ready', () => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Confirm Payment ($${total.toFixed(2)})`;
+        });
+
         submitBtn.onclick = async () => {
             submitBtn.disabled = true;
             submitBtn.textContent = "Processing...";
