@@ -150,7 +150,8 @@ export function attachOwnerDashboardListeners() {
                 logoAlignment: formData.get('logoAlignment'),
                 hamburgerPosition: formData.get('hamburgerPosition'),
                 height: parseInt(formData.get('headerHeight')) || 60,
-                bgColor: formData.get('headerBgColor')
+                bgColor: formData.get('headerBgColor'),
+                bgPattern: formData.get('headerPattern') // NEW
             };
             const { data: { session } } = await supabase.auth.getSession();
             await api.updateSiteSettings({ headerSettings }, session.access_token);

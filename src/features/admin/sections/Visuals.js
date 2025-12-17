@@ -97,7 +97,7 @@ export function renderAppearanceSection(settings) {
 
 export function renderHeaderSection(headerSettings) {
     const height = headerSettings.height || 60;
-    const bgColor = headerSettings.bgColor || '#ffffff'; 
+    const bgPattern = headerSettings.bgPattern || 'none';
 
     return `
         <section class="dashboard-section">
@@ -127,13 +127,23 @@ export function renderHeaderSection(headerSettings) {
                                oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
                     </div>
                     <div class="form-group">
-                        <label>Header Background</label>
-                        <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
+                    <label>Header Background</label>
+                    <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
                             <input type="color" name="headerBgColor" value="${bgColor}" 
                                    style="width:40px; height:30px; border:none; background:none; cursor:pointer;"
                                    oninput="document.getElementById('main-header').style.backgroundColor = this.value;">
                             <span style="font-size:0.8rem; color:#666;">Pick Color</span>
                         </div>
+                    </div>
+                    <div class="form-group">
+                    <label>Header Pattern</label>
+                        <select name="headerPattern" style="width:100%; padding:8px;">
+                            <option value="none" ${bgPattern==='none'?'selected':''}>None</option>
+                            <option value="dots" ${bgPattern==='dots'?'selected':''}>Polka Dots</option>
+                            <option value="stripes" ${bgPattern==='stripes'?'selected':''}>Stripes</option>
+                            <option value="grid" ${bgPattern==='grid'?'selected':''}>Grid</option>
+                            <option value="zigzag" ${bgPattern==='zigzag'?'selected':''}>Zig Zag</option>
+                        </select>
                     </div>
                 </div>
 
