@@ -101,6 +101,7 @@ async function handleLoginFormSubmit(event) {
     const form = event.target;
     const submitButton = form.querySelector('button[type="submit"]');
     const messageEl = document.getElementById('login-message');
+    
     const email = form.email.value;
     const password = form.password.value;
     const { login } = useAppStore.getState().auth;
@@ -111,16 +112,33 @@ async function handleLoginFormSubmit(event) {
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
+    // 1. Call Store
     const { error } = await login(email, password);
 
+    // 2. Handle Result
     if (error) {
-        messageEl.textContent = error.message;
+        let msg = error.message;
+        
+        // FIX: Sanitize technical jargon
+        if (msg.includes("Invalid login credentials")) {
+            msg = "Incorrect email or password.";
+        } else if (msg.includes("AuthApiError")) {
+            msg = "Login failed. Please check your details.";
+        }
+
+        // Show in red text
+        messageEl.textContent = msg;
         messageEl.className = 'auth-message error';
+        
+        // Also show a toast for visibility
+        uiUtils.showToast(msg, 'error');
+
+        // Reset button
         submitButton.disabled = false;
         submitButton.textContent = 'Login';
     } else {
-        // Don't need to close modal manually; auth state change will trigger UI updates.
         uiUtils.showToast('Login successful!', 'success');
+        // Modal closes automatically via auth state change
     }
 }
 
