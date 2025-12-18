@@ -2,18 +2,35 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
+// --- Helper: Get Boot Spinner ---
+function getBootSpinnerHTML() {
+    let bootSpinner = '';
+    try {
+        const saved = localStorage.getItem('site_loader_config');
+        if (saved) {
+            const config = JSON.parse(saved);
+            if (config.type === 'custom' && config.customUrl) {
+                bootSpinner = `<img src="${config.customUrl}" class="loader-icon" alt="Loading" style="width:80px; height:80px; object-fit:contain;">`;
+            } else if (config.type === 'hammer') {
+                bootSpinner = `<svg class="loader-icon" viewBox="0 0 100 100"><g class="nail-body"><rect x="48" y="55" width="4" height="25" fill="currentColor"/><rect x="44" y="55" width="12" height="4" fill="currentColor"/></g><g class="hammer-body"><rect x="60" y="30" width="8" height="50" fill="currentColor" transform="rotate(-20 64 55)"/><path d="M45 20 H 85 V 35 H 45 Z" fill="currentColor" transform="rotate(-20 64 55)"/></g></svg>`;
+            }
+        }
+    } catch (e) {}
 
+    // Default Coffee (Squiggly Steam)
+    if (!bootSpinner) {
+        bootSpinner = `
+        <svg class="loader-icon" viewBox="0 0 100 100">
+            <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" stroke-linejoin="round" />
+            <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+            <path class="mini-steam" d="M38 35 C 34 28, 42 22, 38 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+            <path class="mini-steam" d="M50 35 C 54 28, 46 22, 50 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+            <path class="mini-steam" d="M62 35 C 58 28, 66 22, 62 15" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+        </svg>`;
+    }
 
-const SPINNER_SVG = `
-<div class="auth-loading-spinner">
-    <svg viewBox="0 0 100 100">
-        <path d="M22 40 H 78 L 72 80 Q 50 90 28 80 Z" fill="transparent" stroke="currentColor" stroke-width="6" />
-        <path d="M78 50 C 92 50, 92 70, 78 70" fill="transparent" stroke="currentColor" stroke-width="6" />
-        <path class="mini-steam" d="M40 35 L 42 25" fill="none" stroke="currentColor" stroke-width="4" />
-        <path class="mini-steam" d="M50 35 L 48 25" fill="none" stroke="currentColor" stroke-width="4" />
-        <path class="mini-steam" d="M60 35 L 62 25" fill="none" stroke="currentColor" stroke-width="4" />
-    </svg>
-</div>`;
+    return `<div class="auth-loading-spinner">${bootSpinner}</div>`;
+}
 
 export function renderShell() {
     const appElement = document.getElementById('app');
@@ -45,12 +62,14 @@ export function renderShell() {
         } catch (e) { console.error("Cache load failed", e); }
     }
 
+    const spinnerHTML = getBootSpinnerHTML();
+
     appElement.innerHTML = `
         <header id="main-header" style="${headerStyle}">
             <h1 style="${logoStyle}">${logoHTML}</h1>
             <nav>
                 <div id="desktop-nav-links" class="desktop-nav-group"></div>
-                <div id="auth-status-container">${SPINNER_SVG}</div>
+                <div id="auth-status-container">${spinnerHTML}</div>
                 <button id="hamburger-btn" class="hamburger-button"><span></span><span></span><span></span></button>
             </nav>
         </header>
@@ -93,9 +112,7 @@ export function renderDesktopNav() {
 }
 
 export function renderPersistentUI() {
-    // Import dynamically to avoid circle, or rely on authUI being loaded. 
-    // Since AuthStatus is self-contained DOM manipulation, we can just call it if available, 
-    // or import it here.
+    // Import dynamically to avoid circle
     import('@/features/auth/authUI.js').then(m => m.renderAuthStatus());
     
     renderDesktopNav();
