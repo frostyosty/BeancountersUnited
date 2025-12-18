@@ -3,6 +3,8 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
+import { TABLES } from '@/config/tenancy.js'; // <--- NEW IMPORT
+
 
 const STEPPER_CSS = `
 <style>
@@ -312,12 +314,16 @@ function renderAdminOrderViews(container, orders, role, settings) {
                     setTimeout(() => row.remove(), 300);
                 }
 
-                const { error } = await supabase.from('orders').delete().eq('id', orderId);
+                // FIX: Use TABLES.ORDERS
+                const { error } = await supabase.from(TABLES.ORDERS).delete().eq('id', orderId);
+                
                 if (!error) {
                     uiUtils.showToast("Record deleted.", "success");
                     useAppStore.getState().orderHistory.fetchOrderHistory(true);
                 } else {
+                    console.error("Delete DB Error:", error);
                     uiUtils.showToast("Delete failed.", "error");
+                    // Reload to restore row if failed
                     useAppStore.getState().orderHistory.fetchOrderHistory();
                 }
             }
