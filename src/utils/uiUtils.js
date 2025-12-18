@@ -79,25 +79,43 @@ export function setGlobalSpinnerConfig(config) {
 // --- 1. FONTS & BRANDING CONFIG ---
 export const AVAILABLE_FONTS = [
     "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", 
-    "Playfair Display", "Merriweather", "Nunito", "Raleway", "Oswald"
+    "Playfair Display", "Merriweather", "Nunito", "Raleway", "Oswald",
     "Bebas Neue", "Dancing Script", "Pacifico", "Righteous", "Ubuntu" // Added missing ones
 ];
-
-export function applySiteFont(fontName) {
+/**
+ * Ensures a Google Font is loaded into the document head.
+ * Safe to call multiple times for the same font.
+ */
+export function ensureFontLoaded(fontName) {
     if (!fontName) return;
-    const existingLink = document.getElementById('dynamic-font-link');
-    if (existingLink && existingLink.dataset.font === fontName) return;
-    if (existingLink) existingLink.remove();
+    
+    // Clean name: "'Oswald', sans-serif" -> "Oswald"
+    const cleanName = fontName.split(',')[0].replace(/['"]/g, '').trim();
+    const id = `font-${cleanName.toLowerCase().replace(/\s+/g, '-')}`;
+    
+    // Check if already requested
+    if (document.getElementById(id)) return;
 
     const link = document.createElement('link');
-    link.id = 'dynamic-font-link';
-    link.dataset.font = fontName;
+    link.id = id;
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@300;400;500;700&display=swap`;
+    // Load with display=swap to avoid invisible text, or block to avoid jolt (trade-off)
+    link.href = `https://fonts.googleapis.com/css2?family=${cleanName.replace(/\s+/g, '+')}:wght@300;400;500;700&display=swap`;
     
     document.head.appendChild(link);
-    document.documentElement.style.setProperty('--font-family-main-name', fontName);
 }
+
+/**
+ * Applies the global site font (Body Text).
+ */
+export function applySiteFont(fontName) {
+    if (!fontName) return;
+    ensureFontLoaded(fontName);
+    
+    const cleanName = fontName.split(',')[0].replace(/['"]/g, '').trim();
+    document.documentElement.style.setProperty('--font-family-main-name', cleanName);
+}
+
 
 export function setGlobalSpinner(type) {
     const validTypes = ['coffee', 'hammer'];

@@ -56,11 +56,17 @@ export function renderAppShell() {
     if (cachedHeader) {
         try {
             const config = JSON.parse(cachedHeader);
+            
+            // FIX: Start downloading the specific header fonts immediately
+            if (config.mainFont) uiUtils.ensureFontLoaded(config.mainFont);
+            if (config.subFont) uiUtils.ensureFontLoaded(config.subFont);
+
             logoHTML = uiUtils.generateHeaderSVG(config);
             logoStyle = 'padding:0; line-height:0; display:flex; align-items:center; width:100%; height:100%; justify-content:center; overflow:hidden;';
             if (config.bgColor) headerStyle += `background-color: ${config.bgColor};`;
         } catch (e) { console.error("Cache load failed", e); }
     }
+
 
     const spinnerHTML = getBootSpinnerHTML();
 
