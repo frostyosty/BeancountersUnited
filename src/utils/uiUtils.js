@@ -202,7 +202,7 @@ export function showModal(htmlContent) {
     closeModal(); 
 
     const modalOverlay = document.createElement('div');
-    modalOverlay.id = 'modal-overlay'; // Add ID for easier selection
+    modalOverlay.id = 'modal-overlay'; 
     modalOverlay.className = 'modal-overlay';
     
     // FIX: Used correct variable 'htmlContent' inside template
@@ -217,9 +217,28 @@ export function showModal(htmlContent) {
 
     // Attach Listeners
     modalOverlay.querySelector('.modal-close-btn').addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) closeModal();
+    
+    // --- FIX: PREVENT CLOSING WHEN DRAGGING TEXT ---
+    let isMouseDownOnOverlay = false;
+
+    modalOverlay.addEventListener('mousedown', (e) => {
+        // Only set true if the CLICK STARTED on the grey background
+        if (e.target === modalOverlay) {
+            isMouseDownOnOverlay = true;
+        } else {
+            isMouseDownOnOverlay = false;
+        }
     });
+
+    modalOverlay.addEventListener('click', (e) => {
+        // Only close if we clicked background AND started on background
+        if (e.target === modalOverlay && isMouseDownOnOverlay) {
+            closeModal();
+        }
+        // Reset
+        isMouseDownOnOverlay = false;
+    });
+    // ----------------------------------------------
 }
 
 export function closeModal() {

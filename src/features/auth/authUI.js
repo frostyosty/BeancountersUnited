@@ -113,10 +113,14 @@ async function handleLoginFormSubmit(event) {
     messageEl.className = 'auth-message';
 
     // 1. Call Store
-    const { error } = await login(email, password);
+     if (error) {
+        // --- NEW: Copy values to Sign Up form for convenience ---
+        const signupEmail = document.getElementById('signup-email');
+        const signupPass = document.getElementById('signup-password');
+        if (signupEmail) signupEmail.value = email;
+        if (signupPass) signupPass.value = password;
+        // -------------------------------------------------------
 
-    // 2. Handle Result
-    if (error) {
         let msg = error.message;
         
         // FIX: Sanitize technical jargon
