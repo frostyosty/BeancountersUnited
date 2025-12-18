@@ -1568,3 +1568,33 @@ tr.flash-highlight {
     50% { opacity: 0.8; }
     100% { transform: translateY(-15px); opacity: 0; }
 }
+
+
+
+
+/* Navigation Links */
+.nav-link {
+    text-decoration: none;
+    /* Default to text color, but allow override via --header-text-color */
+    color: var(--header-text-color, var(--text-color)); 
+    font-weight: 500;
+    transition: color 0.2s;
+    position: relative;
+}
+
+.nav-link:hover {
+    opacity: 0.8;
+}
+
+.nav-link.active {
+    font-weight: bold;
+    /* Use the calculated safe color */
+    color: var(--header-active-color, var(--primary-color)); 
+    /* Add underline just in case color matches text color exactly */
+    border-bottom: 2px solid var(--header-active-color, var(--primary-color));
+}
+
+/* Ensure hamburger spans match text color */
+.hamburger-button span {
+    background-color: var(--header-text-color, var(--text-color));
+}

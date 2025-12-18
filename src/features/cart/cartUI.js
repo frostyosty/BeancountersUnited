@@ -158,13 +158,14 @@ function attachListeners() {
         if (!btn) return;
 
         // Guest Flow Logic
-        if (btn.id === 'guest-start-btn') {
-            const name = prompt("Enter a name for the order:");
-            if (name) {
+if (btn.id === 'guest-start-btn') {
+            uiUtils.showGuestNameModal((name) => {
                 localStorage.setItem('guest_name', name);
-                isGuestCheckout = true; // Switch state
-                renderCartPage(); // Re-render
-            }
+                // We need to access the variable 'isGuestCheckout' from module scope.
+                // Assuming you have 'let isGuestCheckout = false;' at the top of cartUI.js
+                isGuestCheckout = true; 
+                renderCartPage(); 
+            });
             return;
         }
         if (btn.id === 'guest-continue-btn') {

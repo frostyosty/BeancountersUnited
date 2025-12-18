@@ -325,33 +325,56 @@ function getHeaderPatternStyle(patternType, bgColor) {
     }
 }
 
+// Helper: Calculate Luminance
+function getLuminance(hex) {
+    if (!hex || hex[0] !== '#') return 0;
+    const r = parseInt(hex.substr(1, 2), 16) / 255;
+    const g = parseInt(hex.substr(3, 2), 16) / 255;
+    const b = parseInt(hex.substr(5, 2), 16) / 255;
+    
+    const a = [r, g, b].map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+}
+
+// Helper: Check Contrast Ratio (Simple)
+function hasGoodContrast(hex1, hex2) {
+    const lum1 = getLuminance(hex1) + 0.05;
+    const lum2 = getLuminance(hex2) + 0.05;
+    const ratio = lum1 > lum2 ? lum1 / lum2 : lum2 / lum1;
+    return ratio > 3; // AA Standard for large text is 3, normal is 4.5. 
+}
+
+
 export function applyHeaderLayout(layoutConfig) {
     const header = document.getElementById('main-header');
     if (!header) return;
 
-    const { logoAlignment, hamburgerPosition, height, bgColor, bgPattern } = layoutConfig || {};
+    const { logoAlignment, hamburgerPosition, height, bgColor } = layoutConfig || {};
 
     // 1. Height
     if (height) document.documentElement.style.setProperty('--header-height', height + 'px');
     
-    // 2. Background Color & Pattern
+    // 2. Background & Text Colors
     if (bgColor) {
         header.style.backgroundColor = bgColor;
         
-        // Apply Contrast to Links
+        // A. Determine Base Text Color (Black or White)
         const textColor = getContrastColor(bgColor);
         document.documentElement.style.setProperty('--header-text-color', textColor);
         
-        // Apply Nav Link Colors
-        header.querySelectorAll('.nav-link').forEach(el => el.style.color = textColor);
+        // B. Determine Active Link Color
+        // Get the current Primary Color from CSS variable (or default)
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#4d2909';
         
-        // Apply Pattern
-        if (bgPattern && bgPattern !== 'none') {
-            header.style.backgroundImage = getHeaderPatternStyle(bgPattern, bgColor);
-            header.style.backgroundSize = bgPattern === 'dots' ? '20px 20px' : (bgPattern === 'grid' ? '20px 20px' : (bgPattern === 'zigzag' ? '20px 20px' : 'auto'));
-        } else {
-            header.style.backgroundImage = 'none';
+        // Check if Primary is readable against Header Background
+        let activeColor = primaryColor;
+        if (!hasGoodContrast(bgColor, primaryColor)) {
+            // If bad contrast, fallback to the high-contrast text color (White/Black)
+            // But make it bold/underlined via CSS to show activity
+            activeColor = textColor;
         }
+
+        document.documentElement.style.setProperty('--header-active-color', activeColor);
     }
 
     // 3. Alignment
@@ -546,4 +569,36 @@ export function generateHeaderSVG(config) {
             </text>
         </svg>
     `;
+}
+
+
+// --- GUEST NAME MODAL ---
+export function showGuestNameModal(onConfirm) {
+    const modalHTML = `
+        <div class="modal-form-container" style="max-width:400px; text-align:center;">
+            <h3>Start Guest Order</h3>
+            <p>Please enter a name for the barista to call out.</p>
+            
+            <form id="guest-name-form">
+                <input type="text" id="guest-name-input" placeholder="Your Name" required 
+                       style="width:100%; padding:12px; font-size:1.1rem; border:1px solid #ccc; border-radius:6px; margin-bottom:20px; text-align:center;">
+                
+                <button type="submit" class="button-primary" style="width:100%;">Continue</button>
+            </form>
+        </div>
+    `;
+    
+    showModal(modalHTML);
+    
+    // Auto-focus the input
+    setTimeout(() => document.getElementById('guest-name-input')?.focus(), 100);
+
+    document.getElementById('guest-name-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('guest-name-input').value.trim();
+        if (name) {
+            closeModal();
+            onConfirm(name);
+        }
+    });
 }
