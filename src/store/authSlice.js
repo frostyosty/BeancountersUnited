@@ -1,6 +1,7 @@
-// src/store/authSlice.js
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
+import * as uiUtils from '@/utils/uiUtils.js'; // <--- FIX: Added missing import
+import { useAppStore } from './appStore.js'; // Needed if you access store directly (e.g. for UI slice)
 
 export const createAuthSlice = (set, get) => ({
     // State
@@ -25,11 +26,7 @@ export const createAuthSlice = (set, get) => ({
         }, false, 'auth/setUserAndProfile');
     },
 
-    
     listenToAuthChanges: () => {
-
-
-        
         supabase.auth.onAuthStateChange(async (event, session) => {
             if (get().auth.isImpersonating()) return;
 
@@ -41,16 +38,18 @@ export const createAuthSlice = (set, get) => ({
                     const profile = await api.getUserProfile(token);
                     get().auth.setUserAndProfile(session.user, profile);
 
-                    if (profile.dietary_preferences) {
-                        useAppStore.setState(state => ({
-                            ui: { ...state.ui, activeAllergenFilters: profile.dietary_preferences }
-                        }));
+                    // Sync Dietary Prefs to UI Filter if they exist
+                    if (profile?.dietary_preferences) {
+                         // We need to access the store to set UI state. 
+                         // Since 'set' here is scoped to the slice creator, we might need useAppStore.setState
+                         // or just dispatch an action if available.
+                         // Safe way if useAppStore is imported:
+                         useAppStore.setState(state => ({
+                             ui: { ...state.ui, activeAllergenFilters: profile.dietary_preferences }
+                         }));
                     }
-                    // --- FIX: SMARTER REDIRECT ---
-                    // Only redirect if we are strictly logging in (SIGNED_IN) 
-                    // OR if it's initial load but we are on the login page/root.
-                    // Do NOT redirect if we are already on a dashboard or history page.
-                    
+
+                    // --- SMARTER REDIRECT ---
                     const currentHash = window.location.hash;
                     const onSafePage = ['#owner-dashboard', '#god-dashboard', '#order-history'].includes(currentHash);
 
@@ -61,10 +60,12 @@ export const createAuthSlice = (set, get) => ({
                             window.location.hash = '#order-history';
                         }
                     }
-                    // -------------------------------------
 
                 } catch (error) {
                     console.error("[AuthSlice] Profile fetch FAILED.", error);
+                    // This is likely where uiUtils was being called and failing
+                    uiUtils.showToast("Failed to load user profile.", "error"); 
+                    
                     get().auth.setUserAndProfile(session.user, null);
                     set(state => ({ auth: { ...state.auth, authError: error.message } }));
                 }
@@ -105,36 +106,27 @@ export const createAuthSlice = (set, get) => ({
 
     impersonateRole: (roleToImpersonate) => {
         const state = get().auth;
-        
-        // 1. Determine the "Real" identity
-        // If already impersonating, keep the existing original. If not, save current as original.
         const originalUser = state.originalUser || state.user;
         const originalProfile = state.originalProfile || state.profile;
 
-        // 2. Security Check: Ensure the REAL user is actually a god
         if (originalProfile?.role !== 'god') {
             console.warn("Attempted impersonation by non-god.");
             return;
         }
 
-        // 3. Construct Impersonated Profile
         let impersonatedUser = originalUser;
         let impersonatedProfile = { ...originalProfile, role: roleToImpersonate };
         
-        // Special case for Guest (no user object)
         if (roleToImpersonate === 'guest') {
             impersonatedUser = null;
             impersonatedProfile = null;
         }
 
-        // 4. Apply State
         set(s => ({
             auth: {
                 ...s.auth,
-                // Store the real identity if not already stored
                 originalUser: originalUser, 
                 originalProfile: originalProfile,
-                // Set the fake identity
                 user: impersonatedUser,
                 profile: impersonatedProfile,
                 isAuthenticated: roleToImpersonate !== 'guest'
@@ -157,19 +149,20 @@ export const createAuthSlice = (set, get) => ({
         }), false, 'auth/stop-impersonating');
     },
 
- fetchProfileOnly: async () => {
+    fetchProfileOnly: async () => {
         const { session } = await supabase.auth.getSession();
         if (session) {
-            const profile = await api.getUserProfile(session.access_token);
-            get().auth.setUserAndProfile(session.user, profile);
-            
-            // NEW: Sync Dietary Prefs to UI Filter
-            if (profile.dietary_preferences && profile.dietary_preferences.length > 0) {
-                // We access the UI slice directly or via get() if available in this scope?
-                // Zustand 'set' usually allows setting other slices if designed that way, 
-                // but here 'set' is scoped to auth.
-                // We can access the store globally if needed, or dispatch.
-                // Easiest: The Menu UI reads from Auth Profile as a fallback/default.
+            try {
+                const profile = await api.getUserProfile(session.access_token);
+                get().auth.setUserAndProfile(session.user, profile);
+                
+                if (profile.dietary_preferences) {
+                     useAppStore.setState(state => ({
+                         ui: { ...state.ui, activeAllergenFilters: profile.dietary_preferences }
+                     }));
+                }
+            } catch (e) {
+                console.error("Fetch Profile Only failed", e);
             }
         }
     },
