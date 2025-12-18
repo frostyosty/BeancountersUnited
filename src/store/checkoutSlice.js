@@ -1,6 +1,6 @@
 // src/store/checkoutSlice.js
 import { supabase } from '@/supabaseClient.js'; 
-import { TABLES } from '@/config/tenancy.js';
+import { TABLES } from '@/config/tenancy.js'; // Ensure this exists
 
 export const createCheckoutSlice = (set, get) => ({
     isProcessing: false,
@@ -44,33 +44,32 @@ export const createCheckoutSlice = (set, get) => ({
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            // FIX: Allow if user exists OR if guestName is provided
+            // 1. User/Guest Logic
             if (!user && !guestName) throw new Error("You must be logged in or provide a guest name.");
             
-            // Determine Name & Email
             let finalName = 'Guest';
             let finalEmail = null;
             let userId = null;
 
             if (user) {
-                // Logged In Logic
                 userId = user.id;
                 finalEmail = user.email;
                 finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
             } else {
-                // Guest Logic
                 finalName = guestName;
-                finalEmail = null; // No email for guests
-                userId = null;     // No User ID
+                finalEmail = null;
+                userId = null;
             }
 
-            // Insert Order
-const { data: orderData } = await supabase
-    .from(TABLES.ORDERS) // WAS: 'orders'
-    .insert([{ 
-                    user_id: userId, // Can be null now
+            // 2. Insert Order Header
+            const { data: orderData, error: orderError } = await supabase
+                .from(TABLES.ORDERS)
+                .insert([{
+                    user_id: userId,
                     total_amount: getCartTotal(),
-                    status: 'pending', payment_status: 'pending', payment_method: 'cash',
+                    status: 'pending',         
+                    payment_status: 'pending', 
+                    payment_method: 'cash',
                     customer_name: finalName,
                     customer_email: finalEmail,
                     pickup_time: new Date().toISOString()
@@ -80,7 +79,7 @@ const { data: orderData } = await supabase
                 
             if (orderError) throw orderError;
 
-            // 2. Insert Order Items
+            // 3. Insert Order Items
             const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
@@ -90,13 +89,12 @@ const { data: orderData } = await supabase
             }));
 
             const { error: itemsError } = await supabase
-                .from('order_items')
+                .from(TABLES.ITEMS)
                 .insert(orderItems);
 
-            // FIX: Handle "Item Deleted" error and Rollback
+            // 4. Rollback if items fail
             if (itemsError) {
-                // Rollback: Delete the header we just made so we don't have empty ghost orders
-                await supabase.from(TABLE ORDERS)delete().eq('id', orderData.id);
+                await supabase.from(TABLES.ORDERS).delete().eq('id', orderData.id);
 
                 if (itemsError.code === '23503') {
                     throw new Error("One or more items in your cart no longer exist on the menu. Please clear your cart and try again.");
@@ -104,7 +102,7 @@ const { data: orderData } = await supabase
                 throw itemsError;
             }
 
-            // 3. Success Cleanup
+            // 5. Success Cleanup
             clearCart();
             set(state => ({ 
                 checkout: { 
@@ -126,7 +124,6 @@ const { data: orderData } = await supabase
     },
 
     // --- ACTION: STRIPE PAYMENT SUCCESS ---
-    // --- ACTION: STRIPE PAYMENT SUCCESS ---
     submitPaidOrder: async (paymentIntent, guestName = null) => {
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
@@ -134,36 +131,32 @@ const { data: orderData } = await supabase
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            // FIX: Allow if user exists OR if guestName is provided
+            // 1. User/Guest Logic
             if (!user && !guestName) throw new Error("You must be logged in or provide a guest name.");
             
-            // Determine Name & Email
             let finalName = 'Guest';
             let finalEmail = null;
             let userId = null;
 
             if (user) {
-                // Logged In Logic
                 userId = user.id;
                 finalEmail = user.email;
                 finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
             } else {
-                // Guest Logic
                 finalName = guestName;
                 finalEmail = null; 
                 userId = null;
             }
 
-            // Insert Order
-const { error: itemsError } = await supabase
-    .from(TABLES.ITEMS) // WAS: 'order_items'
-    .insert(orderItems);
+            // 2. Insert Order Header
+            const { data: orderData, error: orderError } = await supabase
+                .from(TABLES.ORDERS)
                 .insert([{
                     user_id: userId,
                     total_amount: getCartTotal(),
                     status: 'pending',        
-                    payment_status: 'paid',    // <--- FIX: Paid
-                    payment_method: 'stripe',  // <--- FIX: Stripe
+                    payment_status: 'paid',   
+                    payment_method: 'stripe',
                     customer_name: finalName,
                     customer_email: finalEmail,
                     pickup_time: new Date().toISOString()
@@ -173,7 +166,7 @@ const { error: itemsError } = await supabase
 
             if (orderError) throw orderError;
 
-            // 2. Insert Order Items
+            // 3. Insert Order Items
             const orderItems = items.map(item => ({
                 order_id: orderData.id,
                 menu_item_id: item.id,
@@ -183,12 +176,12 @@ const { error: itemsError } = await supabase
             }));
 
             const { error: itemsError } = await supabase
-                .from('order_items')
+                .from(TABLES.ITEMS)
                 .insert(orderItems);
 
-            // FIX: Handle "Item Deleted" error and Rollback
+            // 4. Rollback if items fail
             if (itemsError) {
-                await supabase.from('orders').delete().eq('id', orderData.id);
+                await supabase.from(TABLES.ORDERS).delete().eq('id', orderData.id);
 
                 if (itemsError.code === '23503') {
                     throw new Error("One or more items in your cart no longer exist. Please clear cart and try again.");
@@ -196,7 +189,7 @@ const { error: itemsError } = await supabase
                 throw itemsError;
             }
 
-            // 3. Cleanup
+            // 5. Cleanup
             clearCart();
             set(state => ({ 
                 checkout: { 
