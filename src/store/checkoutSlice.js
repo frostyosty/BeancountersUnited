@@ -31,7 +31,7 @@ export const createCheckoutSlice = (set, get) => ({
     },
 
     // --- ACTION: PAY ON PICKUP ---
-    submitCashOrder: async () => {
+    submitCashOrder: async (guestName = null) => {
         const validation = get().checkout.canPayWithCash();
         if (!validation.allowed) {
             return { success: false, error: validation.reason };
@@ -43,22 +43,36 @@ export const createCheckoutSlice = (set, get) => ({
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            if (!user) throw new Error("You must be logged in to place an order.");
+            // FIX: Allow if user exists OR if guestName is provided
+            if (!user && !guestName) throw new Error("You must be logged in or provide a guest name.");
             
-            const customerName = profile?.full_name || profile?.email || 'Customer';
+            // Determine Name & Email
+            let finalName = 'Guest';
+            let finalEmail = null;
+            let userId = null;
 
-            // 1. Insert Order Header
+            if (user) {
+                // Logged In Logic
+                userId = user.id;
+                finalEmail = user.email;
+                finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
+            } else {
+                // Guest Logic
+                finalName = guestName;
+                finalEmail = null; // No email for guests
+                userId = null;     // No User ID
+            }
+
+            // Insert Order
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([{
-                    user_id: user.id,
+                    user_id: userId, // Can be null now
                     total_amount: getCartTotal(),
-                    status: 'pending',         
-                    payment_status: 'pending', 
-                    payment_method: 'cash',
-                    customer_name: customerName,
-                    customer_email: user.email,
-                    pickup_time: new Date().toISOString() 
+                    status: 'pending', payment_status: 'pending', payment_method: 'cash',
+                    customer_name: finalName,
+                    customer_email: finalEmail,
+                    pickup_time: new Date().toISOString()
                 }])
                 .select()
                 .single();
@@ -111,28 +125,45 @@ export const createCheckoutSlice = (set, get) => ({
     },
 
     // --- ACTION: STRIPE PAYMENT SUCCESS ---
-    submitPaidOrder: async (paymentIntent) => {
+    // --- ACTION: STRIPE PAYMENT SUCCESS ---
+    submitPaidOrder: async (paymentIntent, guestName = null) => {
         set(state => ({ checkout: { ...state.checkout, isProcessing: true, error: null } }));
 
         try {
             const { user, profile } = get().auth;
             const { items, getCartTotal, clearCart } = get().cart;
 
-            if (!user) throw new Error("User session missing during payment finalization.");
+            // FIX: Allow if user exists OR if guestName is provided
+            if (!user && !guestName) throw new Error("You must be logged in or provide a guest name.");
             
-            const customerName = profile?.full_name || profile?.email || 'Customer';
+            // Determine Name & Email
+            let finalName = 'Guest';
+            let finalEmail = null;
+            let userId = null;
 
-            // 1. Insert Order Header
+            if (user) {
+                // Logged In Logic
+                userId = user.id;
+                finalEmail = user.email;
+                finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
+            } else {
+                // Guest Logic
+                finalName = guestName;
+                finalEmail = null; 
+                userId = null;
+            }
+
+            // Insert Order
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([{
-                    user_id: user.id,
+                    user_id: userId,
                     total_amount: getCartTotal(),
                     status: 'pending',        
-                    payment_status: 'paid',   
-                    payment_method: 'stripe',
-                    customer_name: customerName,
-                    customer_email: user.email,
+                    payment_status: 'paid',    // <--- FIX: Paid
+                    payment_method: 'stripe',  // <--- FIX: Stripe
+                    customer_name: finalName,
+                    customer_email: finalEmail,
                     pickup_time: new Date().toISOString()
                 }])
                 .select()
@@ -155,11 +186,10 @@ export const createCheckoutSlice = (set, get) => ({
 
             // FIX: Handle "Item Deleted" error and Rollback
             if (itemsError) {
-                // Rollback: Delete the header
                 await supabase.from('orders').delete().eq('id', orderData.id);
 
                 if (itemsError.code === '23503') {
-                    throw new Error("Item no longer available. Please update your cart.");
+                    throw new Error("One or more items in your cart no longer exist. Please clear cart and try again.");
                 }
                 throw itemsError;
             }

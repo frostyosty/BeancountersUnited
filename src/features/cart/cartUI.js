@@ -4,6 +4,9 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
+// State for Guest Flow
+let isGuestCheckout = false;
+
 // --- CSS for Responsive Cart ---
 const CART_CSS = `
 <style>
@@ -45,44 +48,30 @@ export function renderCartPage() {
         const price = parseFloat(item.price) || 0;
         const subtotal = price * item.quantity;
         
-        // Options Display (Pink Text)
         const optionsDisplay = (item.selectedOptions && item.selectedOptions.length > 0)
             ? `<div style="font-size:0.8rem; color:#d63384; margin-top:2px; line-height:1.2;">+ ${item.selectedOptions.join(', ')}</div>`
             : '';
 
-        // Use cartId if present (new items), else fallback to DB id (legacy items)
         const uniqueId = item.cartId || item.id;
 
         return `
         <div class="cart-item" data-unique-id="${uniqueId}" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
-            
-            <!-- Left: Image & Info -->
             <div style="display:flex; gap:15px; align-items:center; overflow:hidden;">
                 <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" 
                      style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0;">
-                
                 <div style="min-width:0;">
                     <h4 style="margin:0; font-size:1rem; line-height:1.2;">${item.name}</h4>
                     ${optionsDisplay}
-                    <!-- Mobile Sleek Price -->
                     <p style="margin:2px 0 0 0; color:#666; font-size:0.9rem;">$${price.toFixed(2)}</p>
                 </div>
             </div>
-
-            <!-- Right: Controls -->
             <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                
-                <!-- Qty Stepper -->
                 <div class="quantity-selector" style="display:flex; align-items:center; border:1px solid #ddd; border-radius:4px;">
                     <button class="quantity-btn decrease-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">-</button>
                     <span style="padding:0 5px; min-width:20px; text-align:center;">${item.quantity}</span>
                     <button class="quantity-btn increase-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
                 </div>
-
-                <!-- Desktop Subtotal -->
                 <span class="cart-subtotal-col">$${subtotal.toFixed(2)}</span>
-
-                <!-- Delete Button -->
                 <button class="delete-icon-btn remove-item-btn" data-unique-id="${uniqueId}" title="Remove">×</button>
             </div>
         </div>`;
@@ -90,17 +79,28 @@ export function renderCartPage() {
 
     const total = getCartTotal();
 
-    // 3. Payment Section Logic
+    // 3. Payment Logic (Auth OR Guest Mode)
     let paymentSectionHTML = '';
+    const savedGuestName = localStorage.getItem('guest_name');
     
-    if (!isAuthenticated) {
+    // Determine if we show payment buttons
+    const showPayment = isAuthenticated || isGuestCheckout;
+
+    if (!showPayment) {
+        // --- SHOW LOGIN / GUEST OPTIONS ---
+        let guestBtn = savedGuestName 
+            ? `<button class="button-secondary" id="guest-continue-btn" style="width:100%; margin-bottom:10px;">Continue as ${savedGuestName}</button>`
+            : `<button class="button-secondary" id="guest-start-btn" style="width:100%; margin-bottom:10px;">Continue as Guest</button>`;
+
         paymentSectionHTML = `
-            <div style="margin-top:30px; padding:20px; background:#fff3cd; border-radius:8px; text-align:center;">
-                <h3>Almost there!</h3>
-                <p>Please log in to complete your order.</p>
-                <button class="button-primary" id="cart-login-btn">Login / Sign Up</button>
+            <div style="margin-top:30px; padding:20px; background:#f9f9f9; border-radius:8px; border:1px solid #eee;">
+                <h3 style="text-align:center; margin-bottom:15px;">Checkout</h3>
+                ${guestBtn}
+                <div style="text-align:center; font-size:0.9rem; margin:10px 0;">— OR —</div>
+                <button class="button-primary" id="cart-login-btn" style="width:100%;">Login / Sign Up (Save History)</button>
             </div>`;
     } else {
+        // --- SHOW PAYMENT BUTTONS ---
         const cashRule = canPayWithCash();
         const enableStripe = settings.paymentConfig?.enableStripe !== false;
 
@@ -153,49 +153,50 @@ export function renderCartPage() {
 function attachListeners() {
     const mainContent = document.getElementById('main-content');
     
-    // Cleanup any old listeners if this function is called multiple times on the same element?
-    // Using {once:false} or cloning element is robust, but here we just rely on replacement.
-    
     mainContent.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
 
-        // Payment Buttons (IDs)
+        // Guest Flow Logic
+        if (btn.id === 'guest-start-btn') {
+            const name = prompt("Enter a name for the order:");
+            if (name) {
+                localStorage.setItem('guest_name', name);
+                isGuestCheckout = true; // Switch state
+                renderCartPage(); // Re-render
+            }
+            return;
+        }
+        if (btn.id === 'guest-continue-btn') {
+            isGuestCheckout = true;
+            renderCartPage();
+            return;
+        }
+
+        // Cart Item Actions
+        const uniqueId = btn.dataset.uniqueId;
+        if (uniqueId) {
+            const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
+            const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
+            if (!currentItem) return;
+
+            if (btn.classList.contains('increase-qty')) updateItemQuantity(uniqueId, currentItem.quantity + 1);
+            else if (btn.classList.contains('decrease-qty')) updateItemQuantity(uniqueId, currentItem.quantity - 1);
+            else if (btn.classList.contains('remove-item-btn')) removeItem(uniqueId);
+            return;
+        }
+        
+        // Payment Buttons
         if (btn.id === 'cart-login-btn') {
             import('@/features/auth/authUI.js').then(m => m.showLoginSignupModal());
-            return;
         }
-        if (btn.id === 'pay-cash-btn') {
+        else if (btn.id === 'pay-cash-btn') {
             handleCashPayment(btn);
-            return;
         }
-        if (btn.id === 'pay-stripe-btn') {
+        else if (btn.id === 'pay-stripe-btn') {
             btn.style.display = 'none'; 
             document.getElementById('stripe-container').style.display = 'block'; 
             initializeStripeFlow();
-            return;
-        }
-
-        // Item Actions (Classes)
-        const uniqueId = btn.dataset.uniqueId;
-        if (!uniqueId) return; // Not an item button
-
-        const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
-        
-        // Match using cartId or fallback to id
-        const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
-        
-        if (!currentItem) return;
-
-        if (btn.classList.contains('increase-qty')) {
-            updateItemQuantity(uniqueId, currentItem.quantity + 1);
-        } 
-        else if (btn.classList.contains('decrease-qty')) {
-            updateItemQuantity(uniqueId, currentItem.quantity - 1);
-        } 
-        else if (btn.classList.contains('remove-item-btn')) {
-            // FIX: Removed Confirmation Alert
-            removeItem(uniqueId);
         }
     });
 }
@@ -205,11 +206,15 @@ async function handleCashPayment(btn) {
     btn.textContent = "Processing...";
     
     const { submitCashOrder } = useAppStore.getState().checkout;
-    const result = await submitCashOrder();
+    const guestName = localStorage.getItem('guest_name'); // Get Guest Name
+
+    const result = await submitCashOrder(guestName); // Pass it
 
     if (result.success) {
         uiUtils.showToast("Order Placed!", "success");
-        window.location.hash = '#order-history';
+        // Reset guest state if needed
+        isGuestCheckout = false; 
+        window.location.hash = '#order-history'; // Will show guest view (empty usually) or just reload
     } else {
         uiUtils.showToast(result.error, "error");
         btn.disabled = false;
@@ -230,8 +235,6 @@ async function initializeStripeFlow() {
         const { clientSecret, error } = await res.json();
         if (error) throw new Error(error);
 
-        // FIX: Check if mount point exists before using it
-        // This handles cases where user navigated away during fetch
         const mountPoint = document.getElementById('stripe-element-mount');
         if (!mountPoint) return; 
 
@@ -241,14 +244,12 @@ async function initializeStripeFlow() {
         paymentElement.mount('#stripe-element-mount');
 
         const submitBtn = document.getElementById('stripe-submit-btn');
-        
-        // FIX: Disable initially, Enable when ready
         submitBtn.disabled = true;
-        submitBtn.textContent = "Loading payment options...";
+        submitBtn.textContent = "Loading options...";
         
         paymentElement.on('ready', () => {
-            submitBtn.disabled = false;
-            submitBtn.textContent = `Confirm Payment ($${total.toFixed(2)})`;
+             submitBtn.disabled = false;
+             submitBtn.textContent = `Confirm Payment ($${total.toFixed(2)})`;
         });
 
         submitBtn.onclick = async () => {
@@ -269,9 +270,12 @@ async function initializeStripeFlow() {
                 submitBtn.textContent = `Confirm Payment ($${total.toFixed(2)})`;
             } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
                 const { submitPaidOrder } = useAppStore.getState().checkout;
-                const saveRes = await submitPaidOrder(result.paymentIntent);
+                const guestName = localStorage.getItem('guest_name');
+                const saveRes = await submitPaidOrder(result.paymentIntent, guestName);
+                
                 if (saveRes.success) {
                     uiUtils.showToast("Payment Successful!", "success");
+                    isGuestCheckout = false;
                     window.location.hash = '#order-history';
                 } else {
                     errorDiv.textContent = "Payment worked, but database save failed. Contact staff.";

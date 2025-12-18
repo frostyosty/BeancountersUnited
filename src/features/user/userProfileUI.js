@@ -27,6 +27,26 @@ export function renderUserProfilePage() {
         </label>
     `).join('');
 
+
+    // Check if "Fake" domain
+    const isUsernameAccount = user.email.endsWith('@mealmates.local');
+    const displayEmail = isUsernameAccount ? 'Not Set' : user.email;
+    const displayUsername = isUsernameAccount ? user.email.split('@')[0] : 'N/A';
+
+    let emailSection = '';
+    if (isUsernameAccount) {
+        emailSection = `
+            <div style="background:#fff3cd; padding:15px; border-radius:6px; margin-bottom:20px;">
+                <strong>⚠️ Security Notice</strong>
+                <p style="font-size:0.9rem; margin:5px 0;">You are using a Username account. If you forget your password, your account is lost forever.</p>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <input type="email" id="link-email-input" placeholder="Enter Email" style="flex:1; padding:5px;">
+                    <button id="link-email-btn" class="button-primary small">Link Email</button>
+                </div>
+            </div>
+        `;
+    }
+
     mainContent.innerHTML = `
         <div class="dashboard-container" style="max-width:600px; margin:0 auto;">
             <h2>My ${siteName}</h2>
@@ -35,7 +55,11 @@ export function renderUserProfilePage() {
                     <label style="font-size:0.8rem; color:#666;">Logged in as</label>
                     <div style="font-weight:500;">${user.email}</div>
                 </div>
-                
+                <div style="margin-bottom:15px;">
+            <label>Username:</label> <b>${displayUsername}</b><br>
+            <label>Email:</label> <b>${displayEmail}</b>
+        </div>
+        ${emailSection}
                 <h3>Dietary Preferences</h3>
                 <p style="color:#666; font-size:0.9rem; margin-bottom:15px;">
                     Automatically filter the menu to show safe items for you.
@@ -52,6 +76,18 @@ export function renderUserProfilePage() {
         </div>
     `;
 
+    // Listener
+    const linkBtn = document.getElementById('link-email-btn');
+    if (linkBtn) {
+        linkBtn.onclick = async () => {
+            const newEmail = document.getElementById('link-email-input').value;
+            // Call Supabase update
+            const { error } = await supabase.auth.updateUser({ email: newEmail });
+            if (error) uiUtils.showToast(error.message, 'error');
+            else uiUtils.showToast("Confirmation link sent to " + newEmail, 'success');
+        };
+    }
+    
     document.getElementById('save-prefs-btn').addEventListener('click', async (e) => {
         const btn = e.target;
         btn.textContent = "Saving...";
