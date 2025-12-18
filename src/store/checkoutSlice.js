@@ -1,5 +1,6 @@
 // src/store/checkoutSlice.js
 import { supabase } from '@/supabaseClient.js'; 
+import { TABLES } from '@/config/tenancy.js';
 
 export const createCheckoutSlice = (set, get) => ({
     isProcessing: false,
@@ -64,9 +65,9 @@ export const createCheckoutSlice = (set, get) => ({
             }
 
             // Insert Order
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert([{
+const { data: orderData } = await supabase
+    .from(TABLES.ORDERS) // WAS: 'orders'
+    .insert([{ 
                     user_id: userId, // Can be null now
                     total_amount: getCartTotal(),
                     status: 'pending', payment_status: 'pending', payment_method: 'cash',
@@ -95,7 +96,7 @@ export const createCheckoutSlice = (set, get) => ({
             // FIX: Handle "Item Deleted" error and Rollback
             if (itemsError) {
                 // Rollback: Delete the header we just made so we don't have empty ghost orders
-                await supabase.from('orders').delete().eq('id', orderData.id);
+                await supabase.from(TABLE ORDERS)delete().eq('id', orderData.id);
 
                 if (itemsError.code === '23503') {
                     throw new Error("One or more items in your cart no longer exist on the menu. Please clear your cart and try again.");
@@ -154,8 +155,9 @@ export const createCheckoutSlice = (set, get) => ({
             }
 
             // Insert Order
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
+const { error: itemsError } = await supabase
+    .from(TABLES.ITEMS) // WAS: 'order_items'
+    .insert(orderItems);
                 .insert([{
                     user_id: userId,
                     total_amount: getCartTotal(),

@@ -2,85 +2,18 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
-// Helper: Distinguish Email vs Username
+// --- HELPERS ---
+
 function isEmail(input) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
 }
 
-// Helper: Convert Input to Supabase Login format
+// Automatically append dummy domain if it's just a username
 function formatLoginString(input) {
     const trimmed = input.trim();
     if (isEmail(trimmed)) return trimmed;
     // It's a username -> Append dummy domain
     return `${trimmed}@mealmates.local`; 
-}
-
-
-async function handleAuthSubmit(event, type) {
-    event.preventDefault();
-    const form = event.target;
-    const btn = form.querySelector('button[type="submit"]');
-    const msgEl = form.querySelector('.auth-message');
-    
-    const rawInput = form.identifier.value.trim();
-    const password = form.password.value;
-    const { login, signUp } = useAppStore.getState().auth;
-
-    // Validation
-    if (rawInput.length < 3) {
-        msgEl.textContent = "Username/Email is too short.";
-        msgEl.className = 'auth-message error';
-        return;
-    }
-
-    // Save for next time
-    localStorage.setItem('last_login_input', rawInput);
-
-    // Prepare Creds
-    const emailPayload = formatLoginString(rawInput);
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Processing...';
-    msgEl.textContent = '';
-
-    try {
-        const action = type === 'login' ? login : signUp;
-        const result = await action(emailPayload, password);
-        const error = result.error;
-
-        if (error) {
-            let msg = error.message;
-            if (msg.includes("Invalid login credentials")) msg = "Incorrect username/email or password.";
-            
-            msgEl.textContent = msg;
-            msgEl.className = 'auth-message error';
-            uiUtils.showToast(msg, 'error');
-            
-            // Auto-fill other form
-            const otherInput = document.getElementById(type === 'login' ? 'signup-input' : 'login-input');
-            const otherPass = document.getElementById(type === 'login' ? 'signup-password' : 'login-password');
-            if (otherInput) otherInput.value = rawInput;
-            if (otherPass) otherPass.value = password;
-
-            btn.disabled = false;
-            btn.textContent = originalText;
-        } else {
-            uiUtils.showToast(`${type === 'login' ? 'Welcome back' : 'Account created'}!`, 'success');
-            uiUtils.closeModal();
-            // Store specific guest name if using username
-            if (!isEmail(rawInput)) localStorage.setItem('guest_name', rawInput);
-        }
-    } catch (e) {
-        console.error(e);
-        msgEl.textContent = "System Error.";
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
-}
-
-// --- Helper: Email Validation ---
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // --- 1. AUTH STATUS (Header) ---
@@ -90,15 +23,11 @@ export function renderAuthStatus() {
 
     const { user, profile, isAuthLoading } = useAppStore.getState().auth;
 
-    // A. LOADING
     if (isAuthLoading) {
-        // This relies on the global spinner being injected by main.js or uiUtils
-        // We just leave the container to be managed by the spinner logic or show a small placeholder
         container.innerHTML = `<div class="auth-loading-spinner" style="width:24px; height:24px;"></div>`;
         return;
     }
 
-    // B. LOGGED IN
     if (user) {
         const role = profile?.role;
         let displayHTML = '';
@@ -108,7 +37,9 @@ export function renderAuthStatus() {
         } else if (role === 'owner') {
             displayHTML = `<span class="role-badge owner" style="background:var(--primary-color); color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
         } else {
-            const name = profile?.full_name || user.email.split('@')[0];
+            // Clean up username display (remove fake domain)
+            const rawName = profile?.full_name || user.email.split('@')[0];
+            const name = rawName.replace('.local', ''); 
             displayHTML = `<span class="user-greeting" style="font-size:0.9rem;">Hi, ${name}</span>`;
         }
 
@@ -118,9 +49,7 @@ export function renderAuthStatus() {
                 <button id="logout-btn" class="button-link" style="font-size:0.9rem; text-decoration:underline; cursor:pointer; border:none; background:none; color:var(--text-color);">Logout</button>
             </div>
         `;
-    } 
-    // C. LOGGED OUT
-    else {
+    } else {
         container.innerHTML = `
             <button id="login-signup-btn" class="button-primary small" style="font-size:0.8rem; padding: 6px 12px;">Login / Sign Up</button>
         `;
@@ -129,6 +58,9 @@ export function renderAuthStatus() {
 
 // --- 2. LOGIN / SIGNUP MODAL ---
 export function showLoginSignupModal() {
+    // Retrieve saved username
+    const savedInput = localStorage.getItem('last_login_input') || '';
+
     const modalContentHTML = `
         <div class="auth-modal-container">
             <!-- LOGIN SECTION -->
@@ -136,8 +68,9 @@ export function showLoginSignupModal() {
                 <h2>Login</h2>
                 <form id="login-form" novalidate>
                     <div class="form-group">
-                        <label for="login-email">Email</label>
-                        <input type="email" id="login-email" name="email" required autocomplete="email">
+                        <label for="login-input">Username or Email</label>
+                        <!-- FIX: Type is text to allow usernames -->
+                        <input type="text" id="login-input" name="identifier" value="${savedInput}" required placeholder="e.g. Steve">
                     </div>
                     <div class="form-group">
                         <label for="login-password">Password</label>
@@ -157,8 +90,8 @@ export function showLoginSignupModal() {
                 <h2>Sign Up</h2>
                 <form id="signup-form" novalidate>
                      <div class="form-group">
-                        <label for="signup-email">Email</label>
-                        <input type="email" id="signup-email" name="email" required autocomplete="email">
+                        <label for="signup-input">Username or Email</label>
+                        <input type="text" id="signup-input" name="identifier" value="${savedInput}" required placeholder="Pick a username">
                     </div>
                     <div class="form-group">
                         <label for="signup-password">Password (min. 6 characters)</label>
@@ -185,15 +118,14 @@ async function handleLoginFormSubmit(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     const messageEl = document.getElementById('login-message');
     
-    const email = form.email.value.trim();
+    const rawInput = form.identifier.value.trim();
     const password = form.password.value;
     
-    // Validation
-    if (!isValidEmail(email)) {
-        messageEl.textContent = "Please enter a valid email address.";
-        messageEl.className = 'auth-message error';
-        return;
-    }
+    // FIX: Apply domain trick
+    const emailPayload = formatLoginString(rawInput);
+    
+    // Save for convenience
+    localStorage.setItem('last_login_input', rawInput);
 
     // UI Feedback
     const originalBtnText = submitButton.textContent;
@@ -204,25 +136,19 @@ async function handleLoginFormSubmit(event) {
 
     try {
         const { login } = useAppStore.getState().auth;
-        const result = await login(email, password);
+        const result = await login(emailPayload, password);
         const error = result.error;
 
         if (error) {
-            // --- Auto-fill Signup Inputs on Failure ---
-            const signupEmail = document.getElementById('signup-email');
+            // Auto-fill Signup
+            const signupInput = document.getElementById('signup-input');
             const signupPass = document.getElementById('signup-password');
-            if (signupEmail) signupEmail.value = email;
+            if (signupInput) signupInput.value = rawInput;
             if (signupPass) signupPass.value = password;
-            // -----------------------------------------
 
             let msg = error.message || "Login failed";
-            
-            // Helpful messages
-            if (msg.includes("Invalid login credentials")) {
-                msg = "Incorrect email or password.";
-            } else if (msg.includes("AuthApiError")) {
-                msg = "Login failed. Please check your details.";
-            }
+            if (msg.includes("Invalid login credentials")) msg = "Incorrect username or password.";
+            else if (msg.includes("AuthApiError")) msg = "Login failed. Check details.";
 
             messageEl.textContent = msg;
             messageEl.className = 'auth-message error';
@@ -236,7 +162,7 @@ async function handleLoginFormSubmit(event) {
         }
     } catch (unexpectedErr) {
         console.error("Login Crash:", unexpectedErr);
-        messageEl.textContent = "An unexpected error occurred.";
+        messageEl.textContent = "Error occurred.";
         messageEl.className = 'auth-message error';
         submitButton.disabled = false;
         submitButton.textContent = originalBtnText;
@@ -250,23 +176,25 @@ async function handleSignupFormSubmit(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     const messageEl = document.getElementById('signup-message');
     
-    const email = form.email.value.trim();
+    const rawInput = form.identifier.value.trim();
     const password = form.password.value;
     
-    // Validation
-    if (!isValidEmail(email)) {
-        messageEl.textContent = "Please enter a valid email address.";
+    // Validate Length
+    if (rawInput.length < 3) {
+        messageEl.textContent = "Username must be at least 3 characters.";
         messageEl.className = 'auth-message error';
         return;
     }
-
     if (password.length < 6) {
         messageEl.textContent = "Password must be at least 6 characters.";
         messageEl.className = 'auth-message error';
         return;
     }
 
-    // UI Feedback
+    // FIX: Apply domain trick
+    const emailPayload = formatLoginString(rawInput);
+    localStorage.setItem('last_login_input', rawInput);
+
     submitButton.disabled = true;
     submitButton.textContent = 'Signing Up...';
     messageEl.textContent = '';
@@ -274,11 +202,11 @@ async function handleSignupFormSubmit(event) {
 
     try {
         const { signUp } = useAppStore.getState().auth;
-        const { error } = await signUp(email, password);
+        const { error } = await signUp(emailPayload, password);
 
         if (error) {
             let msg = error.message;
-            if (msg.includes("Supabase Auth Error")) msg = "Sign up failed. Please try again.";
+            if (msg.includes("Supabase Auth Error")) msg = "Sign up failed. Username might be taken.";
             
             messageEl.textContent = msg;
             messageEl.className = 'auth-message error';
@@ -288,10 +216,8 @@ async function handleSignupFormSubmit(event) {
             messageEl.textContent = 'Success! You are logged in.';
             messageEl.className = 'auth-message success';
             uiUtils.showToast('Account created!', 'success');
-            // Allow auto-login behavior (auth listener handles close)
         }
     } catch (err) {
-        console.error("Signup Crash:", err);
         messageEl.textContent = "Sign up failed.";
         submitButton.disabled = false;
         submitButton.textContent = 'Sign Up';

@@ -1,5 +1,6 @@
 // api/settings.js
 import { createClient } from '@supabase/supabase-js';
+import { TABLES } from '../src/config/tenancy.js';
 
 export default async function handler(req, res) {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -13,9 +14,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
         try {
-            const { data, error } = await supabaseAdmin
-                .from('site_settings')
-                .select('key, value');
+const { data, error } = await supabaseAdmin.from(TABLES.SETTINGS).select('key, value');
 
             if (error) throw error;
 
