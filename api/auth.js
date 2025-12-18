@@ -1,48 +1,64 @@
-// /api/auth/login.js
-import { supabaseAdmin } from './_db.js';
+// api/auth.js
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-    console.log("--- [API /auth/login] Handler started ---");
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', ['POST']);
-        return res.status(405).end('Method Not Allowed');
+    const { type } = req.query;
+    
+    // DEBUG: Log the type clearly
+    console.log(`--- [API Auth] Handling Request: ${type?.toUpperCase()} ---`);
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+        return res.status(500).json({ error: "Server Config Error" });
     }
 
-    try {
+    // Handle LOGIN
+    if (type === 'login') {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
         const { email, password } = req.body;
-        console.log(`[API /auth/login] Received request for email: ${email}`);
-
-        if (!email || !password) {
-            console.log("[API /auth/login] Missing email or password. Sending 400.");
-            return res.status(400).json({ error: 'Email and password are required.' });
-        }
-
-        console.log("[API /auth/login] Calling supabaseAdmin.auth.signInWithPassword...");
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
-        // Log the raw response from the admin sign-in call
-        console.log("[API /auth/login] Supabase response received.");
-        console.log("[API /auth/login] Error object:", error);
-        console.log("[API /auth/login] Data object:", data ? { session: !!data.session, user: !!data.user } : null);
-
+        
+        console.log(`[API Auth] Attempting login for: ${email}`);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
         if (error) {
-            console.error(`[API /auth/login] Supabase login returned an error for ${email}:`, error.message);
-            return res.status(401).json({ error: `Supabase Auth Error: ${error.message}` });
+            console.error("[API Auth] Login Error:", error.message);
+            return res.status(401).json({ error: error.message });
         }
-
-        if (data.session) {
-            console.log(`[API /auth/login] Login successful. Returning session data.`);
-            return res.status(200).json(data);
-        } else {
-            console.error("[API /auth/login] Login succeeded but no session was returned.");
-            return res.status(500).json({ error: 'Login succeeded but no session was returned.' });
-        }
-
-    } catch (e) {
-        console.error("[API /auth/login] CRITICAL ERROR in try/catch block:", e);
-        return res.status(500).json({ error: 'An internal server error occurred.' });
+        return res.status(200).json({ session: data.session });
     }
+
+    // Handle SIGNUP
+    if (type === 'signup') {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { email, password } = req.body;
+
+        console.log(`[API Auth] Attempting signup for: ${email}`);
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        
+        if (error) {
+            console.error("[API Auth] Signup Error:", error.message);
+            return res.status(400).json({ error: error.message });
+        }
+        
+        // Auto-create Profile
+        if (data.user) {
+            console.log(`[API Auth] Creating profile for ${data.user.id}`);
+            const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+            await supabaseAdmin.from('profiles').insert([{ 
+                id: data.user.id, 
+                email: email, 
+                role: 'customer',
+                full_name: email.split('@')[0] // Default name
+            }]);
+        }
+        return res.status(200).json({ user: data.user });
+    }
+
+    return res.status(400).json({ error: "Invalid auth type requested." });
 }

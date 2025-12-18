@@ -91,6 +91,10 @@ export function showLoginSignupModal() {
     document.getElementById('login-form')?.addEventListener('submit', handleLoginFormSubmit);
     document.getElementById('signup-form')?.addEventListener('submit', handleSignupFormSubmit);
 }
+// --- Helper: Simple Email Validator ---
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 /**
  * Handles the submission of the LOGIN form.
@@ -101,11 +105,17 @@ async function handleLoginFormSubmit(event) {
     const submitButton = form.querySelector('button[type="submit"]');
     const messageEl = document.getElementById('login-message');
     
-    const email = form.email.value;
+    const email = form.email.value.trim(); // Trim whitespace
     const password = form.password.value;
     const { login } = useAppStore.getState().auth;
 
-    // Provide immediate feedback
+    // 1. Validation
+    if (!isValidEmail(email)) {
+        messageEl.textContent = "Please enter a valid email address (e.g. user@email.com)";
+        messageEl.className = 'auth-message error';
+        return;
+    }
+
     const originalBtnText = submitButton.textContent;
     submitButton.disabled = true;
     submitButton.textContent = 'Logging In...';
@@ -113,32 +123,26 @@ async function handleLoginFormSubmit(event) {
     messageEl.className = 'auth-message';
 
     try {
-        // Call store
         const result = await login(email, password);
         const error = result.error;
 
         if (error) {
-            // --- Auto-fill Signup Inputs on Failure ---
+            // Auto-fill Signup
             const signupEmail = document.getElementById('signup-email');
             const signupPass = document.getElementById('signup-password');
             if (signupEmail) signupEmail.value = email;
             if (signupPass) signupPass.value = password;
             
-            // --- ERROR HANDLING ---
-            // Note: Supabase usually returns "Invalid login credentials" for both 
-            // wrong password AND wrong email to prevent scraping.
-            // We display the raw message here as requested.
-            let msg = error.message;
-
-            // Highlight specific issues if the server provides distinct codes
-            if (msg.toLowerCase().includes("password")) {
-                msg = "Incorrect Password.";
-            } else if (msg.toLowerCase().includes("user") || msg.toLowerCase().includes("email")) {
-                msg = "Email not found.";
-            } 
-            // Fallback for the standard vague Supabase security message
-            else if (msg === "Invalid login credentials") {
-                msg = "Invalid Email or Password (Server does not specify which)";
+            // CLEANER ERROR HANDLING
+            let msg = error.message || "Login failed";
+            
+            // Check for common Supabase/Server errors
+            if (msg.toLowerCase().includes("invalid login credentials")) {
+                msg = "Incorrect email or password.";
+            } else if (msg.includes("Supabase Auth Error")) {
+                msg = "Login failed. Please check your details.";
+            } else if (msg.includes("Email not confirmed")) {
+                msg = "Please verify your email address before logging in.";
             }
 
             messageEl.textContent = msg;
@@ -160,7 +164,6 @@ async function handleLoginFormSubmit(event) {
     }
 }
 
-
 /**
  * Handles the submission of the SIGN UP form.
  */
@@ -169,9 +172,16 @@ async function handleSignupFormSubmit(event) {
     const form = event.target;
     const submitButton = form.querySelector('button[type="submit"]');
     const messageEl = document.getElementById('signup-message');
-    const email = form.email.value;
+    const email = form.email.value.trim();
     const password = form.password.value;
     const { signUp } = useAppStore.getState().auth;
+
+    // 1. Validation
+    if (!isValidEmail(email)) {
+        messageEl.textContent = "Please enter a valid email address.";
+        messageEl.className = 'auth-message error';
+        return;
+    }
 
     submitButton.disabled = true;
     submitButton.textContent = 'Signing Up...';
@@ -182,13 +192,19 @@ async function handleSignupFormSubmit(event) {
         const { error } = await signUp(email, password);
 
         if (error) {
-            messageEl.textContent = error.message;
+            // Clean Error Message
+            let msg = error.message;
+            if (msg.includes("Supabase Auth Error")) msg = "Sign up failed. Please try again.";
+            
+            messageEl.textContent = msg;
             messageEl.className = 'auth-message error';
             submitButton.disabled = false;
             submitButton.textContent = 'Sign Up';
         } else {
-            messageEl.textContent = 'Success! Please check your email for a confirmation link.';
+            messageEl.textContent = 'Success! You are logged in.';
             messageEl.className = 'auth-message success';
+            uiUtils.showToast('Account created!', 'success');
+            // Allow auto-login behavior (auth listener handles close)
         }
     } catch (err) {
         messageEl.textContent = "Sign up failed.";
