@@ -1,7 +1,7 @@
 // api/auth.js
 import { createClient } from '@supabase/supabase-js';
 
-// Define TABLES locally for Vercel safety
+// Define TABLES locally to avoid import issues
 const TABLES = { PROFILES: 'mealmates_profiles' };
 
 export default async function handler(req, res) {
@@ -39,13 +39,23 @@ export default async function handler(req, res) {
         // Auto-create Profile
         if (data.user) {
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-            await supabaseAdmin.from(TABLES.PROFILES).insert([{ 
-                id: data.user.id, 
-                email: email, 
-                role: 'customer',
-                // FIX: Restore default name logic
-                full_name: email.split('@')[0] 
-            }]);
+            
+            // FIX: Use UPSERT instead of INSERT to prevent duplicate errors if retrying
+            // FIX: Log the specific error if it fails
+            const { error: profileError } = await supabaseAdmin
+                .from(TABLES.PROFILES)
+                .upsert([{ 
+                    id: data.user.id, 
+                    email: email, 
+                    role: 'customer',
+                    full_name: email.split('@')[0] 
+                }]);
+
+            if (profileError) {
+                 console.error("Profile creation failed:", profileError);
+                 // Return the ACTUAL database error so we can debug it
+                 return res.status(400).json({ error: "DB Error: " + profileError.message });
+            }
         }
         return res.status(200).json({ user: data.user });
     }
