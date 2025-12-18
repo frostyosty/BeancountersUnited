@@ -59,11 +59,14 @@ export function renderCartPage() {
     attachListeners();
 }
 
-function attachListeners() {
-    const mainContent = document.getElementById('main-content');
-    if (!mainContent) return;
 
-    mainContent.addEventListener('click', (e) => {
+function attachListeners() {
+    // FIX: Select the .cart-container instead of #main-content
+    // This element is destroyed/recreated on every render, preventing listener cleanup issues.
+    const container = document.querySelector('.cart-container');
+    if (!container) return;
+
+    container.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
 

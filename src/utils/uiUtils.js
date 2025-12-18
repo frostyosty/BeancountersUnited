@@ -125,18 +125,13 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         document.body.appendChild(container);
     }
 
-    // DEBUG LOG
-    const rect = container.getBoundingClientRect();
-    console.log("Toast Container Rect:", rect);
-    console.log("Window Width:", window.innerWidth);
-
     let settings = {};
     try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
     const duration = overrideDuration || settings.duration || 3000;
     const position = settings.position || 'bottom-center';
 
-    // Reset layout styles to let CSS/Logic take over
+    // Reset styles
     container.style.left = '';
     container.style.right = '';
     container.style.top = '';
@@ -144,7 +139,7 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
     container.style.transform = '';
     container.style.alignItems = ''; 
 
-    // Apply Position Logic
+    // Apply Position
     if (position.includes('bottom')) { 
         container.style.bottom = '20px'; 
         container.style.top = 'auto'; 
@@ -163,16 +158,14 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
         // CENTER
         container.style.left = '0'; 
         container.style.right = '0'; 
-        container.style.alignItems = 'center'; // Flex centering
-        container.style.width = '100%';        // Force full width span
-        container.style.pointerEvents = 'none'; // Click-through empty space
+        container.style.alignItems = 'center'; 
+        container.style.width = '100%'; 
+        container.style.pointerEvents = 'none'; 
     }
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    
-    // Interactive settings
     toast.style.pointerEvents = 'auto'; 
     
     if (onClick) {
@@ -182,18 +175,17 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
 
     container.appendChild(toast);
 
-    // Trigger Entry Animation
-    requestAnimationFrame(() => {
-        toast.classList.add('show');
-    });
-
-    // Auto-remove logic
+    // Animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Auto-remove
     setTimeout(() => {
-        toast.classList.remove('show');
-        // Force removal after animation time (300ms) + buffer
-        setTimeout(() => {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 400); 
+        if (toast.parentNode) {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            });
+        }
     }, duration);
 }
 
