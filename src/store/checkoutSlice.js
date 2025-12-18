@@ -102,7 +102,7 @@ export const createCheckoutSlice = (set, get) => ({
                 throw itemsError;
             }
 
-            // 5. Success Cleanup
+ // 3. Success Cleanup
             clearCart();
             set(state => ({ 
                 checkout: { 
@@ -112,7 +112,10 @@ export const createCheckoutSlice = (set, get) => ({
                 } 
             }));
             
-            get().orderHistory.fetchOrderHistory();
+            // FIX: Only fetch history if we are actually logged in
+            if (user) {
+                get().orderHistory.fetchOrderHistory();
+            }
             
             return { success: true, orderId: orderData.id };
 
@@ -189,7 +192,7 @@ export const createCheckoutSlice = (set, get) => ({
                 throw itemsError;
             }
 
-            // 5. Cleanup
+ // 3. Success Cleanup
             clearCart();
             set(state => ({ 
                 checkout: { 
@@ -198,9 +201,12 @@ export const createCheckoutSlice = (set, get) => ({
                     lastSuccessfulOrderId: orderData.id 
                 } 
             }));
-
-            get().orderHistory.fetchOrderHistory();
-
+            
+            // FIX: Only fetch history if we are actually logged in
+            if (user) {
+                get().orderHistory.fetchOrderHistory();
+            }
+            
             return { success: true, orderId: orderData.id };
 
         } catch (error) {

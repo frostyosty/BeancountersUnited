@@ -151,9 +151,11 @@ export function renderCartPage() {
 }
 
 function attachListeners() {
-    const mainContent = document.getElementById('main-content');
+    // FIX: Attach listener to the specific container we just created, NOT the persistent main-content
+    const container = document.querySelector('.cart-container');
+    if (!container) return;
     
-    mainContent.addEventListener('click', (e) => {
+    container.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
 
@@ -176,6 +178,8 @@ if (btn.id === 'guest-start-btn') {
 
         // Cart Item Actions
         const uniqueId = btn.dataset.uniqueId;
+        
+        // Item Actions
         if (uniqueId) {
             const { updateItemQuantity, removeItem, items } = useAppStore.getState().cart;
             const currentItem = items.find(i => (i.cartId || i.id) === uniqueId);
