@@ -1,11 +1,13 @@
-// src/features/cart/templates.js
-
 export const CART_CSS = `
 <style>
     .cart-subtotal-col { display: none; }
     @media (min-width: 768px) {
         .cart-subtotal-col { 
-            display: block; font-weight: 600; width: 80px; text-align: right; margin-right: 15px; 
+            display: block; 
+            font-weight: 600; 
+            width: 80px; 
+            text-align: right; 
+            margin-right: 15px;
         }
     }
 </style>
@@ -33,10 +35,12 @@ export function getCartItemsHTML(items) {
 
         return `
         <div class="cart-item" data-unique-id="${uniqueId}" style="display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px solid #eee;">
+            
             <!-- Left: Image & Info -->
             <div style="display:flex; gap:15px; align-items:center; overflow:hidden;">
                 <img src="${item.image_url || '/placeholder-coffee.jpg'}" alt="${item.name}" 
                      style="width:60px; height:60px; object-fit:cover; border-radius:6px; flex-shrink:0;">
+                
                 <div style="min-width:0;">
                     <h4 style="margin:0; font-size:1rem; line-height:1.2;">${item.name}</h4>
                     ${optionsDisplay}
@@ -46,12 +50,18 @@ export function getCartItemsHTML(items) {
 
             <!-- Right: Controls -->
             <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                
+                <!-- Qty Stepper -->
                 <div class="quantity-selector" style="display:flex; align-items:center; border:1px solid #ddd; border-radius:4px;">
                     <button class="quantity-btn decrease-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">-</button>
                     <span style="padding:0 5px; min-width:20px; text-align:center;">${item.quantity}</span>
                     <button class="quantity-btn increase-qty" data-unique-id="${uniqueId}" style="padding:5px 10px; background:none; border:none; cursor:pointer;">+</button>
                 </div>
+
+                <!-- Desktop Subtotal -->
                 <span class="cart-subtotal-col">$${subtotal.toFixed(2)}</span>
+
+                <!-- Delete Button -->
                 <button class="delete-icon-btn remove-item-btn" data-unique-id="${uniqueId}" title="Remove">×</button>
             </div>
         </div>`;
