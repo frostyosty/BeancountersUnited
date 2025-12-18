@@ -113,7 +113,7 @@ async function handleLoginFormSubmit(event) {
     messageEl.className = 'auth-message';
 
     try {
-        // Call store (returns object { error: ... } or { error: null })
+        // Call store
         const result = await login(email, password);
         const error = result.error;
 
@@ -123,15 +123,22 @@ async function handleLoginFormSubmit(event) {
             const signupPass = document.getElementById('signup-password');
             if (signupEmail) signupEmail.value = email;
             if (signupPass) signupPass.value = password;
-            // -----------------------------------------
-
-            let msg = error.message || "Login failed";
             
-            // Sanitize technical jargon
-            if (msg.includes("Invalid login credentials")) {
-                msg = "Incorrect email or password.";
-            } else if (msg.includes("AuthApiError")) {
-                msg = "Login failed. Please check your details.";
+            // --- ERROR HANDLING ---
+            // Note: Supabase usually returns "Invalid login credentials" for both 
+            // wrong password AND wrong email to prevent scraping.
+            // We display the raw message here as requested.
+            let msg = error.message;
+
+            // Highlight specific issues if the server provides distinct codes
+            if (msg.toLowerCase().includes("password")) {
+                msg = "Incorrect Password.";
+            } else if (msg.toLowerCase().includes("user") || msg.toLowerCase().includes("email")) {
+                msg = "Email not found.";
+            } 
+            // Fallback for the standard vague Supabase security message
+            else if (msg === "Invalid login credentials") {
+                msg = "Invalid Email or Password (Server does not specify which)";
             }
 
             messageEl.textContent = msg;
@@ -152,6 +159,7 @@ async function handleLoginFormSubmit(event) {
         submitButton.textContent = originalBtnText;
     }
 }
+
 
 /**
  * Handles the submission of the SIGN UP form.
