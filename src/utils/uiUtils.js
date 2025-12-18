@@ -80,6 +80,7 @@ export function setGlobalSpinnerConfig(config) {
 export const AVAILABLE_FONTS = [
     "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", 
     "Playfair Display", "Merriweather", "Nunito", "Raleway", "Oswald"
+    "Bebas Neue", "Dancing Script", "Pacifico", "Righteous", "Ubuntu" // Added missing ones
 ];
 
 export function applySiteFont(fontName) {
