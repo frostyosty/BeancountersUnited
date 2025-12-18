@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/appStore.js';
-import * as uiUtils from '@/utils/uiUtils.js'; // Needed for modal
+import * as uiUtils from '@/utils/uiUtils.js';
 
 export function renderAuthStatus() {
     const container = document.getElementById('auth-status-container');
@@ -9,9 +9,8 @@ export function renderAuthStatus() {
 
     // 1. LOADING
     if (isAuthLoading) {
-        // This will be populated by initGlobalSpinner(), just put a placeholder
         container.innerHTML = `<div class="auth-loading-spinner"></div>`;
-        uiUtils.initGlobalSpinner(); // Re-inject SVG if needed
+        uiUtils.initGlobalSpinner(); 
         return;
     }
 
@@ -23,7 +22,7 @@ export function renderAuthStatus() {
         if (role === 'god') {
             displayHTML = `<span class="role-badge god" style="background:black; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">GOD MODE</span>`;
         } else if (role === 'owner') {
-            displayHTML = `<span class="role-badge owner" style="background:mauve; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
+            displayHTML = `<span class="role-badge owner" style="background:var(--primary-color); color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; font-weight:bold;">OWNER</span>`;
         } else {
             const name = profile?.full_name || user.email.split('@')[0];
             displayHTML = `<span class="user-greeting" style="font-size:0.9rem;">Hi, ${name}</span>`;
@@ -107,42 +106,50 @@ async function handleLoginFormSubmit(event) {
     const { login } = useAppStore.getState().auth;
 
     // Provide immediate feedback
+    const originalBtnText = submitButton.textContent;
     submitButton.disabled = true;
     submitButton.textContent = 'Logging In...';
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
-    // 1. Call Store
-     if (error) {
-        // --- NEW: Copy values to Sign Up form for convenience ---
-        const signupEmail = document.getElementById('signup-email');
-        const signupPass = document.getElementById('signup-password');
-        if (signupEmail) signupEmail.value = email;
-        if (signupPass) signupPass.value = password;
-        // -------------------------------------------------------
+    try {
+        // Call store (returns object { error: ... } or { error: null })
+        const result = await login(email, password);
+        const error = result.error;
 
-        let msg = error.message;
-        
-        // FIX: Sanitize technical jargon
-        if (msg.includes("Invalid login credentials")) {
-            msg = "Incorrect email or password.";
-        } else if (msg.includes("AuthApiError")) {
-            msg = "Login failed. Please check your details.";
+        if (error) {
+            // --- Auto-fill Signup Inputs on Failure ---
+            const signupEmail = document.getElementById('signup-email');
+            const signupPass = document.getElementById('signup-password');
+            if (signupEmail) signupEmail.value = email;
+            if (signupPass) signupPass.value = password;
+            // -----------------------------------------
+
+            let msg = error.message || "Login failed";
+            
+            // Sanitize technical jargon
+            if (msg.includes("Invalid login credentials")) {
+                msg = "Incorrect email or password.";
+            } else if (msg.includes("AuthApiError")) {
+                msg = "Login failed. Please check your details.";
+            }
+
+            messageEl.textContent = msg;
+            messageEl.className = 'auth-message error';
+            uiUtils.showToast(msg, 'error');
+            
+            submitButton.disabled = false;
+            submitButton.textContent = originalBtnText;
+        } else {
+            uiUtils.showToast('Login successful!', 'success');
+            uiUtils.closeModal();
         }
-
-        // Show in red text
-        messageEl.textContent = msg;
+    } catch (unexpectedErr) {
+        console.error("Login Crash:", unexpectedErr);
+        messageEl.textContent = "An unexpected error occurred.";
         messageEl.className = 'auth-message error';
-        
-        // Also show a toast for visibility
-        uiUtils.showToast(msg, 'error');
-
-        // Reset button
         submitButton.disabled = false;
-        submitButton.textContent = 'Login';
-    } else {
-        uiUtils.showToast('Login successful!', 'success');
-        // Modal closes automatically via auth state change
+        submitButton.textContent = originalBtnText;
     }
 }
 
@@ -163,15 +170,21 @@ async function handleSignupFormSubmit(event) {
     messageEl.textContent = '';
     messageEl.className = 'auth-message';
 
-    const { error } = await signUp(email, password);
+    try {
+        const { error } = await signUp(email, password);
 
-    if (error) {
-        messageEl.textContent = error.message;
-        messageEl.className = 'auth-message error';
+        if (error) {
+            messageEl.textContent = error.message;
+            messageEl.className = 'auth-message error';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Sign Up';
+        } else {
+            messageEl.textContent = 'Success! Please check your email for a confirmation link.';
+            messageEl.className = 'auth-message success';
+        }
+    } catch (err) {
+        messageEl.textContent = "Sign up failed.";
         submitButton.disabled = false;
         submitButton.textContent = 'Sign Up';
-    } else {
-        messageEl.textContent = 'Success! Please check your email for a confirmation link.';
-        messageEl.className = 'auth-message success';
     }
 }
