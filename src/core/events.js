@@ -1,5 +1,4 @@
 // src/core/events.js
-// src/core/events.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
@@ -11,17 +10,13 @@ export function setupGlobalListeners() {
             return;
         }
 
-        // Logout (FIXED)
+        // Logout
         if (e.target.matches('#logout-btn')) {
             const { logout } = useAppStore.getState().auth;
             
-            // Show toast immediately for feedback
             uiUtils.showToast("Logged out successfully.", "success");
-            
-            // Perform logout
             await logout();
             
-            // Redirect to home/menu to ensure we aren't left on a protected page
             if (window.location.hash !== '#menu') {
                 window.location.hash = '#menu';
             }

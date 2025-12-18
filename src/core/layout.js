@@ -2,7 +2,7 @@
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
-// --- Helper: Get Boot Spinner ---
+// Helper: Get Boot Spinner HTML (Dynamic)
 function getBootSpinnerHTML() {
     let bootSpinner = '';
     try {
@@ -32,7 +32,7 @@ function getBootSpinnerHTML() {
     return `<div class="auth-loading-spinner">${bootSpinner}</div>`;
 }
 
-export function renderShell() {
+export function renderAppShell() {
     const appElement = document.getElementById('app');
     if (!appElement) return;
 

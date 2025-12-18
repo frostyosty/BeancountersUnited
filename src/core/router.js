@@ -9,6 +9,7 @@ import { renderOwnerDashboard } from '@/features/admin/ownerDashboardUI.js';
 import { renderGodDashboard } from '@/features/admin/godDashboardUI.js';
 import { renderOrderHistoryPage } from '@/features/user/orderHistoryUI.js';
 import { renderAboutUsPage } from '@/features/about/aboutUsUI.js';
+import { renderUserProfilePage } from '@/features/user/userProfileUI.js';
 
 export function renderPageContent() {
     console.log("%c[Router] renderPageContent() CALLED", "font-weight: bold;");
@@ -51,7 +52,7 @@ export function renderPageContent() {
             break;
         case '#my-account':
             if (isAuthenticated) {
-                import('@/features/user/userProfileUI.js').then(m => m.renderUserProfilePage());
+                renderUserProfilePage();
             } else {
                 window.location.hash = '#menu';
             }
