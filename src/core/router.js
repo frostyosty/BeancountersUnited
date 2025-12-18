@@ -4,7 +4,7 @@ import { renderDesktopNav } from './layout.js';
 
 // Feature Imports
 import { renderMenuPage } from '@/features/menu/menuUI.js';
-import { renderCartPage } from '@/features/cart/cartUI.js';
+import { renderCartPage } from '@/features/cart/index.js';
 import { renderOwnerDashboard } from '@/features/admin/ownerDashboardUI.js';
 import { renderGodDashboard } from '@/features/admin/godDashboardUI.js';
 import { renderOrderHistoryPage } from '@/features/user/orderHistoryUI.js';

@@ -52,10 +52,11 @@ export const updateCustomerDetails = (data, token) =>
 
 
 // --- OTHER FUNCTIONS (UNCHANGED) ---
-export const getMenu = () => request('/menu');
-export const addMenuItem = (itemData, token) => request('/menu', 'POST', itemData, token);
-export const updateMenuItem = (itemId, itemData, token) => request(`/menu?id=${itemId}`, 'PUT', itemData, token);
-export const deleteMenuItem = (itemId, token) => request(`/menu?id=${itemId}`, 'DELETE', null, token);
+export const getMenu = () => request('/user?type=menu');
+export const addMenuItem = (itemData, token) => request('/user?type=menu', 'POST', itemData, token);
+export const updateMenuItem = (itemId, itemData, token) => request(`/user?type=menu&id=${itemId}`, 'PUT', itemData, token);
+export const deleteMenuItem = (itemId, token) => request(`/user?type=menu&id=${itemId}`, 'DELETE', null, token);
+
 export const updateSiteSettings = (settingsData, token) => request('/settings', 'PUT', settingsData, token);
 export const getSiteSettings = () => request('/settings', 'GET');
 export const createManualOrder = (orderData, token) => 
