@@ -146,10 +146,11 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
     let settings = {};
     try { settings = useAppStore.getState().siteSettings?.settings?.toast || {}; } catch(e) {}
     
+    // Default to 3000ms (3 seconds)
     const duration = overrideDuration || settings.duration || 3000;
     const position = settings.position || 'bottom-center';
 
-    // Reset styles
+    // Reset styles to prevent conflict
     container.style.left = '';
     container.style.right = '';
     container.style.top = '';
@@ -158,27 +159,14 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
     container.style.alignItems = ''; 
 
     // Apply Position
-    if (position.includes('bottom')) { 
-        container.style.bottom = '20px'; 
-        container.style.top = 'auto'; 
-    } else { 
-        container.style.top = '20px'; 
-        container.style.bottom = 'auto'; 
-    }
+    if (position.includes('bottom')) { container.style.bottom = '20px'; container.style.top = 'auto'; } 
+    else { container.style.top = '20px'; container.style.bottom = 'auto'; }
     
-    if (position.includes('right')) { 
-        container.style.right = '20px'; 
-        container.style.alignItems = 'flex-end'; 
-    } else if (position.includes('left')) { 
-        container.style.left = '20px'; 
-        container.style.alignItems = 'flex-start'; 
-    } else { 
-        // CENTER
-        container.style.left = '0'; 
-        container.style.right = '0'; 
-        container.style.alignItems = 'center'; 
-        container.style.width = '100%'; 
-        container.style.pointerEvents = 'none'; 
+    if (position.includes('right')) { container.style.right = '20px'; container.style.alignItems = 'flex-end'; } 
+    else if (position.includes('left')) { container.style.left = '20px'; container.style.alignItems = 'flex-start'; } 
+    else { 
+        container.style.left = '0'; container.style.right = '0'; container.style.alignItems = 'center'; 
+        container.style.width = '100%'; container.style.pointerEvents = 'none'; 
     }
 
     const toast = document.createElement('div');
@@ -193,17 +181,22 @@ export function showToast(message, type = 'info', overrideDuration = null, onCli
 
     container.appendChild(toast);
 
-    // Animation
+    // 1. Trigger Entry Animation (after small delay)
     setTimeout(() => toast.classList.add('show'), 10);
     
-    // Auto-remove
+    // 2. Trigger Removal
     setTimeout(() => {
-        if (toast.parentNode) {
-            toast.classList.remove('show');
-            toast.addEventListener('transitionend', () => {
-                if (toast.parentNode) toast.parentNode.removeChild(toast);
-            });
-        }
+        if (!toast.parentNode) return;
+
+        // Start Exit Animation
+        toast.classList.remove('show');
+        
+        // FIX: Force removal after 400ms (CSS transition is usually 300ms)
+        // This ensures it deletes even if 'transitionend' fails to fire.
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 400);
+
     }, duration);
 }
 

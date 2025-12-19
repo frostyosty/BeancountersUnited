@@ -146,8 +146,15 @@ function attachGlobalInputs() {
         const el = document.getElementById(id);
         if (el) {
             if (editorState.config[key] !== undefined) el.value = editorState.config[key];
+            
             el.addEventListener('input', (e) => {
                 editorState.config[key] = e.target.value;
+                
+                // FIX: If changing a font, load it immediately so preview works
+                if (key === 'mainFont' || key === 'subFont') {
+                    uiUtils.ensureFontLoaded(e.target.value);
+                }
+
                 markDirty();
                 updatePreview();
             });
