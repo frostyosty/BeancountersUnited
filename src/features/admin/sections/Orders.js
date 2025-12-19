@@ -1,3 +1,5 @@
+// src/features/admin/sections/Orders.js
+
 export function renderActiveOrdersSection(orders) {
     if (!Array.isArray(orders)) return '<p>Loading orders...</p>';
 
@@ -6,13 +8,13 @@ export function renderActiveOrdersSection(orders) {
     const content = activeOrders.length === 0 ? '<p>No active orders.</p>' : activeOrders.map(order => {
         const profile = order.profiles || {}; 
         
-        // Note Icon Logic
         let noteIcon = '';
         if (profile.staff_note) {
             noteIcon = profile.staff_note_urgency === 'alert' ? `<span title="Important">🔴</span>` : `<span title="Info">🔵</span>`;
         }
 
         const displayName = order.customer_name || profile.internal_nickname || profile.full_name || profile.email || 'Guest';
+        // Escape for JS click handler
         const clickName = displayName.replace(/'/g, "\\'"); 
 
         const orderId = order.id ? order.id.slice(0, 4) : '????';

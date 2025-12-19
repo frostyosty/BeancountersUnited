@@ -1,3 +1,5 @@
+// src/features/admin/sections/Menu.js
+
 export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAllergenBadges, getSortIcon, showAllergens) {
     const isEnabled = showAllergens === true;
 
@@ -15,6 +17,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
             style="background-color: ${getCategoryColor(item.category||'')}; border-bottom:1px solid #fff; cursor:pointer;"
             onclick="window.handleItemRowClick('${item.id}')">
             
+            <!-- Click Image to Edit Photo -->
             <td style="padding:10px; width:60px;" onclick="event.stopPropagation()">
                 <div style="position:relative; width:40px; height:40px;">
                     <img src="${item.image_url || '/placeholder-coffee.jpg'}" 
@@ -32,6 +35,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
             <td style="padding:10px;">${item.category || 'None'}</td>
             <td style="padding:10px;">$${parseFloat(item.price).toFixed(2)}</td>
             
+            <!-- Click Actions to Edit/Delete -->
             <td style="padding:10px;" onclick="event.stopPropagation()">
                 <button class="button-secondary small edit-item-btn-table">Edit</button>
                 <button class="delete-icon-btn" title="Delete">×</button>
@@ -61,6 +65,7 @@ export function renderMenuSection(menuItems, sortConfig, getCategoryColor, getAl
                 </table>
             </div>
 
+            <!-- Allergen Toggle -->
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
                 <form id="menu-config-form">
                     <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">

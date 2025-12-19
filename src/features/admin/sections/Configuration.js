@@ -1,3 +1,5 @@
+// src/features/admin/sections/Configuration.js
+
 export function renderGlobalSettingsSection(settings) {
     const currentLogo = settings.logoUrl || '';
     const hamburgerConfig = settings.hamburgerMenuContent || 'main-nav';
@@ -33,33 +35,6 @@ export function renderGlobalSettingsSection(settings) {
     `;
 }
 
-export function renderPaymentSection(paymentConfig) {
-    const enableStripe = paymentConfig.enableStripe !== false;
-    return `
-        <section class="dashboard-section" style="border: 2px solid #dc3545;">
-            <h3 style="color: #dc3545;">Payment & Emergency Controls</h3>
-            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
-                These settings control what <strong>Customers</strong> see. 
-            </p>
-            <form id="payment-settings-form">
-                <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Stripe (Credit Cards)</label>
-                    <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
-                        <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> Enable Stripe (Credit Cards)
-                    </label>
-                </div>
-                <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
-                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Pay on Pickup (Cash)</label>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                        <div><label>Max Order Value ($)</label><input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}"></div>
-                        <div><label>Max Item Count</label><input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}"></div>
-                    </div>
-                </div>
-            </form>
-        </section>
-    `;
-}
-
 export function renderAboutConfigSection(settings) {
     const aboutEnabled = settings.aboutUs?.enabled || false;
     return `
@@ -76,6 +51,35 @@ export function renderAboutConfigSection(settings) {
                     </p>
                     <div style="margin-top:10px; margin-left:24px;">
                         <a href="#about-us" class="button-secondary small">Go to About Page</a>
+                    </div>
+                </div>
+            </form>
+        </section>
+    `;
+}
+
+export function renderPaymentSection(paymentConfig) {
+    const enableStripe = paymentConfig.enableStripe !== false;
+    return `
+        <section class="dashboard-section" style="border: 2px solid #dc3545;">
+            <h3 style="color: #dc3545;">Payment & Emergency Controls</h3>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">
+                These settings control what <strong>Customers</strong> see on their checkout page. 
+                <br><em>(Managers can always create manual orders of any size).</em>
+            </p>
+            <form id="payment-settings-form">
+                <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
+                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Stripe (Credit Cards)</label>
+                    <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" name="enableStripe" ${enableStripe ? 'checked' : ''}> 
+                        Enable Online Card Payments
+                    </label>
+                </div>
+                <div style="margin-bottom:20px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;">
+                    <label style="font-weight:bold; display:block; margin-bottom:10px;">Customer "Pay on Pickup" Rules</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div><label>Max Order Value ($)</label><input type="number" name="maxCashAmount" value="${paymentConfig.maxCashAmount}"></div>
+                        <div><label>Max Item Count</label><input type="number" name="maxCashItems" value="${paymentConfig.maxCashItems}"></div>
                     </div>
                 </div>
             </form>

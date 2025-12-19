@@ -1,3 +1,5 @@
+// src/features/admin/sections/Clients.js
+
 export function renderClientRelationshipsSection(clients) {
     if (!clients) return '<p>Loading clients...</p>';
     

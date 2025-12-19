@@ -1,3 +1,4 @@
+// src/features/admin/sections/Visuals.js
 import * as uiUtils from '@/utils/uiUtils.js';
 
 export function renderAppearanceSection(settings) {
@@ -14,21 +15,27 @@ export function renderAppearanceSection(settings) {
     return `
         <section class="dashboard-section">
             <h3>Appearance & Animations</h3>
+            
             <div style="margin-bottom:20px;">
                 ${uiUtils.getThemeControlsHTML(settings.themeVariables || {})}
             </div>
+
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+
             <form id="appearance-settings-form">
                 <h4>Site Background</h4>
+                
                 <div class="form-group" style="display:flex; gap:15px; margin-bottom:15px;">
                     <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="backgroundType" value="color" ${bgType==='color'?'checked':''}> Solid Color</label>
                     <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="backgroundType" value="image" ${bgType==='image'?'checked':''}> Custom Image</label>
                     <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="backgroundType" value="pattern" ${bgType==='pattern'?'checked':''}> Name Pattern</label>
                 </div>
+
                 <div class="form-group bg-control-group" id="bg-ctrl-color" style="display:${bgType==='color'?'block':'none'}">
                     <label>Background Color</label>
                     <input type="color" data-css-var="--background-color" value="${bgColor}" style="width:100%; height:40px;">
                 </div>
+
                 <div class="form-group bg-control-group" id="bg-ctrl-image" style="display:${bgType==='image'?'block':'none'}">
                     <label>Upload Image</label>
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -43,6 +50,7 @@ export function renderAppearanceSection(settings) {
                         </label>
                     </div>
                 </div>
+
                 <div class="form-group bg-control-group" id="bg-ctrl-pattern" style="display:${bgType==='pattern'?'block':'none'}">
                     <p style="font-size:0.9rem; color:#666;">Generates a diagonal pattern using your Website Name.</p>
                     <label style="font-weight:normal; display:flex; gap:10px; align-items:center; cursor:pointer;">
@@ -56,6 +64,7 @@ export function renderAppearanceSection(settings) {
                     <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="loaderType" value="hammer" ${loaderConfig.type==='hammer'?'checked':''}> Hammer</label>
                     <label style="font-weight:normal; cursor:pointer;"><input type="radio" name="loaderType" value="custom" ${loaderConfig.type==='custom'?'checked':''}> Custom Image</label>
                 </div>
+                
                 <div class="form-group" id="loader-custom-group" style="display:${loaderConfig.type==='custom'?'block':'none'}">
                     <label>Custom Loader Image</label>
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -64,6 +73,7 @@ export function renderAppearanceSection(settings) {
                         <input type="file" id="loader-upload" accept="image/*" style="display:none;">
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label>Animation Style</label>
                     <select name="loaderAnimation">
@@ -97,6 +107,7 @@ export function renderAppearanceSection(settings) {
 
 export function renderHeaderSection(headerSettings) {
     const height = headerSettings.height || 60;
+    const bgColor = headerSettings.bgColor || '#ffffff';
     const bgPattern = headerSettings.bgPattern || 'none';
 
     return `
@@ -127,24 +138,25 @@ export function renderHeaderSection(headerSettings) {
                                oninput="document.getElementById('header-height-val').textContent = this.value + 'px'; document.documentElement.style.setProperty('--header-height', this.value + 'px');">
                     </div>
                     <div class="form-group">
-                    <label>Header Background</label>
-                    <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
+                        <label>Header Background</label>
+                        <div style="display:flex; align-items:center; gap:10px; border:1px solid #ccc; padding:4px; border-radius:4px;">
                             <input type="color" name="headerBgColor" value="${bgColor}" 
                                    style="width:40px; height:30px; border:none; background:none; cursor:pointer;"
                                    oninput="document.getElementById('main-header').style.backgroundColor = this.value;">
                             <span style="font-size:0.8rem; color:#666;">Pick Color</span>
                         </div>
                     </div>
-                    <div class="form-group">
+                </div>
+                
+                <div class="form-group" style="margin-bottom:15px;">
                     <label>Header Pattern</label>
-                        <select name="headerPattern" style="width:100%; padding:8px;">
-                            <option value="none" ${bgPattern==='none'?'selected':''}>None</option>
-                            <option value="dots" ${bgPattern==='dots'?'selected':''}>Polka Dots</option>
-                            <option value="stripes" ${bgPattern==='stripes'?'selected':''}>Stripes</option>
-                            <option value="grid" ${bgPattern==='grid'?'selected':''}>Grid</option>
-                            <option value="zigzag" ${bgPattern==='zigzag'?'selected':''}>Zig Zag</option>
-                        </select>
-                    </div>
+                    <select name="headerPattern" style="width:100%; padding:8px;">
+                        <option value="none" ${bgPattern==='none'?'selected':''}>None</option>
+                        <option value="dots" ${bgPattern==='dots'?'selected':''}>Polka Dots</option>
+                        <option value="stripes" ${bgPattern==='stripes'?'selected':''}>Stripes</option>
+                        <option value="grid" ${bgPattern==='grid'?'selected':''}>Grid</option>
+                        <option value="zigzag" ${bgPattern==='zigzag'?'selected':''}>Zig Zag</option>
+                    </select>
                 </div>
 
                 <div style="padding-top:15px; border-top:1px solid #eee;">
