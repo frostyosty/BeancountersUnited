@@ -1,7 +1,7 @@
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
+import { useAppStore } from './appStore.js'; // Needed to access other slices (like UI)
 import * as uiUtils from '@/utils/uiUtils.js'; // <--- FIX: Added missing import
-import { useAppStore } from './appStore.js'; // Needed if you access store directly (e.g. for UI slice)
 
 export const createAuthSlice = (set, get) => ({
     // State
@@ -40,16 +40,14 @@ export const createAuthSlice = (set, get) => ({
 
                     // Sync Dietary Prefs to UI Filter if they exist
                     if (profile?.dietary_preferences) {
-                         // We need to access the store to set UI state. 
-                         // Since 'set' here is scoped to the slice creator, we might need useAppStore.setState
-                         // or just dispatch an action if available.
-                         // Safe way if useAppStore is imported:
+                         // Use global store setter since we are inside a slice
                          useAppStore.setState(state => ({
                              ui: { ...state.ui, activeAllergenFilters: profile.dietary_preferences }
                          }));
                     }
 
                     // --- SMARTER REDIRECT ---
+                    // Only redirect if explicitly logging in on a non-admin page
                     const currentHash = window.location.hash;
                     const onSafePage = ['#owner-dashboard', '#god-dashboard', '#order-history'].includes(currentHash);
 
@@ -63,8 +61,9 @@ export const createAuthSlice = (set, get) => ({
 
                 } catch (error) {
                     console.error("[AuthSlice] Profile fetch FAILED.", error);
-                    // This is likely where uiUtils was being called and failing
-                    uiUtils.showToast("Failed to load user profile.", "error"); 
+                    
+                    // FIX: This line caused the crash because uiUtils wasn't imported
+                    uiUtils.showToast("Failed to load user profile.", "error");
                     
                     get().auth.setUserAndProfile(session.user, null);
                     set(state => ({ auth: { ...state.auth, authError: error.message } }));
