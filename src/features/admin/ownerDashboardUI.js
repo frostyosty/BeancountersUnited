@@ -179,5 +179,4 @@ export function renderOwnerDashboard() {
     attachOwnerDashboardListeners();
     uiUtils.startLiveTimers();
     if (ownerPermissions.canEditCategories) initializeSortable();
-    
 }
