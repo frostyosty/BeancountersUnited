@@ -1,10 +1,11 @@
-// src/main.js
+// src/main.js (FINAL & CORRECTED)
 import './utils/debugLogger.js';
 import './assets/css/style.css';
 import './assets/css/static.css';
 
 import { useAppStore } from '@/store/appStore.js';
-import * as uiUtils from './utils/uiUtils.js';
+import * as uiUtils from '@/utils/uiUtils.js';
+import { applyHeaderLogo } from '@/utils/ui/header.js'; // Ensure correct import path based on your splits
 
 // Core Imports
 import { renderAppShell, renderPersistentUI, setupHamburgerMenu } from './core/layout.js';
@@ -50,7 +51,6 @@ async function main() {
     // 3. Router Subscription
     window.addEventListener('hashchange', renderPageContent);
 
-    // 4. Store Subscriptions
     const getPersistentUIState = () => {
         const state = useAppStore.getState();
         return {
@@ -71,16 +71,6 @@ async function main() {
         }
     });
 
-    // Page Refresh Subscription
-    useAppStore.subscribe(
-        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}-${state.auth.isAuthLoading}-${state.auth.isAuthenticated}`,
-        (keyString) => {
-            console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
-            renderPageContent();
-        }
-    );
-    
-    // Urgency Check Interval
     setInterval(() => {
         const state = useAppStore.getState();
         if (state.auth.isAuthenticated && state.orderHistory.hasLoaded) {
@@ -88,52 +78,80 @@ async function main() {
         }
     }, 60 * 1000);
 
-    // Default Route
+    useAppStore.subscribe(
+        (state) => `${state.ui._reRenderTrigger}-${state.ui.activeMenuCategory}-${state.auth.isAuthLoading}-${state.auth.isAuthenticated}`,
+        (keyString) => {
+            // console.log(`%c[App Sub] Page re-render triggered. Key: ${keyString}`, "color: green;");
+            renderPageContent();
+        }
+    );
+
     if (!window.location.hash) {
         window.location.hash = '#menu';
     }
 
-    // 5. Initial Data Fetch
-    await Promise.all([
-        useAppStore.getState().auth.listenToAuthChanges(),
-        useAppStore.getState().menu.fetchMenu().then(() => {
-            const items = useAppStore.getState().menu.items;
-            localStorage.setItem('backup_menu_items', JSON.stringify(items));
-        }),
-        useAppStore.getState().siteSettings.fetchSiteSettings().then(() => {
-            const current = useAppStore.getState().siteSettings.settings;
-            localStorage.setItem('cached_site_settings', JSON.stringify(current));
+    // 5. Initial Data Fetch (Protected)
+    try {
+        console.log("[App] Attempting to fetch initial data...");
+        
+        await Promise.all([
+            useAppStore.getState().auth.listenToAuthChanges(),
             
-            // Hydrate UI immediately from fetched data if different from cache
-            if (current) {
-                if (current.themeVariables) {
-                    Object.entries(current.themeVariables).forEach(([key, value]) => {
-                        document.documentElement.style.setProperty(key, value);
-                    });
-                    if (current.themeVariables['--font-family-main-name']) {
-                        uiUtils.applySiteFont(current.themeVariables['--font-family-main-name']);
+            useAppStore.getState().menu.fetchMenu().then(() => {
+                const items = useAppStore.getState().menu.items;
+                localStorage.setItem('backup_menu_items', JSON.stringify(items));
+            }),
+            
+            useAppStore.getState().siteSettings.fetchSiteSettings().then(() => {
+                const current = useAppStore.getState().siteSettings.settings;
+                localStorage.setItem('cached_site_settings', JSON.stringify(current));
+                
+                // Hydration
+                if (current) {
+                    if (current.themeVariables) {
+                        Object.entries(current.themeVariables).forEach(([key, value]) => {
+                            document.documentElement.style.setProperty(key, value);
+                        });
+                        if (current.themeVariables['--font-family-main-name']) {
+                            uiUtils.applySiteFont(current.themeVariables['--font-family-main-name']);
+                        }
                     }
+                    if (current.headerSettings) uiUtils.applyHeaderLayout(current.headerSettings);
+                    if (current.websiteName || current.logoUrl) uiUtils.updateSiteTitles(current.websiteName, current.logoUrl);
+                    if (current.headerLogoConfig) applyHeaderLogo(current.headerLogoConfig);
+                    uiUtils.applyGlobalBackground(current);
                 }
-                if (current.headerSettings) uiUtils.applyHeaderLayout(current.headerSettings);
-                if (current.websiteName || current.logoUrl) uiUtils.updateSiteTitles(current.websiteName, current.logoUrl);
-                if (current.headerLogoConfig) uiUtils.applyHeaderLogo(current.headerLogoConfig);
-                uiUtils.applyGlobalBackground(current);
-            }
-        })
-    ]);
+            })
+        ]);
 
-    if (useAppStore.getState().auth.isAuthenticated) {
-        useAppStore.getState().orderHistory.fetchOrderHistory(true); 
-    }
-    
-    console.log("[App] Initial data loaded. Performing first full render...");
-    renderPersistentUI();
-    renderPageContent();
+        if (useAppStore.getState().auth.isAuthenticated) {
+            useAppStore.getState().orderHistory.fetchOrderHistory(true).catch(e => console.warn("Order history fetch failed", e));
+        }
 
-    setTimeout(() => {
-        console.log("[App] Hiding initial loader.");
+        console.log("[App] Initial data loaded. Performing first full render...");
+        renderPersistentUI();
+        renderPageContent();
+
+        setTimeout(() => {
+            console.log("[App] Hiding initial loader.");
+            uiUtils.hideInitialLoader();
+        }, 100);
+
+    } catch (criticalError) {
+        console.error("🔥 CRITICAL STARTUP FAILURE:", criticalError);
+        
+        // --- FALLBACK TRIGGER ---
         uiUtils.hideInitialLoader();
-    }, 100);
+        renderStaticSite(); 
+        
+        // Show a discrete toast
+        const timeLeft = parseInt(localStorage.getItem('simulated_outage_end')) - Date.now();
+        if (timeLeft > 0) {
+            uiUtils.showToast(`Simulated Outage Active (${Math.ceil(timeLeft/1000)}s remaining)`, 'error');
+        } else {
+            uiUtils.showToast("Cannot connect to server. Loaded offline mode.", 'error');
+        }
+    }
 }
 
 main();

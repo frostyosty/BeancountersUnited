@@ -99,8 +99,20 @@ export default async function handler(req, res) {
             const { data: profile } = await supabaseAdmin.from(TABLES.PROFILES).select('role').eq('id', user.id).single();
             const isAdmin = profile && (profile.role === 'god' || profile.role === 'owner' || profile.role === 'manager');
 
-            let query = supabaseAdmin.from(TABLES.ORDERS).select(`*, ${TABLES.ITEMS} (*, ${TABLES.MENU} (name, image_url)), ${TABLES.PROFILES} (email, full_name, internal_nickname, staff_note, staff_note_urgency)`).order('created_at', { ascending: false });
-
+             let query = supabaseAdmin
+                .from(TABLES.ORDERS)
+                .select(`
+                    *,
+                    ${TABLES.ITEMS} (
+                        quantity,
+                        price_at_order,
+                        selected_options,
+                        ${TABLES.MENU} (name, image_url)
+                    ),
+                    ${TABLES.PROFILES} (email, full_name, internal_nickname, staff_note, staff_note_urgency)
+                `)
+                .order('created_at', { ascending: false });
+                
             if (!isAdmin) query = query.eq('user_id', user.id);
 
             const { data, error } = await query;

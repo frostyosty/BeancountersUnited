@@ -97,6 +97,20 @@ export function showEditItemModal(item) {
                     </div>
                 </div>
 
+                <!-- Delivery Tags -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:10px;">
+                    <div class="form-row">
+                        <label>Prep Time (mins)</label>
+                        <input type="number" name="prep_time" value="${itemData.prep_time || 5}" min="1">
+                        <small style="color:#888; font-size:0.75rem;">Time to make 1 unit</small>
+                    </div>
+                    <div class="form-row">
+                        <label>Delivery Padding (mins)</label>
+                        <input type="number" name="delivery_extra_time" value="${itemData.delivery_extra_time || 0}" min="0">
+                        <small style="color:#888; font-size:0.75rem;">Extra time if delivered</small>
+                    </div>
+                </div>
+
                 <!-- Dietary Tags -->
                 <div class="form-group" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:5px; margin-top:20px;">
                     <label style="margin-bottom:8px;">Dietary Tags</label>
@@ -162,8 +176,11 @@ export function showEditItemModal(item) {
             price: parseFloat(formData.get('price')),
             category: formData.get('category'),
             description: formData.get('description'),
+            prep_time: parseInt(formData.get('prep_time')) || 5,
+            delivery_extra_time: parseInt(formData.get('delivery_extra_time')) || 0,
             allergens: selectedAllergens,
             available_options: selectedOptions
+            
         };
 
         const { data: { session } } = await supabase.auth.getSession();

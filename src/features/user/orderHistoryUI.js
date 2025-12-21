@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import { supabase } from '@/supabaseClient.js';
 import * as api from '@/services/apiService.js';
-import { TABLES } from '@/config/tenancy.js'; // <--- NEW IMPORT
+import { TABLES } from '@/config/tenancy.js';
 
 
 const STEPPER_CSS = `
@@ -50,6 +50,7 @@ export function renderOrderHistoryPage() {
     if (timerInterval) clearInterval(timerInterval);
 
     useAppStore.getState().orderHistory.fetchOrderHistory();
+    useAppStore.getState().orderHistory.subscribeToOrders();
     useAppStore.getState().menu.fetchMenu(); 
     useAppStore.getState().siteSettings.fetchSiteSettings(); // Need settings for archive logic
 
@@ -224,7 +225,7 @@ function renderAdminOrderViews(container, orders, role, settings) {
                 <div class="archive-header">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <h3 style="margin:0;">Archived Orders (Log)</h3>
-                        <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙️ Settings</button>
+                        <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙</button>
                     </div>
                     
                     <!-- FIX: Removed inline margin-left -->

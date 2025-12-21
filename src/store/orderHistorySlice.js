@@ -1,7 +1,7 @@
 // src/store/orderHistorySlice.js
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
-import { TABLES } from '@/config/tenancy.js'; // <--- NEW IMPORT
+import { TABLES } from '@/config/tenancy.js';
 
 export const createOrderHistorySlice = (set, get) => ({
     orders: [],
@@ -10,6 +10,32 @@ export const createOrderHistorySlice = (set, get) => ({
     error: null,
     notifiedOrderIds: new Set(),
 
+
+    // --- REALTIME SUBSCRIPTION ---
+    subscribeToOrders: () => {
+        // Prevent duplicate subscriptions
+        if (get().orderHistory.subscription) return;
+
+        console.log("Subscribing to Live Orders...");
+        const sub = supabase
+            .channel('public:orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: TABLES.ORDERS }, (payload) => {
+                console.log("Realtime Update:", payload);
+                // Refresh list
+                get().orderHistory.fetchOrderHistory(true);
+                
+                // Play notification sound? (Optional)
+                if (payload.eventType === 'INSERT') {
+                    const audio = new Audio('/notification.mp3'); // Ensure file exists or remove this
+                    audio.play().catch(() => {}); 
+                }
+            })
+            .subscribe();
+            
+        set(state => ({ orderHistory: { ...state.orderHistory, subscription: sub } }));
+    },
+
+    
     // --- MAIN FETCH ACTION ---
     fetchOrderHistory: async (silent = false) => {
         const state = get().orderHistory;

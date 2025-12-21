@@ -1,8 +1,17 @@
 // src/services/apiService.js
 console.log("--- [2] apiService.js: START ---");
 
-async function request(endpoint, method = 'GET', body = null, token = null) { 
-    // ... (Your existing request function logic remains exactly the same) ...
+async function request(endpoint, method = 'GET', body = null, token = null) {
+    // --- 1. SIMULATION CHECK ---
+    const outageEnd = localStorage.getItem('simulated_outage_end');
+    if (outageEnd && Date.now() < parseInt(outageEnd)) {
+        console.warn("🔥 SIMULATING API OUTAGE 🔥");
+        // Simulate network delay then fail
+        await new Promise(r => setTimeout(r, 500)); 
+        throw new Error("Network Error: Simulated Outage Active");
+    }
+    // ---------------------------
+
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const config = { method, headers };

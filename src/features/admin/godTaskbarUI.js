@@ -1,17 +1,17 @@
 // src/features/admin/godTaskbarUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
-import { supabase } from '@/supabaseClient.js'; 
+import { supabase } from '@/supabaseClient.js';
 
 export function initializeImpersonationToolbar() {
     console.log("[GodTaskbarUI] Initializing subscription...");
-    
+
     useAppStore.subscribe(
         (state) => {
             const realRole = state.auth.originalProfile?.role || state.auth.profile?.role || 'guest';
             const isImp = state.auth.isImpersonating();
             const currRole = state.auth.profile?.role || 'guest';
-            return `${realRole}|${isImp}|${currRole}`; 
+            return `${realRole}|${isImp}|${currRole}`;
         },
         (keyString) => {
             const [realRole, isImpStr, currentRole] = keyString.split('|');
@@ -55,8 +55,20 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         toolbar = document.createElement('div');
         toolbar.id = 'god-mode-toolbar';
         document.body.appendChild(toolbar);
-        document.body.style.paddingBottom = '60px'; 
-        
+        document.body.style.paddingBottom = '60px';
+
+
+        // Add Listener for the new button
+        setTimeout(() => { // Small timeout to ensure DOM insertion
+            document.getElementById('btn-sim-outage')?.addEventListener('click', () => {
+                if (confirm("This will break the API for 1 minute to test the Static Fallback. The page will reload. Proceed?")) {
+                    // Set expiry for 1 minute from now
+                    localStorage.setItem('simulated_outage_end', Date.now() + 60 * 1000);
+                    window.location.reload();
+                }
+            });
+        }, 0);
+
         toolbar.addEventListener('click', (e) => {
             const auth = useAppStore.getState().auth;
             if (e.target.matches('[data-role]')) auth.impersonateRole(e.target.dataset.role);
@@ -65,7 +77,7 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
         });
     }
 
-    const stopButtonHTML = isImpersonating ? 
+    const stopButtonHTML = isImpersonating ?
         `<button id="stop-impersonating-btn" class="toolbar-btn stop-btn">Stop Impersonating</button>` : '';
 
     toolbar.innerHTML = `
@@ -77,9 +89,12 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
                 <button class="toolbar-btn" data-role="guest">Guest</button>
                 <button class="toolbar-btn" data-role="customer">Customer</button>
                 <button class="toolbar-btn" data-role="owner">Owner</button>
+                <button id="btn-sim-outage" class="toolbar-btn" style="border-color: red; color: #ff9999;">
+                    🔥 Sim Outage (1m)
+                </button>
                 ${stopButtonHTML}
                 <button id="god-config-btn" class="toolbar-btn" title="Site Configuration" style="margin-left: 10px; background: #444; border: 1px solid #666;">
-                    ⚙️ Config
+                    ⚙
                 </button>
             </div>
         </div>
@@ -95,7 +110,7 @@ function renderToolbar(realRole, isImpersonating, currentRole) {
             backgroundColor: '#212529', color: '#ffffffff', border: '2px solid #92a392ff',
             fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         });
-        
+
         debugBtn.onclick = () => toggleDebugModal();
         document.body.appendChild(debugBtn);
     }
@@ -172,24 +187,24 @@ async function showGodModeConfigModal() {
         if (e.target.matches('.zoom-btn')) {
             const val = e.target.dataset.val;
             document.getElementById('zoom-input').value = val;
-            document.body.style.zoom = val; 
+            document.body.style.zoom = val;
         }
-        
+
         // Adjusters (+/-)
         if (e.target.matches('.adjust-btn')) {
             const targetId = e.target.dataset.target;
             const step = parseInt(e.target.dataset.step, 10);
             const unit = e.target.dataset.unit || 'px';
             const input = document.getElementById(targetId);
-            
+
             // Regex to grab the number part (handle '1rem' vs '20px')
             const match = input.value.match(/(\d*\.?\d+)/);
             let currentVal = match ? parseFloat(match[0]) : 0;
-            
+
             // If it was '1rem' (16px approx) and we are changing by px, conversions get messy. 
             // For simplicity in God Mode, we convert everything to 'px' once touched.
             if (input.value.includes('rem') && unit === 'px') {
-                currentVal = currentVal * 16; 
+                currentVal = currentVal * 16;
             }
 
             let newVal = Math.max(0, currentVal + step) + unit;
@@ -211,9 +226,9 @@ async function showGodModeConfigModal() {
 
         const formData = new FormData(form);
         const updates = {
-            paymentConfig: { 
-                ...settings.paymentConfig, 
-                inStoreOnly: formData.get('inStoreOnly') === 'on' 
+            paymentConfig: {
+                ...settings.paymentConfig,
+                inStoreOnly: formData.get('inStoreOnly') === 'on'
             },
             themeVariables: {
                 ...settings.themeVariables,
@@ -255,7 +270,7 @@ function showDebugLogModalInternal() {
         <div class="debug-modal-container" style="height:80vh; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h2 style="margin:0">Debug Console</h2>
-                <button class="button-secondary small" onclick="document.querySelector('.debug-modal-container').closest('.modal-overlay').click()">Close (X)</button>
+                <button class="button-secondary small" onclick="document.querySelector('.debug-modal-container').closest('.modal-overlay').click()">Close</button>
             </div>
             <div style="flex:1; overflow:auto; border:1px solid #ccc;">
                 <table style="width:100%; border-collapse:collapse;">

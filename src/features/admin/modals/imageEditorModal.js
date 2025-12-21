@@ -3,6 +3,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import { useAppStore } from '@/store/appStore.js';
+import { warper } from '@/utils/ui/imageMorph.js';
 
 export async function showImageEditorModal(item) {
     const currentImg = item.image_url || '/placeholder-coffee.jpg';
@@ -202,13 +203,29 @@ export async function showImageEditorModal(item) {
             if (error) throw error;
             
             const { data } = supabase.storage.from('menu-images').getPublicUrl(fileName);
+
+            const newUrl = data.publicUrl;
             
             const { data: { session } } = await supabase.auth.getSession();
-            await api.updateMenuItem(item.id, { image_url: data.publicUrl }, session.access_token);
+
+            await api.updateMenuItem(item.id, { image_url: newUrl }, session.access_token);
 
             uiUtils.showToast("Image updated!", "success");
-            useAppStore.getState().menu.fetchMenu();
             uiUtils.closeModal();
+
+            // --- OPTIMISTIC WARP ---
+            // 1. Find the image in the background (The Dashboard List)
+            // We use the ID because the modal is on top
+            const thumbImg = document.querySelector(`tr[data-item-id="${item.id}"] img`);
+            
+            if (thumbImg) {
+                // 2. Trigger Warp
+                warper.warp(thumbImg, newUrl);
+            }
+
+            // 3. Then refresh data (silent refresh so we don't snap the DOM immediately)
+            // (Delay slightly to let warp finish if you want, but warp overlays canvas so it's fine)
+            useAppStore.getState().menu.fetchMenu(); 
 
         } catch (err) {
             console.error(err);
