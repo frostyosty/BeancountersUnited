@@ -102,15 +102,72 @@ export function attachEventHandlers(container) {
         if (target.id === 'open-header-creator-btn') {
             openHeaderLogoEditor();
         }
-        // WARP TESTER
-        if (e.target.id === 'btn-test-warp') {
+        //warp test
+        if (target.id === 'btn-test-warp') {
             const img = document.getElementById('warp-test-target');
-            // Toggle between two images
             const current = img.getAttribute('src');
             const next = current.includes('coffee') ? '/placeholder-burger.jpg' : '/placeholder-coffee.jpg';
             
-            uiUtils.showToast("Warping...", "info");
-            warper.warp(img, next);
+            // FIX: Grab live values from inputs
+            const speedInput = document.querySelector('input[name="warpSpeed"]');
+            const blockInput = document.querySelector('input[name="warpBlock"]');
+            
+            const config = {
+                duration: speedInput ? parseInt(speedInput.value) : 30,
+                blockSize: blockInput ? parseInt(blockInput.value) : 2
+            };
+
+            uiUtils.showToast(`Warping (Speed: ${config.duration}, Block: ${config.blockSize})`, "info");
+            
+            // Import warper dynamically to ensure we get the instance
+            import('@/utils/ui/imageMorph.js').then(m => {
+                m.warper.warp(img, next, config);
+            });
+        }
+
+        // --- Order Management Buttons ---
+        
+        // Manual Order
+        if (target.id === 'btn-manual-order') {
+            import('@/features/user/orderHistoryUI.js').then(m => m.showManualOrderModal()); // We can reuse the modal logic
+        }
+
+        // Archive Toggle
+        if (target.id === 'toggle-archive-btn') {
+            const container = document.getElementById('archive-table-container');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            target.textContent = isHidden ? 'Hide Archive' : 'Show Archive';
+        }
+
+        // Archive Settings
+        if (target.id === 'btn-archive-settings') {
+             const { settings } = useAppStore.getState().siteSettings;
+             import('@/features/user/orderHistoryUI.js').then(m => m.showArchiveSettingsModal(settings.archiveSettings || {}));
+        }
+
+        // Row Actions (Dismiss/Delete)
+        // Note: The logic for .action-btn in your current listener might be missing, add this:
+        if (target.classList.contains('action-btn')) {
+            const btn = target;
+            const orderId = btn.closest('tr').dataset.orderId;
+            const action = btn.dataset.action;
+            const name = btn.dataset.name;
+            const total = btn.dataset.total;
+
+            if (action === 'dismiss') {
+                useAppStore.getState().orderHistory.dismissOrder(orderId);
+                uiUtils.showToast(`Dismissed ${name}'s ${total} Order`, "info");
+            } 
+            else if (action === 'delete') {
+                 const { error } = await supabase.from('mealmates_orders').delete().eq('id', orderId);
+                 if (!error) {
+                     uiUtils.showToast("Deleted.", "success");
+                     useAppStore.getState().orderHistory.fetchOrderHistory(true);
+                 } else {
+                     uiUtils.showToast("Delete failed.", "error");
+                 }
+            }
         }
     });
 
@@ -240,6 +297,9 @@ export function attachEventHandlers(container) {
             }
             return;
         }
+
+
+        
 
         // General Form Autosaves
         if (form?.id === 'global-settings-form') saveFunctions.globalSettings(form);

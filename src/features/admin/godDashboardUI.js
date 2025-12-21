@@ -190,6 +190,8 @@ mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
         console.log("8. Attaching Listeners...");
         attachOwnerDashboardListeners();
         
+        uiUtils.startLiveTimers();
+        
         console.log("9. Initializing Sortable...");
         initializeSortable();
 

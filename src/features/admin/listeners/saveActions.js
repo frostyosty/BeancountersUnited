@@ -83,19 +83,20 @@ export const saveFunctions = {
     },
 
     appearanceSettings: async (form) => {
-        const formData = new FormData(form);
-        const { data: { session } } = await supabase.auth.getSession();
-        const { settings } = useAppStore.getState().siteSettings;
+            const formData = new FormData(form);
+            const { data: { session } } = await supabase.auth.getSession();
+            const { settings } = useAppStore.getState().siteSettings;
 
-        const uiConfig = {
-            pageTransition: formData.get('pageTransition'),
-            staggerMenu: formData.get('staggerMenu') === 'on',
-            backgroundType: formData.get('backgroundType'),
-            bgParallax: formData.get('bgParallax') === 'on',
-            bgAnimation: formData.get('bgAnimation') === 'on',
-            warpSpeed: parseInt(formData.get('warpSpeed')),
-            warpBlock: parseInt(formData.get('warpBlock'))
-        };
+            const uiConfig = {
+                pageTransition: formData.get('pageTransition'),
+                staggerMenu: formData.get('staggerMenu') === 'on',
+                backgroundType: formData.get('backgroundType'),
+                bgParallax: formData.get('bgParallax') === 'on',
+                bgAnimation: formData.get('bgAnimation') === 'on',
+                // FIX: Capture and parse these values
+                warpSpeed: parseInt(formData.get('warpSpeed')) || 30,
+                warpBlock: parseInt(formData.get('warpBlock')) || 2
+            };
         // Loader Config
         const currentLoader = settings.loaderConfig || {};
         const loaderConfig = {
