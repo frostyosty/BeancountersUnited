@@ -10,12 +10,12 @@ export const saveFunctions = {
         const { data: { session } } = await supabase.auth.getSession();
         const currentSettings = useAppStore.getState().siteSettings.settings;
 
-        const settingsUpdate = { 
-            websiteName: formData.get('websiteName'), 
+        const settingsUpdate = {
+            websiteName: formData.get('websiteName'),
             hamburgerMenuContent: formData.get('hamburgerMenuContent'),
             logoUrl: currentSettings.logoUrl
         };
-        
+
         await api.updateSiteSettings(settingsUpdate, session.access_token);
         uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
         uiUtils.showToast('Settings saved.', 'success', 1000);
@@ -29,7 +29,7 @@ export const saveFunctions = {
         uiUtils.showToast('Menu settings saved.', 'success', 1000);
         useAppStore.getState().siteSettings.fetchSiteSettings();
     },
-    
+
     ownerPermissions: async (form) => {
         const permissions = {
             canEditTheme: form.canEditTheme.checked,
@@ -92,15 +92,16 @@ export const saveFunctions = {
             staggerMenu: formData.get('staggerMenu') === 'on',
             backgroundType: formData.get('backgroundType'),
             bgParallax: formData.get('bgParallax') === 'on',
-            bgAnimation: formData.get('bgAnimation') === 'on'
+            bgAnimation: formData.get('bgAnimation') === 'on',
+            warpSpeed: parseInt(formData.get('warpSpeed')),
+            warpBlock: parseInt(formData.get('warpBlock'))
         };
-        
         // Loader Config
         const currentLoader = settings.loaderConfig || {};
         const loaderConfig = {
             type: formData.get('loaderType'),
             animation: formData.get('loaderAnimation'),
-            customUrl: currentLoader.customUrl 
+            customUrl: currentLoader.customUrl
         };
 
         const container = document.querySelector('.dashboard-container');
@@ -111,10 +112,10 @@ export const saveFunctions = {
 
         await api.updateSiteSettings({ uiConfig, loaderConfig, themeVariables }, session.access_token);
         uiUtils.setGlobalSpinnerConfig(loaderConfig);
-        
+
         const currentSettings = useAppStore.getState().siteSettings.settings;
         const newSettings = { ...currentSettings, uiConfig, themeVariables: { ...currentSettings.themeVariables, ...themeVariables } };
-        
+
         uiUtils.applyGlobalBackground(newSettings);
         uiUtils.showToast('Appearance saved.', 'success', 1000);
     },
@@ -133,12 +134,12 @@ export const saveFunctions = {
         };
         await api.updateSiteSettings(settingsUpdate, session.access_token);
         uiUtils.showToast('About settings saved.', 'success', 1000);
-        useAppStore.getState().siteSettings.fetchSiteSettings(); 
+        useAppStore.getState().siteSettings.fetchSiteSettings();
     },
 
     dashboardLayout: async (form) => {
         const formData = new FormData(form);
-        
+
         const newLayout = [];
         const listItems = document.querySelectorAll('.tab-config-item');
         listItems.forEach(li => {
@@ -156,12 +157,12 @@ export const saveFunctions = {
 
         const { data: { session } } = await supabase.auth.getSession();
         await api.updateSiteSettings({ dashboardConfig }, session.access_token);
-        
+
         // Update local state
         adminState.tabsEnabled = dashboardConfig.enabled;
         adminState.tabPosition = dashboardConfig.position;
         adminState.layout = newLayout;
-        
+
         uiUtils.showToast("Layout saved.", "success");
         useAppStore.getState().ui.triggerPageRender();
     }

@@ -164,7 +164,17 @@ export class ImageWarper {
 
 export const warper = new ImageWarper();
 
-export function smoothUpdateImage(imgId, newSrc, config = {}) {
+export function smoothUpdateImage(imgId, newSrc) {
+    // Get settings dynamically
+    let config = { duration: 30, blockSize: 2 };
+    try {
+        const settings = useAppStore.getState().siteSettings.settings.uiConfig;
+        if (settings) {
+            if (settings.warpSpeed) config.duration = settings.warpSpeed;
+            if (settings.warpBlock) config.blockSize = settings.warpBlock;
+        }
+    } catch(e) {}
+
     const img = document.getElementById(imgId) || document.querySelector(`img[data-item-id="${imgId}"]`);
     if (img) {
         warper.warp(img, newSrc, config);
