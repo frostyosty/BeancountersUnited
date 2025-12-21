@@ -41,7 +41,10 @@ const STEPPER_CSS = `
 </style>
 `;
 
+// --- STATE ---
 let timerInterval = null;
+let isArchiveOpen = false;
+
 
 export function renderOrderHistoryPage() {
     const mainContent = document.getElementById('main-content');
@@ -220,25 +223,27 @@ function renderAdminOrderViews(container, orders, role, settings) {
                 </table>
             </div>
 
-<!-- ARCHIVE -->
+            <!-- ARCHIVE -->
             <div class="archive-section">
                 <div class="archive-header">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <h3 style="margin:0;">Archived Orders (Log)</h3>
-                        <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙</button>
+                        <button id="btn-archive-settings" class="button-secondary small" style="padding:2px 8px; font-size:0.75rem;">⚙️ Settings</button>
                     </div>
                     
-                    <!-- FIX: Removed inline margin-left -->
-                    <button id="toggle-archive-btn" class="button-secondary small">Show/Hide</button>
+                    <!-- Button Text Update -->
+                    <button id="toggle-archive-btn" class="button-secondary small" style="margin-left: 15px;">
+                        ${isArchiveOpen ? 'Hide Archive' : 'Show Archive'}
+                    </button>
                 </div>
-
                 
                 <!-- NEW: Info Text -->
                 <p style="margin-top:-10px; margin-bottom:15px; color:#888; font-style:italic; font-size:0.85rem;">
                     Orders moved here automatically after ${hoursText}.
                 </p>
                 
-                <div id="archive-table-container" style="display:none;">
+                <!-- FIX: Use isArchiveOpen to determine display -->
+                <div id="archive-table-container" style="display:${isArchiveOpen ? 'block' : 'none'};">
                     <input type="text" id="archive-search" placeholder="Search archive..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="archive-table">
