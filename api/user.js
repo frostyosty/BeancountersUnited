@@ -99,7 +99,9 @@ export default async function handler(req, res) {
             const { data: profile } = await supabaseAdmin.from(TABLES.PROFILES).select('role').eq('id', user.id).single();
             const isAdmin = profile && (profile.role === 'god' || profile.role === 'owner' || profile.role === 'manager');
 
-             let query = supabaseAdmin
+// We assume the constraint is named 'mealmates_orders_user_id_fkey' based on previous steps.
+            // If you get an error "resource not found", check Postgres for the exact constraint name on mealmates_orders.
+            let query = supabaseAdmin
                 .from(TABLES.ORDERS)
                 .select(`
                     *,
@@ -109,7 +111,9 @@ export default async function handler(req, res) {
                         selected_options,
                         ${TABLES.MENU} (name, image_url)
                     ),
-                    ${TABLES.PROFILES} (email, full_name, internal_nickname, staff_note, staff_note_urgency)
+                    ${TABLES.PROFILES}!mealmates_orders_user_id_fkey (
+                        email, full_name, internal_nickname, staff_note, staff_note_urgency
+                    )
                 `)
                 .order('created_at', { ascending: false });
                 

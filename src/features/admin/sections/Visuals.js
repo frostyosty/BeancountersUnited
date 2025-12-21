@@ -11,6 +11,8 @@ export function renderAppearanceSection(settings) {
     const bgParallax = uiConfig.bgParallax || false;
     const bgAnimation = uiConfig.bgAnimation || false;
     const loaderConfig = settings.loaderConfig || { type: 'coffee', animation: 'pulse', customUrl: '' };
+    const warpSpeed = uiConfig.warpSpeed || 30; // Frames (Lower is faster)
+    const warpBlock = uiConfig.warpBlock || 2;  // Pixels (Higher is blockier/faster CPU)
 
     return `
         <section class="dashboard-section">
@@ -106,6 +108,20 @@ export function renderAppearanceSection(settings) {
                 <img id="warp-test-target" src="/placeholder-coffee.jpg" style="width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid #ccc;">
                 <button type="button" id="btn-test-warp" class="button-secondary">Randomize & Warp</button>
             </div>
+
+            <h4 style="margin-top:20px;">Morph Effect Settings</h4>
+                <div class="form-group">
+                    <label>Effect Speed (Frames): <span id="warp-speed-val">${warpSpeed}</span></label>
+                    <input type="range" name="warpSpeed" min="10" max="120" value="${warpSpeed}"
+                        oninput="document.getElementById('warp-speed-val').textContent = this.value">
+                    <small style="color:#666; font-size:0.75rem;">Lower = Faster</small>
+                </div>
+                <div class="form-group">
+                    <label>Pixel Block Size: <span id="warp-block-val">${warpBlock}px</span></label>
+                    <input type="range" name="warpBlock" min="1" max="10" value="${warpBlock}"
+                        oninput="document.getElementById('warp-block-val').textContent = this.value + 'px'">
+                    <small style="color:#666; font-size:0.75rem;">Higher = Retro/Pixelated look (Better Performance)</small>
+                </div>
         </section>
     `;
 }
