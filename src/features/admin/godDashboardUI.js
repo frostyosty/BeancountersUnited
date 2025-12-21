@@ -2,7 +2,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as components from './dashboardComponents.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 // FIX: Imported adminState
-import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './adminListeners.js';
+import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './listeners/index.js';
 
 // --- Helpers ---
 function getCategoryColor(categoryName) {

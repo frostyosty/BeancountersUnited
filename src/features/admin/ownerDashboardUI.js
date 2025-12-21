@@ -1,7 +1,7 @@
 // src/features/admin/ownerDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js'; // Needed for startLiveTimers
-import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './adminListeners.js';
+import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './listeners/index.js';
 import * as components from './dashboardComponents.js';
 
 // Helpers (Only needed for passing data)
