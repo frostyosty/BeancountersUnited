@@ -7,7 +7,7 @@ import { openHeaderLogoEditor } from '../headerEditor/index.js';
 import { debounce, uploadLogo } from './helpers.js';
 import { saveFunctions } from './saveActions.js';
 import { currentSort, adminState } from './state.js';
-import { warper } from './imageMorph.js';
+import { warper } from '../../../utils/uiUtils.js';
 
 export function attachEventHandlers(container) {
     
