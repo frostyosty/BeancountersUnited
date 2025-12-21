@@ -1,26 +1,15 @@
-// src/features/admin/godDashboardUI.js
 import { useAppStore } from '@/store/appStore.js';
 import * as components from './dashboardComponents.js';
-import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './listeners/index.js';
+import * as uiUtils from '@/utils/uiUtils.js';
+// FIX: Imported adminState
+import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './adminListeners.js';
 
-// --- Helpers (Color/Badge/Sort logic is inside components or listeners now, or kept here if needed for sorting state) ---
-// We keep sort/color helpers here if they are used for local logic, 
-// but the HTML generation is now in components.js.
-
+// --- Helpers ---
 function getCategoryColor(categoryName) {
     let hash = 0;
-    for (let i = 0; i < categoryName.length; i++) {
-        hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    // Math: 180 is Cyan. We allow a variance of 50 degrees (180 to 230).
-    // Math.abs ensures the hash is positive.
-    const h = 180 + (Math.abs(hash) % 50); 
-    
-    // Result: 85% Saturation, 96% Lightness (Very pale blue)
-    return `hsl(${h}, 85%, 96%)`; 
+    for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    return `hsl(${180 + (Math.abs(hash) % 50)}, 85%, 96%)`; 
 }
-
 function getAllergenBadges(allergens = []) {
     if (!allergens || allergens.length === 0) return '';
     const map = { 'GF': '#2ecc71', 'V': '#27ae60', 'DF': '#3498db', 'VG': '#9b59b6' };
@@ -30,75 +19,33 @@ function getSortIcon(col) {
     if (currentSort.column !== col) return '↕';
     return currentSort.direction === 'asc' ? '↑' : '↓';
 }
-
 function getMenuLayoutHTML() {
     const { getMenuCategories } = useAppStore.getState().siteSettings;
     const categories = getMenuCategories();
-    
-    if (!categories || categories.length === 0) {
-        return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><p>No categories defined.</p></div>`;
-    }
-
-    const listItems = categories.map(cat => `
-        <li class="category-list-item" data-category-name="${cat}" style="display:flex; align-items:center; padding:8px; border-bottom:1px solid #eee; background:white;">
-            <div class="drag-handle-wrapper" style="margin-right:10px; cursor:grab; color:#999;">
-                <span class="drag-handle">☰</span>
-            </div>
-            <span class="category-name" style="flex-grow:1;">${cat}</span>
-            
-            <!-- FIX: Styled X Button with Margin -->
-            <button class="delete-icon-btn delete-category-btn" style="margin-left:15px;" title="Delete Category">
-                ×
-            </button>
-        </li>
-    `).join('');
-
-    return `
-        <div id="category-manager">
-            <div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;">
-                <input type="text" id="new-category-name" placeholder="New Category Name" style="flex:1; padding:5px;">
-                <button id="add-category-btn" class="button-primary small">Add</button>
-            </div>
-            <ul id="category-list" style="list-style:none; padding:0; border:1px solid #ddd; border-radius:4px;">
-                ${listItems}
-            </ul>
-        </div>`;
+    if (!categories || categories.length === 0) return `<div id="category-manager"><div class="add-category-row"><input type="text" id="new-category-name" placeholder="New Category"><button id="add-category-btn" class="button-primary small">Add</button></div><p>No categories defined.</p></div>`;
+    return `<div id="category-manager"><div class="add-category-row" style="margin-bottom:10px; display:flex; gap:10px;"><input type="text" id="new-category-name" placeholder="New Category Name"><button id="add-category-btn" class="button-primary small">Add</button></div><ul id="category-list">${categories.map(cat => `<li class="category-list-item" data-category-name="${cat}"><div class="drag-handle-wrapper"><span class="drag-handle">☰</span></div><span class="category-name">${cat}</span><button class="button-danger small delete-category-btn">Delete</button></li>`).join('')}</ul></div>`;
 }
-// --- MAIN RENDER FUNCTION (God Mode) ---
-export function renderGodDashboard() {
-    console.log("--- [GodDashboard] Render START ---");
+
+export function renderOwnerDashboard() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-// Fetch Data Logic
-     const adminState = useAppStore.getState().admin;
-    
-    // 1. Fetch Users (User Management)
-    if (!adminState.users || adminState.users.length === 0) {
-        console.log("[GodDashboard] Fetching Users...");
-        useAppStore.getState().admin.fetchAllUsers(); 
-    }
-    
-    // 2. Fetch Clients (Client Relationships)
-    if (!adminState.clients || adminState.clients.length === 0) {
-        console.log("[GodDashboard] Fetching Clients...");
-        useAppStore.getState().admin.fetchClients();
-    }
-    
-    // 3. Other Data
+    // Fetch Data
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
-    useAppStore.getState().orderHistory.fetchOrderHistory();
+    useAppStore.getState().orderHistory.fetchOrderHistory(); 
+    
+    const adminStateData = useAppStore.getState().admin;
+    if (!adminStateData.clients || adminStateData.clients.length === 0) useAppStore.getState().admin.fetchClients();
 
-    // 2. Retrieve State
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
-    // We don't strictly need 'orders' here anymore as we use 'clients', but keeping for safety
-    const { orders } = useAppStore.getState().orderHistory; 
-    const { users, clients } = useAppStore.getState().admin;
+    const { orders } = useAppStore.getState().orderHistory;
+    const { clients } = useAppStore.getState().admin;
+    const role = useAppStore.getState().auth.getUserRole();
 
     if (isLoadingMenu || isLoadingSettings) {
-mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
+        mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
         return;
     }
     if (error) {
@@ -106,103 +53,77 @@ mainContent.innerHTML = uiUtils.getLoaderHTML("Loading Dashboard...");
         return;
     }
 
+    const ownerPermissions = settings.ownerPermissions || { canEditTheme: true, canEditCategories: true };
+    
     try {
-        // --- 3. Render HTML Components ---
-
-        // User Management (Exclusive)
-        let userManagementHTML = '';
-        if (users) {
-            const userRows = users.map(user => `
-                <tr data-user-id="${user.id}">
-                    <td>${user.email}</td>
-                    <td>${user.full_name || 'N/A'}</td>
-                    <td><span class="role-badge role-${user.role}">${user.role}</span></td>
-                    <td>${user.is_verified_buyer ? 'Yes' : 'No'}</td>
-                    <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
-                    <td><button class="button-secondary small edit-user-btn">Edit</button></td>
-                </tr>`).join('');
-            userManagementHTML = `
-                <section class="dashboard-section" style="border-color: #7b2cbf;">
-                    <h3 style="color:#7b2cbf;">User Management</h3>
-                    <div class="table-wrapper">
-                        <table style="width:100%; border-collapse:collapse;">
-                            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
-                            <tbody>${userRows}</tbody>
-                        </table>
-                    </div>
-                </section>`;
+        // --- Sync Config ---
+        const dbConfig = settings.dashboardConfig;
+        if (dbConfig) {
+            adminState.tabsEnabled = dbConfig.enabled;
+            adminState.tabPosition = dbConfig.position;
+            if (dbConfig.layout && dbConfig.layout.length > 0) {
+                adminState.layout = dbConfig.layout;
+            }
         }
 
-        console.log("1. Rendering Global Settings...");
-        const globalSettingsHTML = components.renderGlobalSettingsSection(settings);
+        // --- Prepare Sections ---
+        // Filter layout based on permissions if needed (e.g. if can't edit theme, don't show Appearance tab)
+        // For now, we render string empty if permission denied
+        
+        const sections = {
+            'active_orders': components.renderActiveOrdersSection(orders, role, settings),
+            'clients': components.renderClientRelationshipsSection(clients || []),
+            'menu': components.renderMenuSection(
+                menuItems, currentSort, getCategoryColor, getAllergenBadges, getSortIcon, settings.showAllergens, settings
+            ),
+            'categories': ownerPermissions.canEditCategories 
+                ? `<section class="dashboard-section"><h3>Menu Categories</h3>${getMenuLayoutHTML()}</section>` 
+                : '',
+            'header': components.renderHeaderSection(settings.headerSettings || {}),
+            'appearance': ownerPermissions.canEditTheme 
+                ? components.renderAppearanceSection(settings) 
+                : '',
+            'global': components.renderGlobalSettingsSection(settings) // Available to owner? Usually yes for Logo/Name
+        };
 
-        console.log("2. Rendering Client Relationships...");
-        if (typeof components.renderClientRelationshipsSection !== 'function') {
-            throw new Error("renderClientRelationshipsSection not found in dashboardComponents.js");
+        // --- Build View ---
+        let viewHTML = '';
+        
+        if (adminState.tabsEnabled) {
+            const tabBar = components.renderTabBar(adminState.layout, adminState.activeTab, adminState.tabPosition);
+            const activeContent = sections[adminState.activeTab] || '<p style="padding:20px; color:#666;">Section hidden or restricted.</p>';
+            
+            viewHTML = (adminState.tabPosition === 'top') ? tabBar + activeContent : activeContent + tabBar;
+        } else {
+            viewHTML = adminState.layout.map(item => {
+                if (item.hidden) return '';
+                return sections[item.id] || '';
+            }).join('');
         }
-        // FIX: Renamed variable to match template and passed 'clients' data
-        const clientSectionHTML = components.renderClientRelationshipsSection(clients || []);
 
-        console.log("3. Rendering Menu...");
-        const menuSectionHTML = components.renderMenuSection(
-            menuItems, 
-            currentSort, 
-            getCategoryColor, 
-            getAllergenBadges, 
-            getSortIcon, 
-            settings.showAllergens,
-            settings // Pass settings for color theme logic
-        );
-
-        console.log("4. Rendering Appearance...");
-        const appearanceHTML = components.renderAppearanceSection(settings);
-
-        console.log("5. Rendering Header...");
-        const headerHTML = components.renderHeaderSection(settings.headerSettings || {});
-
-        console.log("6. Rendering About & Payment...");
-        const aboutHTML = components.renderAboutConfigSection(settings);
+        // --- Static Footer ---
+        const layoutConfigHTML = components.renderLayoutConfig(adminState.layout, adminState.tabPosition, adminState.tabsEnabled);
         const paymentHTML = components.renderPaymentSection(settings.paymentConfig || {});
-
-        // --- 4. Final Assembly ---
-        console.log("7. Assembling HTML...");
+        const aboutHTML = components.renderAboutConfigSection(settings);
 
         mainContent.innerHTML = `
             <div class="dashboard-container">
-                <h2>God Mode Dashboard</h2>
-                ${userManagementHTML}
-                ${globalSettingsHTML}
-                ${clientSectionHTML} <!-- Client Table -->
-                ${menuSectionHTML}
+                <h2>Owner Dashboard</h2>
                 
-                <section class="dashboard-section">
-                    <h3>Menu Categories</h3>
-                    ${getMenuLayoutHTML()}
-                </section>
+                ${viewHTML}
 
-                ${headerHTML}
-                ${appearanceHTML}
                 ${aboutHTML}
+                ${layoutConfigHTML}
                 ${paymentHTML}
             </div>
         `;
 
-        console.log("8. Attaching Listeners...");
         attachOwnerDashboardListeners();
-        
+        if (ownerPermissions.canEditCategories) initializeSortable();
         uiUtils.startLiveTimers();
-        
-        console.log("9. Initializing Sortable...");
-        initializeSortable();
-
-        console.log("--- [GodDashboard] Render COMPLETE ---");
 
     } catch (e) {
-        console.error("CRITICAL DASHBOARD CRASH:", e);
-        mainContent.innerHTML = `<div class="error-message">
-            <h3>Dashboard Crash</h3>
-            <p>${e.message}</p>
-            <p>Check console for details.</p>
-        </div>`;
+        console.error("Owner Dashboard Crash:", e);
+        mainContent.innerHTML = `<div class="error-message"><h3>Dashboard Error</h3><p>${e.message}</p></div>`;
     }
 }
