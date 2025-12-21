@@ -281,11 +281,15 @@ function renderAdminOrderViews(container, orders, role, settings) {
 
     const archiveContainer = document.getElementById('archive-table-container');
     const toggleBtn = document.getElementById('toggle-archive-btn');
+    
     if (toggleBtn) {
         toggleBtn.onclick = () => {
-            const isHidden = archiveContainer.style.display === 'none';
-            archiveContainer.style.display = isHidden ? 'block' : 'none';
-            toggleBtn.textContent = isHidden ? 'Hide Archive' : 'Show Archive';
+            // Toggle State
+            isArchiveOpen = !isArchiveOpen;
+            
+            // Update UI immediately
+            archiveContainer.style.display = isArchiveOpen ? 'block' : 'none';
+            toggleBtn.textContent = isArchiveOpen ? 'Hide Archive' : 'Show Archive';
         };
     }
 
