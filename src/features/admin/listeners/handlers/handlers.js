@@ -1,3 +1,5 @@
+//src/features/admin/listeners/handlers/handlers.js
+
 import { attachClickHandlers } from './clickHandlers.js';
 import { attachInputHandlers } from './inputHandlers.js';
 import { attachChangeHandlers } from './changeHandlers.js';

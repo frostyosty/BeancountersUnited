@@ -1,17 +1,9 @@
-import { attachChangeHandlers } from './handlers/handlers.js';
-import { attachGlobalHandlers } from './globals.js';
-import { initializeSortable } from './sortable.js';
-export { currentSort, adminState } from './state.js';
-export { initializeSortable };
+// src/features/admin/listeners/index.js
 
-// The main function called by dashboard UI
-export function attachOwnerDashboardListeners() {
-    const container = document.querySelector('.dashboard-container');
-    if (!container) return;
-
-    // Attach DOM events
-    attachChangeHandlers(container);
-    
-    // Attach Global Window Handlers
-    attachGlobalHandlers();
-}
+// Simply re-export the main function and state from your aggregator
+export { 
+    attachOwnerDashboardListeners, 
+    currentSort, 
+    adminState, 
+    initializeSortable 
+} from './handlers/handlers.js';

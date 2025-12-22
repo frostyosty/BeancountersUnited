@@ -1,3 +1,5 @@
+//src/features/admin/listeners/handlers/changeHandlers.js
+
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
