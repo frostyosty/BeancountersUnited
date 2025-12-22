@@ -2,10 +2,13 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
-import { showEditItemModal, showEditUserModal } from '../modals/index.js'; 
-import { openHeaderLogoEditor } from '../headerEditor/index.js';
-import { currentSort, adminState } from './state.js';
-import { warper } from '@/utils/ui/morph/index.js';
+import { warper } from '@/utils/ui/imageMorph.js';
+
+// --- FIX: Use Absolute Imports (@) to avoid path errors ---
+import { showEditItemModal, showEditUserModal } from '@/features/admin/modals/index.js'; 
+import { openHeaderLogoEditor } from '@/features/admin/headerEditor/index.js';
+// Import siblings from the listeners folder
+import { currentSort, adminState } from '@/features/admin/listeners/state.js';
 
 export function attachClickHandlers(container) {
     container.addEventListener('click', async (e) => {
