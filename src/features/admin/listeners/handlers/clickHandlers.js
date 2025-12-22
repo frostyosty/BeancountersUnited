@@ -5,7 +5,7 @@ import { supabase } from '@/supabaseClient.js';
 import { showEditItemModal, showEditUserModal } from '../modals/index.js'; 
 import { openHeaderLogoEditor } from '../headerEditor/index.js';
 import { currentSort, adminState } from './state.js';
-import { warper } from '@/utils/ui/imageMorph.js';
+import { warper } from '@/utils/ui/morph/index.js';
 
 export function attachClickHandlers(container) {
     container.addEventListener('click', async (e) => {
