@@ -154,13 +154,15 @@ try {
         const role = get().auth.getUserRole();
         if (role !== 'manager' && role !== 'owner' && role !== 'god') return;
         
+        // Don't alert if already viewing the list
         if (window.location.hash === '#order-history') return;
 
         const { orders, notifiedOrderIds } = get().orderHistory;
-        
         const now = Date.now();
-        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000; 
-        const MAX_AGE_MS = 24 * 60 * 60 * 1000; 
+        
+        // TIMING CONFIG
+        const URGENCY_THRESHOLD_MS = 15 * 60 * 1000; // Start alerting if > 15 mins late
+        const MAX_LATE_MS = 60 * 60 * 1000;          // Stop alerting if > 60 mins late (Abandoned?)
 
         const newNotifiedSet = new Set(notifiedOrderIds);
         let hasNewAlerts = false;
@@ -168,13 +170,15 @@ try {
         orders.forEach(order => {
             if (order.status === 'pending' || order.status === 'preparing') {
                 
-                const createdTime = new Date(order.created_at).getTime();
+                // Use Pickup Time (defaults to created_at for ASAP)
                 const pickupTime = new Date(order.pickup_time || order.created_at).getTime();
+                const timeLate = now - pickupTime;
 
-                if (now - createdTime > MAX_AGE_MS) return;
-                if (pickupTime > now) return;
-
-                if ((now - pickupTime) > URGENCY_THRESHOLD_MS && !newNotifiedSet.has(order.id)) {
+                // LOGIC:
+                // 1. Must be Late (> 15 mins)
+                // 2. Must not be Ancient (< 60 mins) -> This implicitly handles the 24h check
+                // 3. Must not have been notified in this session
+                if (timeLate > URGENCY_THRESHOLD_MS && timeLate < MAX_LATE_MS && !newNotifiedSet.has(order.id)) {
                     
                     newNotifiedSet.add(order.id);
                     hasNewAlerts = true;
@@ -183,8 +187,8 @@ try {
                     const firstItem = order.order_items?.[0]?.menu_items?.name || 'Order';
                     const isImportant = order.profiles?.staff_note_urgency === 'alert';
                     
-                    let alertText = `⚠️ ${firstItem} for ${customer} Due`;
-                    if (isImportant) alertText = `🚨 VIP: ${firstItem} for ${customer} Due`;
+                    let alertText = `⚠️ ${firstItem} for ${customer} is Overdue`;
+                    if (isImportant) alertText = `🚨 VIP: ${firstItem} for ${customer} is Overdue`;
 
                     import('@/utils/uiUtils.js').then(utils => {
                         utils.showToast(
@@ -192,8 +196,11 @@ try {
                             'error', 
                             isImportant ? 12000 : 8000, 
                             () => {
-                                // Click Action
+                                // --- CLICK ACTION (Restored) ---
+                                // 1. Set row to flash red
                                 get().ui.setHighlightOrderId(order.id);
+                                
+                                // 2. Navigate or Refresh
                                 if (window.location.hash === '#order-history') {
                                     get().ui.triggerPageRender();
                                 } else {
