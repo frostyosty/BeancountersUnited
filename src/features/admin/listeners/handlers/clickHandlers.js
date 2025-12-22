@@ -9,6 +9,7 @@ import { showEditItemModal, showEditUserModal } from '@/features/admin/modals/in
 import { openHeaderLogoEditor } from '@/features/admin/headerEditor/index.js';
 // Import siblings from the listeners folder
 import { currentSort, adminState } from '@/features/admin/listeners/state.js';
+import { uploadLogo } from '../helpers.js';
 
 export function attachClickHandlers(container) {
     container.addEventListener('click', async (e) => {
