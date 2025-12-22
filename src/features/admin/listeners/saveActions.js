@@ -5,7 +5,7 @@ import { supabase } from '@/supabaseClient.js';
 import { adminState } from './state.js';
 
 export const saveFunctions = {
-    
+
     globalSettings: async (form) => {
         const formData = new FormData(form);
         const { data: { session } } = await supabase.auth.getSession();
@@ -84,24 +84,24 @@ export const saveFunctions = {
     },
 
     appearanceSettings: async (form) => {
-            const formData = new FormData(form);
-            const { data: { session } } = await supabase.auth.getSession();
-            const { settings } = useAppStore.getState().siteSettings;
+        const formData = new FormData(form);
+        const { data: { session } } = await supabase.auth.getSession();
+        const { settings } = useAppStore.getState().siteSettings;
 
-            const uiConfig = {
-                pageTransition: formData.get('pageTransition'),
-                staggerMenu: formData.get('staggerMenu') === 'on',
-                backgroundType: formData.get('backgroundType'),
-                bgParallax: formData.get('bgParallax') === 'on',
-                bgAnimation: formData.get('bgAnimation') === 'on',
-                // FIX: Capture and parse these values
-                warpSpeed: parseInt(formData.get('warpSpeed')) || 30,
-                warpBlock: parseInt(formData.get('warpBlock')) || 2,
-duration: parseInt(formData.get('warpDuration')),
-                effectZoom: parseInt(formData.get('effectZoom')),
-                effectPixel: parseInt(formData.get('effectPixel')),
-                effectSlide: parseInt(formData.get('effectSlide')),
-            };
+        const uiConfig = {
+            pageTransition: formData.get('pageTransition'),
+            staggerMenu: formData.get('staggerMenu') === 'on',
+            backgroundType: formData.get('backgroundType'),
+            bgParallax: formData.get('bgParallax') === 'on',
+            bgAnimation: formData.get('bgAnimation') === 'on',
+            // FIX: Capture and parse these values
+            warpSpeed: parseInt(formData.get('warpSpeed')) || 30,
+            warpBlock: parseInt(formData.get('warpBlock')) || 2,
+            duration: parseInt(formData.get('warpDuration')),
+            effectZoom: parseInt(formData.get('effectZoom')),
+            effectPixel: parseInt(formData.get('effectPixel')),
+            effectSlide: parseInt(formData.get('effectSlide')),
+        };
         // Loader Config
         const currentLoader = settings.loaderConfig || {};
         const loaderConfig = {
@@ -172,35 +172,35 @@ duration: parseInt(formData.get('warpDuration')),
         uiUtils.showToast("Layout saved.", "success");
         useAppStore.getState().ui.triggerPageRender();
     },
- operationsConfig: async (form) => {
-            const formData = new FormData(form);
-            const { data: { session } } = await supabase.auth.getSession();
+    operationsConfig: async (form) => {
+        const formData = new FormData(form);
+        const { data: { session } } = await supabase.auth.getSession();
 
-            // Build Hours Object
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            const openingHours = { enabled: formData.get('hoursEnabled') === 'on' };
-            days.forEach(d => {
-                openingHours[d] = {
-                    isOpen: formData.get(`open_${d}`) === 'on',
-                    start: formData.get(`start_${d}`),
-                    end: formData.get(`end_${d}`)
-                };
-            });
-
-            // Build Delivery Object
-            const deliveryConfig = {
-                enabled: formData.get('deliveryEnabled') === 'on',
-                baseFee: parseFloat(formData.get('baseFee')),
-                feePerKm: parseFloat(formData.get('feePerKm')),
-                maxDistanceKm: parseFloat(formData.get('maxDistanceKm')),
-                cafeLat: parseFloat(formData.get('cafeLat')),
-                cafeLng: parseFloat(formData.get('cafeLng'))
+        // Build Hours Object
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const openingHours = { enabled: formData.get('hoursEnabled') === 'on' };
+        days.forEach(d => {
+            openingHours[d] = {
+                isOpen: formData.get(`open_${d}`) === 'on',
+                start: formData.get(`start_${d}`),
+                end: formData.get(`end_${d}`)
             };
+        });
 
-            await api.updateSiteSettings({ openingHours, deliveryConfig }, session.access_token);
-            uiUtils.showToast('Operations saved.', 'success', 1000);
-        },
+        // Build Delivery Object
+        const deliveryConfig = {
+            enabled: formData.get('deliveryEnabled') === 'on',
+            baseFee: parseFloat(formData.get('baseFee')),
+            feePerKm: parseFloat(formData.get('feePerKm')),
+            maxDistanceKm: parseFloat(formData.get('maxDistanceKm')),
+            cafeLat: parseFloat(formData.get('cafeLat')),
+            cafeLng: parseFloat(formData.get('cafeLng'))
+        };
+
+        await api.updateSiteSettings({ openingHours, deliveryConfig }, session.access_token);
+        uiUtils.showToast('Operations saved.', 'success', 1000);
+    },
 
 
-    
+
 };
