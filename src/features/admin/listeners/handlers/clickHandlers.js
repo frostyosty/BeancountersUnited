@@ -2,7 +2,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
-import { warper } from '@/utils/ui/imageMorph.js';
+import { warper } from '@/utils/ui/morph/index.js';
 
 // --- FIX: Use Absolute Imports (@) to avoid path errors ---
 import { showEditItemModal, showEditUserModal } from '@/features/admin/modals/index.js'; 
