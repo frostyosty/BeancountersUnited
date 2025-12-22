@@ -2,7 +2,7 @@ import { useAppStore } from '@/store/appStore.js';
 import * as components from './dashboardComponents.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 // FIX: Imported adminState
-import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './listeners/index.js';
+import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminState } from './listeners/handlers/index.js';
 
 // --- Helpers ---
 function getCategoryColor(categoryName) {
@@ -42,7 +42,7 @@ export function renderGodDashboard() {
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
     useAppStore.getState().admin.fetchSiteLogs(); // Ensure this exists in adminSlice
-    
+
     // 2. Retrieve State
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
