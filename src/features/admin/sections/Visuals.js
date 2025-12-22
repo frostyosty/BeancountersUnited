@@ -13,6 +13,11 @@ export function renderAppearanceSection(settings) {
     const loaderConfig = settings.loaderConfig || { type: 'coffee', animation: 'pulse', customUrl: '' };
     const warpSpeed = uiConfig.warpSpeed || 30; // Frames (Lower is faster)
     const warpBlock = uiConfig.warpBlock || 2;  // Pixels (Higher is blockier/faster CPU)
+    const warpDuration = uiConfig.duration || 45;
+    const effectZoom = uiConfig.effectZoom || 50;
+    const effectPixel = uiConfig.effectPixel || 0;
+    const effectSlide = uiConfig.effectSlide || 0;
+
 
     return `
         <section class="dashboard-section">
@@ -109,7 +114,29 @@ export function renderAppearanceSection(settings) {
                 <button type="button" id="btn-test-warp" class="button-secondary">Randomize & Warp</button>
             </div>
 
-            <h4 style="margin-top:20px;">Morph Effect Settings</h4>
+ <h4 style="margin-top:20px;">Morph Effect Mixer</h4>
+                <p style="font-size:0.8rem; color:#666;">The effect with the highest value will be used.</p>
+                
+                <div class="form-group">
+                    <label>Animation Duration: <span id="val-dur">${warpDuration}</span> frames</label>
+                    <input type="range" name="warpDuration" min="10" max="120" value="${warpDuration}"
+                        oninput="document.getElementById('val-dur').textContent = this.value">
+                </div>
+
+                <div class="form-group">
+                    <label>Zoom & Fade Intensity</label>
+                    <input type="range" name="effectZoom" min="0" max="100" value="${effectZoom}">
+                </div>
+
+                <div class="form-group">
+                    <label>Pixelation Intensity</label>
+                    <input type="range" name="effectPixel" min="0" max="100" value="${effectPixel}">
+                </div>
+
+                <div class="form-group">
+                    <label>Slide Up Intensity</label>
+                    <input type="range" name="effectSlide" min="0" max="100" value="${effectSlide}">
+                </div>
                 <div class="form-group">
                     <label>Effect Speed (Frames): <span id="warp-speed-val">${warpSpeed}</span></label>
                     <input type="range" name="warpSpeed" min="10" max="120" value="${warpSpeed}"

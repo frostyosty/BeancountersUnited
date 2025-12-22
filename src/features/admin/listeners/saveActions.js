@@ -96,7 +96,11 @@ export const saveFunctions = {
                 bgAnimation: formData.get('bgAnimation') === 'on',
                 // FIX: Capture and parse these values
                 warpSpeed: parseInt(formData.get('warpSpeed')) || 30,
-                warpBlock: parseInt(formData.get('warpBlock')) || 2
+                warpBlock: parseInt(formData.get('warpBlock')) || 2,
+duration: parseInt(formData.get('warpDuration')),
+                effectZoom: parseInt(formData.get('effectZoom')),
+                effectPixel: parseInt(formData.get('effectPixel')),
+                effectSlide: parseInt(formData.get('effectSlide')),
             };
         // Loader Config
         const currentLoader = settings.loaderConfig || {};
