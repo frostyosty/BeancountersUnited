@@ -177,6 +177,7 @@ export function attachClickHandlers(container) {
                 uiUtils.showToast(`Dismissed ${name}'s ${total} Order`, "info");
             } 
             else if (action === 'delete') {
+                 // Use correct table name
                  const { error } = await supabase.from('mealmates_orders').delete().eq('id', orderId);
                  if (!error) {
                      uiUtils.showToast("Deleted.", "success");

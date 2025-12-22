@@ -1,5 +1,5 @@
-import { debounce } from './helpers.js';
-import { saveFunctions } from './saveActions.js';
+import { debounce } from '../helpers.js';
+import { saveFunctions } from '../saveActions.js';
 
 export function attachInputHandlers(container) {
     

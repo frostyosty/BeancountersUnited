@@ -1,5 +1,5 @@
 import { createOverlayCanvas, loadImage, captureElementAsImage } from './helpers.js';
-import * as Effects from './effects.js';
+import * as Effects from '../effects.js';
 
 export class ImageWarper {
     constructor() {
