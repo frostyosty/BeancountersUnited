@@ -1,5 +1,5 @@
 import { ensureFontLoaded } from './theme.js';
-import { warper } from './imageMorph.js';
+import { warper } from './morph/index.js';
 
 // --- CONTRAST HELPERS ---
 function getLuminance(hex) {
