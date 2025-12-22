@@ -2,8 +2,8 @@ import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
-import { uploadLogo } from '../helpers.js';
-import { saveFunctions } from '../saveActions.js';
+import { uploadLogo } from './helpers.js';
+import { saveFunctions } from './saveActions.js';
 
 export function attachChangeHandlers(container) {
     container.addEventListener('change', async (e) => {

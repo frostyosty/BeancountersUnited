@@ -1,4 +1,4 @@
-import { attachEventHandlers } from './handlers/handlers.js';
+import { attachChangeHandlers } from './handlers/handlers.js';
 import { attachGlobalHandlers } from './globals.js';
 import { initializeSortable } from './sortable.js';
 export { currentSort, adminState } from './state.js';
@@ -10,7 +10,7 @@ export function attachOwnerDashboardListeners() {
     if (!container) return;
 
     // Attach DOM events
-    attachEventHandlers(container);
+    attachChangeHandlers(container);
     
     // Attach Global Window Handlers
     attachGlobalHandlers();
