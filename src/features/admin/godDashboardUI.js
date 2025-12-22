@@ -8,12 +8,12 @@ import { attachOwnerDashboardListeners, initializeSortable, currentSort, adminSt
 function getCategoryColor(categoryName) {
     let hash = 0;
     for (let i = 0; i < categoryName.length; i++) hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    return `hsl(${180 + (Math.abs(hash) % 50)}, 85%, 96%)`; 
+    return `hsl(${180 + (Math.abs(hash) % 50)}, 85%, 96%)`;
 }
 function getAllergenBadges(allergens = []) {
     if (!allergens || allergens.length === 0) return '';
     const map = { 'GF': '#2ecc71', 'V': '#27ae60', 'DF': '#3498db', 'VG': '#9b59b6' };
-    return allergens.map(tag => `<span style="font-size:0.7rem; background:${map[tag]||'#999'}; color:white; padding:1px 4px; border-radius:3px; margin-right:2px;">${tag}</span>`).join('');
+    return allergens.map(tag => `<span style="font-size:0.7rem; background:${map[tag] || '#999'}; color:white; padding:1px 4px; border-radius:3px; margin-right:2px;">${tag}</span>`).join('');
 }
 function getSortIcon(col) {
     if (currentSort.column !== col) return '↕';
@@ -33,19 +33,23 @@ export function renderGodDashboard() {
 
     // 1. Fetch Data
     const adminStateData = useAppStore.getState().admin; // Rename to avoid conflict with adminState import
-    if (!adminStateData.users || adminStateData.users.length === 0) useAppStore.getState().admin.fetchAllUsers(); 
+    if (!adminStateData.users || adminStateData.users.length === 0) useAppStore.getState().admin.fetchAllUsers();
     if (!adminStateData.clients || adminStateData.clients.length === 0) useAppStore.getState().admin.fetchClients();
+
+
 
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
-
+    useAppStore.getState().admin.fetchSiteLogs(); // Ensure this exists in adminSlice
+    
     // 2. Retrieve State
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
     const { users, clients } = useAppStore.getState().admin;
     const role = useAppStore.getState().auth.getUserRole();
+    const { siteLogs } = useAppStore.getState().admin;
 
     if (isLoadingMenu || isLoadingSettings) {
         mainContent.innerHTML = uiUtils.getLoaderHTML("Loading God Dashboard...");
@@ -68,7 +72,7 @@ export function renderGodDashboard() {
         }
 
         // --- 4. Generate Section HTML ---
-        
+
         // User Management
         let userManagementHTML = '';
         if (users) {
@@ -107,7 +111,9 @@ export function renderGodDashboard() {
             'categories': `<section class="dashboard-section"><h3>Menu Categories</h3>${getMenuLayoutHTML()}</section>`,
             'header': components.renderHeaderSection(settings.headerSettings || {}),
             'appearance': components.renderAppearanceSection(settings),
-            'global': components.renderGlobalSettingsSection(settings)
+            'global': components.renderGlobalSettingsSection(settings),
+            'operations': components.renderOperationsSection(settings), // New
+            'history': components.renderHistorySection(siteLogs || [])
         };
 
         // Note: User Management is exclusive to God, usually not part of the reorderable layout, 
@@ -116,13 +122,13 @@ export function renderGodDashboard() {
 
         // --- 6. Build View (Tabs vs List) ---
         let viewHTML = '';
-        
+
         if (adminState.tabsEnabled) {
             const tabBar = components.renderTabBar(adminState.layout, adminState.activeTab, adminState.tabPosition);
             const activeContent = sections[adminState.activeTab] || '<p style="padding:20px;">Section not found or hidden.</p>';
-            
-            viewHTML = (adminState.tabPosition === 'top') 
-                ? tabBar + activeContent 
+
+            viewHTML = (adminState.tabPosition === 'top')
+                ? tabBar + activeContent
                 : activeContent + tabBar;
         } else {
             // List Mode: Render in order

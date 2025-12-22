@@ -81,5 +81,13 @@ fetchClients: async () => {
             console.error("[AdminSlice] Fetch Failed:", e); // <--- LOG 9
             set(state => ({ admin: { ...state.admin, isLoadingClients: false } }));
         }
+    },
+    fetchSiteLogs: async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const logs = await api.getSystemLogs(session.access_token);
+            set(state => ({ admin: { ...state.admin, siteLogs: logs } }));
+        } catch(e) { console.error(e); }
     }
+
 });

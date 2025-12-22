@@ -105,9 +105,13 @@ export function renderDesktopNav() {
     if (aboutEnabled) html += makeLink('#about-us', 'About Us');
 
     if (isAuthenticated && profile) {
-        if (profile.can_see_order_history) {
-            const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
-            html += makeLink('#order-history', label);
+// FIX: Only show Order History to Customers (Admins see it in Dashboard)
+        if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
+            html += makeLink('#order-history', 'Order History');
+        }
+        
+        if (profile.role === 'owner' || profile.role === 'god') {
+            html += makeLink('#owner-dashboard', 'Dashboard');
         }
         if (profile.role === 'owner' || profile.role === 'god') html += makeLink('#owner-dashboard', 'Dashboard');
         if (profile.role === 'god') html += makeLink('#god-dashboard', 'God Mode');
@@ -150,8 +154,13 @@ export function setupHamburgerMenu() {
             const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
             
             navHTML += `<a href="#my-account" class="nav-link">My ${siteName}</a>`;
-            if (profile.can_see_order_history) navHTML += `<a href="#order-history" class="nav-link">${label}</a>`;
-            if (profile.role === 'owner' || profile.role === 'god') navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
+                navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
+            }
+            
+            if (profile.role === 'owner' || profile.role === 'god') {
+                navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
+            }
             if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
         }
 

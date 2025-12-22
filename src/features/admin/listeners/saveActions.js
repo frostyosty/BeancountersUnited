@@ -5,6 +5,7 @@ import { supabase } from '@/supabaseClient.js';
 import { adminState } from './state.js';
 
 export const saveFunctions = {
+    
     globalSettings: async (form) => {
         const formData = new FormData(form);
         const { data: { session } } = await supabase.auth.getSession();
@@ -166,5 +167,36 @@ export const saveFunctions = {
 
         uiUtils.showToast("Layout saved.", "success");
         useAppStore.getState().ui.triggerPageRender();
-    }
+    },
+ operationsConfig: async (form) => {
+            const formData = new FormData(form);
+            const { data: { session } } = await supabase.auth.getSession();
+
+            // Build Hours Object
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            const openingHours = { enabled: formData.get('hoursEnabled') === 'on' };
+            days.forEach(d => {
+                openingHours[d] = {
+                    isOpen: formData.get(`open_${d}`) === 'on',
+                    start: formData.get(`start_${d}`),
+                    end: formData.get(`end_${d}`)
+                };
+            });
+
+            // Build Delivery Object
+            const deliveryConfig = {
+                enabled: formData.get('deliveryEnabled') === 'on',
+                baseFee: parseFloat(formData.get('baseFee')),
+                feePerKm: parseFloat(formData.get('feePerKm')),
+                maxDistanceKm: parseFloat(formData.get('maxDistanceKm')),
+                cafeLat: parseFloat(formData.get('cafeLat')),
+                cafeLng: parseFloat(formData.get('cafeLng'))
+            };
+
+            await api.updateSiteSettings({ openingHours, deliveryConfig }, session.access_token);
+            uiUtils.showToast('Operations saved.', 'success', 1000);
+        },
+
+
+    
 };

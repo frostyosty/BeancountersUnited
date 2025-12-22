@@ -1622,3 +1622,30 @@ tr.flash-highlight {
 .admin-tab-btn:hover {
     transform: translateY(-2px);
 }
+
+
+/* --- Dashboard Layout Config Fixes --- */
+#tab-sort-list {
+    max-width: 100%;
+    overflow: hidden; /* Prevent horizontal scroll causing issues */
+}
+
+.tab-config-item {
+    /* Ensure it fits within the padding */
+    width: 100%; 
+    box-sizing: border-box; 
+    
+    /* Better Touch Targets */
+    margin-bottom: 8px !important;
+    padding: 12px !important; 
+    border-radius: 6px;
+}
+
+/* Add breathing room to the main container on mobile */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding-left: 15px;
+        padding-right: 15px;
+        overflow-x: hidden; /* Stop horizontal sway */
+    }
+}

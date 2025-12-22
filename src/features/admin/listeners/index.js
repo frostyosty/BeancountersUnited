@@ -1,4 +1,4 @@
-import { attachEventHandlers } from './handlers.js';
+import { attachEventHandlers } from './handlers/handlers.js';
 import { attachGlobalHandlers } from './globals.js';
 import { initializeSortable } from './sortable.js';
 export { currentSort, adminState } from './state.js';

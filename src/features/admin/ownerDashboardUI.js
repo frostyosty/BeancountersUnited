@@ -68,7 +68,7 @@ export function renderOwnerDashboard() {
     useAppStore.getState().menu.fetchMenu();
     useAppStore.getState().siteSettings.fetchSiteSettings();
     useAppStore.getState().orderHistory.fetchOrderHistory();
-
+useAppStore.getState().admin.fetchSiteLogs();
     const { clients } = useAppStore.getState().admin;
     if (!clients || clients.length === 0) {
         useAppStore.getState().admin.fetchClients();
@@ -78,7 +78,9 @@ export function renderOwnerDashboard() {
     const { items: menuItems, isLoading: isLoadingMenu } = useAppStore.getState().menu;
     const { settings, isLoading: isLoadingSettings, error } = useAppStore.getState().siteSettings;
     const { orders } = useAppStore.getState().orderHistory;
-
+ // Ensure this exists in adminSlice
+    const { siteLogs } = useAppStore.getState().admin;
+    
     // 3. Loading / Error Checks
     if (isLoadingMenu || isLoadingSettings) {
         // Use the new graphical loader if available, else simple text
@@ -134,6 +136,9 @@ export function renderOwnerDashboard() {
             : '',
             
         'global': components.renderGlobalSettingsSection(settings)
+        ,
+                    'operations': components.renderOperationsSection(settings), // New
+                    'history': components.renderHistorySection(siteLogs || [])
     };
 
     // 6. Build Main Content View (Tabs vs List)
