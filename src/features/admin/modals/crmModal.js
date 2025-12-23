@@ -13,21 +13,24 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
         const { profile, history, logs } = await api.getCustomerDetails(userId, session.access_token);
 
         // --- Build HTML ---
-        const historyRows = history.map(order => {
+        // FIX: Add (history || []) to prevent crash if null
+        const historyRows = (history || []).map(order => {
             const date = new Date(order.created_at).toLocaleDateString();
-            const itemsSummary = order.order_items.map(i => `${i.quantity}x ${i.menu_items?.name}`).join(', ');
+            // FIX: Add (order.order_items || []) too
+            const itemsSummary = (order.order_items || []).map(i => `${i.quantity}x ${i.menu_items?.name}`).join(', ');
             return `<tr style="border-bottom:1px solid #eee; font-size:0.9rem;"><td style="padding:8px;">${date}</td><td style="padding:8px; color:#666;">${itemsSummary}</td><td style="padding:8px;">$${order.total_amount.toFixed(2)}</td></tr>`;
         }).join('');
 
+        // FIX: Add (logs || []) to prevent crash
         const auditRows = (logs || []).map(log => {
             const date = new Date(log.created_at).toLocaleString();
             const actorName = log.profiles?.email || 'Manager';
             let changeMsg = log.action_type;
             if (log.action_type === 'UPDATE_NICKNAME') changeMsg = `Nickname: "${log.old_value}" → "${log.new_value}"`;
             if (log.action_type === 'UPDATE_NOTE') changeMsg = `Updated Note`;
-            
             return `<div style="padding:8px; border-bottom:1px solid #eee; font-size:0.85rem;"><div style="color:#888; font-size:0.8rem;">${date} by ${actorName}</div><div>${changeMsg}</div></div>`;
         }).join('');
+
 
         const displayName = manualNameOverride || profile.full_name || profile.email || 'Guest';
         const subText = manualNameOverride 

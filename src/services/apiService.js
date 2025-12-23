@@ -76,3 +76,6 @@ console.log("--- [2] apiService.js: END ---");
 export const getClients = (token) => request('/user?type=clients', 'GET', null, token);
 
 export const updateUserProfile = (data, token) => request('/user?type=profile', 'PUT', data, token);
+
+
+export const getSystemLogs = (token) => request('/user?type=logs', 'GET', null, token);

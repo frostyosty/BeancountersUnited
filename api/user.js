@@ -258,6 +258,20 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
+        // TYPE: LOGS (Global Audit)
+        if (type === 'logs') {
+            const { data: adminProfile } = await supabaseAdmin.from(TABLES.PROFILES).select('role').eq('id', user.id).single();
+            if (adminProfile.role !== 'god') return res.status(403).json({ error: "God access only" });
+
+            const { data } = await supabaseAdmin
+                .from(TABLES.AUDIT)
+                .select(`*, ${TABLES.PROFILES}:actor_id (email)`)
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            return res.status(200).json(data || []);
+        }
+
     } catch (error) {
         console.error("User API Error:", error);
         return res.status(500).json({ error: error.message });
