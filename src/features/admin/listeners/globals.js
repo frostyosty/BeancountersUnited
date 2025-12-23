@@ -2,13 +2,15 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { useAppStore } from '@/store/appStore.js';
 import { supabase } from '@/supabaseClient.js';
-import { showCustomerCRMModal, showEditItemModal,showAddPastOrderModal } from '../modals/index.js';
+import { showCustomerCRMModal, showEditItemModal, showImageEditorModal, showAddPastOrderModal } from '../modals/index.js';
 
 
 export function attachGlobalHandlers() {
+    // --- 1. Order/Client Row Click ---
     window.handleOrderRowClick = (userId, manualNameOverride = null) => {
         const event = window.event; 
         const target = event.target;
+        // Don't trigger if clicking a button inside the row
         if (target.closest('button')) return;
 
         if (!userId || userId === 'null' || userId === 'undefined') { 
@@ -18,13 +20,24 @@ export function attachGlobalHandlers() {
         showCustomerCRMModal(userId, manualNameOverride);
     };
 
-    window.handleItemPhotoClick = (itemId) => {
-        import('../modals/index.js').then(m => {
-            const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
-            if (item) m.showImageEditorModal(item);
-        });
+    // --- 2. Menu Item Row Click (The Missing Fix) ---
+    window.handleItemRowClick = (itemId) => {
+        const event = window.event;
+        const target = event.target;
+        // Don't trigger if clicking the image or a button
+        if (target.closest('button') || target.closest('img') || target.closest('.admin-item-thumb')) return;
+
+        const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
+        if (item) showEditItemModal(item);
     };
 
+    // --- 3. Menu Item Photo Click ---
+    window.handleItemPhotoClick = (itemId) => {
+        const item = useAppStore.getState().menu.items.find(i => i.id === itemId);
+        if (item) showImageEditorModal(item);
+    };
+
+    // --- 4. Merge Client ---
     window.handleMergeClick = (sourceId) => {
         const targetId = prompt("Enter the User ID (UUID) of the CLIENT you want to keep:");
         if (!targetId) return;
@@ -40,10 +53,8 @@ export function attachGlobalHandlers() {
         }
     };
     
-    // Add Past Order Handler - We import this logic from adminListeners or define it here
+    // --- 5. Add Past Order ---
     window.showAddPastOrderModal = (prefillProfile = null) => {
-        // ... (Paste the showAddPastOrderModal logic here if you want it modular, 
-        // OR import it if you defined it elsewhere. 
-        // Best to define it in 'adminModals.js' and import/export it from there)
+        showAddPastOrderModal(prefillProfile);
     };
 }

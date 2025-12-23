@@ -152,3 +152,111 @@ export async function showCustomerCRMModal(userId, manualNameOverride = null) {
         uiUtils.showModal(`<div class="error-message">Could not load client details.</div>`);
     }
 }
+
+// --- NEW EXPORT: Add Past Order Modal ---
+export function showAddPastOrderModal(prefillProfile = null) {
+    const { items: menuItems } = useAppStore.getState().menu;
+    
+    // Create simple list for selecting items
+    const itemRows = menuItems.map(item => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center; border-bottom:1px solid #eee; padding:5px 0;">
+            <span style="font-size:0.9rem;">${item.name} ($${parseFloat(item.price).toFixed(2)})</span>
+            <input type="number" class="past-item-qty" data-id="${item.id}" data-price="${item.price}" value="0" min="0" style="width:60px; padding:5px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+    `).join('');
+
+    const modalHTML = `
+        <div class="modal-form-container">
+            <h3>Add Past Order Record</h3>
+            <div style="margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>
+                    <label>Client Name</label>
+                    <input type="text" id="past-client-name" placeholder="Name" 
+                           value="${prefillProfile ? (prefillProfile.internal_nickname || prefillProfile.full_name || 'Client') : ''}"
+                           ${prefillProfile ? 'readonly style="background:#eee;"' : ''}>
+                </div>
+                <div>
+                    <label>Date & Time</label>
+                    <input type="datetime-local" id="past-order-date" style="width:100%; padding:8px;">
+                </div>
+            </div>
+            
+            <div style="border:1px solid #ccc; max-height:300px; overflow-y:auto; padding:10px; margin-bottom:15px; background:#f9f9f9; border-radius:4px;">
+                ${itemRows}
+            </div>
+            
+            <div style="text-align:right;">
+                <button class="button-primary" id="save-past-order">Save Record</button>
+            </div>
+        </div>
+    `;
+    
+    uiUtils.showModal(modalHTML);
+    
+    // Set default date to now (adjusted for timezone offset to work with datetime-local)
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('past-order-date').value = now.toISOString().slice(0,16);
+
+    document.getElementById('save-past-order').onclick = async () => {
+        const btn = document.getElementById('save-past-order');
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+
+        const name = document.getElementById('past-client-name').value;
+        const dateVal = document.getElementById('past-order-date').value;
+        
+        if (!dateVal) {
+             uiUtils.showToast("Please select a date.", "error");
+             btn.disabled = false;
+             btn.textContent = "Save Record";
+             return;
+        }
+
+        const createdAt = new Date(dateVal).toISOString();
+        
+        const items = [];
+        let total = 0;
+        
+        document.querySelectorAll('.past-item-qty').forEach(input => {
+            const qty = parseInt(input.value);
+            if (qty > 0) {
+                const price = parseFloat(input.dataset.price);
+                items.push({ id: input.dataset.id, price, quantity: qty });
+                total += qty * price;
+            }
+        });
+        
+        if (items.length === 0) { 
+            uiUtils.showToast("No items selected", "error"); 
+            btn.disabled = false;
+            btn.textContent = "Save Record";
+            return; 
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        try {
+            await api.createManualOrder({
+                customerName: name || "Past Client",
+                items,
+                total,
+                createdAt, 
+                dueTime: createdAt,
+                targetUserId: prefillProfile ? prefillProfile.id : null
+            }, session.access_token);
+            
+            uiUtils.showToast("Past order recorded", "success");
+            uiUtils.closeModal();
+            
+            // Refresh tables
+            useAppStore.getState().admin.fetchClients();
+            useAppStore.getState().orderHistory.fetchOrderHistory();
+            
+        } catch(e) {
+            uiUtils.showToast(e.message, "error");
+            btn.disabled = false;
+            btn.textContent = "Save Record";
+        }
+    };
+}
