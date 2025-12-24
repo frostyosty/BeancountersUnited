@@ -3,7 +3,7 @@ import * as uiUtils from '@/utils/uiUtils.js';
 import * as api from '@/services/apiService.js';
 import { supabase } from '@/supabaseClient.js';
 import { openHeaderLogoEditor } from '@/features/admin/headerEditor/index.js';
-import { warper } from '@/utils/ui/imageMorph.js';
+import { warper } from '@/utils/ui/morph/index.js';
 
 export async function handleConfigClicks(target) {
     // Logo Clear
