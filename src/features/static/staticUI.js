@@ -37,7 +37,7 @@ export function renderStaticSite() {
             </div>
             
             <div style="margin-top:50px; text-align:center; border-top:1px solid #000; padding-top:20px;">
-                <p>Please order at the counter.</p>
+                <p>Please order at the counter. All prices and menu items are placeholders as we are undergoing website maintenance. </p>
                 <a href="/?mode=admin" style="color:#ccc; text-decoration:none; font-size:0.7rem;">Admin Login</a>
             </div>
         </main>
