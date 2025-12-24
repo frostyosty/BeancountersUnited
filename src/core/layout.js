@@ -85,7 +85,7 @@ export function renderAppShell() {
     `;
 }
 
-export function renderDesktopNav() {
+function renderDesktopNav() {
     const container = document.getElementById('desktop-nav-links');
     if (!container) return;
 
@@ -100,24 +100,28 @@ export function renderDesktopNav() {
         return `<a href="${hash}" class="nav-link ${activeClass}">${label}</a>`;
     };
 
+    // FIX: Declare 'html' string with the first link
     let html = makeLink('#menu', 'Menu');
 
-    if (aboutEnabled) html += makeLink('#about-us', 'About Us');
+    if (aboutEnabled) {
+        html += makeLink('#about-us', 'About Us');
+    }
 
     if (isAuthenticated && profile) {
-// FIX: Only show Order History to Customers (Admins see it in Dashboard)
-        if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
-            html += makeLink('#order-history', 'Order History');
+        if (profile.can_see_order_history) {
+            const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
+            html += makeLink('#order-history', label);
         }
-        
         if (profile.role === 'owner' || profile.role === 'god') {
             html += makeLink('#owner-dashboard', 'Dashboard');
         }
-        if (profile.role === 'owner' || profile.role === 'god') html += makeLink('#owner-dashboard', 'Dashboard');
-        if (profile.role === 'god') html += makeLink('#god-dashboard', 'God Mode');
+        if (profile.role === 'god') {
+            html += makeLink('#god-dashboard', 'God Mode');
+        }
     }
 
     html += `<a href="#cart" class="nav-link ${currentHash === '#cart' ? 'active' : ''}">Cart (<span id="cart-count">${cartCount}</span>)</a>`;
+    
     container.innerHTML = html;
 }
 
