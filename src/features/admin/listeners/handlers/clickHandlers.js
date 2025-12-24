@@ -3,9 +3,9 @@ import { showEditUserModal } from '@/features/admin/modals/index.js';
 import { currentSort, adminState } from '../state.js';
 
 // Import sub-handlers
-import { handleItemClicks } from './handlers/itemHandlers.js';
-import { handleConfigClicks } from './handlers/configHandlers.js';
-import { handleOrderClicks } from './handlers/orderHandlers.js';
+import { handleItemClicks } from './itemHandlers.js';
+import { handleConfigClicks } from './configHandlers.js';
+import { handleOrderClicks } from './orderHandlers.js';
 
 export function attachClickHandlers(container) {
     container.addEventListener('click', async (e) => {
