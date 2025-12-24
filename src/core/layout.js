@@ -1,4 +1,3 @@
-// src/core/layout.js
 import { useAppStore } from '@/store/appStore.js';
 import * as uiUtils from '@/utils/uiUtils.js';
 
@@ -15,7 +14,7 @@ function getBootSpinnerHTML() {
                 bootSpinner = `<svg class="loader-icon" viewBox="0 0 100 100"><g class="nail-body"><rect x="48" y="55" width="4" height="25" fill="currentColor"/><rect x="44" y="55" width="12" height="4" fill="currentColor"/></g><g class="hammer-body"><rect x="60" y="30" width="8" height="50" fill="currentColor" transform="rotate(-20 64 55)"/><path d="M45 20 H 85 V 35 H 45 Z" fill="currentColor" transform="rotate(-20 64 55)"/></g></svg>`;
             }
         }
-    } catch (e) {}
+    } catch (e) { }
 
     // Default Coffee (Squiggly Steam)
     if (!bootSpinner) {
@@ -40,7 +39,7 @@ export function renderAppShell() {
     let logoHTML = 'Mealmates';
     let logoStyle = '';
     let headerStyle = '';
-    
+
     // 1. Height
     try {
         const cachedSettings = localStorage.getItem('cached_site_settings');
@@ -49,14 +48,14 @@ export function renderAppShell() {
             const h = parsed.headerSettings?.height;
             if (h) headerStyle += `--header-height: ${h}px; height: ${h}px; `;
         }
-    } catch (e) {}
+    } catch (e) { }
 
     // 2. Logo & Color
     const cachedHeader = localStorage.getItem('cached_header_config');
     if (cachedHeader) {
         try {
             const config = JSON.parse(cachedHeader);
-            
+
             // FIX: Start downloading the specific header fonts immediately
             if (config.mainFont) uiUtils.ensureFontLoaded(config.mainFont);
             if (config.subFont) uiUtils.ensureFontLoaded(config.subFont);
@@ -66,7 +65,6 @@ export function renderAppShell() {
             if (config.bgColor) headerStyle += `background-color: ${config.bgColor};`;
         } catch (e) { console.error("Cache load failed", e); }
     }
-
 
     const spinnerHTML = getBootSpinnerHTML();
 
@@ -101,7 +99,7 @@ export function renderDesktopNav() {
         return `<a href="${hash}" class="nav-link ${activeClass}">${label}</a>`;
     };
 
-    // FIX: Define 'html' variable here
+    // --- CRITICAL FIX: Declare 'html' variable ---
     let html = makeLink('#menu', 'Menu');
 
     if (aboutEnabled) {
@@ -109,38 +107,37 @@ export function renderDesktopNav() {
     }
 
     if (isAuthenticated && profile) {
-        // 1. My Account (Standard for logged in users)
+        // 1. My Account
         html += makeLink('#my-account', `My ${siteName}`);
 
-        // 2. Order History: Only for regular customers (Admins see this in Dashboard)
+        // 2. Order History (Hidden for Admins)
         if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
             html += makeLink('#order-history', 'Order History');
         }
-        
-        // 3. Owner Dashboard
+
+        // 3. Admin Links
         if (profile.role === 'owner' || profile.role === 'god') {
             html += makeLink('#owner-dashboard', 'Dashboard');
         }
-        
-        // 4. God Mode
+
         if (profile.role === 'god') {
             html += makeLink('#god-dashboard', 'God Mode');
         }
     }
 
     html += `<a href="#cart" class="nav-link ${currentHash === '#cart' ? 'active' : ''}">Cart (<span id="cart-count">${cartCount}</span>)</a>`;
-    
+
     container.innerHTML = html;
 }
 
 export function renderPersistentUI() {
     // Import dynamically to avoid circle
     import('@/features/auth/authUI.js').then(m => m.renderAuthStatus());
-    
+
     renderDesktopNav();
     const cartCountSpan = document.getElementById('cart-count');
     if (cartCountSpan) cartCountSpan.textContent = useAppStore.getState().cart.getTotalItemCount();
-    
+
     // Refresh mobile menu
     if (window.buildMobileMenu) window.buildMobileMenu();
 }
@@ -164,39 +161,34 @@ export function setupHamburgerMenu() {
 
         if (isAuthenticated && profile) {
             const label = (profile.role === 'god' || profile.role === 'owner') ? 'Orders' : 'Order History';
-            
+
             navHTML += `<a href="#my-account" class="nav-link">My ${siteName}</a>`;
-if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
-                navHTML += `<a href="#order-history" class="nav-link">Order History</a>`;
+            if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !== 'god') {
+                navHTML += `<a href="#order-history" class="nav-link">${label}</a>`;
             }
-            
+
             if (profile.role === 'owner' || profile.role === 'god') {
                 navHTML += `<a href="#owner-dashboard" class="nav-link">Owner Dashboard</a>`;
             }
             if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
         }
 
-// --- NEW: Category Links Feature ---
+        // --- NEW: Category Links Feature ---
         if (settings?.hamburgerMenuContent === 'categories') {
-            // We need to access categories. 
-            // Note: settings.menuCategories might be undefined if not loaded.
-            // Safest to get from store state if available, or settings
             const categories = settings.menuCategories || [];
-            
             if (categories.length > 0) {
                 navHTML += `<div style="padding-left:20px; font-size:0.9em;">`;
                 categories.forEach(cat => {
-                    // Use a special data attribute to handle scroll
                     navHTML += `<a href="#menu" class="nav-link menu-cat-link" data-cat="${cat}" style="border-bottom:none; padding: 8px 0; color:#666;">↳ ${cat}</a>`;
                 });
                 navHTML += `</div>`;
             }
         }
-        // -----------------------------------
+        
+        // FIX: Use navHTML, not html
+        if (aboutEnabled) navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
 
-        if (aboutEnabled) html += `<a href="#about-us" class="nav-link">About Us</a>`;
-
-        let authSectionHTML = isAuthenticated 
+        let authSectionHTML = isAuthenticated
             ? `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`
             : `<div class="mobile-auth-section"><button id="login-signup-btn" class="button-primary">Login / Sign Up</button></div>`;
 
@@ -216,11 +208,8 @@ if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !=
         // Handle Category Deep Links
         if (e.target.classList.contains('menu-cat-link')) {
             const cat = e.target.dataset.cat;
-            // 1. Go to Menu
             window.location.hash = '#menu';
-            // 2. Set Filter
             useAppStore.getState().ui.setActiveMenuCategory(cat);
-            // 3. Close Menu
             toggleMenu();
             return;
         }
