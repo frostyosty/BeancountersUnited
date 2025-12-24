@@ -9,17 +9,34 @@ export const saveFunctions = {
     globalSettings: async (form) => {
         const formData = new FormData(form);
         const { data: { session } } = await supabase.auth.getSession();
+        
+        // Get existing settings to merge
         const currentSettings = useAppStore.getState().siteSettings.settings;
 
-        const settingsUpdate = {
-            websiteName: formData.get('websiteName'),
+        // 1. Core Settings
+        const settingsUpdate = { 
+            websiteName: formData.get('websiteName'), 
             hamburgerMenuContent: formData.get('hamburgerMenuContent'),
             logoUrl: currentSettings.logoUrl
         };
-
-        await api.updateSiteSettings(settingsUpdate, session.access_token);
+        
+        // 2. Theme Variables (Layout)
+        const newThemeVars = {
+            ...currentSettings.themeVariables,
+            '--site-zoom': formData.get('zoomLevel'),
+            '--global-padding': formData.get('globalPadding'),
+            '--section-margin': formData.get('sectionMargin'),
+            '--border-radius': formData.get('borderRadius')
+        };
+        
+        // Save both
+        await api.updateSiteSettings({ ...settingsUpdate, themeVariables: newThemeVars }, session.access_token);
+        
         uiUtils.updateSiteTitles(settingsUpdate.websiteName, null);
-        uiUtils.showToast('Settings saved.', 'success', 1000);
+        uiUtils.showToast('Global settings & Layout saved.', 'success', 1000);
+        
+        // Refresh store
+        useAppStore.getState().siteSettings.fetchSiteSettings();
     },
 
     menuConfig: async (form) => {

@@ -30,8 +30,12 @@ export function renderOperationsSection(settings) {
                 <div style="margin-bottom:20px;">
                     <label style="font-weight:bold; display:flex; gap:10px; align-items:center; cursor:pointer; margin-bottom:10px;">
                         <input type="checkbox" name="hoursEnabled" ${hours.enabled ? 'checked' : ''}> 
-                        Enforce Opening Hours (Block checkout when closed)
+                        Enforce Opening Hours
                     </label>
+                    <p style="font-size:0.8rem; color:#666; margin-top:-5px; margin-bottom:10px;">
+                        If checked, customers cannot enter the checkout screen outside of these times. 
+                        It does NOT automatically schedule orders for later; it simply blocks "Now" orders.
+                    </p>
                     <div style="background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;">
                         ${hoursRows}
                     </div>

@@ -164,7 +164,25 @@ if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !=
             if (profile.role === 'god') navHTML += `<a href="#god-dashboard" class="nav-link">God Mode</a>`;
         }
 
-        if (aboutEnabled) navHTML += `<a href="#about-us" class="nav-link">About Us</a>`;
+// --- NEW: Category Links Feature ---
+        if (settings?.hamburgerMenuContent === 'categories') {
+            // We need to access categories. 
+            // Note: settings.menuCategories might be undefined if not loaded.
+            // Safest to get from store state if available, or settings
+            const categories = settings.menuCategories || [];
+            
+            if (categories.length > 0) {
+                navHTML += `<div style="padding-left:20px; font-size:0.9em;">`;
+                categories.forEach(cat => {
+                    // Use a special data attribute to handle scroll
+                    navHTML += `<a href="#menu" class="nav-link menu-cat-link" data-cat="${cat}" style="border-bottom:none; padding: 8px 0; color:#666;">↳ ${cat}</a>`;
+                });
+                navHTML += `</div>`;
+            }
+        }
+        // -----------------------------------
+
+        if (aboutEnabled) html += `<a href="#about-us" class="nav-link">About Us</a>`;
 
         let authSectionHTML = isAuthenticated 
             ? `<div class="mobile-auth-section"><button id="logout-btn" class="button-secondary">Logout</button></div>`
@@ -183,7 +201,21 @@ if (profile.can_see_order_history && profile.role !== 'owner' && profile.role !=
 
     hamburgerBtn.addEventListener('click', () => toggleMenu());
     mobileMenuPanel.addEventListener('click', (e) => {
-        if (e.target.closest('a.nav-link') || e.target.closest('button')) toggleMenu();
+        // Handle Category Deep Links
+        if (e.target.classList.contains('menu-cat-link')) {
+            const cat = e.target.dataset.cat;
+            // 1. Go to Menu
+            window.location.hash = '#menu';
+            // 2. Set Filter
+            useAppStore.getState().ui.setActiveMenuCategory(cat);
+            // 3. Close Menu
+            toggleMenu();
+            return;
+        }
+
+        if (e.target.closest('a.nav-link') || e.target.closest('button')) {
+            toggleMenu();
+        }
     });
     mainContent.addEventListener('click', () => {
         if (mobileMenuPanel.classList.contains('open')) toggleMenu();

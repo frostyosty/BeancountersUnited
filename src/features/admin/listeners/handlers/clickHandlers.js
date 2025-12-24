@@ -165,6 +165,35 @@ export function attachClickHandlers(container) {
              );
         }
 
+
+         // --- Layout Adjusters (Moved from God Mode) ---
+        if (target.matches('.zoom-btn')) {
+            const val = target.dataset.val;
+            document.getElementById('zoom-input').value = val;
+            document.body.style.zoom = val; 
+        }
+        
+        if (target.matches('.adjust-btn')) {
+            const targetId = target.dataset.target;
+            const step = parseInt(target.dataset.step, 10);
+            const unit = target.dataset.unit || 'px';
+            const input = document.getElementById(targetId);
+            
+            // Parse current value
+            const match = input.value.match(/(\d*\.?\d+)/);
+            let currentVal = match ? parseFloat(match[0]) : 0;
+            // Convert rem to approx px if switching units (simple fallback)
+            if (input.value.includes('rem') && unit === 'px') currentVal = currentVal * 16; 
+            
+            let newVal = Math.max(0, currentVal + step) + unit;
+            input.value = newVal;
+
+            // Live Preview
+            if (targetId === 'padding-input') document.documentElement.style.setProperty('--global-padding', newVal);
+            if (targetId === 'margin-input') document.documentElement.style.setProperty('--section-margin', newVal);
+            if (targetId === 'radius-input') document.documentElement.style.setProperty('--border-radius', newVal);
+        }
+        
         // --- ROW ACTIONS ---
         if (target.classList.contains('action-btn')) {
             const btn = target;
