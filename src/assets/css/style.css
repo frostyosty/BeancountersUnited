@@ -1,0 +1,1651 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Lato:wght@300;400;700;900&family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Oswald:wght@300;400;700&family=Pacifico&family=Playfair+Display:wght@400;700;900&family=Righteous&family=Roboto+Slab:wght@300;400;700;900&family=Ubuntu:wght@400;700&display=swap');
+
+
+/* ==========================================================================
+   1. VARIABLES & THEMING
+   ========================================================================== */
+:root {
+    /* --- Colors --- */
+    --primary-color: #4d2909;
+    --secondary-color: #6c757d;
+    --background-color: #ffffff;
+    --surface-color: #f8f9fa;
+    --text-color: #212529;
+    --border-color: #dee2e6;
+    
+    /* --- Layout Controls (Updated via God Mode) --- */
+    --global-padding: 1rem;
+    --section-margin: 2rem;
+    --border-radius: 0.25rem;
+    --site-zoom: 100%;
+
+    /* --- Typography --- */
+    --font-family-main-name: system-ui;
+    --font-family-sans-serif: var(--font-family-main-name), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dark Mode Override */
+html.dark {
+    --primary-color: #fa3a18;
+    --secondary-color: #8c96a2;
+    --background-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --border-color: #333;
+}
+
+/* Apply God Mode Zoom */
+html { zoom: var(--site-zoom); }
+
+/* ==========================================================================
+   2. RESET & BASE STYLES
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding-bottom: 60px; /* Space for Footer/Toolbar */
+    font-family: var(--font-family-sans-serif);
+    font-size: 1rem;
+    /* line-height: 1.5; */
+    color: var(--text-color);
+    background-color: var(--background-color);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+h1, h2, h3, h4 { margin-top: 0; color: var(--text-color); }
+p { margin-bottom: 1rem; }
+img { max-width: 100%; height: auto; display: block; }
+ul { list-style: none; padding: 0; margin: 0; }
+
+/* ==========================================================================
+   3. LAYOUT STRUCTURE
+   ========================================================================== */
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#main-content {
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--global-padding);
+    /* Entry Animation */
+    animation: fade-content-up 0.6s ease-out;
+}
+
+@keyframes fade-content-up {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+#main-footer {
+    background-color: var(--surface-color);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+/* ==========================================================================
+   4. HEADER & NAVIGATION (Grid Layout)
+   ========================================================================== */
+#main-header {
+    z-index: 3001; 
+
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    height: 60px;
+    padding: 0 var(--global-padding);
+
+    /* Grid: Left (Empty/Burger), Center (Logo), Right (Nav) */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+}
+
+/* Logo (Center) */
+#main-header h1 {
+    grid-column: 2;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin: 0;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 1;
+}
+
+.site-logo { max-height: 45px; width: auto; margin: 0 auto; }
+
+/* Nav Area (Right) */
+#main-header nav {
+    grid-column: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: color 0.2s;
+}
+.nav-link:hover, .nav-link.active { color: var(--primary-color); }
+
+/* Auth Status Wrapper */
+#auth-status-container { display: flex; align-items: center; gap: 10px; }
+
+/* ==========================================================================
+   5. MOBILE MENU & HAMBURGER
+   ========================================================================== */
+/* The Button */
+.hamburger-button {
+    display: none; /* Hidden on desktop */
+    width: 30px;
+    height: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    padding: 0;
+    
+    /* Z-INDEX CRITICAL: Must be > Mobile Panel (2000) */
+    z-index: 2001; 
+    
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hamburger-button span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: var(--text-color);
+    border-radius: 2px;
+    transition: all 0.3s ease-in-out;
+    transform-origin: center;
+}
+
+/* The "X" Animation */
+.hamburger-button.open span:nth-child(1) { transform: translateY(10.5px) rotate(45deg); }
+.hamburger-button.open span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+.hamburger-button.open span:nth-child(3) { transform: translateY(-10.5px) rotate(-45deg); }
+
+/* The Panel */
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+    z-index: 3000; 
+    padding-top: 20px; /* Adjust padding since header is now visible above it */
+
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-menu-panel.open { transform: translateX(0); }
+
+.mobile-menu-panel .nav-link {
+    display: block;
+    padding: 1rem 1.5rem;
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-auth-section { padding: 2rem; text-align: center; margin-top: auto; }
+
+/* ==========================================================================
+   6. COMPONENT STYLES
+   ========================================================================== */
+/* Buttons */
+.button-primary, .button-secondary, .button-danger {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+.button-primary { background-color: var(--primary-color); color: white; }
+.button-secondary { background-color: var(--secondary-color); color: white; }
+.button-danger { background-color: #dc3545; color: white; }
+.button-primary:hover, .button-secondary:hover, .button-danger:hover { opacity: 0.9; }
+.button-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.small { padding: 0.3rem 0.6rem; font-size: 0.85rem; }
+
+/* Forms */
+.form-group { margin-bottom: 1rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+input, select, textarea {
+    width: 100%; padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 1rem;
+}
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* Tables */
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+th { background-color: var(--surface-color); }
+.role-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: white; }
+.role-badge.god { background: #dc3545; }
+.role-badge.owner { background: #28a745; }
+.role-badge.customer { background: var(--secondary-color); }
+
+/* ==========================================================================
+   7. FEATURE STYLES (Menu, Cart, History, Dashboard)
+   ========================================================================== */
+/* Menu */
+.menu-header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+.sub-tabs-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
+.sub-tab-button {
+    padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid var(--border-color);
+    background: var(--surface-color); cursor: pointer;
+}
+.sub-tab-button.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+.menu-items-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem;
+    margin-bottom: var(--section-margin);
+}
+.menu-item-card {
+    border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden;
+    transition: transform 0.2s;
+}
+.menu-item-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.menu-item-image { width: 100%; height: 180px; object-fit: cover; }
+.menu-item-content { padding: 1rem; }
+.menu-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+.menu-item-price { font-weight: bold; color: var(--primary-color); font-size: 1.1rem; }
+
+/* Cart */
+.cart-item { display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+.quantity-selector { display: flex; border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+.quantity-btn { background: none; border: none; padding: 0.5rem; cursor: pointer; }
+.quantity-input { border: none; width: 40px; text-align: center; }
+
+/* Order History */
+.order-history-list { display: flex; flex-direction: column; gap: 1rem; }
+.order-history-card { background: var(--surface-color); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--border-radius); }
+.order-card-header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+
+/* Admin / Uploads */
+#image-preview { width: 100px; height: 100px; object-fit: cover; border: 1px solid var(--border-color); display: block; margin-bottom: 10px; }
+
+/* ==========================================================================
+   8. UTILITIES (Modals, Toasts, Loaders)
+   ========================================================================== */
+/* Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 3000; /* Highest UI layer */
+}
+.modal-content, .modal-form-container {
+    background: var(--background-color); padding: 2rem;
+    border-radius: var(--border-radius);
+    /* width: 90%; */
+    max-width: 600px;
+    
+    position: relative; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.debug-modal-container { background: white; padding: 20px; width: 90%; height: 80vh; }
+
+/* Toasts */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+.toast { padding: 1rem; border-radius: var(--border-radius); color: white; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease; }
+.toast-success { background: #28a745; }
+.toast-error { background: #dc3545; }
+.toast-info { background: var(--secondary-color); }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+/* Initial Loader (Full Screen) */
+.initial-app-loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--background-color); z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.4s ease-out, visibility 0.4s;
+}
+.initial-app-loader.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Coffee Spinner Animation */
+.dynamic-coffee-spinner { width: 90px; height: 90px; color: var(--primary-color); opacity: 0.9; }
+.cup-outline { stroke: currentColor; fill: none; transition: stroke 0.5s; }
+.steam-line { stroke: currentColor; fill: none; opacity: 0; animation: steam-rise 2s infinite ease-in-out; }
+.steam-2 { animation-delay: 0.6s; }
+.steam-3 { animation-delay: 1.2s; }
+@keyframes steam-rise {
+    0% { opacity: 0; transform: translateY(5px); }
+    50% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Hammer Spinner Animation */
+.dynamic-hammer-spinner { width: 80px; height: 80px; color: var(--primary-color); }
+.hammer-body { transform-origin: 70px 70px; animation: hammer-swing 1s infinite ease-in-out; }
+.nail-body { animation: nail-hit 1s infinite ease-in-out; }
+@keyframes hammer-swing {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(15deg); }
+    100% { transform: rotate(0deg); }
+}
+@keyframes nail-hit {
+    0%, 40% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+    100% { transform: translateY(0); }
+}
+
+/* Auth Mini Spinner */
+.auth-loading-spinner { width: 24px; height: 24px; color: var(--primary-color); }
+
+/* ==========================================================================
+   9. GOD MODE UI
+   ========================================================================== */
+#god-mode-toolbar {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: #111; color: #fff; padding: 8px;
+    z-index: 5000; display: flex; justify-content: center;
+    font-size: 0.85rem;
+}
+.toolbar-content { display: flex; gap: 1rem; align-items: center; }
+.toolbar-btn { background: #333; color: #fff; border: 1px solid #555; padding: 2px 8px; cursor: pointer; }
+.toolbar-btn.stop-btn { background: var(--primary-color); }
+
+#god-mode-debug-btn {
+    /* Positioned via JS, but enforced here */
+    z-index: 6000 !important; 
+    transition: transform 0.2s;
+}
+#god-mode-debug-btn:hover { transform: scale(1.1); }
+
+/* ==========================================================================
+   10. MEDIA QUERIES (Mobile)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* Hide Desktop Nav */
+    .nav-link:not(.mobile-only) { display: none; }
+    #auth-status-container { display: none; }
+    
+    /* Show Hamburger */
+    .hamburger-button { display: flex; }
+    
+    /* Stack Modal */
+    .auth-modal-container { flex-direction: column; }
+    .auth-divider { width: 100%; height: 1px; margin: 1rem 0; }
+    #main-header .nav-link { 
+        display: none; 
+    }
+    
+    /* Force links in the panel to be visible */
+    .mobile-menu-panel .nav-link {
+        display: block !important;
+        padding: 1rem 1.5rem;
+        font-size: 1.2rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+}
+
+
+
+/* --- BETTER BUTTON STYLES --- */
+
+/* 1. Modal Close Button (Top Right) */
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50%; /* Perfect Circle */
+    color: var(--text-color);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.modal-close-btn:hover {
+    background-color: #dc3545; /* Red on hover */
+    color: white;
+    border-color: #dc3545;
+    transform: rotate(90deg); /* Spin effect */
+}
+
+/* 2. Delete Icon Button (Trash Can style) */
+.delete-icon-btn, .delete-item-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #dc3545; /* Red text */
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.delete-icon-btn:hover, .delete-item-btn:hover {
+    background-color: #fff5f5;
+    border-color: #dc3545;
+    transform: scale(1.05);
+}
+
+/* Add a generic icon if using text "Delete" */
+.delete-item-btn::before {
+    content: "🗑️"; /* Optional trash icon */
+    font-size: 0.9em;
+}
+
+/* --- Allergen Filters (Menu Page) --- */
+.allergen-filter-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--secondary-color);
+}
+.allergen-filter-btn.active {
+    background-color: #e8f5e9;
+    border-color: #2ecc71;
+    color: #27ae60;
+    font-weight: bold;
+}
+.allergen-filter-btn:hover {
+    background-color: var(--surface-color);
+}
+
+/* Badge on Card */
+.allergen-container {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-left: 5px;
+}
+.allergen-badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: white;
+    font-weight: bold;
+}
+.allergen-badge.GF { background-color: #2ecc71; }
+.allergen-badge.V  { background-color: #27ae60; }
+.allergen-badge.VG { background-color: #9b59b6; }
+.allergen-badge.DF { background-color: #3498db; }
+
+
+
+/* --- HEADER: Always on top --- */
+#main-header {
+    position: sticky;
+    top: 0;
+    /* Highest priority so Logo/Burger stay visible */
+    z-index: 2000; 
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* --- FIX MOBILE MENU VISIBILITY --- */
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    z-index: 1200; /* FIX: Must be HIGHER than header (1100) to be seen */
+    
+    /* FIX: Padding so items aren't hidden by the top edge/status bar */
+    padding-top: 80px; 
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the Hamburger Button is on TOP of the open panel */
+.hamburger-button {
+    z-index: 1300; /* Highest priority */
+    position: relative;
+}
+
+/* --- FIX TOAST ANIMATIONS (Issue #8) --- */
+.toast {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    color: white;
+    width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    
+    /* Entry Animation */
+    animation: slideIn 0.3s ease forwards; 
+    
+    /* Ensure it has opacity 1 initially */
+    opacity: 1; 
+}
+
+/* Hide class triggered by JS */
+.toast.hide {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+
+
+
+/* --- MOBILE PANEL: Slides underneath header --- */
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    /* Lower than Header (2000) but higher than content (1) */
+    z-index: 1900; 
+    
+    padding-top: 80px; /* Space for header */
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-menu-panel.open {
+    transform: translateX(0);
+}
+
+/* --- HAMBURGER LINES: Fix visibility --- */
+.hamburger-button span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    /* Ensure color contrasts with surface */
+    background-color: var(--text-color); 
+    border-radius: 2px;
+    transition: all 0.3s ease-in-out;
+    transform-origin: center;
+    opacity: 1; /* Default opacity */
+}
+
+/* Open State Animations */
+.hamburger-button.open span:nth-child(1) { transform: translateY(10.5px) rotate(45deg); }
+.hamburger-button.open span:nth-child(2) { opacity: 0; } /* Middle line disappears */
+.hamburger-button.open span:nth-child(3) { transform: translateY(-10.5px) rotate(-45deg); }
+
+
+/* --- SCROLLABLE TABLES (Mobile) --- */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Horizontal scroll */
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .table-wrapper {
+        /* Constrain height on mobile so the whole page doesn't stretch */
+        max-height: 60vh; 
+        overflow-y: auto; /* Vertical scroll */
+        display: block;
+    }
+    
+    /* Fix sticky header for the table */
+    .table-wrapper thead th {
+        position: sticky;
+        top: 0;
+        background-color: var(--surface-color);
+        z-index: 1;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.hamburger-button {
+    z-index: 2100; /* Higher than Header (2000) and Panel (1900) */
+    position: relative;
+}
+
+.hamburger-button span {
+    /* Force a color that contrasts with your --surface-color */
+    background-color: var(--text-color); 
+}
+
+/* Fix the "X" animation to stay within the box */
+.hamburger-button.open span:nth-child(1) {
+    transform: translateY(10px) rotate(45deg);
+}
+.hamburger-button.open span:nth-child(2) {
+    opacity: 0;
+}
+.hamburger-button.open span:nth-child(3) {
+    transform: translateY(-10px) rotate(-45deg);
+}
+
+
+/* 1. Parallax Effect */
+/* Keeps image static while content scrolls over it */
+body.bg-parallax {
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
+}
+
+/* 2. Background Animation (Slow Diagonal Scroll) */
+@keyframes bg-scroll-diag {
+    0% { background-position: 0 0; }
+    100% { background-position: 500px 500px; } /* Moves 500px diagonally */
+}
+
+body.bg-animate {
+    animation: bg-scroll-diag 60s linear infinite;
+}
+
+
+/* --- Desktop Nav Group (Dynamic Links) --- */
+.desktop-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Hide on mobile (use the existing media query or add this) */
+@media (max-width: 768px) {
+    .desktop-nav-group {
+        display: none;
+    }
+}
+
+
+/* --- Icon Buttons (Delete/Remove) --- */
+.delete-icon-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #dc3545;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.delete-icon-btn:hover {
+    background-color: #fff0f0;
+    transform: scale(1.1);
+}
+
+
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+/* --- TOAST CONTAINER (Fixed Positioning) --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0; /* Span full width */
+    z-index: 9999;
+    
+    /* Flexbox Centering (Robust against Zoom) */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center horizontally */
+    gap: 10px;
+    pointer-events: none; /* Let clicks pass through the container area */
+}
+
+.toast {
+    /* ... keep existing styles ... */
+    pointer-events: auto; /* Re-enable clicks on the toast itself */
+    cursor: default;
+}
+
+.toast.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+
+/* Header Editor Inputs Grid */
+.he-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+
+#toast-container {
+    position: fixed;
+    /* Vertical position handled by JS (top/bottom) */
+    
+    /* Horizontal: Span full width by default for easy centering */
+    left: 0;
+    right: 0;
+    
+    z-index: 9999;
+    
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    
+    /* CRITICAL: Let clicks pass through the invisible container */
+    pointer-events: none; 
+}
+
+.toast {
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    color: white;
+    width: auto;           /* Don't force 300px, let it fit content */
+    max-width: 90%;        /* But don't overflow mobile screens */
+    min-width: 250px;      /* Consistent look */
+    
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    
+    /* Animation defaults */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease-out;
+    
+    /* CRITICAL: Re-enable clicks on the toast itself */
+    pointer-events: auto; 
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-info { background-color: var(--secondary-color, #666); }
+.toast.toast-success { background-color: #28a745; }
+.toast.toast-error { background-color: #dc3545; }
+.toast.clickable { cursor: pointer; text-decoration: underline; }
+
+
+
+/* ==========================================================================
+   HEADER EDITOR (MODAL STYLES)
+   ========================================================================== */
+
+/* The Modal Inner Wrapper */
+.he-modal-wrapper {
+    font-family: var(--font-family-sans-serif);
+    color: #333;
+    width: 100%;
+    /* Ensure it fits on smaller screens */
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.he-title {
+    margin: 0;
+    font-size: 1.25rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.he-subtitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 15px 0 10px 0;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* Preview Box */
+.he-preview-box {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Layout Grid (2 Columns on Desktop) */
+.he-controls-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 700px) {
+    .he-controls-container {
+        grid-template-columns: 1fr; /* Stack on mobile */
+    }
+}
+
+.he-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Input Components */
+.he-input-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.he-input-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+}
+
+.he-color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9f9f9;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid #eee;
+}
+
+input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.he-color-value {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.he-text-input, .he-select, .he-number-input {
+
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    margin-left: 10px;
+}
+
+.he-text-input { width: 100%; box-sizing: border-box; }
+.he-select { width: 100%; background: white; }
+.he-number-input { width: 60px; text-align: center; }
+
+/* Range Sliders Row */
+.he-range-group {
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+.he-range-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 2px;
+}
+.he-range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+}
+.he-range-row input { flex: 1; }
+
+.he-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.he-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 10px 0;
+}
+
+/* Footer Actions */
+.he-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+
+/* New Helper for Reset Buttons */
+.reset-pos-btn {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    margin-left: 5px;
+}
+.reset-pos-btn:hover {
+    background: #eee;
+    color: #333;
+}
+
+
+/* Header Editor Drop Zone */
+.he-drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    background: #f9f9f9;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.he-drop-zone:hover, .he-drop-zone.drag-over {
+    border-color: var(--primary-color);
+    background: #fffdf5;
+    color: var(--primary-color);
+}
+
+.he-drop-zone p { margin: 0; font-size: 0.9rem; }
+.he-drop-zone small { font-size: 0.75rem; color: #999; }
+
+
+/* --- Header Editor: Letter Selector --- */
+.he-letter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0;
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.he-letter-chip {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.he-letter-chip.selected {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Advanced Controls Panel */
+.he-adv-controls {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fff;
+    display: none; /* Hidden until letter selected */
+}
+.he-adv-controls.active { display: block; animation: fadeIn 0.2s; }
+
+
+.he-mini-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.he-mini-label { font-size: 0.7rem; color: #666; width: 40px; }
+.he-mini-input { flex: 1; padding: 2px; font-size: 0.8rem; }
+
+.modal-content{
+    padding: 0.5rem;
+    width: 95%;
+}
+
+
+/* 2. Sticky Preview Box */
+.he-preview-box {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    
+    /* STICKY MAGIC */
+    position: sticky; 
+    top: 0;
+    z-index: 100; /* Sit above controls */
+    margin-bottom: 20px;
+}
+
+
+
+
+
+
+/* --- FIX: Custom Header SVG Scaling --- */
+#main-header h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* or flex-start based on alignment settings */
+    height: 100%;
+    overflow: hidden; /* Cut off anything sticking out */
+}
+
+#main-header h1 svg {
+    display: block;
+    width: auto;       /* Let width grow naturally */
+    height: 100%;      /* Force height to match header (60px) */
+    max-width: 100%;   /* Don't overflow width */
+    
+    /* Ensure it doesn't stretch weirdly */
+    object-fit: contain; 
+}
+
+
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    z-index: 9999;
+    
+    /* FORCE CENTERING STRATEGY */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    top: auto !important;
+    
+    /* Layout */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    
+    /* Allow it to grow but not overflow */
+    width: auto;
+    max-width: 90vw; 
+    
+    pointer-events: none;
+}
+
+.toast {
+    /* Reset margins */
+    margin: 0 !important;
+    pointer-events: auto;
+    /* ... rest of styles ... */
+}
+
+
+
+:root {
+    /* ... existing vars ... */
+    --header-height: 60px; /* Default */
+}
+
+/* Update Main Header to use var */
+#main-header {
+    height: var(--header-height);
+    /* ... rest of properties ... */
+}
+
+/* Ensure mobile panel respects the new height */
+.mobile-menu-panel {
+    padding-top: calc(var(--header-height) + 20px);
+}
+
+
+/* --- MODAL FIXES --- */
+
+.modal-content {
+    /* Ensure relative positioning so the close button sticks to this box */
+    position: relative; 
+    background: var(--background-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    width: 95%; 
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 10px;    /* 10px from top edge */
+    right: 10px;  /* 10px from right edge */
+    
+    width: 32px;
+    height: 32px;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    
+    font-size: 1.5rem;
+    line-height: 1; /* Center X vertically */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s;
+    z-index: 10; /* Above modal content */
+}
+
+.modal-close-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+
+/* --- Order Table Enhancements --- */
+
+/* Clickable Client Name */
+.client-name-btn {
+    display: inline-block;
+    padding: 4px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* Pill shape */
+    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.client-name-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Live Timer Styling */
+.live-timer {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums; /* Prevents jumping numbers */
+}
+.live-timer.overdue { color: #dc3545; } /* Red if overdue */
+.live-timer.due-soon { color: #e67e22; } /* Orange if < 10 mins */
+.live-timer.okay { color: #28a745; }    /* Green otherwise */
+
+
+
+
+/* --- HAMBURGER BUTTON (High Contrast) --- */
+.hamburger-button {
+    /* Position */
+    position: relative;
+    z-index: 2100; /* Highest priority */
+    
+    /* Box Styling */
+    width: 44px; /* Slightly larger touch target */
+    height: 40px;
+    padding: 8px 10px; /* Internal spacing */
+    background-color: rgba(255, 255, 255, 0.85); /* Semi-transparent white */
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    
+    /* Layout */
+    display: none; /* Hidden on desktop by default */
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hamburger-button:hover {
+    background-color: #fff;
+    transform: scale(1.05);
+}
+
+.hamburger-button span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: #333; /* Always dark text color for contrast against white button */
+    border-radius: 2px;
+    transition: all 0.3s ease-in-out;
+    transform-origin: center;
+    opacity: 1;
+}
+
+/* Open State Animations */
+/* .hamburger-button.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); } */
+.hamburger-button.open span:nth-child(2) { opacity: 0; }
+/* .hamburger-button.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); } */
+
+@media (max-width: 768px) {
+    .hamburger-button { display: flex; }
+}
+
+
+
+/* src/assets/css/style.css */
+
+.mobile-menu-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    
+    /* FIX: Dynamic Width Logic */
+    width: max-content;   /* Snap to widest element */
+    min-width: 200px;     /* Minimum nice looking width */
+    max-width: 85vw;      /* Never cover the whole screen */
+    
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    z-index: 1900; 
+    
+    /* Ensure padding for the content */
+    padding-top: calc(var(--header-height, 60px) + 20px); 
+    padding-right: 10px; /* Add breathing room on the right */
+    
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-menu-panel.open {
+    transform: translateX(0);
+}
+
+.mobile-menu-panel .nav-link {
+    display: block;
+    padding: 1rem 1.5rem;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-color);
+    
+    /* FIX: Force text to stay on one line so the panel widens */
+    white-space: nowrap; 
+}
+
+
+.dashboard-section {
+
+    margin-bottom: 5px;
+}
+
+
+
+@media (max-width: 768px) {
+    /* ... existing mobile styles ... */
+
+    /* FIX: Force Logo to absolute center on mobile */
+    #main-header h1 {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto; /* Let it size itself */
+        margin: 0;
+        grid-column: unset; /* Detach from grid */
+        white-space: nowrap;
+        pointer-events: none; /* Let clicks pass through if it overlaps buttons */
+    }
+    
+    /* Ensure hamburger stays clickable on top */
+    .hamburger-button {
+        z-index: 2200;
+        margin-left: auto; /* Push to right */
+    }
+    
+    /* Ensure Nav container is right-aligned */
+    #main-header nav {
+        justify-content: flex-end;
+    }
+}
+
+
+/* --- About Us Phone Button --- */
+.about-phone-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background-color: #28a745; /* Green for Call */
+    color: white;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 12px 25px;
+    border-radius: 50px; /* Pill shape */
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 20px;
+}
+
+.about-phone-btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Mobile Specific: Make it a Floating "Sticky" Button */
+@media (max-width: 768px) {
+    .about-phone-btn.mobile-sticky {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%; /* Prominent width */
+        max-width: 300px;
+        z-index: 900; /* Above content, below toasts/modals */
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        font-size: 1.1rem;
+        animation: floatUp 0.5s ease-out;
+    }
+}
+
+@keyframes floatUp {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+
+/* --- Row Highlighting Animation --- */
+@keyframes flashRedFade {
+    0% { background-color: rgba(220, 53, 69, 0.4); } /* Reddish */
+    50% { background-color: rgba(220, 53, 69, 0.1); }
+    100% { background-color: transparent; }
+}
+
+tr.flash-highlight {
+    animation: flashRedFade 2s ease-out forwards;
+}
+
+
+#main-header {
+    /* ... existing styles ... */
+    
+    /* ADD THIS: Smooth Bezier Transition */
+    transition: 
+        height 0.6s cubic-bezier(0.22, 1, 0.36, 1), 
+        background-color 0.6s ease;
+        
+    /* Optimization to prevent blurriness during animation */
+    will-change: height;
+}
+
+#main-header h1 {
+    /* ... existing styles ... */
+    
+    /* Smoothly resize/recenter content if header changes */
+    transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Also smooth the mobile panel top-padding adjustment */
+.mobile-menu-panel {
+    /* ... existing styles ... */
+    transition: 
+        transform 0.3s ease-in-out,
+        padding-top 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* src/assets/css/style.css */
+
+/* ... existing styles ... */
+
+/* --- Header Editor: Unsaved Changes Overlay --- */
+.he-unsaved-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    z-index: 50; /* Above controls */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    animation: fadeIn 0.2s;
+}
+
+.he-unsaved-box {
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 300px;
+}
+
+.he-unsaved-box h4 { margin-top: 0; color: var(--primary-color); }
+.he-unsaved-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+
+/* --- CENTRAL LOADING SPINNER --- */
+.loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh; /* Center in the available view area */
+    width: 100%;
+    color: var(--primary-color);
+}
+
+.loader-icon {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.loader-text {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* --- ANIMATIONS --- */
+.anim-pulse {
+    animation: spin-pulse 2s infinite ease-in-out;
+}
+.anim-bounce {
+    animation: spin-bounce 1s infinite ease-in-out;
+}
+.anim-fade {
+    animation: spin-fade 1.5s infinite ease-in-out;
+}
+.anim-spin {
+    animation: spin-rotate 1.5s infinite linear;
+}
+
+@keyframes spin-pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+@keyframes spin-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+@keyframes spin-fade {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+@keyframes spin-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+
+/* src/assets/css/style.css */
+
+/* Slower, gentler rise */
+.mini-steam {
+    stroke: currentColor;
+    opacity: 0;
+    /* Changed from 1.5s to 2.5s for a more relaxed vibe */
+    animation: steamRise 2.5s infinite ease-in-out;
+}
+
+@keyframes steamRise {
+    0% { transform: translateY(0); opacity: 0; }
+    50% { opacity: 0.8; }
+    100% { transform: translateY(-15px); opacity: 0; }
+}
+
+
+
+
+/* Navigation Links */
+.nav-link {
+    text-decoration: none;
+    /* Default to text color, but allow override via --header-text-color */
+    color: var(--header-text-color, var(--text-color)); 
+    font-weight: 500;
+    transition: color 0.2s;
+    position: relative;
+}
+
+.nav-link:hover {
+    opacity: 0.8;
+}
+
+.nav-link.active {
+    font-weight: bold;
+    /* Use the calculated safe color */
+    color: var(--header-active-color, var(--primary-color)); 
+    /* Add underline just in case color matches text color exactly */
+    border-bottom: 2px solid var(--header-active-color, var(--primary-color));
+}
+
+/* Ensure hamburger spans match text color */
+.hamburger-button span {
+    background-color: var(--header-text-color, var(--text-color));
+}
+
+
+/* Admin Tabs */
+.admin-tab-btn {
+    background: white;
+    border: 1px solid #ccc;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.admin-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.admin-tab-btn:hover {
+    transform: translateY(-2px);
+}
+
+
+/* --- Dashboard Layout Config Fixes --- */
+#tab-sort-list {
+    max-width: 100%;
+    overflow: hidden; /* Prevent horizontal scroll causing issues */
+}
+
+.tab-config-item {
+    /* Ensure it fits within the padding */
+    width: 100%; 
+    box-sizing: border-box; 
+    
+    /* Better Touch Targets */
+    margin-bottom: 8px !important;
+    padding: 12px !important; 
+    border-radius: 6px;
+}
+
+/* Add breathing room to the main container on mobile */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding-left: 15px;
+        padding-right: 15px;
+        overflow-x: hidden; /* Stop horizontal sway */
+    }
+}

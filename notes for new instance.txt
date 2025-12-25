@@ -1,0 +1,284 @@
+user with email god@mealmates.dev and password password123 -> god role 
+
+
+when production:
+
+make sure to turn this off
+make sure to put on confirm email in supabase
+
+
+ok i have this website please analyse - what is the git command to give you a list of the nested file structure? After youve seen that ill deliver to you the files one by one or two if theyre small and you can review and understand them.
+When offering feedback, please bear in mind the following types of shortcomings you might encounter as an AI:
+1. You might be out of sync with the latest iteration of a file or have your wires crossed etc.
+2. You might have assumed a function was made that was not.
+3. You might have assumed a database entry was made that was not.
+4. You might assign scope incorrectly e.g. clearCart(); instead of get().cart.clearCart(); resulting in access issues.
+
+5. You have an unfortunate tendency to forget scoping specificities.
+6. You also have an unfortunate tendency to give full files back when small snippet updates would be a better path.
+7. When returning snippets, if it's a full file, please ensure that the relative path to the file is printed at the top in the format // src/store/siteSettingsSlice.js
+8. If using placeholders for brevity (please prioritise full snippet dumps), please add an adendum to the bottom of the response saying where the placeholders are in the response.
+9. When giving snippets, please give the prior line as the start of your snippet and the line after the snippet at the end, so i know exactly where to paste it.
+
+Please be aware of these sorts of shortcomings and consider them before offering drastic measures.
+
+You also rarely ask for files to analyse as your not programmed desire more information unless absolutely necessary.
+If you would like to see a file, ask.
+
+
+
+
+SELECT
+  p.id,
+  p.role,
+  p.full_name,
+  p.email AS profile_email,
+  u.email AS auth_email,
+  u.created_at,
+  u.email_confirmed_at
+FROM
+  public.profiles AS p
+JOIN
+  auth.users AS u ON p.id = u.id;
+
+
+
+
+  mainappinit template 
+
+  
+async function mainAppInit() {
+    console.log(`%c[App] 1. mainAppInit() started.`, 'background: #222; color: #bada55; font-weight: bold;');
+    const initialLoadId = showFullScreenLoader();
+
+    // === STEP 1: SETUP ALL ZUSTAND SUBSCRIPTIONS FIRST ===
+    console.log('[App] 2. Setting up all Zustand subscriptions...');
+
+    let previousActiveTab = useAppStore.getState().ui.activeTab;
+    useAppStore.subscribe((state) => {
+        const newActiveTab = state.ui.activeTab;
+        if (newActiveTab !== previousActiveTab) {
+            console.log(`%c[Main Nav Sub] Navigation state changed from '${previousActiveTab}' to '${newActiveTab}'.`, 'color: blue');
+            handleTabLifecycle(newActiveTab, previousActiveTab);
+            previousActiveTab = newActiveTab;
+        }
+    });
+
+
+    // Auth Button & User Display Subscription
+    // We track the previous state manually.
+    let previousIsLoggedIn = useAppStore.getState().user.isLoggedIn;
+
+    useAppStore.subscribe((state) => {
+        const newIsLoggedIn = state.user.isLoggedIn;
+
+        if (newIsLoggedIn !== previousIsLoggedIn) {
+            console.log(`%c[MAIN AUTH SUB - BRUTE FORCE] Fired! ...`, '...');
+
+            const authBtn = querySel('#authTriggerBtn');
+            const userDisplay = querySel('#loggedInUserDisplay');
+            const tierDisplay = querySel('#userTierDisplay');
+            const { profile } = state.user;
+
+            if (authBtn) {
+                authBtn.textContent = newIsLoggedIn ? 'Sign Out' : 'Sign In / Sign Up';
+            }
+            if (userDisplay) {
+                userDisplay.innerHTML = newIsLoggedIn && profile
+                    ? `Logged in: <strong>${escapeHTML(profile.profile_nickname || profile.username)}</strong>`
+                    : '';
+            }
+
+            if (tierDisplay) {
+                tierDisplay.textContent = newIsLoggedIn && profile ? `Tier: ${profile.tier}` : 'Tier: ...';
+            }
+            previousIsLoggedIn = newIsLoggedIn;
+        }
+    });
+
+
+    // User Login Subscription (for applying preferences)
+    useAppStore.subscribe(
+        (state) => state.user.profile,
+        (currentProfile, previousProfile) => {
+            if (currentProfile && !previousProfile) {
+                console.log('[Main Sub] User logged in. Applying preferences...');
+                applyUserPreferences();
+            }
+        }
+    );
+
+    // --- THIS IS THE DEFINITIVE MESSENGER SUBSCRIPTION FIX ---
+
+    // Helper to get the current state slice we care about
+    const getMessengerPanelState = () => {
+        const state = useAppStore.getState();
+        return {
+            isLoggedIn: state.user.isLoggedIn,
+            isVerified: state.user.profile?.is_verified,
+            contacts: state.messenger.contacts,
+            isLoading: state.messenger.isContactListLoading
+        };
+    };
+
+    // We track the previous state manually.
+    let previousMessengerState = getMessengerPanelState();
+
+    // This subscription listens to the ENTIRE store.
+    useAppStore.subscribe(() => {
+        const currentState = getMessengerPanelState();
+
+        // We do a deep-enough comparison to see if anything relevant has changed.
+        // JSON.stringify is a simple way to compare the objects.
+        if (JSON.stringify(currentState) !== JSON.stringify(previousMessengerState)) {
+            console.log(`%c[MAIN MESSENGER SUB - BRUTE FORCE] Fired!`, 'background: #fd7e14; color: white;');
+
+            const contactListPanel = querySel('#messenger-contact-list');
+            if (!contactListPanel) return;
+
+            // The rendering logic remains the same, but now it's guaranteed to run at the right time.
+            if (currentState.isLoggedIn) {
+                if (currentState.isLoading) {
+                    // State 1: Logged in and currently fetching contacts.
+                    // Instead of text, inject the HTML for a loader.
+                    contactListPanel.innerHTML = `
+                <div class="messenger-loader-container">
+                    <div class="cube-loader-scene">
+                        <div class="cube-loader">
+                            <div class="face front">H</div><div class="face back">H</div>
+                            <div class="face right">T</div><div class="face left">T</div>
+                            <div class="face top">C</div><div class="face bottom">C</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                } else if (currentState.isVerified === false) {
+                    // IMPORTANT: This logic is preserved
+                    renderUnverifiedContactList();
+                } else {
+                    renderContactList(currentState.contacts);
+                    updateTotalUnreadBadge();
+                }
+            } else {
+                renderDummyContactList();
+            }
+
+            // Update our tracker for the next change.
+            previousMessengerState = currentState;
+        }
+    });
+    // --- END OF FIX ---
+    useAppStore.subscribe(state => state.messenger.chatWindows, renderAllChatWindows);
+
+
+
+
+    // Favorite Indicators Subscription
+    useAppStore.subscribe(
+        (state) => [state.ui.activeTab, state.ui.activeSubTabs, state.user.preferences.starSelection],
+        updateFavoriteIndicators
+    );
+
+
+
+
+    // 6. "Principles" Visibility Subscription
+    useAppStore.subscribe(
+        (state) => state.user.profile?.principle_flags,
+        (flags) => {
+            const visibilityRules = {
+                'news': { requires: [] }, 'forum': { requires: [] }, 'faithbook': { requires: [] },
+                'vote': { requires: [] }, 'crafting': { requires: [] }, 'game': { requires: [] },
+                'stream': { requires: [] }, 'study': { requires: [] }, 'merch': { requires: [] },
+                'admin': { requires: [] }, 'mixed': { requires: [] }, 'war': { requires: [] },
+                'ai': { requires: [] }, 'tech': { requires: [] }, 'user_generated': { requires: [] },
+                'argue': { requires: [] }, 'organise': { requires: [] }, 'fb-feed': { requires: [] },
+                'fb-profile': { requires: [] }, 'fb-barter': { requires: [] }, 'propose': { requires: [] },
+                'doctrine': { requires: [] }, 'bible': { requires: [] }, 'hss': { requires: [] },
+                'eatpraychill': { requires: [] }, 'craft-main': { requires: [] }, 'craft-buy': { requires: [] },
+                'craft-game': { requires: [] }, 'craft-village': { requires: [] }, 'study-languages': { requires: [] },
+                'study-sciences': { requires: [] }, 'study-math': { requires: [] }
+            };
+            // pricncipals
+            const userFlags = flags ?? 7; // Use 7 as a fallback for logged-out users
+            const principles = {
+                'love-jews-muslims': (userFlags & 1) === 1,
+                'respect-women': (userFlags & 2) === 2,
+                'no-swearing': (userFlags & 4) === 4
+            };
+            for (const dataTabValue in visibilityRules) {
+                const rule = visibilityRules[dataTabValue];
+                const meetsRequirements = rule.requires.every(p => principles[p]);
+                const meetsException = rule.except?.some(p => principles[p]) || false;
+                const shouldBeVisible = meetsRequirements && !meetsException;
+                document.querySelectorAll(`[data-tab="${dataTabValue}"]`).forEach(element => {
+                    element.style.display = shouldBeVisible ? '' : 'none';
+                });
+            }
+        },
+        { fireImmediately: true }
+    );
+
+    // 7. Crafting UI Re-render Subscription
+    useAppStore.subscribe(
+        (state) => state.crafting.data,
+        (newCraftingData, oldCraftingData) => {
+            if (newCraftingData !== oldCraftingData && useAppStore.getState().ui.activeTab === 'crafting') {
+                renderCraftingUI();
+            }
+        }
+    );
+
+    console.log('[App] 2a. All subscriptions are now active.');
+    // === STEP 2: SYNCHRONOUS SETUP ===
+    console.log('[App] 3. Initializing synchronous modules and DOM listeners...');
+    initializeUI();
+    initializeAuthService();
+    initializeMessengerFeature();
+    setupNavigation();
+    setupGlobalListeners();
+    setupDevModeTriggers();
+    console.log('[App] 3a. Synchronous setup complete.');
+
+    // === STEP 3: ASYNCHRONOUS STARTUP ===
+    console.log('[App] 4. Beginning asynchronous startup. Awaiting checkSession()...');
+    await checkSession();
+    console.log('[App] 4a. checkSession() complete. Setting up auth DOM...');
+    setupAuthDOM();
+    console.log('[App] 4b. Auth DOM setup complete.');
+
+    // === STEP 4: RENDER THE INITIAL VIEW ===
+    const startingTab = useAppStore.getState().ui.activeTab || 'news';
+    console.log(`[App] 5. Determined starting tab is '${startingTab}'. Calling handleTabLifecycle...`);
+    handleTabLifecycle(startingTab, null);
+
+    // === STEP 5: INITIALIZE BACKGROUND SERVICES ===
+    console.log('[App] 6. Initializing background services...');
+    prefetchGod.init();
+    try {
+        await initializeDanmakuSystem();
+        console.log('[App] 6a. Danmaku service initialized.');
+    } catch (e) { console.error("Danmaku failed to init", e); }
+    try {
+        if (useAppStore.getState().user.isLoggedIn) {
+            await initializeMessengerService();
+            console.log('[App] 6b. Messenger service initialized.');
+        }
+    } catch (e) { console.error("Messenger failed to init", e); }
+    if (localStorage.getItem('devMode') === 'true') {
+        initializeDevTools();
+        initializeMobileConsole();
+        initializeMessageLogViewer();
+        console.log('[App] 6c. Dev tools initialized.');
+    }
+
+    // === STEP 6: FINALIZE ===
+    console.log('[App] 7. Finalizing UI...');
+    await new Promise(res => setTimeout(res, 200));
+    moveLoaderTo(null, initialLoadId);
+    console.log(`%c[App] 8. All async initial data loaded and ready.`, 'background: #222; color: #bada55; font-weight: bold;');
+}
+
+// Entry Point
+document.addEventListener('DOMContentLoaded', mainAppInit);
