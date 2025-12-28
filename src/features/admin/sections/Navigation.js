@@ -50,7 +50,7 @@ export function renderLayoutConfig(tabs, position, enabled) {
                         <select name="tabPosition" style="width:100%; padding:8px;">
                             <option value="top" ${position==='top'?'selected':''}>Top</option>
                             <option value="bottom" ${position==='bottom'?'selected':''}>Bottom</option>
-                        </select>
+                        </select
                     </div>
                     
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">Tab Order & Visibility</label>

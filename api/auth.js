@@ -1,7 +1,6 @@
-// api/auth.js
 import { createClient } from '@supabase/supabase-js';
 
-// Define TABLES locally to avoid import issues
+// --- CONFIGURATION ---
 const TABLES = { PROFILES: 'beancountersunited_profiles' };
 
 export default async function handler(req, res) {
@@ -10,11 +9,13 @@ export default async function handler(req, res) {
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
+    // 1. Check Env Vars
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-        return res.status(500).json({ error: "Server Config Error" });
+        console.error("CRITICAL: Missing Environment Variables");
+        return res.status(500).json({ error: "Server Config Error: Missing Keys" });
     }
 
-    // Handle LOGIN
+    // 2. Handle LOGIN
     if (type === 'login') {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -25,23 +26,29 @@ export default async function handler(req, res) {
         return res.status(200).json({ session: data.session });
     }
 
-    // Handle SIGNUP
+    // 3. Handle SIGNUP
     if (type === 'signup') {
+        console.log("--- STARTING SIGNUP ---");
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         const { email, password } = req.body;
 
+        console.log(`1. Attempting Auth SignUp for: ${email}`);
         const { data, error } = await supabase.auth.signUp({ email, password });
         
-        if (error) return res.status(400).json({ error: error.message });
+        if (error) {
+            console.error("Auth SignUp Failed:", error.message);
+            return res.status(400).json({ error: error.message });
+        }
         
         // Auto-create Profile
         if (data.user) {
+            console.log(`2. Auth Success. User ID: ${data.user.id}`);
+            console.log(`3. Attempting DB Insert into: ${TABLES.PROFILES}`);
+            
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
             
-            // FIX: Use UPSERT instead of INSERT to prevent duplicate errors if retrying
-            // FIX: Log the specific error if it fails
             const { error: profileError } = await supabaseAdmin
                 .from(TABLES.PROFILES)
                 .upsert([{ 
@@ -52,10 +59,18 @@ export default async function handler(req, res) {
                 }]);
 
             if (profileError) {
-                 console.error("Profile creation failed:", profileError);
-                 // Return the ACTUAL database error so we can debug it
-                 return res.status(400).json({ error: "DB Error: " + profileError.message });
+                 console.error("!!! DB INSERT FAILED !!!");
+                 console.error("Code:", profileError.code);
+                 console.error("Message:", profileError.message);
+                 console.error("Details:", profileError.details);
+                 console.error("Hint:", profileError.hint);
+                 
+                 // Return the DETAILED error to the frontend
+                 return res.status(400).json({ 
+                     error: `DB Error: ${profileError.message} (Code: ${profileError.code})` 
+                 });
             }
+            console.log("4. Profile Created Successfully");
         }
         return res.status(200).json({ user: data.user });
     }
