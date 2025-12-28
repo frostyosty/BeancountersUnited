@@ -1,4 +1,4 @@
-export const DB_PREFIX = 'beancountersunited_'; // Change this variable to swap restaurants
+export const DB_PREFIX = 'bu_'; // Change this variable to swap restaurants
 export const TABLES = {
     MENU: `${DB_PREFIX}menu_items`,
     ORDERS: `${DB_PREFIX}orders`,

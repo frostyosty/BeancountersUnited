@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURATION ---
-const TABLES = { PROFILES: 'beancountersunited_profiles' };
+const TABLES = { PROFILES: 'bu_profiles' };
 
 export default async function handler(req, res) {
     const { type } = req.query;

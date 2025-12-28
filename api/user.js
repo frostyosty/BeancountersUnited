@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const TABLES = {
-    PROFILES: 'beancountersunited_profiles',
-    ORDERS: 'beancountersunited_orders',
-    ITEMS: 'beancountersunited_order_items',
-    AUDIT: 'beancountersunited_audit_logs',
-    MENU: 'beancountersunited_menu_items'
+    PROFILES: 'bu_profiles',
+    ORDERS: 'bu_orders',
+    ITEMS: 'bu_order_items',
+    AUDIT: 'bu_audit_logs',
+    MENU: 'bu_menu_items'
 };
 
 export default async function handler(req, res) {
@@ -99,8 +99,8 @@ export default async function handler(req, res) {
             const { data: profile } = await supabaseAdmin.from(TABLES.PROFILES).select('role').eq('id', user.id).single();
             const isAdmin = profile && (profile.role === 'god' || profile.role === 'owner' || profile.role === 'manager');
 
-// We assume the constraint is named 'beancountersunited_orders_user_id_fkey' based on previous steps.
-            // If you get an error "resource not found", check Postgres for the exact constraint name on beancountersunited_orders.
+// We assume the constraint is named 'bu_orders_user_id_fkey' based on previous steps.
+            // If you get an error "resource not found", check Postgres for the exact constraint name on bu_orders.
             let query = supabaseAdmin
                 .from(TABLES.ORDERS)
                 .select(`
@@ -111,7 +111,7 @@ export default async function handler(req, res) {
                         selected_options,
                         ${TABLES.MENU} (name, image_url)
                     ),
-                    ${TABLES.PROFILES}!beancountersunited_orders_user_id_fkey (
+                    ${TABLES.PROFILES}!bu_orders_user_id_fkey (
                         email, full_name, internal_nickname, staff_note, staff_note_urgency
                     )
                 `)

@@ -35,7 +35,7 @@ export async function handleOrderClicks(target) {
             uiUtils.showToast(`Dismissed ${name}'s ${total} Order`, "info");
         } 
         else if (action === 'delete') {
-             const { error } = await supabase.from('beancountersunited_orders').delete().eq('id', orderId);
+             const { error } = await supabase.from('bu_orders').delete().eq('id', orderId);
              if (!error) {
                  uiUtils.showToast("Deleted.", "success");
                  useAppStore.getState().orderHistory.fetchOrderHistory(true);
