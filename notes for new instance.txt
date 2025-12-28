@@ -1,4 +1,4 @@
-user with email god@mealmates.dev and password password123 -> god role 
+user with email god@beancountersunited.dev and password password123 -> god role 
 
 
 when production:

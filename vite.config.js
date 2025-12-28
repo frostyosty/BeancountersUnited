@@ -48,9 +48,9 @@ export default defineConfig({
         'android-chrome-512x512.png'
       ],
       manifest: {
-        name: 'Mealmates',
-        short_name: 'Mealmates',
-        description: 'Order delicious food for pickup from Mealmates.',
+        name: 'BeancountersUnited',
+        short_name: 'BeancountersUnited',
+        description: 'Order delicious food for pickup from BeancountersUnited.',
         theme_color: '#e67e22',
         background_color: '#ffffff',
         start_url: '/',

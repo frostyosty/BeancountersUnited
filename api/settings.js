@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // FIX: Define correct table names
 const TABLES = {
-    SETTINGS: 'mealmates_site_settings',
-    AUDIT: 'mealmates_audit_logs'
+    SETTINGS: 'beancountersunited_site_settings',
+    AUDIT: 'beancountersunited_audit_logs'
 };
 
 export default async function handler(req, res) {

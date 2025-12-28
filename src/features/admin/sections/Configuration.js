@@ -18,7 +18,7 @@ export function renderGlobalSettingsSection(settings) {
                 <!-- 1. Identity -->
                 <div class="form-group">
                     <label>Website Name</label>
-                    <input type="text" name="websiteName" value="${settings.websiteName || 'Mealmates'}" required>
+                    <input type="text" name="websiteName" value="${settings.websiteName || 'BeancountersUnited'}" required>
                 </div>
                 <div class="form-group">
                     <label>Website Logo</label>

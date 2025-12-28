@@ -54,7 +54,7 @@ export const createCheckoutSlice = (set, get) => ({
             if (user) {
                 userId = user.id;
                 finalEmail = user.email;
-                finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
+                finalName = profile?.full_name || (user.email.includes('@beancountersunited.local') ? user.email.split('@')[0] : user.email);
             } else {
                 finalName = guestName;
                 finalEmail = null;
@@ -144,7 +144,7 @@ export const createCheckoutSlice = (set, get) => ({
             if (user) {
                 userId = user.id;
                 finalEmail = user.email;
-                finalName = profile?.full_name || (user.email.includes('@mealmates.local') ? user.email.split('@')[0] : user.email);
+                finalName = profile?.full_name || (user.email.includes('@beancountersunited.local') ? user.email.split('@')[0] : user.email);
             } else {
                 finalName = guestName;
                 finalEmail = null; 

@@ -1,4 +1,4 @@
-# Mealmates
+# BeancountersUnited
 
 This project is a modern, customizable website for ordering food, built with Vite, Supabase, and Zustand.
 

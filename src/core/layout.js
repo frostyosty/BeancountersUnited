@@ -36,7 +36,7 @@ export function renderAppShell() {
     if (!appElement) return;
 
     // --- Pre-Calculate Header Styles (Anti-Jolt) ---
-    let logoHTML = 'Mealmates';
+    let logoHTML = 'BeancountersUnited';
     let logoStyle = '';
     let headerStyle = '';
 
@@ -78,7 +78,7 @@ export function renderAppShell() {
             </nav>
         </header>
         <main id="main-content"></main>
-        <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} Mealmates</p></footer>
+        <footer id="main-footer"><p>&copy; ${new Date().getFullYear()} BeancountersUnited</p></footer>
         <div id="mobile-menu-panel" class="mobile-menu-panel"><nav id="mobile-nav-links"></nav></div>
     `;
 }
@@ -154,7 +154,7 @@ export function setupHamburgerMenu() {
         const { isAuthenticated, profile } = useAppStore.getState().auth;
         const { settings } = useAppStore.getState().siteSettings;
         const aboutEnabled = settings?.aboutUs?.enabled || false;
-        const siteName = settings?.websiteName || 'Mealmates';
+        const siteName = settings?.websiteName || 'BeancountersUnited';
 
         let navHTML = `<a href="#menu" class="nav-link">Menu</a>`;
         navHTML += `<a href="#cart" class="nav-link">Cart (${useAppStore.getState().cart.getTotalItemCount()})</a>`;

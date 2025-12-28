@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Define TABLES locally to avoid import issues
-const TABLES = { PROFILES: 'mealmates_profiles' };
+const TABLES = { PROFILES: 'beancountersunited_profiles' };
 
 export default async function handler(req, res) {
     const { type } = req.query;

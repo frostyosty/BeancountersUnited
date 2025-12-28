@@ -98,7 +98,7 @@ export function applyGlobalBackground(settings) {
         if (uiConfig.bgParallax) body.classList.add('bg-parallax');
     
     } else if (bgType === 'pattern') {
-        const text = settings.websiteName || 'Mealmates';
+        const text = settings.websiteName || 'BeancountersUnited';
         const patternUrl = generatePatternUrl(text);
         style.setProperty('--body-background-image', patternUrl);
         style.setProperty('background-size', 'auto');

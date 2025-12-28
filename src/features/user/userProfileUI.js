@@ -10,7 +10,7 @@ export function renderUserProfilePage() {
 
     const { settings } = useAppStore.getState().siteSettings;
     const { user, profile } = useAppStore.getState().auth;
-    const siteName = settings.websiteName || 'Mealmates';
+    const siteName = settings.websiteName || 'BeancountersUnited';
 
     if (!user) {
         mainContent.innerHTML = `<div class="notice-message"><h2>My ${siteName}</h2><p>Please log in.</p></div>`;
@@ -29,7 +29,7 @@ export function renderUserProfilePage() {
 
 
     // Check if "Fake" domain
-    const isUsernameAccount = user.email.endsWith('@mealmates.local');
+    const isUsernameAccount = user.email.endsWith('@beancountersunited.local');
     const displayEmail = isUsernameAccount ? 'Not Set' : user.email;
     const displayUsername = isUsernameAccount ? user.email.split('@')[0] : 'N/A';
 

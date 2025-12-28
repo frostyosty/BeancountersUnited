@@ -13,7 +13,7 @@ function formatLoginString(input) {
     const trimmed = input.trim();
     if (isEmail(trimmed)) return trimmed;
     // It's a username -> Append dummy domain
-    return `${trimmed}@mealmates.local`; 
+    return `${trimmed}@beancountersunited.local`; 
 }
 
 // --- 1. AUTH STATUS (Header) ---
