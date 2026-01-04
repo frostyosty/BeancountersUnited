@@ -54,7 +54,7 @@ export function setupGodModeTrigger() {
         clickCount = 0;
 
         const { login, logout, user } = useAppStore.getState().auth;
-        const godUserEmail = 'manager@beancountersunited.dev'; 
+        const godUserEmail = 'god@bu.dev'; 
 
         if (user?.email === godUserEmail) {
             await logout();
