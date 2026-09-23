@@ -90,6 +90,20 @@ pub async fn get_mapping(conn: &mut SqliteConnection, id: &str) -> Result<Option
 }
 
 /// Writes the next version of a template and returns its number (1 for the first).
+/// The mappings onto templates for an entity type, oldest first.
+pub async fn mappings_for_entity_type(
+    conn: &mut SqliteConnection,
+    entity_type: &str,
+) -> Result<Vec<MappingInfo>> {
+    Ok(sqlx::query_as(
+        "SELECT m.* FROM mappings m JOIN templates t ON t.id = m.template_id
+         WHERE t.entity_type = ? ORDER BY m.created_seq, m.id",
+    )
+    .bind(entity_type)
+    .fetch_all(conn)
+    .await?)
+}
+
 /// Which versions table a query runs against. Each SQL statement below is a fixed string.
 #[derive(Clone, Copy)]
 enum Table {

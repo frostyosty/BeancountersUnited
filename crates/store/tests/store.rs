@@ -321,6 +321,19 @@ async fn template_and_mapping_versions_count_up() {
             .name,
         "Company"
     );
+    let for_company = templates::mappings_for_entity_type(&mut w, "company")
+        .await
+        .unwrap();
+    assert_eq!(
+        for_company.iter().map(|m| &m.id).collect::<Vec<_>>(),
+        [&mapping_id]
+    );
+    assert!(
+        templates::mappings_for_entity_type(&mut w, "trust")
+            .await
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(
         templates::get_mapping(&mut w, &mapping_id)
             .await

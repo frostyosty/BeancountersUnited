@@ -23,14 +23,19 @@ version = "0.1.0"
 name = "acct-server"
 version = "0.1.0"
 dependencies = [
+ "acct-core",
+ "acct-store",
  "axum",
+ "chrono",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tower",
  "tracing",
  "tracing-subscriber",
  "ts-rs",
+ "uuid",
 ]
 
 [[package]]

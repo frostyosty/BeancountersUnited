@@ -1,5 +1,9 @@
 //! The acct HTTP API: routes, auth, the command pipeline and the sync feed.
 
+pub mod commands;
+pub mod error;
+pub mod pipeline;
+
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 use ts_rs::TS;
