@@ -62,12 +62,12 @@ Status: in progress.
   6. commit
 
   It's idempotent on `id`. Errors are structured (`code`, `message`, `details`).
-- Auth: argon2id password hashes and an HttpOnly, SameSite=Strict session cookie. First run creates the master user.
+- Auth: argon2id password hashes and an HttpOnly, SameSite=Strict session cookie. First run creates the master user with `acctd init` on the server (decided 2026-09-23: a CLI, so no one else on the LAN can claim an unclaimed server through the web).
 - Endpoints:
   - health, login/logout
   - clients, client-years, chart
   - journals (via commands)
-  - TB import: CSV upload, then preview, then the import command. The preview flags any gap between the imported retained earnings and the rolled-forward figure; that usually means last year's adjustments were never posted in the client's own books.
+  - TB import: CSV upload, then preview, then the import command. The CSV has a header row and either `code, name, debit, credit` or `code, name, amount` (signed, debit positive); the parser tells them apart by the header (decided 2026-09-23). The preview flags any gap between the imported retained earnings and the rolled-forward figure; that usually means last year's adjustments were never posted in the client's own books.
   - report (ReportDoc JSON)
   - sync feed
 - `make db-reset` loads fixtures by submitting commands, not raw SQL.
