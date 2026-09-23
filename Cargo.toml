@@ -14,6 +14,7 @@ acct-import = { path = "crates/import" }
 
 argon2 = "0.6"
 axum = "0.8"
+csv = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4"
 insta = "1"

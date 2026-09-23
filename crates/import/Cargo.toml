@@ -5,6 +5,10 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+acct-core.workspace = true
+csv.workspace = true
+serde.workspace = true
+ts-rs.workspace = true
 
 [lints]
 workspace = true

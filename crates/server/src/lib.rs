@@ -6,6 +6,7 @@ pub mod error;
 pub mod ledger;
 pub mod pipeline;
 pub mod reads;
+pub mod tb_import;
 
 use std::sync::Arc;
 
@@ -49,6 +50,10 @@ pub fn app(state: AppState) -> Router {
         .route("/api/years/{id}/journals", get(reads::list_journals))
         .route("/api/years/{id}/tb", get(reads::get_trial_balance))
         .route("/api/years/{id}/report", get(reads::get_report))
+        .route(
+            "/api/years/{id}/tb-import/preview",
+            post(tb_import::preview),
+        )
         .route("/api/sync", get(reads::sync))
         .with_state(state)
 }

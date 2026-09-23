@@ -12,7 +12,7 @@ use acct_store::practice::Practice;
 use acct_store::sqlx::Connection;
 use acct_store::templates::{MappingInfo, TemplateInfo};
 use acct_store::users::{Role, User};
-use acct_store::years::{StoredYear, YearStatus};
+use acct_store::years::{BooksSource, StoredYear, YearStatus};
 use acct_store::{
     SqliteConnection, Store, charts, clients, journals, log, new_id, practice, templates, users,
     years,
@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use crate::auth;
 use crate::commands::{Accepted, Command, CommandEnvelope};
 use crate::error::CommandError;
+use crate::tb_import;
 
 /// Who is submitting a command. `user_id` is `None` only for `acctd init` on the server itself.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -392,6 +393,55 @@ async fn apply(
             post(tx, &year, journal, JournalKind::Manual, None, seq).await
         }
 
+        Command::ImportTb {
+            client_year_id,
+            rows,
+        } => {
+            let year = open_year(tx, client_year_id).await?;
+            let plan = tb_import::plan(tx, client_year_id, rows).await?;
+            if !plan.problems.is_empty() {
+                return Err(CommandError::invalid_with(
+                    "tb_import_rejected",
+                    "The trial balance can't be imported until these are fixed.",
+                    &plan.problems,
+                ));
+            }
+            years::set_books_source(tx, client_year_id, BooksSource::TbImport).await?;
+            let mut effect = Effect {
+                entity_id: None,
+                client_id: Some(year.client_id.clone()),
+                client_year_id: Some(year.id.clone()),
+            };
+            if plan.unchanged() {
+                return Ok(effect);
+            }
+            if let Some(current) = plan.current {
+                let reversal = Journal {
+                    date: current.journal.date,
+                    narration: format!("Reversal of: {}", current.journal.narration),
+                    lines: negated(&current.journal.lines),
+                };
+                post(
+                    tx,
+                    &year,
+                    reversal,
+                    JournalKind::TbImport,
+                    Some(current.id),
+                    seq,
+                )
+                .await?;
+            }
+            if !plan.lines.is_empty() {
+                let journal = Journal {
+                    date: year.year.end(),
+                    narration: tb_import::NARRATION.to_owned(),
+                    lines: plan.lines,
+                };
+                effect = post(tx, &year, journal, JournalKind::TbImport, None, seq).await?;
+            }
+            Ok(effect)
+        }
+
         Command::ReverseJournal {
             journal_id,
             date,
@@ -419,15 +469,7 @@ async fn apply(
                 narration: narration
                     .clone()
                     .unwrap_or_else(|| format!("Reversal of: {}", original.journal.narration)),
-                lines: original
-                    .journal
-                    .lines
-                    .iter()
-                    .map(|l| JournalLine {
-                        account: l.account.clone(),
-                        amount: -l.amount,
-                    })
-                    .collect(),
+                lines: negated(&original.journal.lines),
             };
             post(
                 tx,
@@ -485,6 +527,16 @@ async fn create_user(
     )
     .await?;
     Ok(id)
+}
+
+fn negated(lines: &[JournalLine]) -> Vec<JournalLine> {
+    lines
+        .iter()
+        .map(|l| JournalLine {
+            account: l.account.clone(),
+            amount: -l.amount,
+        })
+        .collect()
 }
 
 fn created(id: String) -> Effect {

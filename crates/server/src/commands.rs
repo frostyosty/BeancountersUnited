@@ -1,6 +1,6 @@
 //! The commands clients submit to `POST /api/commands`, and what they get back.
 
-use acct_core::{Account, AccountCode, JournalLine, Mapping, Template};
+use acct_core::{Account, AccountCode, JournalLine, Mapping, TbLine, Template};
 use acct_store::users::Role;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -87,6 +87,13 @@ pub enum Command {
         narration: String,
         lines: Vec<JournalLine>,
     },
+    /// Imports a year's trial balance, as previewed by `POST /api/years/{id}/tb-import/preview`.
+    /// Posts the TB less the opening balances as the year's TB-import journal, replacing any
+    /// earlier one. Every other journal is left alone.
+    ImportTb {
+        client_year_id: String,
+        rows: Vec<TbLine>,
+    },
     /// Posts a journal that reverses `journal_id`, dated `date` or, if that's absent, the
     /// original's date. A journal can be reversed only once.
     ReverseJournal {
@@ -112,6 +119,7 @@ impl Command {
             Command::CreateClient { .. } => "create_client",
             Command::CreateClientYear { .. } => "create_client_year",
             Command::PostJournal { .. } => "post_journal",
+            Command::ImportTb { .. } => "import_tb",
             Command::ReverseJournal { .. } => "reverse_journal",
         }
     }
@@ -140,6 +148,7 @@ impl Command {
             Command::CreateClient { .. }
             | Command::CreateClientYear { .. }
             | Command::PostJournal { .. }
+            | Command::ImportTb { .. }
             | Command::ReverseJournal { .. } => matches!(role, Role::Master | Role::Staff),
         }
     }

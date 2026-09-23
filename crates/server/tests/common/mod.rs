@@ -152,6 +152,24 @@ impl Server {
     /// Loads the fixture practice defaults (as `master_cookie`) and the fixture company with its
     /// journals (as `staff_cookie`), entirely through `POST /api/commands`.
     pub async fn load_fixture(&self, master_cookie: &str, staff_cookie: &str) -> LoadedFixture {
+        self.practice_defaults(master_cookie).await;
+        let (client_id, year_ids) = self.fixture_client(staff_cookie).await;
+        let client: Value = serde_json::from_str(CLIENT).unwrap();
+        for (year, year_id) in client["years"].as_array().unwrap().iter().zip(&year_ids) {
+            for journal in year["journals"].as_array().unwrap() {
+                let mut payload = journal.clone();
+                payload["client_year_id"] = json!(year_id);
+                self.ok(staff_cookie, "post_journal", payload).await;
+            }
+        }
+        LoadedFixture {
+            client_id,
+            year_ids,
+        }
+    }
+
+    /// The fixture's master chart, template and mapping for companies.
+    pub async fn practice_defaults(&self, master_cookie: &str) {
         let accounts: Value = serde_json::from_str(CHART).unwrap();
         self.ok(
             master_cookie,
@@ -174,7 +192,10 @@ impl Server {
             json!({ "template_id": template_id, "name": "Company (standard)", "body": mapping }),
         )
         .await;
+    }
 
+    /// The fixture company and its years, with no journals. Returns (client, years).
+    pub async fn fixture_client(&self, staff_cookie: &str) -> (String, Vec<String>) {
         let client: Value = serde_json::from_str(CLIENT).unwrap();
         let client_id = self
             .ok(
@@ -197,17 +218,9 @@ impl Server {
                     json!({ "client_id": client_id, "start": year["start"], "end": year["end"] }),
                 )
                 .await;
-            for journal in year["journals"].as_array().unwrap() {
-                let mut payload = journal.clone();
-                payload["client_year_id"] = json!(year_id);
-                self.ok(staff_cookie, "post_journal", payload).await;
-            }
             year_ids.push(year_id);
         }
-        LoadedFixture {
-            client_id,
-            year_ids,
-        }
+        (client_id, year_ids)
     }
 
     pub async fn get_json(&self, uri: &str, cookie: &str) -> Value {
