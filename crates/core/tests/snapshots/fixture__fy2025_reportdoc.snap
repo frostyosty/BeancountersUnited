@@ -1,0 +1,570 @@
+---
+source: crates/core/tests/fixture.rs
+expression: "serde_json::to_string_pretty(&built.docs[0]).unwrap()"
+---
+{
+  "template": "Company (standard)",
+  "current_period": {
+    "start": "2024-04-01",
+    "end": "2025-03-31"
+  },
+  "prior_period": null,
+  "comparatives": "none",
+  "statements": [
+    {
+      "key": "performance",
+      "title": "Statement of Financial Performance",
+      "rows": [
+        {
+          "key": "revenue",
+          "style": "heading",
+          "depth": 0,
+          "label": "Revenue",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "sales",
+          "style": "line",
+          "depth": 1,
+          "label": "Sales",
+          "current": 87643,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "100",
+              "current": 8764235,
+              "prior": 0
+            }
+          ],
+          "rounding": {
+            "current": 1,
+            "prior": 0
+          }
+        },
+        {
+          "key": "interest_income",
+          "style": "line",
+          "depth": 1,
+          "label": "Interest received",
+          "current": 34,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "110",
+              "current": 3417,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "revenue",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total revenue",
+          "current": 87677,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "expenses",
+          "style": "heading",
+          "depth": 0,
+          "label": "Expenses",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "accountancy",
+          "style": "line",
+          "depth": 1,
+          "label": "Accountancy fees",
+          "current": 1851,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "200",
+              "current": 185050,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "bank_fees",
+          "style": "line",
+          "depth": 1,
+          "label": "Bank fees",
+          "current": 238,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "205",
+              "current": 23775,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "depreciation",
+          "style": "line",
+          "depth": 1,
+          "label": "Depreciation",
+          "current": 2775,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "210",
+              "current": 277493,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "insurance",
+          "style": "line",
+          "depth": 1,
+          "label": "Insurance",
+          "current": 2150,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "215",
+              "current": 214960,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "interest_expense",
+          "style": "line",
+          "depth": 1,
+          "label": "Interest paid",
+          "current": 1625,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "220",
+              "current": 162545,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "motor_vehicle",
+          "style": "line",
+          "depth": 1,
+          "label": "Motor vehicle expenses",
+          "current": 3962,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "225.01",
+              "current": 311218,
+              "prior": 0
+            },
+            {
+              "code": "225.02",
+              "current": 84990,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "rent",
+          "style": "line",
+          "depth": 1,
+          "label": "Rent",
+          "current": 15600,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "230",
+              "current": 1560000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "repairs",
+          "style": "line",
+          "depth": 1,
+          "label": "Repairs and maintenance",
+          "current": 811,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "235",
+              "current": 81173,
+              "prior": 0
+            }
+          ],
+          "rounding": {
+            "current": -1,
+            "prior": 0
+          }
+        },
+        {
+          "key": "wages",
+          "style": "line",
+          "depth": 1,
+          "label": "Wages",
+          "current": 31200,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "240",
+              "current": 3120000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "general_expenses",
+          "style": "line",
+          "depth": 1,
+          "label": "General expenses",
+          "current": 580,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "290",
+              "current": 57953,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "expenses",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total expenses",
+          "current": 60792,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "net_profit",
+          "style": "total",
+          "depth": 0,
+          "label": "Net profit for the year",
+          "current": 26885,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        }
+      ]
+    },
+    {
+      "key": "position",
+      "title": "Statement of Financial Position",
+      "rows": [
+        {
+          "key": "assets",
+          "style": "heading",
+          "depth": 0,
+          "label": "Assets",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "current_assets",
+          "style": "heading",
+          "depth": 1,
+          "label": "Current assets",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "bank",
+          "style": "line",
+          "depth": 2,
+          "label": "Bank accounts",
+          "current": 38350,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "600",
+              "current": 3831622,
+              "prior": 0
+            },
+            {
+              "code": "605",
+              "current": 3417,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "receivables",
+          "style": "line",
+          "depth": 2,
+          "label": "Accounts receivable",
+          "current": 8522,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "610",
+              "current": 852225,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "current_assets",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total current assets",
+          "current": 46872,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "non_current_assets",
+          "style": "heading",
+          "depth": 1,
+          "label": "Non-current assets",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "ppe",
+          "style": "line",
+          "depth": 2,
+          "label": "Property, plant and equipment",
+          "current": 15725,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "700",
+              "current": 1849950,
+              "prior": 0
+            },
+            {
+              "code": "705",
+              "current": -277493,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "non_current_assets",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total non-current assets",
+          "current": 15725,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "assets",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total assets",
+          "current": 62597,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "liabilities",
+          "style": "heading",
+          "depth": 0,
+          "label": "Liabilities",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "current_liabilities",
+          "style": "heading",
+          "depth": 1,
+          "label": "Current liabilities",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "payables",
+          "style": "line",
+          "depth": 2,
+          "label": "Accounts payable",
+          "current": 212,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "800",
+              "current": 21185,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "shareholder",
+          "style": "line",
+          "depth": 2,
+          "label": "Shareholder current account",
+          "current": 3000,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "830",
+              "current": 300000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "current_liabilities",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total current liabilities",
+          "current": 3212,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "non_current_liabilities",
+          "style": "heading",
+          "depth": 1,
+          "label": "Non-current liabilities",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "term_loan",
+          "style": "line",
+          "depth": 2,
+          "label": "Term loan",
+          "current": 22500,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "900",
+              "current": 2250000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "non_current_liabilities",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total non-current liabilities",
+          "current": 22500,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "liabilities",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total liabilities",
+          "current": 25712,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "net_assets",
+          "style": "total",
+          "depth": 0,
+          "label": "Net assets",
+          "current": 36885,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "equity",
+          "style": "heading",
+          "depth": 0,
+          "label": "Equity",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "share_capital",
+          "style": "line",
+          "depth": 1,
+          "label": "Share capital",
+          "current": 10000,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "950",
+              "current": 1000000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "profit_for_year",
+          "style": "link",
+          "depth": 1,
+          "label": "Net profit for the year",
+          "current": 26885,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "equity",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total equity",
+          "current": 36885,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "rounding_fallback",
+      "column": "current",
+      "row": "revenue",
+      "line": "sales"
+    }
+  ]
+}

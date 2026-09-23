@@ -1,0 +1,51 @@
+---
+source: crates/core/tests/fixture.rs
+expression: "render_text(&built.docs[0])"
+---
+Statement of Financial Performance
+                                                        2025            
+ Revenue                                                                
+   Sales                                              87,643              [rounding +1 / +0]
+   Interest received                                      34            
+=Total revenue                                        87,677            
+ Expenses                                                               
+   Accountancy fees                                    1,851            
+   Bank fees                                             238            
+   Depreciation                                        2,775            
+   Insurance                                           2,150            
+   Interest paid                                       1,625            
+   Motor vehicle expenses                              3,962            
+   Rent                                               15,600            
+   Repairs and maintenance                               811              [rounding -1 / +0]
+   Wages                                              31,200            
+   General expenses                                      580            
+=Total expenses                                       60,792            
+=Net profit for the year                              26,885            
+
+Statement of Financial Position
+                                                        2025            
+ Assets                                                                 
+   Current assets                                                       
+     Bank accounts                                    38,350            
+     Accounts receivable                               8,522            
+=  Total current assets                               46,872            
+   Non-current assets                                                   
+     Property, plant and equipment                    15,725            
+=  Total non-current assets                           15,725            
+=Total assets                                         62,597            
+ Liabilities                                                            
+   Current liabilities                                                  
+     Accounts payable                                    212            
+     Shareholder current account                       3,000            
+=  Total current liabilities                           3,212            
+   Non-current liabilities                                              
+     Term loan                                        22,500            
+=  Total non-current liabilities                      22,500            
+=Total liabilities                                    25,712            
+=Net assets                                           36,885            
+ Equity                                                                 
+   Share capital                                      10,000            
+   Net profit for the year                            26,885            
+=Total equity                                         36,885            
+
+warning: RoundingFallback { column: Current, row: LineKey("revenue"), line: LineKey("sales") }

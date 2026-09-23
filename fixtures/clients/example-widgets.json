@@ -1,0 +1,443 @@
+{
+  "name": "Example Widgets Limited",
+  "entity_type": "company",
+  "retained_earnings": "960",
+  "rounding_priority": [
+    "235",
+    "205",
+    "290",
+    "610",
+    "800",
+    "960"
+  ],
+  "years": [
+    {
+      "start": "2024-04-01",
+      "end": "2025-03-31",
+      "journals": [
+        {
+          "date": "2024-04-01",
+          "narration": "Shares issued for cash",
+          "lines": [
+            {
+              "account": "600",
+              "amount": 1000000
+            },
+            {
+              "account": "950",
+              "amount": -1000000
+            }
+          ]
+        },
+        {
+          "date": "2024-04-02",
+          "narration": "Term loan drawn down",
+          "lines": [
+            {
+              "account": "600",
+              "amount": 2500000
+            },
+            {
+              "account": "900",
+              "amount": -2500000
+            }
+          ]
+        },
+        {
+          "date": "2024-04-05",
+          "narration": "Plant purchased",
+          "lines": [
+            {
+              "account": "700",
+              "amount": 1849950
+            },
+            {
+              "account": "600",
+              "amount": -1849950
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Sales invoiced for the year",
+          "lines": [
+            {
+              "account": "610",
+              "amount": 8764235
+            },
+            {
+              "account": "100",
+              "amount": -8764235
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Receipts from customers",
+          "lines": [
+            {
+              "account": "600",
+              "amount": 7912010
+            },
+            {
+              "account": "610",
+              "amount": -7912010
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Expenses paid for the year",
+          "lines": [
+            {
+              "account": "200",
+              "amount": 185050
+            },
+            {
+              "account": "205",
+              "amount": 23775
+            },
+            {
+              "account": "215",
+              "amount": 214960
+            },
+            {
+              "account": "220",
+              "amount": 162545
+            },
+            {
+              "account": "225.01",
+              "amount": 311218
+            },
+            {
+              "account": "225.02",
+              "amount": 84990
+            },
+            {
+              "account": "230",
+              "amount": 1560000
+            },
+            {
+              "account": "235",
+              "amount": 72333
+            },
+            {
+              "account": "240",
+              "amount": 3120000
+            },
+            {
+              "account": "290",
+              "amount": 45567
+            },
+            {
+              "account": "600",
+              "amount": -5780438
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Supplier invoices unpaid at year end",
+          "lines": [
+            {
+              "account": "290",
+              "amount": 12345
+            },
+            {
+              "account": "235",
+              "amount": 8840
+            },
+            {
+              "account": "800",
+              "amount": -21185
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "GST adjustment at year end",
+          "lines": [
+            {
+              "account": "290",
+              "amount": 41
+            },
+            {
+              "account": "810",
+              "amount": -41
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Depreciation on plant",
+          "lines": [
+            {
+              "account": "210",
+              "amount": 277493
+            },
+            {
+              "account": "705",
+              "amount": -277493
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Interest received",
+          "lines": [
+            {
+              "account": "605",
+              "amount": 3417
+            },
+            {
+              "account": "110",
+              "amount": -3417
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Shareholder loan to company",
+          "lines": [
+            {
+              "account": "600",
+              "amount": 300000
+            },
+            {
+              "account": "830",
+              "amount": -300000
+            }
+          ]
+        },
+        {
+          "date": "2025-03-31",
+          "narration": "Loan principal repaid",
+          "lines": [
+            {
+              "account": "900",
+              "amount": 250000
+            },
+            {
+              "account": "600",
+              "amount": -250000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "start": "2025-04-01",
+      "end": "2026-03-31",
+      "journals": [
+        {
+          "date": "2025-04-20",
+          "narration": "Motor vehicle purchased",
+          "lines": [
+            {
+              "account": "710",
+              "amount": 2345678
+            },
+            {
+              "account": "600",
+              "amount": -2345678
+            }
+          ]
+        },
+        {
+          "date": "2025-05-01",
+          "narration": "Suppliers paid",
+          "lines": [
+            {
+              "account": "800",
+              "amount": 21185
+            },
+            {
+              "account": "600",
+              "amount": -21185
+            }
+          ]
+        },
+        {
+          "date": "2025-05-28",
+          "narration": "GST paid",
+          "lines": [
+            {
+              "account": "810",
+              "amount": 41
+            },
+            {
+              "account": "600",
+              "amount": -41
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Sales invoiced for the year",
+          "lines": [
+            {
+              "account": "610",
+              "amount": 10341260
+            },
+            {
+              "account": "100",
+              "amount": -10341260
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Receipts from customers",
+          "lines": [
+            {
+              "account": "600",
+              "amount": 10123411
+            },
+            {
+              "account": "610",
+              "amount": -10123411
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Expenses paid for the year",
+          "lines": [
+            {
+              "account": "200",
+              "amount": 192040
+            },
+            {
+              "account": "205",
+              "amount": 31040
+            },
+            {
+              "account": "215",
+              "amount": 229920
+            },
+            {
+              "account": "220",
+              "amount": 141070
+            },
+            {
+              "account": "225.01",
+              "amount": 402245
+            },
+            {
+              "account": "225.02",
+              "amount": 120449
+            },
+            {
+              "account": "230",
+              "amount": 1638000
+            },
+            {
+              "account": "240",
+              "amount": 3510000
+            },
+            {
+              "account": "290",
+              "amount": 52020
+            },
+            {
+              "account": "600",
+              "amount": -6316784
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Supplier invoices unpaid at year end",
+          "lines": [
+            {
+              "account": "290",
+              "amount": 9930
+            },
+            {
+              "account": "800",
+              "amount": -9930
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "GST owing at year end",
+          "lines": [
+            {
+              "account": "290",
+              "amount": 1234
+            },
+            {
+              "account": "810",
+              "amount": -1234
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Depreciation",
+          "lines": [
+            {
+              "account": "210",
+              "amount": 235874
+            },
+            {
+              "account": "705",
+              "amount": -235874
+            },
+            {
+              "account": "210",
+              "amount": 492593
+            },
+            {
+              "account": "715",
+              "amount": -492593
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Interest received",
+          "lines": [
+            {
+              "account": "605",
+              "amount": 5160
+            },
+            {
+              "account": "110",
+              "amount": -5160
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Shareholder current account repaid",
+          "lines": [
+            {
+              "account": "830",
+              "amount": 120000
+            },
+            {
+              "account": "600",
+              "amount": -120000
+            }
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "narration": "Loan principal repaid",
+          "lines": [
+            {
+              "account": "900",
+              "amount": 300000
+            },
+            {
+              "account": "600",
+              "amount": -300000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

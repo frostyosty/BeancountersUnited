@@ -1,0 +1,109 @@
+{
+  "ranges": [
+    {
+      "from": "100",
+      "to": "109",
+      "line": "sales"
+    },
+    {
+      "from": "110",
+      "to": "199",
+      "line": "interest_income"
+    },
+    {
+      "from": "200",
+      "to": "204",
+      "line": "accountancy"
+    },
+    {
+      "from": "205",
+      "to": "209",
+      "line": "bank_fees"
+    },
+    {
+      "from": "210",
+      "to": "214",
+      "line": "depreciation"
+    },
+    {
+      "from": "215",
+      "to": "219",
+      "line": "insurance"
+    },
+    {
+      "from": "220",
+      "to": "224",
+      "line": "interest_expense"
+    },
+    {
+      "from": "225",
+      "to": "225",
+      "line": "motor_vehicle"
+    },
+    {
+      "from": "226",
+      "to": "234",
+      "line": "rent"
+    },
+    {
+      "from": "235",
+      "to": "239",
+      "line": "repairs"
+    },
+    {
+      "from": "240",
+      "to": "244",
+      "line": "wages"
+    },
+    {
+      "from": "245",
+      "to": "299",
+      "line": "general_expenses"
+    },
+    {
+      "from": "600",
+      "to": "609",
+      "line": "bank"
+    },
+    {
+      "from": "610",
+      "to": "619",
+      "line": "receivables"
+    },
+    {
+      "from": "700",
+      "to": "799",
+      "line": "ppe"
+    },
+    {
+      "from": "800",
+      "to": "809",
+      "line": "payables"
+    },
+    {
+      "from": "810",
+      "to": "819",
+      "line": "gst"
+    },
+    {
+      "from": "830",
+      "to": "839",
+      "line": "shareholder"
+    },
+    {
+      "from": "900",
+      "to": "949",
+      "line": "term_loan"
+    },
+    {
+      "from": "950",
+      "to": "959",
+      "line": "share_capital"
+    },
+    {
+      "from": "960",
+      "to": "999",
+      "line": "retained_earnings"
+    }
+  ]
+}

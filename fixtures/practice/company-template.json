@@ -1,0 +1,268 @@
+{
+  "name": "Company (standard)",
+  "statements": [
+    {
+      "key": "performance",
+      "title": "Statement of Financial Performance",
+      "body": [
+        {
+          "kind": "group",
+          "key": "revenue",
+          "label": "Revenue",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "sales",
+              "label": "Sales",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "interest_income",
+              "label": "Interest received",
+              "presentation": "credit_positive"
+            }
+          ],
+          "total_label": "Total revenue",
+          "protect": null
+        },
+        {
+          "kind": "group",
+          "key": "expenses",
+          "label": "Expenses",
+          "presentation": "debit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "accountancy",
+              "label": "Accountancy fees",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "bank_fees",
+              "label": "Bank fees",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "depreciation",
+              "label": "Depreciation",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "insurance",
+              "label": "Insurance",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "interest_expense",
+              "label": "Interest paid",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "motor_vehicle",
+              "label": "Motor vehicle expenses",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "rent",
+              "label": "Rent",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "repairs",
+              "label": "Repairs and maintenance",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "wages",
+              "label": "Wages",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "general_expenses",
+              "label": "General expenses",
+              "presentation": "debit_positive"
+            }
+          ],
+          "total_label": "Total expenses",
+          "protect": null
+        },
+        {
+          "kind": "total",
+          "key": "net_profit",
+          "label": "Net profit for the year",
+          "presentation": "credit_positive",
+          "of": [
+            "revenue",
+            "expenses"
+          ],
+          "protect": 1
+        }
+      ]
+    },
+    {
+      "key": "position",
+      "title": "Statement of Financial Position",
+      "body": [
+        {
+          "kind": "group",
+          "key": "assets",
+          "label": "Assets",
+          "presentation": "debit_positive",
+          "children": [
+            {
+              "kind": "group",
+              "key": "current_assets",
+              "label": "Current assets",
+              "presentation": "debit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "bank",
+                  "label": "Bank accounts",
+                  "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "receivables",
+                  "label": "Accounts receivable",
+                  "presentation": "debit_positive"
+                }
+              ],
+              "total_label": "Total current assets",
+              "protect": null
+            },
+            {
+              "kind": "group",
+              "key": "non_current_assets",
+              "label": "Non-current assets",
+              "presentation": "debit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "ppe",
+                  "label": "Property, plant and equipment",
+                  "presentation": "debit_positive"
+                }
+              ],
+              "total_label": "Total non-current assets",
+              "protect": null
+            }
+          ],
+          "total_label": "Total assets",
+          "protect": 2
+        },
+        {
+          "kind": "group",
+          "key": "liabilities",
+          "label": "Liabilities",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "group",
+              "key": "current_liabilities",
+              "label": "Current liabilities",
+              "presentation": "credit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "payables",
+                  "label": "Accounts payable",
+                  "presentation": "credit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "gst",
+                  "label": "GST payable",
+                  "presentation": "credit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "shareholder",
+                  "label": "Shareholder current account",
+                  "presentation": "credit_positive"
+                }
+              ],
+              "total_label": "Total current liabilities",
+              "protect": null
+            },
+            {
+              "kind": "group",
+              "key": "non_current_liabilities",
+              "label": "Non-current liabilities",
+              "presentation": "credit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "term_loan",
+                  "label": "Term loan",
+                  "presentation": "credit_positive"
+                }
+              ],
+              "total_label": "Total non-current liabilities",
+              "protect": null
+            }
+          ],
+          "total_label": "Total liabilities",
+          "protect": null
+        },
+        {
+          "kind": "total",
+          "key": "net_assets",
+          "label": "Net assets",
+          "presentation": "debit_positive",
+          "of": [
+            "assets",
+            "liabilities"
+          ],
+          "protect": null
+        },
+        {
+          "kind": "group",
+          "key": "equity",
+          "label": "Equity",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "share_capital",
+              "label": "Share capital",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "retained_earnings",
+              "label": "Retained earnings",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "link",
+              "key": "profit_for_year",
+              "label": "Net profit for the year",
+              "presentation": "credit_positive",
+              "from": "net_profit"
+            }
+          ],
+          "total_label": "Total equity",
+          "protect": 3
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "left": "net_assets",
+      "right": "equity"
+    }
+  ]
+}

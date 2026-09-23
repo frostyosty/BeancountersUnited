@@ -154,5 +154,33 @@ drill-down, although they still count in the totals, so this needs the practice'
   NZ style (similar code ranges and groupings to common small-business charts), written in our own
   words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
 
+## Worked example: the fixture company (hand-checked 2026-09-23)
+Example Widgets Limited (`fixtures/clients/example-widgets.json`), years ending 31 March 2025 and 2026.
+Rounding priority list: 235, 205, 290, 610, 800, 960. Snapshots: `crates/core/tests/snapshots/fixture__*.snap`.
+The figures below were recomputed by hand from the closing TBs, independently of `acct-core`.
+
+Rollover: FY2025 profit is 87,676.52 − 60,791.57 = 26,884.95, which opens FY2026 in 960 (retained
+earnings) as a credit. Balance-sheet accounts carry forward unchanged (e.g. 700 at 18,499.50).
+
+Where rounding bites, and which line absorbs it:
+
+| Year | Section | Exact total | Sum of rounded lines | Absorbed by | Why |
+|---|---|---|---|---|---|
+| 2025 | Revenue | 87,677 (87,676.52) | 87,676 | Sales 87,642 → 87,643 | Nothing on the list maps to revenue: fallback to the largest line, with a warning |
+| 2025 | Expenses | 60,792 (60,791.57) | 60,793 | Repairs 812 → 811 | 235 is first on the list |
+| 2025 | Current assets | 46,873 (46,872.64) | 46,872 | none: shows 46,872 | Total assets (62,597.21 → 62,597) is protected, and 46,873 + 15,725 would give 62,598 |
+| 2026 | Revenue | 103,464 (103,464.20) | 103,465 | Sales 103,413 → 103,412 | Fallback, with a warning |
+| 2026 | Current liabilities | 1,912 (1,911.64) | 1,911 | Payables 99 → 100 | 800 is the first account on the list in this section |
+
+Results (whole dollars, 2026 with 2025 comparatives):
+- Net profit 32,900 (26,885) = revenue 103,464 (87,677) − expenses 70,564 (60,792).
+- Total assets 91,197 (62,597) = current 59,300 (46,872) + non-current 31,897 (15,725).
+- Total liabilities 21,412 (25,712) = current 1,912 (3,212) + non-current 19,500 (22,500).
+- Net assets 69,785 (36,885) = equity: share capital 10,000 (10,000) + retained earnings 26,885 (0) +
+  profit 32,900 (26,885).
+- GST payable shows 12 (0): the 2025 balance of 0.41 rounds to nil. It is left out of the 2025
+  statement, where it is nil in the only column.
+- The comparatives in the 2026 statement equal the 2025 statement line for line.
+
 ## Open
 None yet.

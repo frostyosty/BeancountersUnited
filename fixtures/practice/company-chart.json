@@ -1,0 +1,164 @@
+[
+  {
+    "code": "100",
+    "name": "Sales",
+    "account_type": "income",
+    "active": true
+  },
+  {
+    "code": "110",
+    "name": "Interest received",
+    "account_type": "income",
+    "active": true
+  },
+  {
+    "code": "200",
+    "name": "Accountancy fees",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "205",
+    "name": "Bank fees",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "210",
+    "name": "Depreciation",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "215",
+    "name": "Insurance",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "220",
+    "name": "Interest paid",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "225",
+    "name": "Motor vehicle expenses",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "225.01",
+    "name": "Motor vehicle fuel",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "225.02",
+    "name": "Motor vehicle repairs",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "230",
+    "name": "Rent",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "235",
+    "name": "Repairs and maintenance",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "240",
+    "name": "Wages",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "290",
+    "name": "General expenses",
+    "account_type": "expense",
+    "active": true
+  },
+  {
+    "code": "600",
+    "name": "Bank - cheque account",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "605",
+    "name": "Bank - savings account",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "610",
+    "name": "Accounts receivable",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "700",
+    "name": "Plant and equipment at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "705",
+    "name": "Plant and equipment accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "710",
+    "name": "Motor vehicles at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "715",
+    "name": "Motor vehicles accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "800",
+    "name": "Accounts payable",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "810",
+    "name": "GST payable",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "830",
+    "name": "Shareholder current account",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "900",
+    "name": "Term loan",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "950",
+    "name": "Share capital",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "960",
+    "name": "Retained earnings",
+    "account_type": "equity",
+    "active": true
+  }
+]
