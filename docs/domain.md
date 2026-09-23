@@ -93,9 +93,51 @@ the year of acquisition).
 **GST-exclusive ledger.** A ledger whose coded bank lines are split into the net amount and GST.
 
 ## Decisions
-None yet.
+
+### Rounding to whole dollars (decided 2026-09-23)
+Statements show whole dollars. Rounding follows these rules, applied separately to the current and prior
+columns:
+
+1. **Lines.** Each line's exact cents total is rounded half away from zero.
+2. **Totals.** Every total and subtotal shows its own exact cents total, rounded half away from zero. It
+   is never just the sum of the rounded lines.
+3. **Absorbing the difference.** Where the rounded lines in a section don't add up to that section's
+   rounded total, the whole difference goes onto one line in that section, so the column foots. It's
+   usually $1 but can be more when a section has many lines.
+4. **Which line absorbs it.** Each client has a *rounding priority list*: an ordered list of account
+   codes. For a section needing an adjustment, take the first account on the list that maps into that
+   section and has a non-zero balance in that column. The line it maps to absorbs the difference.
+   Example: the list is 1. Repairs & maintenance, 2. Bank fees. There's no R&M this year, and bank
+   fees is $120, so bank fees shows $121.
+5. **Fallback.** If no account on the list qualifies, the largest line in the section by absolute
+   rounded amount absorbs it (ties go to the first in template order). The ReportDoc then carries a
+   warning, so staff can extend the list.
+6. **When totals conflict.** Rounding every total independently can leave totals that don't agree
+   (income $100.40, expenses $50.60, profit $49.80: rounded 100 − 51 ≠ 50). Protected totals win, in
+   this order: net profit, total assets, total equity (= net assets). A total that isn't protected
+   (total income, total expenses, total liabilities, other subtotals) gives way. It shows whatever
+   keeps the protected totals right, even if that's $1 off its own exact rounded figure. In the example,
+   profit shows $50, and expenses show $50 via the absorbing line.
+7. **Profit into equity.** The current-year profit shown in equity is the P&L's net profit exactly
+   as shown.
+8. **Drill-down.** Accounts behind a line always show their real balances. An absorbing line also shows
+   a separate "rounding adjustment" entry, so the drill-down adds up to the line.
+9. **Who sets the list.** The master user keeps a practice default list per entity type. Each new client
+   gets a copy. Staff can reorder or edit a client's list. Changing the default doesn't alter existing
+   clients unless someone runs the explicit "push default" command, which previews the change and only
+   touches open years.
+
+There's one implementation of this, in `acct-core`.
+
+### Account codes (decided 2026-09-23)
+- A code is one or more segments separated by `.`, such as `200`, `200.01`, `1100` or `A100`. Segments
+  are ASCII letters and digits.
+- Codes sort segment by segment. An all-digit segment compares as a number, so `200` < `200.01` < `1100`,
+  and a digit segment sorts before a segment containing letters. A code that is a prefix of another sorts
+  first.
+- The master user builds master charts and templates. The practice ships premade charts in the familiar
+  NZ style (similar code ranges and groupings to common small-business charts), written in our own
+  words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
 
 ## Open
-- Rounding placement: which lines absorb differences, and must key totals equal the rounded exact
-  totals? Needed before M1's ReportDoc builder.
-- The practice's account-code format. It checks M1's sort key.
+None yet.

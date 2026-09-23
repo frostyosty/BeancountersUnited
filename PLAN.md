@@ -6,7 +6,7 @@ Each milestone ends in something that runs and a "Done when" check. Don't start 
 early; put ideas in the Backlog instead.
 
 ## M0 — Repo and dev environment
-Status: built on branch `m0`. `make setup && make check` is green and `make dev` serves `/api/health` through the Vite proxy in the existing Codespace. Still to check: a fresh Codespace built from `.devcontainer`, and the first CI run.
+Status: done, except for one check: a Codespace built fresh from `.devcontainer`. CI is green on `master`.
 - `.devcontainer/devcontainer.json`:
   - image `mcr.microsoft.com/devcontainers/base:ubuntu`
   - features `ghcr.io/devcontainers/features/rust:1` and `ghcr.io/devcontainers/features/node:1` (LTS)
@@ -33,8 +33,8 @@ Status: built on branch `m0`. `make setup && make check` is green and `make dev`
 Done when: a fresh Codespace runs `make setup && make check` green, and `make dev` serves a page that calls `/api/health` through the Vite proxy.
 
 ## M1 — Core: ledger to statements (pure)
-Status: not started
-- First, ask how rounding should be placed, then record it in `docs/domain.md`: which lines absorb differences, and whether key totals must equal the rounded exact totals.
+Status: in progress. Rounding and account codes are decided in `docs/domain.md`.
+- Rounding follows `docs/domain.md`: totals are the rounded exact totals, and the absorbing line comes from the client's rounding priority list (`RoundingPriority`, a list of account codes). Core takes the list as an input; storing and editing it comes in M2 and M3.
 - `Money`: addition, subtraction, negation, `round_to_dollars` (half away from zero), parsing and formatting.
 - `AccountCode`, with a normalised sort key that compares numeric segments numerically: "200" < "200.01" < "1100".
 - `Chart` and `Account`. Account type is one of asset, liability, equity, income, expense; each account has an active flag.
@@ -170,15 +170,15 @@ Status: waiting on a decision
 
 ## Open questions
 - Does anyone need to edit away from the office network? This decides M9.
-- Rounding (needed before M1's builder): which lines absorb rounding differences, and must key totals equal the rounded exact totals?
 - Straight-line entry: a rate or a useful life? Basis points can't express 1/3, so a 3-year rate of 33.33% leaves a small residue for a fourth year; a life in months doesn't.
 - Who may set client-level depreciation overrides: master only, or staff too?
 - Which entity types come after companies: trusts, partnerships, sole traders?
-- What account-code format does the practice use? This checks M1's sort key.
 - Which server host OS and which client (M7)?
 
 ## Backlog (not scheduled)
 - Templates for trusts, partnerships and sole traders.
+- Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
+- A "master dev" sync simulator: one `acctd` with many simulated clients sending commands and following `/api/sync`, checking that they all converge on the same state. Needs M2's sync feed.
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
 - GL listing and audit-trail reports (hide matched reversal pairs by default).
