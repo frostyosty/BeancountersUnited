@@ -12,12 +12,16 @@ acct-core = { path = "crates/core" }
 acct-store = { path = "crates/store" }
 acct-import = { path = "crates/import" }
 
+argon2 = "0.6"
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
+getrandom = "0.4"
 insta = "1"
 proptest = "1"
+rpassword = "7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.11"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono"] }
 tempfile = "3"
 thiserror = "2"
@@ -30,3 +34,9 @@ uuid = { version = "1", features = ["v7"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+
+# Password hashing is deliberately slow; unoptimised it makes tests and `make dev` logins crawl.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3

@@ -1,14 +1,19 @@
-//! Users. Sessions arrive with auth.
+//! Users. Their login sessions are in `sessions`.
 
 use sqlx::{FromRow, SqliteConnection};
 
 use crate::{Result, parse_enum};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// What a user may do (CLAUDE.md, Roles).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
 pub enum Role {
+    /// Practice settings, users, defaults, master charts, templates, finalising and reopening.
     Master,
+    /// Client work, including custom depreciation rates.
     Staff,
+    /// Read-only.
     Viewer,
 }
 

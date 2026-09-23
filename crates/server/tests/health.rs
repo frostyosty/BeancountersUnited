@@ -1,17 +1,13 @@
-use axum::body::{Body, to_bytes};
-use axum::http::{Request, StatusCode};
-use tower::ServiceExt;
+mod common;
+
+use axum::http::StatusCode;
+use common::{Server, get, split};
 
 #[tokio::test]
-async fn health_reports_ok() {
-    let response = acct_server::app()
-        .oneshot(Request::get("/api/health").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+async fn health_reports_ok_without_a_login() {
+    let server = Server::new().await;
+    let (status, json) = split(server.send(get("/api/health", None)).await).await;
+    assert_eq!(status, StatusCode::OK);
     assert_eq!(json["status"], "ok");
     assert_eq!(json["version"], env!("CARGO_PKG_VERSION"));
 }

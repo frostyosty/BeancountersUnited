@@ -22,6 +22,7 @@ pub mod clients;
 pub mod journals;
 pub mod log;
 pub mod practice;
+pub mod sessions;
 pub mod templates;
 pub mod users;
 pub mod years;

@@ -26,6 +26,10 @@ pub struct ApiError {
 pub enum CommandError {
     /// The body isn't a command this server understands.
     Malformed(String),
+    /// No valid session: not logged in, or the login has expired.
+    Unauthenticated,
+    /// A login with the wrong username or password. Which one is never said.
+    BadCredentials,
     Forbidden,
     NotFound {
         entity: &'static str,
@@ -85,6 +89,9 @@ impl CommandError {
     pub fn status(&self) -> StatusCode {
         match self {
             CommandError::Malformed(_) => StatusCode::BAD_REQUEST,
+            CommandError::Unauthenticated | CommandError::BadCredentials => {
+                StatusCode::UNAUTHORIZED
+            }
             CommandError::Forbidden => StatusCode::FORBIDDEN,
             CommandError::NotFound { .. } => StatusCode::NOT_FOUND,
             CommandError::IdReused(_) => StatusCode::CONFLICT,
@@ -96,6 +103,14 @@ impl CommandError {
     pub fn body(&self) -> ApiError {
         let (code, message, details) = match self {
             CommandError::Malformed(m) => ("malformed", m.clone(), Value::Null),
+            CommandError::Unauthenticated => {
+                ("unauthenticated", "Please log in.".to_owned(), Value::Null)
+            }
+            CommandError::BadCredentials => (
+                "bad_credentials",
+                "That username and password don't match.".to_owned(),
+                Value::Null,
+            ),
             CommandError::Forbidden => (
                 "forbidden",
                 "Your role doesn't allow this.".to_owned(),

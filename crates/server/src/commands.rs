@@ -6,6 +6,8 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::pipeline::Actor;
+
 /// The request body: `{ id, kind, payload }`. `id` is a UUID the client makes with `newId()`, and
 /// is the idempotency key.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -21,6 +23,21 @@ pub struct CommandEnvelope {
 #[serde(tag = "kind", content = "payload", rename_all = "snake_case")]
 #[ts(export, rename_all = "snake_case")]
 pub enum Command {
+    /// Names the practice and creates its first master user. Only `acctd init` on the server can
+    /// submit it, and only once.
+    Initialise {
+        practice_name: String,
+        username: String,
+        display_name: String,
+        password: String,
+    },
+    /// Adds a user. Master only.
+    CreateUser {
+        username: String,
+        display_name: String,
+        password: String,
+        role: Role,
+    },
     /// Sets up the practice master chart for an entity type. Master only.
     CreateMasterChart {
         entity_type: String,
@@ -85,6 +102,8 @@ impl Command {
     /// The name stored in `command_log.kind`, as it appears on the wire.
     pub fn kind(&self) -> &'static str {
         match self {
+            Command::Initialise { .. } => "initialise",
+            Command::CreateUser { .. } => "create_user",
             Command::CreateMasterChart { .. } => "create_master_chart",
             Command::CreateTemplate { .. } => "create_template",
             Command::ReviseTemplate { .. } => "revise_template",
@@ -100,13 +119,20 @@ impl Command {
     /// The payload as stored in `command_log`. Commands carrying secrets blank them here.
     pub fn logged_payload(&self) -> serde_json::Value {
         let mut v = serde_json::to_value(self).expect("commands serialise");
-        v["payload"].take()
+        let mut payload = v["payload"].take();
+        if let Some(password) = payload.get_mut("password") {
+            *password = "[redacted]".into();
+        }
+        payload
     }
 
-    /// Whether `role` may submit this command.
-    pub fn allowed_for(&self, role: Role) -> bool {
+    /// Whether `actor` may submit this command.
+    pub fn allowed_for(&self, actor: &Actor) -> bool {
+        let role = actor.role;
         match self {
-            Command::CreateMasterChart { .. }
+            Command::Initialise { .. } => actor.user_id.is_none(),
+            Command::CreateUser { .. }
+            | Command::CreateMasterChart { .. }
             | Command::CreateTemplate { .. }
             | Command::ReviseTemplate { .. }
             | Command::CreateMapping { .. }

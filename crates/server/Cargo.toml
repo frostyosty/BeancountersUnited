@@ -11,10 +11,14 @@ path = "src/main.rs"
 [dependencies]
 acct-core.workspace = true
 acct-store.workspace = true
+argon2.workspace = true
 axum.workspace = true
 chrono.workspace = true
+getrandom.workspace = true
+rpassword.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

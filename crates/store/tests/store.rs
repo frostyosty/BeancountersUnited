@@ -524,3 +524,37 @@ async fn a_rolled_back_transaction_leaves_nothing() {
         .unwrap();
     assert_eq!(lines, 0);
 }
+
+#[tokio::test]
+async fn sessions_round_trip_and_expire() {
+    use acct_store::sessions::{self, Session};
+    let (_dir, store) = open().await;
+    let mut w = store.writer().await;
+    let user = User {
+        id: new_id(),
+        username: "pat".into(),
+        display_name: "Pat".into(),
+        password_hash: "x".into(),
+        role: Role::Staff,
+        active: true,
+        created_seq: 1,
+    };
+    users::insert(&mut w, &user).await.unwrap();
+    let at = |h: u32| Utc.with_ymd_and_hms(2026, 9, 23, h, 0, 0).unwrap();
+    let session = |hash: &str, expires: u32| Session {
+        token_hash: hash.into(),
+        user_id: user.id.clone(),
+        created_at: at(0),
+        expires_at: at(expires),
+    };
+    sessions::insert(&mut w, &session("old", 5)).await.unwrap();
+    sessions::insert(&mut w, &session("new", 20)).await.unwrap();
+    assert_eq!(
+        sessions::get(&mut w, "new").await.unwrap(),
+        Some(session("new", 20))
+    );
+    assert_eq!(sessions::delete_expired(&mut w, at(10)).await.unwrap(), 1);
+    assert_eq!(sessions::get(&mut w, "old").await.unwrap(), None);
+    sessions::delete(&mut w, "new").await.unwrap();
+    assert_eq!(sessions::get(&mut w, "new").await.unwrap(), None);
+}

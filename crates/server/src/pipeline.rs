@@ -8,20 +8,23 @@ use acct_store::charts::MasterChart;
 use acct_store::clients::Client;
 use acct_store::journals::{JournalKind, StoredJournal};
 use acct_store::log::LoggedCommand;
+use acct_store::practice::Practice;
 use acct_store::sqlx::Connection;
 use acct_store::templates::{MappingInfo, TemplateInfo};
-use acct_store::users::Role;
+use acct_store::users::{Role, User};
 use acct_store::years::{StoredYear, YearStatus};
 use acct_store::{
-    SqliteConnection, Store, charts, clients, journals, log, new_id, templates, years,
+    SqliteConnection, Store, charts, clients, journals, log, new_id, practice, templates, users,
+    years,
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
+use crate::auth;
 use crate::commands::{Accepted, Command, CommandEnvelope};
 use crate::error::CommandError;
 
-/// Who is submitting a command. `user_id` is `None` only for the server's own bootstrap.
+/// Who is submitting a command. `user_id` is `None` only for `acctd init` on the server itself.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Actor {
     pub user_id: Option<String>,
@@ -63,7 +66,7 @@ pub async fn submit(
             .map_err(|e| CommandError::Store(acct_store::StoreError::Corrupt(e.to_string())));
     }
 
-    if !command.allowed_for(actor.role) {
+    if !command.allowed_for(actor) {
         return Err(CommandError::Forbidden);
     }
 
@@ -99,6 +102,41 @@ async fn apply(
     seq: i64,
 ) -> Result<Effect, CommandError> {
     match command {
+        Command::Initialise {
+            practice_name,
+            username,
+            display_name,
+            password,
+        } => {
+            check_name(practice_name)?;
+            if practice::get(tx).await?.is_some() {
+                return Err(CommandError::invalid(
+                    "already_initialised",
+                    "This server has already been set up.",
+                ));
+            }
+            practice::insert(
+                tx,
+                &Practice {
+                    name: practice_name.trim().to_owned(),
+                    created_seq: seq,
+                },
+            )
+            .await?;
+            let id = create_user(tx, username, display_name, password, Role::Master, seq).await?;
+            Ok(created(id))
+        }
+
+        Command::CreateUser {
+            username,
+            display_name,
+            password,
+            role,
+        } => {
+            let id = create_user(tx, username, display_name, password, *role, seq).await?;
+            Ok(created(id))
+        }
+
         Command::CreateMasterChart {
             entity_type,
             name,
@@ -402,6 +440,51 @@ async fn apply(
             .await
         }
     }
+}
+
+async fn create_user(
+    tx: &mut SqliteConnection,
+    username: &str,
+    display_name: &str,
+    password: &str,
+    role: Role,
+    seq: i64,
+) -> Result<String, CommandError> {
+    let username = username.trim();
+    let ok = !username.is_empty()
+        && username.len() <= 64
+        && username
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b));
+    if !ok {
+        return Err(CommandError::invalid(
+            "invalid_username",
+            "A username is 1 to 64 letters, digits, dots, dashes or underscores.",
+        ));
+    }
+    check_name(display_name)?;
+    auth::check_password_rules(password)?;
+    if users::by_username(tx, username).await?.is_some() {
+        return Err(CommandError::invalid(
+            "username_taken",
+            format!("There's already a user called {username}."),
+        ));
+    }
+    let id = new_id();
+    users::insert(
+        tx,
+        &User {
+            id: id.clone(),
+            username: username.to_owned(),
+            display_name: display_name.trim().to_owned(),
+            password_hash: auth::hash_password(password),
+            role,
+            active: true,
+            created_seq: seq,
+        },
+    )
+    .await?;
+    Ok(id)
 }
 
 fn created(id: String) -> Effect {

@@ -1,12 +1,29 @@
 //! The acct HTTP API: routes, auth, the command pipeline and the sync feed.
 
+pub mod auth;
 pub mod commands;
 pub mod error;
 pub mod pipeline;
 
-use axum::{Json, Router, routing::get};
+use std::sync::Arc;
+
+use acct_store::Store;
+use axum::extract::State;
+use axum::extract::rejection::JsonRejection;
+use axum::routing::{get, post};
+use axum::{Json, Router};
 use serde::Serialize;
 use ts_rs::TS;
+
+use crate::auth::CurrentUser;
+use crate::commands::{Accepted, CommandEnvelope};
+use crate::error::CommandError;
+
+/// What every handler shares.
+#[derive(Clone)]
+pub struct AppState {
+    pub store: Arc<Store>,
+}
 
 /// Response body of `GET /api/health`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -16,8 +33,14 @@ pub struct Health {
     pub version: String,
 }
 
-pub fn app() -> Router {
-    Router::new().route("/api/health", get(health))
+pub fn app(state: AppState) -> Router {
+    Router::new()
+        .route("/api/health", get(health))
+        .route("/api/login", post(auth::login))
+        .route("/api/logout", post(auth::logout))
+        .route("/api/me", get(auth::me))
+        .route("/api/commands", post(submit_command))
+        .with_state(state)
 }
 
 async fn health() -> Json<Health> {
@@ -25,4 +48,16 @@ async fn health() -> Json<Health> {
         status: "ok".to_owned(),
         version: env!("CARGO_PKG_VERSION").to_owned(),
     })
+}
+
+/// `POST /api/commands`
+async fn submit_command(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    body: Result<Json<CommandEnvelope>, JsonRejection>,
+) -> Result<Json<Accepted>, CommandError> {
+    let Json(envelope) = body.map_err(|e| CommandError::Malformed(e.body_text()))?;
+    let accepted =
+        pipeline::submit(&state.store, &user.actor(), envelope, chrono::Utc::now()).await?;
+    Ok(Json(accepted))
 }
