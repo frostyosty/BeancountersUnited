@@ -33,7 +33,7 @@ Status: done, except for one check: a Codespace built fresh from `.devcontainer`
 Done when: a fresh Codespace runs `make setup && make check` green, and `make dev` serves a page that calls `/api/health` through the Vite proxy.
 
 ## M1 — Core: ledger to statements (pure)
-Status: in progress. Rounding and account codes are decided in `docs/domain.md`.
+Status: done (2026-09-23). The fixture's snapshots were hand-checked against the worked example in `docs/domain.md` and signed off. Nil-line behaviour is still provisional there.
 - Rounding follows `docs/domain.md`: totals are the rounded exact totals, and the absorbing line comes from the client's rounding priority list (`RoundingPriority`, a list of account codes). Core takes the list as an input; storing and editing it comes in M2 and M3.
 - `Money`: addition, subtraction, negation, `round_to_dollars` (half away from zero), parsing and formatting.
 - `AccountCode`, with a normalised sort key that compares numeric segments numerically: "200" < "200.01" < "1100".
@@ -51,7 +51,7 @@ Status: in progress. Rounding and account codes are decided in `docs/domain.md`.
 Done when: a person has reviewed the fixture's ReportDoc snapshots and they match a hand-checked statement recorded in `docs/domain.md`.
 
 ## M2 — Store, server, command pipeline
-Status: not started
+Status: in progress.
 - Migrations for: practice, users, sessions, clients, client_years, master_charts, accounts, templates and mappings (versioned), journals, journal_lines, command_log, and snapshots (table only for now).
 - Command pipeline, in order:
   1. decode
