@@ -129,6 +129,25 @@ impl Ord for AccountCode {
     }
 }
 
+impl AccountCode {
+    /// Compares this code, cut to `other`'s number of segments, with `other`, by value only. So
+    /// `299.05` against `299` is `Equal`: a sub-account compares equal to its parent. Mapping
+    /// ranges use this so their upper code covers its own sub-accounts.
+    pub fn cmp_truncated(&self, other: &AccountCode) -> Ordering {
+        let mut a = self.segments();
+        for y in other.segments() {
+            match a.next() {
+                None => return Ordering::Less,
+                Some(x) => match cmp_segment(x, y) {
+                    Ordering::Equal => {}
+                    ord => return ord,
+                },
+            }
+        }
+        Ordering::Equal
+    }
+}
+
 impl PartialOrd for AccountCode {
     fn partial_cmp(&self, other: &AccountCode) -> Option<Ordering> {
         Some(self.cmp(other))

@@ -136,6 +136,9 @@ There's one implementation of this, in `acct-core`.
 - Codes sort segment by segment. An all-digit segment compares as a number, so `200` < `200.01` < `1100`,
   and a digit segment sorts before a segment containing letters. A code that is a prefix of another sorts
   first. `0200` and `200` are different codes; the shorter one sorts first.
+- A mapping range `from`–`to` includes both ends, and `to` also covers its own sub-accounts: `200`–`299`
+  includes `299.05`. Ranges may not overlap, and touching ends such as `100`–`199` and `199`–`250`
+  count as overlapping.
 - The master user builds master charts and templates. The practice ships premade charts in the familiar
   NZ style (similar code ranges and groupings to common small-business charts), written in our own
   words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
