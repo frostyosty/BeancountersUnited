@@ -10,5 +10,6 @@ and figures are made up.
   designated equity account for rollover.
 
 Amounts are integer cents, debits positive. `acct-core`'s fixture tests read these files at compile
-time and snapshot the resulting ReportDocs. From M2, `make db-reset` loads them through the command
-pipeline.
+time and snapshot the resulting ReportDocs. `make db-reset` loads them into the dev database through
+the command pipeline (`acct-load-fixtures`), with dev users `admin`, `staff` and `viewer`, password
+`fixture-password`.

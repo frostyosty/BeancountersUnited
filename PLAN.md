@@ -51,7 +51,7 @@ Status: done (2026-09-23). The fixture's snapshots were hand-checked against the
 Done when: a person has reviewed the fixture's ReportDoc snapshots and they match a hand-checked statement recorded in `docs/domain.md`.
 
 ## M2 — Store, server, command pipeline
-Status: in progress.
+Status: done (2026-09-23). `crates/server/tests/m2_done.rs` is the check. M1's snapshot shows FY2026 with FY2025 finalised, and nothing can finalise a year until M5, so that test sets FY2025's status directly; without that, the only difference is `"comparatives": "unfinalised"`.
 - Migrations for: practice, users, sessions, clients, client_years, master_charts, accounts, templates and mappings (versioned), journals, journal_lines, command_log, and snapshots (table only for now).
 - Command pipeline, in order:
   1. decode
@@ -182,3 +182,5 @@ Status: waiting on a decision
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
 - GL listing and audit-trail reports (hide matched reversal pairs by default).
+- Login throttling (M2 has none; a LAN with a handful of users makes it low priority until M7).
+- Commands still to come for M3: editing a client's chart (add, rename, deactivate accounts), editing a client's rounding priority list, users changing their own password, a master user resetting a password or deactivating a user.

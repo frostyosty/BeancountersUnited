@@ -31,6 +31,7 @@ types-check: types
 	@git diff --quiet -- $(TYPES_DIR) && test -z "$$(git ls-files --others --exclude-standard -- $(TYPES_DIR))" \
 		|| { git status --short -- $(TYPES_DIR); echo "Generated types are out of date: run 'make types' and commit the result."; exit 1; }
 
-# There's no schema until M2. Then this also loads fixtures through the command pipeline.
+# Wipes the dev database and loads the synthetic fixtures through the command pipeline.
 db-reset:
 	rm -f data/*.db data/*.db-*
+	cargo run -q -p acct-server --bin acct-load-fixtures
