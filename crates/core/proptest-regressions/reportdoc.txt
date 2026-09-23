@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 75f6635b3e6212fe21b58db323ed7fa18cf9dda2d02170662da9732198a22873 # shrinks to current = TrialBalance { balances: {} }, prior = TrialBalance { balances: {} }, priority = []

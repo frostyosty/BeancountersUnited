@@ -176,7 +176,12 @@ pub struct Template {
 pub enum TemplateError {
     #[error("the key {0} is used more than once")]
     DuplicateKey(LineKey),
-    #[error("{node} refers to {target}, which doesn't come earlier in the template")]
+    /// Totals may only add up earlier rows in their own statement; links may only repeat a row
+    /// from an earlier statement, whose figures are settled by the time the link is shown.
+    #[error(
+        "{node} refers to {target}, but totals can only use earlier rows in the same statement, \
+         and links can only use rows from an earlier statement"
+    )]
     UnknownReference { node: LineKey, target: LineKey },
     #[error("the total {0} doesn't add up anything")]
     EmptyTotal(LineKey),
@@ -196,25 +201,33 @@ impl Template {
         self.nodes().find(|n| n.key() == key)
     }
 
-    /// Checks that keys are unique across the template (statement keys included), that totals and
-    /// links only refer to rows that come earlier (so there can be no cycles), and that checks
-    /// refer to existing rows.
+    /// Checks that keys are unique across the template (statement keys included), that totals
+    /// only use earlier rows of their own statement and links only rows of an earlier statement
+    /// (so there can be no cycles), and that checks refer to existing rows.
     pub fn validate(&self) -> Result<(), Vec<TemplateError>> {
         let mut errors = Vec::new();
-        let mut seen: BTreeSet<&LineKey> = BTreeSet::new();
+        let mut all_keys: BTreeSet<&LineKey> = BTreeSet::new();
         for statement in &self.statements {
-            if !seen.insert(&statement.key) {
+            if !all_keys.insert(&statement.key) {
                 errors.push(TemplateError::DuplicateKey(statement.key.clone()));
             }
         }
+        let mut earlier_statements: BTreeSet<&LineKey> = BTreeSet::new();
         for statement in &self.statements {
+            let mut this_statement = BTreeSet::new();
             for top in &statement.body {
-                validate_node(top, &mut seen, &mut errors);
+                let mut scope = Scope {
+                    all_keys: &mut all_keys,
+                    earlier_statements: &earlier_statements,
+                    this_statement: &mut this_statement,
+                };
+                validate_node(top, &mut scope, &mut errors);
             }
+            earlier_statements.extend(this_statement);
         }
         for check in &self.checks {
             for key in [&check.left, &check.right] {
-                if !seen.contains(key) {
+                if !earlier_statements.contains(key) {
                     errors.push(TemplateError::UnknownCheckKey(key.clone()));
                 }
             }
@@ -227,39 +240,42 @@ impl Template {
     }
 }
 
-fn validate_node<'a>(
-    node: &'a Node,
-    seen: &mut BTreeSet<&'a LineKey>,
-    errors: &mut Vec<TemplateError>,
-) {
-    // Children come before their group's own key is "seen": a group total can't be referred to
+struct Scope<'a, 'b> {
+    all_keys: &'b mut BTreeSet<&'a LineKey>,
+    earlier_statements: &'b BTreeSet<&'a LineKey>,
+    this_statement: &'b mut BTreeSet<&'a LineKey>,
+}
+
+fn validate_node<'a>(node: &'a Node, scope: &mut Scope<'a, '_>, errors: &mut Vec<TemplateError>) {
+    // Children come before their group's own key is recorded: a group total can't be referred to
     // from inside itself.
     if let Node::Group { children, .. } = node {
         for child in children {
-            validate_node(child, seen, errors);
+            validate_node(child, scope, errors);
         }
     }
-    let refs: &[LineKey] = match node {
+    let (refs, allowed): (&[LineKey], &BTreeSet<&LineKey>) = match node {
         Node::Total { of, .. } => {
             if of.is_empty() {
                 errors.push(TemplateError::EmptyTotal(node.key().clone()));
             }
-            of
+            (of, scope.this_statement)
         }
-        Node::Link { from, .. } => std::slice::from_ref(from),
-        _ => &[],
+        Node::Link { from, .. } => (std::slice::from_ref(from), scope.earlier_statements),
+        _ => (&[], scope.this_statement),
     };
     for target in refs {
-        if !seen.contains(target) {
+        if !allowed.contains(target) {
             errors.push(TemplateError::UnknownReference {
                 node: node.key().clone(),
                 target: target.clone(),
             });
         }
     }
-    if !seen.insert(node.key()) {
+    if !scope.all_keys.insert(node.key()) {
         errors.push(TemplateError::DuplicateKey(node.key().clone()));
     }
+    scope.this_statement.insert(node.key());
 }
 
 #[cfg(test)]
@@ -481,6 +497,17 @@ pub(crate) mod tests {
         t.statements[1]
             .body
             .push(total("empty", "Empty", DebitPositive, &[], None));
+        // A link within its own statement, and a total reaching into another statement.
+        t.statements[1]
+            .body
+            .push(link("same", "Same", DebitPositive, "bank"));
+        t.statements[1].body.push(total(
+            "cross",
+            "Cross",
+            DebitPositive,
+            &["assets", "income"],
+            None,
+        ));
         t.checks.push(EqualityCheck {
             left: key("bank"),
             right: key("ghost"),
@@ -501,6 +528,14 @@ pub(crate) mod tests {
                     target: key("missing")
                 },
                 TemplateError::EmptyTotal(key("empty")),
+                TemplateError::UnknownReference {
+                    node: key("same"),
+                    target: key("bank")
+                },
+                TemplateError::UnknownReference {
+                    node: key("cross"),
+                    target: key("income")
+                },
                 TemplateError::UnknownCheckKey(key("ghost")),
             ])
         );

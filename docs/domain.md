@@ -129,6 +129,17 @@ columns:
 
 There's one implementation of this, in `acct-core`.
 
+How it runs (`acct-core::reportdoc`), per column: lines start at their exact amount rounded;
+then, statement by statement, links copy their already-settled target, groups (innermost first)
+are brought to their exact total rounded, and totals are brought to theirs, protected ones first.
+Once a protected row is settled, the lines under it are frozen, so nothing later can move it.
+Protection is marked in the template (`protect: 1, 2, 3`), not hard-coded by name.
+
+### Nil lines (provisional, to confirm)
+A line that shows $0 in both columns is left out, along with any group whose lines are all left
+out. Totals such as net profit always show. The accounts on a left-out line then don't appear in
+drill-down, although they still count in the totals, so this needs the practice's confirmation.
+
 ### Account codes (decided 2026-09-23)
 - A code is one or more segments separated by `.`, such as `200`, `200.01`, `1100` or `A100`. Segments
   are ASCII letters and digits, and codes are at most 20 characters. Letters are stored uppercase, so
