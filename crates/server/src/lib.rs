@@ -3,7 +3,9 @@
 pub mod auth;
 pub mod commands;
 pub mod error;
+pub mod ledger;
 pub mod pipeline;
+pub mod reads;
 
 use std::sync::Arc;
 
@@ -40,6 +42,14 @@ pub fn app(state: AppState) -> Router {
         .route("/api/logout", post(auth::logout))
         .route("/api/me", get(auth::me))
         .route("/api/commands", post(submit_command))
+        .route("/api/clients", get(reads::list_clients))
+        .route("/api/clients/{id}", get(reads::get_client))
+        .route("/api/clients/{id}/chart", get(reads::get_chart))
+        .route("/api/years/{id}", get(reads::get_year))
+        .route("/api/years/{id}/journals", get(reads::list_journals))
+        .route("/api/years/{id}/tb", get(reads::get_trial_balance))
+        .route("/api/years/{id}/report", get(reads::get_report))
+        .route("/api/sync", get(reads::sync))
         .with_state(state)
 }
 

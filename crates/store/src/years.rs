@@ -8,15 +8,17 @@ use sqlx::{FromRow, SqliteConnection};
 use crate::{Result, StoreError, enum_text, parse_enum};
 
 /// Where a year's books come from. Never both: that would double-count (CLAUDE.md).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
 pub enum BooksSource {
     TbImport,
     BankCoding,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
 pub enum YearStatus {
     Open,
     Finalised,
