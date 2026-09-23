@@ -21,7 +21,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-ts-rs = "12"
+ts-rs = { version = "12", features = ["no-serde-warnings"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

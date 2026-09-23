@@ -131,10 +131,11 @@ There's one implementation of this, in `acct-core`.
 
 ### Account codes (decided 2026-09-23)
 - A code is one or more segments separated by `.`, such as `200`, `200.01`, `1100` or `A100`. Segments
-  are ASCII letters and digits.
+  are ASCII letters and digits, and codes are at most 20 characters. Letters are stored uppercase, so
+  `a100` and `A100` are the same code.
 - Codes sort segment by segment. An all-digit segment compares as a number, so `200` < `200.01` < `1100`,
   and a digit segment sorts before a segment containing letters. A code that is a prefix of another sorts
-  first.
+  first. `0200` and `200` are different codes; the shorter one sorts first.
 - The master user builds master charts and templates. The practice ships premade charts in the familiar
   NZ style (similar code ranges and groupings to common small-business charts), written in our own
   words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
