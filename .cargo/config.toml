@@ -1,0 +1,5 @@
+[env]
+# JSON delivers i64 as a plain number, not a bigint.
+TS_RS_LARGE_INT = "number"
+# Every crate exports its TypeScript types to one place.
+TS_RS_EXPORT_DIR = { value = "packages/types/src", relative = true }

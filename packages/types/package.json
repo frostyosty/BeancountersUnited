@@ -1,0 +1,15 @@
+{
+  "name": "@acct/types",
+  "private": true,
+  "description": "TypeScript types generated from Rust by ts-rs. Run `make types`; never edit src/ by hand.",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  }
+}

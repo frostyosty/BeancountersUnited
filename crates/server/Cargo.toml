@@ -1,0 +1,24 @@
+[package]
+name = "acct-server"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "acctd"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+serde.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true

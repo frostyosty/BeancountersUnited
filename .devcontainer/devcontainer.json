@@ -1,0 +1,10 @@
+{
+  "name": "acct",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+  },
+  "forwardPorts": [8080, 5173],
+  "postCreateCommand": "npm install -g pnpm && make setup"
+}

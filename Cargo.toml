@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = ["crates/core", "crates/store", "crates/server", "crates/import"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+acct-core = { path = "crates/core" }
+acct-store = { path = "crates/store" }
+acct-import = { path = "crates/import" }
+
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tower = { version = "0.5", features = ["util"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ts-rs = "12"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
