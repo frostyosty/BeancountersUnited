@@ -13,8 +13,10 @@ acct-store = { path = "crates/store" }
 acct-import = { path = "crates/import" }
 
 axum = "0.8"
+proptest = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
