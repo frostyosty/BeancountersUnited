@@ -1,0 +1,17 @@
+# acct-core must be pure (CLAUDE.md hard rule 5): no clock, environment, randomness or IO.
+disallowed-methods = [
+  { path = "std::time::SystemTime::now", reason = "acct-core is pure: take the time as an input" },
+  { path = "std::time::Instant::now", reason = "acct-core is pure: take the time as an input" },
+  { path = "std::env::var", reason = "acct-core is pure: take configuration as an input" },
+  { path = "std::env::var_os", reason = "acct-core is pure: take configuration as an input" },
+  { path = "std::env::vars", reason = "acct-core is pure: take configuration as an input" },
+  { path = "std::fs::read", reason = "acct-core does no IO" },
+  { path = "std::fs::read_to_string", reason = "acct-core does no IO" },
+  { path = "std::fs::write", reason = "acct-core does no IO" },
+  { path = "std::fs::File::open", reason = "acct-core does no IO" },
+  { path = "std::fs::File::create", reason = "acct-core does no IO" },
+]
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order isn't stable; use BTreeMap so output is byte-identical" },
+  { path = "std::collections::HashSet", reason = "iteration order isn't stable; use BTreeSet so output is byte-identical" },
+]
