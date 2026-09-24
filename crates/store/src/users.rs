@@ -94,3 +94,11 @@ pub async fn count(conn: &mut SqliteConnection) -> Result<i64> {
         .await?;
     Ok(n)
 }
+
+/// Every user, active or not, oldest first.
+pub async fn list(conn: &mut SqliteConnection) -> Result<Vec<User>> {
+    let rows: Vec<Row> = sqlx::query_as("SELECT * FROM users ORDER BY created_seq, id")
+        .fetch_all(conn)
+        .await?;
+    rows.into_iter().map(User::try_from).collect()
+}

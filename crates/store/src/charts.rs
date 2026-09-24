@@ -100,3 +100,18 @@ pub async fn for_entity_type(
         chart: to_chart(accounts)?,
     }))
 }
+
+/// Every master chart, with its accounts, by entity type.
+pub async fn list(conn: &mut SqliteConnection) -> Result<Vec<MasterChart>> {
+    let types: Vec<(String,)> =
+        sqlx::query_as("SELECT entity_type FROM master_charts ORDER BY entity_type")
+            .fetch_all(&mut *conn)
+            .await?;
+    let mut charts = Vec::with_capacity(types.len());
+    for (entity_type,) in types {
+        if let Some(chart) = for_entity_type(conn, &entity_type).await? {
+            charts.push(chart);
+        }
+    }
+    Ok(charts)
+}

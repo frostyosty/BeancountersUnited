@@ -46,6 +46,8 @@ pub fn app(state: AppState) -> Router {
         .route("/api/logout", post(auth::logout))
         .route("/api/me", get(auth::me))
         .route("/api/commands", post(submit_command))
+        .route("/api/practice", get(reads::get_practice))
+        .route("/api/users", get(reads::list_users))
         .route("/api/clients", get(reads::list_clients))
         .route("/api/clients/{id}", get(reads::get_client))
         .route("/api/clients/{id}/chart", get(reads::get_chart))

@@ -250,3 +250,39 @@ async fn get_version<T: serde::de::DeserializeOwned>(
     let row: Option<VersionRow> = sqlx::query_as(sql).bind(value).fetch_optional(conn).await?;
     row.map(VersionRow::decode).transpose()
 }
+
+/// A template or mapping as listed: its latest version number, and the entity type it's for.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct Listed {
+    pub id: String,
+    pub name: String,
+    pub entity_type: String,
+    /// For a mapping, the template it maps onto; for a template, its own id.
+    pub template_id: String,
+    pub latest_version: i64,
+}
+
+/// Every template, by entity type and then age.
+pub async fn list_templates(conn: &mut SqliteConnection) -> Result<Vec<Listed>> {
+    Ok(sqlx::query_as(
+        "SELECT t.id, t.name, t.entity_type, t.id AS template_id,
+                (SELECT COALESCE(MAX(version), 0) FROM template_versions v
+                 WHERE v.template_id = t.id) AS latest_version
+         FROM templates t ORDER BY t.entity_type, t.created_seq, t.id",
+    )
+    .fetch_all(conn)
+    .await?)
+}
+
+/// Every mapping, by entity type and then age.
+pub async fn list_mappings(conn: &mut SqliteConnection) -> Result<Vec<Listed>> {
+    Ok(sqlx::query_as(
+        "SELECT m.id, m.name, t.entity_type, m.template_id,
+                (SELECT COALESCE(MAX(version), 0) FROM mapping_versions v
+                 WHERE v.mapping_id = m.id) AS latest_version
+         FROM mappings m JOIN templates t ON t.id = m.template_id
+         ORDER BY t.entity_type, m.created_seq, m.id",
+    )
+    .fetch_all(conn)
+    .await?)
+}

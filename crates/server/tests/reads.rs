@@ -253,3 +253,52 @@ async fn reads_need_a_login_and_unknown_ids_are_not_found() {
         assert_eq!(body["code"], "not_found");
     }
 }
+
+#[tokio::test]
+async fn the_practice_lists_its_defaults_for_any_role() {
+    let server = Server::new().await;
+    let boss = server.login("boss").await;
+    let sam = server.login("sam").await;
+    server.load_fixture(&boss, &sam).await;
+
+    let val = server.login("val").await;
+    let p = server.get_json("/api/practice", &val).await;
+    assert_eq!(p["name"], "Example Practice");
+    let charts = p["master_charts"].as_array().unwrap();
+    assert_eq!(charts.len(), 1);
+    assert_eq!(charts[0]["entity_type"], "company");
+    assert!(!charts[0]["accounts"].as_array().unwrap().is_empty());
+    let templates = p["templates"].as_array().unwrap();
+    assert_eq!(templates.len(), 1);
+    assert_eq!(templates[0]["latest_version"], 1);
+    let mappings = p["mappings"].as_array().unwrap();
+    assert_eq!(mappings.len(), 1);
+    assert_eq!(mappings[0]["entity_type"], "company");
+    assert_eq!(mappings[0]["template_id"], templates[0]["id"]);
+    assert_eq!(mappings[0]["latest_version"], 1);
+}
+
+#[tokio::test]
+async fn only_a_master_lists_users_and_never_sees_hashes() {
+    let server = Server::new().await;
+    for who in ["sam", "val"] {
+        let cookie = server.login(who).await;
+        let (status, body) = split(server.send(get("/api/users", Some(&cookie))).await).await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["code"], "forbidden");
+    }
+    let boss = server.login("boss").await;
+    let users = server.get_json("/api/users", &boss).await;
+    let names: Vec<_> = users
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| (u["username"].as_str().unwrap(), u["role"].as_str().unwrap()))
+        .collect();
+    assert_eq!(
+        names,
+        [("boss", "master"), ("sam", "staff"), ("val", "viewer")]
+    );
+    assert!(!users.to_string().contains("argon2"));
+    assert_eq!(users[0]["active"], json!(true));
+}

@@ -2,8 +2,9 @@
 
 use acct_core::{Account, AccountCode, JournalLine, ReportDoc, TbLine};
 use acct_store::journals::JournalKind;
+use acct_store::users::Role;
 use acct_store::years::{BooksSource, StoredYear, YearStatus};
-use acct_store::{clients, journals, log, years};
+use acct_store::{charts, clients, journals, log, practice, templates, users, years};
 use axum::Json;
 use axum::extract::rejection::QueryRejection;
 use axum::extract::{Path, Query, State};
@@ -117,6 +118,130 @@ pub struct SyncQuery {
 }
 
 pub const SYNC_MAX: i64 = 500;
+
+/// The practice's defaults, for choosing an entity type, chart accounts and mapping when
+/// setting up a client.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PracticeView {
+    pub name: String,
+    /// By entity type.
+    pub master_charts: Vec<MasterChartView>,
+    /// By entity type, then oldest first.
+    pub templates: Vec<TemplateSummary>,
+    /// By entity type, then oldest first.
+    pub mappings: Vec<MappingSummary>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MasterChartView {
+    pub id: String,
+    pub entity_type: String,
+    pub name: String,
+    pub accounts: Vec<Account>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TemplateSummary {
+    pub id: String,
+    pub entity_type: String,
+    pub name: String,
+    pub latest_version: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MappingSummary {
+    pub id: String,
+    pub entity_type: String,
+    pub template_id: String,
+    pub name: String,
+    pub latest_version: i64,
+}
+
+/// A user as the practice settings page shows them. Never the password hash.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserView {
+    pub id: String,
+    pub username: String,
+    pub display_name: String,
+    pub role: Role,
+    pub active: bool,
+}
+
+/// `GET /api/practice`
+pub async fn get_practice(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+) -> ApiResult<PracticeView> {
+    let mut conn = state.store.reader().await?;
+    let p = practice::get(&mut conn)
+        .await?
+        .ok_or_else(|| CommandError::not_found("practice", "1"))?;
+    let master_charts = charts::list(&mut conn)
+        .await?
+        .into_iter()
+        .map(|c| MasterChartView {
+            id: c.id,
+            entity_type: c.entity_type,
+            name: c.name,
+            accounts: c.chart.accounts().to_vec(),
+        })
+        .collect();
+    let templates = templates::list_templates(&mut conn)
+        .await?
+        .into_iter()
+        .map(|t| TemplateSummary {
+            id: t.id,
+            entity_type: t.entity_type,
+            name: t.name,
+            latest_version: t.latest_version,
+        })
+        .collect();
+    let mappings = templates::list_mappings(&mut conn)
+        .await?
+        .into_iter()
+        .map(|m| MappingSummary {
+            id: m.id,
+            entity_type: m.entity_type,
+            template_id: m.template_id,
+            name: m.name,
+            latest_version: m.latest_version,
+        })
+        .collect();
+    Ok(Json(PracticeView {
+        name: p.name,
+        master_charts,
+        templates,
+        mappings,
+    }))
+}
+
+/// `GET /api/users`: master only.
+pub async fn list_users(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> ApiResult<Vec<UserView>> {
+    if user.0.role != Role::Master {
+        return Err(CommandError::Forbidden);
+    }
+    let mut conn = state.store.reader().await?;
+    let all = users::list(&mut conn).await?;
+    Ok(Json(
+        all.into_iter()
+            .map(|u| UserView {
+                id: u.id,
+                username: u.username,
+                display_name: u.display_name,
+                role: u.role,
+                active: u.active,
+            })
+            .collect(),
+    ))
+}
 
 /// `GET /api/clients`
 pub async fn list_clients(
