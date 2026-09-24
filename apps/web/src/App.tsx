@@ -1,7 +1,8 @@
 import { Route, Routes } from "react-router";
 import { useMe } from "./auth";
 import { Layout } from "./components/Layout";
-import { HomePage } from "./pages/HomePage";
+import { ClientPage } from "./pages/ClientPage";
+import { ClientsPage } from "./pages/ClientsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
@@ -24,7 +25,8 @@ export function App() {
   return (
     <Routes>
       <Route element={<Layout me={me.data} />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<ClientsPage />} />
+        <Route path="clients/:clientId" element={<ClientPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -41,3 +41,13 @@
   flex: 1;
   padding: var(--space-4);
 }
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.nav a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 600;
+}

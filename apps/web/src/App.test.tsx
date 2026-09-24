@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { jsonResponse, renderApp, stubApi } from "./test/render";
 
+const practice = { name: "P", master_charts: [], templates: [], mappings: [] };
 const sam = { id: "u1", username: "sam", display_name: "Sam Staff", role: "staff" };
 
 afterEach(() => {
@@ -26,7 +27,8 @@ describe("App", () => {
         signedIn = false;
         return new Response(null, { status: 204 });
       },
-      "GET /api/health": () => ({ status: "ok", version: "0.1.0" }),
+      "GET /api/clients": () => [],
+      "GET /api/practice": () => practice,
     });
     renderApp(<App />);
 

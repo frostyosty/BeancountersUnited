@@ -29,6 +29,15 @@ export function useSignOut() {
     });
 }
 
+/** The logged-in user, inside the signed-in part of the app (where `App` has already checked). */
+export function useCurrentUser(): Me {
+  const me = useMe().data;
+  if (!me) {
+    throw new Error("useCurrentUser outside a session");
+  }
+  return me;
+}
+
 const RANK: Record<Role, number> = { viewer: 0, staff: 1, master: 2 };
 
 /** Whether `me` has at least `role`'s permissions. The server checks again; this only hides UI. */
