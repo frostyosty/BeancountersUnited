@@ -101,7 +101,7 @@ tools/           local-only utilities (M8)
 - `make db-reset`: wipe the dev database and load fixtures through the command pipeline.
 
 ## Working conventions
-- Work on one task from the current milestone per branch.
+- Work directly on `master`; don't create branches. Commit each finished task there. The user saves and pushes with `zz_quicksave.txt` (stage all, commit, pull --rebase, push), so leave the tree in a state that is safe to commit as a whole.
 - Propose a plan before changing more than about 5 files or any public type.
 - Snapshots: `cargo insta review` is interactive, so don't use it. Read each pending `.snap.new` against its `.snap`. Run `cargo insta accept` only when you can explain every change, and say in the commit message why each one changed.
 - When you add a dependency, explain why in the commit message.
