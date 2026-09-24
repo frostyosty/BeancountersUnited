@@ -78,6 +78,12 @@
     "active": true
   },
   {
+    "code": "250",
+    "name": "Loss (gain) on disposal of assets",
+    "account_type": "expense",
+    "active": true
+  },
+  {
     "code": "290",
     "name": "General expenses",
     "account_type": "expense",

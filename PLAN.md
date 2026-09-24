@@ -87,7 +87,7 @@ Status: code complete (2026-09-24); waiting on the manual browser walkthrough be
 Done when: a user, in a browser in the Codespace, goes from an empty client to previewed statements with comparatives. Checked by vitest and Testing Library component tests plus a manual walkthrough; no Playwright (decided 2026-09-24).
 
 ## M4 — Fixed assets (accounting depreciation)
-Status: not started
+Status: code complete (2026-09-24); waiting on the snapshot review and a browser check. The decisions are in `docs/domain.md` under "Depreciation": SL takes a rate or a life, staff may set client overrides, disposal proceeds go to an account chosen at disposal, the register doesn't post additions, and the schedule shows book value and accumulated depreciation exactly rounded, so cost gives way. The fixture's depreciation now comes from its register, so the M1 snapshots moved by cents in FY2026 (explained in the commit and in `docs/domain.md`). The done check is `crates/server/tests/assets.rs` (`m4_is_done`) plus `fixture_register_reconciles_to_the_balance_sheet` in core. Still open: where a gain or loss on disposal is presented (`docs/domain.md`, Open). Built: `acct_core::depreciation`, migration 0002, the commands `create_asset_class`, `update_asset_class`, `set_client_asset_class`, `create_asset`, `update_asset`, `delete_asset`, `dispose_asset`, `reinstate_asset`, `run_depreciation` and `apply_asset_class_defaults`, the reads `GET /api/asset-classes`, `/api/clients/{id}/asset-classes` (plus `apply-preview`) and `/api/years/{id}/assets`, the Assets tab, asset classes in practice settings, and the schedule in the statement preview.
 - Practice asset classes, set by the master user: default method, rate, part-year convention, disposal-year convention. Clients can override these.
 - Each asset class links, by account code, to its cost, accumulated depreciation, depreciation expense and gain/loss-on-disposal accounts. Depreciation and disposal journals post to these.
 - v1 conventions:
@@ -170,8 +170,6 @@ Status: waiting on a decision
 
 ## Open questions
 - Does anyone need to edit away from the office network? This decides M9.
-- Straight-line entry: a rate or a useful life? Basis points can't express 1/3, so a 3-year rate of 33.33% leaves a small residue for a fourth year; a life in months doesn't.
-- Who may set client-level depreciation overrides: master only, or staff too?
 - Which entity types come after companies: trusts, partnerships, sole traders?
 - Which server host OS and which client (M7)?
 

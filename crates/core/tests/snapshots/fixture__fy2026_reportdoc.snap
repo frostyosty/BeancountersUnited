@@ -125,7 +125,7 @@ expression: "serde_json::to_string_pretty(&built.docs[1]).unwrap()"
           "accounts": [
             {
               "code": "210",
-              "current": 728467,
+              "current": 728461,
               "prior": 277493
             }
           ],
@@ -369,7 +369,7 @@ expression: "serde_json::to_string_pretty(&built.docs[1]).unwrap()"
             },
             {
               "code": "705",
-              "current": -513367,
+              "current": -513362,
               "prior": -277493
             },
             {
@@ -379,7 +379,7 @@ expression: "serde_json::to_string_pretty(&built.docs[1]).unwrap()"
             },
             {
               "code": "715",
-              "current": -492593,
+              "current": -492592,
               "prior": 0
             }
           ],
@@ -607,6 +607,239 @@ expression: "serde_json::to_string_pretty(&built.docs[1]).unwrap()"
       ]
     }
   ],
+  "asset_schedule": {
+    "title": "Property, plant and equipment",
+    "blocks": [
+      {
+        "class": "motor_vehicles",
+        "title": "Motor vehicles",
+        "rows": [
+          {
+            "key": "opening_cost",
+            "style": "line",
+            "label": "Cost at the start of the year",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "additions",
+            "style": "line",
+            "label": "Additions",
+            "current": 23457,
+            "prior": 0
+          },
+          {
+            "key": "disposals",
+            "style": "line",
+            "label": "Disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_cost",
+            "style": "total",
+            "label": "Cost at the end of the year",
+            "current": 23457,
+            "prior": 0
+          },
+          {
+            "key": "opening_accumulated",
+            "style": "line",
+            "label": "Accumulated depreciation at the start of the year",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "depreciation",
+            "style": "line",
+            "label": "Depreciation for the year",
+            "current": 4926,
+            "prior": 0
+          },
+          {
+            "key": "disposal_accumulated",
+            "style": "line",
+            "label": "Depreciation on disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_accumulated",
+            "style": "total",
+            "label": "Accumulated depreciation at the end of the year",
+            "current": 4926,
+            "prior": 0
+          },
+          {
+            "key": "book_value",
+            "style": "total",
+            "label": "Book value at the end of the year",
+            "current": 18531,
+            "prior": 0
+          },
+          {
+            "key": "gain",
+            "style": "line",
+            "label": "Gain (loss) on disposal",
+            "current": 0,
+            "prior": 0
+          }
+        ]
+      },
+      {
+        "class": "plant",
+        "title": "Plant and equipment",
+        "rows": [
+          {
+            "key": "opening_cost",
+            "style": "line",
+            "label": "Cost at the start of the year",
+            "current": 18500,
+            "prior": 0
+          },
+          {
+            "key": "additions",
+            "style": "line",
+            "label": "Additions",
+            "current": 0,
+            "prior": 18500
+          },
+          {
+            "key": "disposals",
+            "style": "line",
+            "label": "Disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_cost",
+            "style": "total",
+            "label": "Cost at the end of the year",
+            "current": 18500,
+            "prior": 18500
+          },
+          {
+            "key": "opening_accumulated",
+            "style": "line",
+            "label": "Accumulated depreciation at the start of the year",
+            "current": 2775,
+            "prior": 0
+          },
+          {
+            "key": "depreciation",
+            "style": "line",
+            "label": "Depreciation for the year",
+            "current": 2359,
+            "prior": 2775
+          },
+          {
+            "key": "disposal_accumulated",
+            "style": "line",
+            "label": "Depreciation on disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_accumulated",
+            "style": "total",
+            "label": "Accumulated depreciation at the end of the year",
+            "current": 5134,
+            "prior": 2775
+          },
+          {
+            "key": "book_value",
+            "style": "total",
+            "label": "Book value at the end of the year",
+            "current": 13366,
+            "prior": 15725
+          },
+          {
+            "key": "gain",
+            "style": "line",
+            "label": "Gain (loss) on disposal",
+            "current": 0,
+            "prior": 0
+          }
+        ]
+      },
+      {
+        "class": null,
+        "title": "Total",
+        "rows": [
+          {
+            "key": "opening_cost",
+            "style": "line",
+            "label": "Cost at the start of the year",
+            "current": 18500,
+            "prior": 0
+          },
+          {
+            "key": "additions",
+            "style": "line",
+            "label": "Additions",
+            "current": 23457,
+            "prior": 18500
+          },
+          {
+            "key": "disposals",
+            "style": "line",
+            "label": "Disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_cost",
+            "style": "total",
+            "label": "Cost at the end of the year",
+            "current": 41957,
+            "prior": 18500
+          },
+          {
+            "key": "opening_accumulated",
+            "style": "line",
+            "label": "Accumulated depreciation at the start of the year",
+            "current": 2775,
+            "prior": 0
+          },
+          {
+            "key": "depreciation",
+            "style": "line",
+            "label": "Depreciation for the year",
+            "current": 7285,
+            "prior": 2775
+          },
+          {
+            "key": "disposal_accumulated",
+            "style": "line",
+            "label": "Depreciation on disposals",
+            "current": 0,
+            "prior": 0
+          },
+          {
+            "key": "closing_accumulated",
+            "style": "total",
+            "label": "Accumulated depreciation at the end of the year",
+            "current": 10060,
+            "prior": 2775
+          },
+          {
+            "key": "book_value",
+            "style": "total",
+            "label": "Book value at the end of the year",
+            "current": 31897,
+            "prior": 15725
+          },
+          {
+            "key": "gain",
+            "style": "line",
+            "label": "Gain (loss) on disposal",
+            "current": 0,
+            "prior": 0
+          }
+        ]
+      }
+    ]
+  },
   "warnings": [
     {
       "code": "rounding_fallback",

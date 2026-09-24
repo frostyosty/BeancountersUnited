@@ -1,0 +1,44 @@
+[
+  {
+    "key": "motor_vehicles",
+    "name": "Motor vehicles",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 2100
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "710",
+      "accumulated": "715",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  },
+  {
+    "key": "plant",
+    "name": "Plant and equipment",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 1500
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "700",
+      "accumulated": "705",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  }
+]

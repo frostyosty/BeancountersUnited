@@ -13,6 +13,10 @@ use crate::{Result, StoreError, enum_text, parse, parse_enum};
 pub enum JournalKind {
     Manual,
     TbImport,
+    /// The year's depreciation journal, posted by the depreciation run.
+    Depreciation,
+    /// A disposal journal, posted by the depreciation run for an asset disposed of in the year.
+    AssetDisposal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

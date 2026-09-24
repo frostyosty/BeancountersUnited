@@ -50,5 +50,40 @@ Statement of Financial Position
    Net profit for the year                            32,900      26,885
 =Total equity                                         69,785      36,885
 
+Property, plant and equipment
+  Motor vehicles
+    Cost at the start of the year                              0           0
+    Additions                                             23,457           0
+    Disposals                                                  0           0
+    Cost at the end of the year                           23,457           0
+    Accumulated depreciation at the start of the year           0           0
+    Depreciation for the year                              4,926           0
+    Depreciation on disposals                                  0           0
+    Accumulated depreciation at the end of the year        4,926           0
+    Book value at the end of the year                     18,531           0
+    Gain (loss) on disposal                                    0           0
+  Plant and equipment
+    Cost at the start of the year                         18,500           0
+    Additions                                                  0      18,500
+    Disposals                                                  0           0
+    Cost at the end of the year                           18,500      18,500
+    Accumulated depreciation at the start of the year       2,775           0
+    Depreciation for the year                              2,359       2,775
+    Depreciation on disposals                                  0           0
+    Accumulated depreciation at the end of the year        5,134       2,775
+    Book value at the end of the year                     13,366      15,725
+    Gain (loss) on disposal                                    0           0
+  Total
+    Cost at the start of the year                         18,500           0
+    Additions                                             23,457      18,500
+    Disposals                                                  0           0
+    Cost at the end of the year                           41,957      18,500
+    Accumulated depreciation at the start of the year       2,775           0
+    Depreciation for the year                              7,285       2,775
+    Depreciation on disposals                                  0           0
+    Accumulated depreciation at the end of the year       10,060       2,775
+    Book value at the end of the year                     31,897      15,725
+    Gain (loss) on disposal                                    0           0
+
 warning: RoundingFallback { column: Current, row: LineKey("revenue"), line: LineKey("sales") }
 warning: RoundingFallback { column: Prior, row: LineKey("revenue"), line: LineKey("sales") }

@@ -4,7 +4,7 @@
 //! It sets the server up as `acctd init` would and adds one user per role, all with
 //! `DEV_PASSWORD`. For development only: never point it at a real practice's database.
 
-use acct_core::{Account, AccountCode, Journal};
+use acct_core::{Account, AccountCode, AssetAccounts, DepreciationSettings, Journal, Money};
 use acct_store::Store;
 use acct_store::users::Role;
 use chrono::NaiveDate;
@@ -17,6 +17,7 @@ const CHART: &str = include_str!("../../../fixtures/practice/company-chart.json"
 const TEMPLATE: &str = include_str!("../../../fixtures/practice/company-template.json");
 const MAPPING: &str = include_str!("../../../fixtures/practice/company-mapping.json");
 const CLIENT: &str = include_str!("../../../fixtures/clients/example-widgets.json");
+const ASSET_CLASSES: &str = include_str!("../../../fixtures/practice/company-asset-classes.json");
 
 pub const DEV_PASSWORD: &str = "fixture-password";
 
@@ -42,7 +43,25 @@ struct Client {
     entity_type: String,
     retained_earnings: AccountCode,
     rounding_priority: Vec<AccountCode>,
+    assets: Vec<FixtureAsset>,
     years: Vec<Year>,
+}
+
+#[derive(Deserialize)]
+struct AssetClass {
+    key: String,
+    name: String,
+    settings: DepreciationSettings,
+    accounts: AssetAccounts,
+}
+
+#[derive(Deserialize)]
+struct FixtureAsset {
+    class: String,
+    name: String,
+    cost: Money,
+    residual: Money,
+    acquired: NaiveDate,
 }
 
 #[derive(Deserialize)]
@@ -135,6 +154,21 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
         })
         .await?;
 
+    let classes: Vec<AssetClass> = serde_json::from_str(ASSET_CLASSES)?;
+    let mut class_ids = Vec::new();
+    for class in classes {
+        let id = loader
+            .create(Command::CreateAssetClass {
+                entity_type: "company".into(),
+                key: class.key.clone(),
+                name: class.name,
+                settings: class.settings,
+                accounts: class.accounts,
+            })
+            .await?;
+        class_ids.push((class.key, id));
+    }
+
     let client: Client = serde_json::from_str(CLIENT)?;
     let client_id = loader
         .create(Command::CreateClient {
@@ -145,6 +179,7 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
         })
         .await?;
     let mut journals = 0;
+    let mut last_year_id = None;
     for year in client.years {
         let client_year_id = loader
             .create(Command::CreateClientYear {
@@ -165,6 +200,33 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
                 .await?;
             journals += 1;
         }
+        last_year_id = Some(client_year_id);
+    }
+
+    // The register, then depreciation for every year.
+    for asset in client.assets {
+        let class_id = class_ids
+            .iter()
+            .find(|(key, _)| *key == asset.class)
+            .map(|(_, id)| id.clone())
+            .ok_or_else(|| format!("no asset class {}", asset.class))?;
+        loader
+            .create(Command::CreateAsset {
+                client_id: client_id.clone(),
+                class_id,
+                name: asset.name,
+                cost: asset.cost,
+                residual: asset.residual,
+                acquired: asset.acquired,
+                settings: None,
+                opening: None,
+            })
+            .await?;
+    }
+    if let Some(client_year_id) = last_year_id {
+        loader
+            .run(Command::RunDepreciation { client_year_id })
+            .await?;
     }
 
     Ok(Loaded {

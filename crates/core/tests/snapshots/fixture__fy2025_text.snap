@@ -48,4 +48,28 @@ Statement of Financial Position
    Net profit for the year                            26,885            
 =Total equity                                         36,885            
 
+Property, plant and equipment
+  Plant and equipment
+    Cost at the start of the year                              0            
+    Additions                                             18,500            
+    Disposals                                                  0            
+    Cost at the end of the year                           18,500            
+    Accumulated depreciation at the start of the year           0            
+    Depreciation for the year                              2,775            
+    Depreciation on disposals                                  0            
+    Accumulated depreciation at the end of the year        2,775            
+    Book value at the end of the year                     15,725            
+    Gain (loss) on disposal                                    0            
+  Total
+    Cost at the start of the year                              0            
+    Additions                                             18,500            
+    Disposals                                                  0            
+    Cost at the end of the year                           18,500            
+    Accumulated depreciation at the start of the year           0            
+    Depreciation for the year                              2,775            
+    Depreciation on disposals                                  0            
+    Accumulated depreciation at the end of the year        2,775            
+    Book value at the end of the year                     15,725            
+    Gain (loss) on disposal                                    0            
+
 warning: RoundingFallback { column: Current, row: LineKey("revenue"), line: LineKey("sales") }

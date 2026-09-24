@@ -1,9 +1,12 @@
 import type { Account } from "@acct/types/Account";
+import type { AssetClassView } from "@acct/types/AssetClassView";
+import type { ClientClassView } from "@acct/types/ClientClassView";
 import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { ClientSummary } from "@acct/types/ClientSummary";
 import type { JournalView } from "@acct/types/JournalView";
 import type { PracticeView } from "@acct/types/PracticeView";
 import type { UserView } from "@acct/types/UserView";
+import type { YearAssets } from "@acct/types/YearAssets";
 import type { YearSummary } from "@acct/types/YearSummary";
 import type { YearTrialBalance } from "@acct/types/YearTrialBalance";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +29,10 @@ export const keys = {
   journals: (yearId: string) => ["year", yearId, "journals"] as const,
   tb: (yearId: string) => ["year", yearId, "tb"] as const,
   report: (yearId: string) => ["year", yearId, "report"] as const,
+  assets: (yearId: string) => ["year", yearId, "assets"] as const,
+  /** Practice asset classes; with a client id, as that client sees them. */
+  assetClasses: ["asset-classes"] as const,
+  clientAssetClasses: (clientId: string) => ["asset-classes", clientId] as const,
 };
 
 export function usePractice() {
@@ -58,4 +65,19 @@ export function useTrialBalance(yearId: string) {
 
 export function useUsers() {
   return useQuery({ queryKey: keys.users, queryFn: () => getJson<UserView[]>("/api/users") });
+}
+
+export function useAssetClasses() {
+  return useQuery({ queryKey: keys.assetClasses, queryFn: () => getJson<AssetClassView[]>("/api/asset-classes") });
+}
+
+export function useClientAssetClasses(clientId: string) {
+  return useQuery({
+    queryKey: keys.clientAssetClasses(clientId),
+    queryFn: () => getJson<ClientClassView[]>(`/api/clients/${clientId}/asset-classes`),
+  });
+}
+
+export function useYearAssets(yearId: string) {
+  return useQuery({ queryKey: keys.assets(yearId), queryFn: () => getJson<YearAssets>(`/api/years/${yearId}/assets`) });
 }

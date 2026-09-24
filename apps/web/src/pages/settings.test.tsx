@@ -26,6 +26,7 @@ describe("practice settings", () => {
       "GET /api/me": () => boss,
       "GET /api/practice": () => practice,
       "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
       "POST /api/commands": () => ({ seq: 1, entity_id: null }),
     });
     renderApp(<App />, "/settings");
@@ -97,5 +98,46 @@ describe("an ended session", () => {
     signedIn = false;
     await user.click(screen.getByRole("button", { name: "Change password" }));
     expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
+  });
+  it("adds a practice asset class", async () => {
+    const chart = [
+      { code: "210", name: "Depreciation", account_type: "expense", active: true },
+      { code: "250", name: "Loss on disposal", account_type: "expense", active: true },
+      { code: "700", name: "Plant at cost", account_type: "asset", active: true },
+      { code: "705", name: "Plant accumulated depreciation", account_type: "asset", active: true },
+    ];
+    const calls = stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => ({ ...practice, master_charts: [{ ...practice.master_charts[0], accounts: chart }] }),
+      "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
+      "POST /api/commands": () => ({ seq: 1, entity_id: "k1" }),
+    });
+    renderApp(<App />, "/settings");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Key"), "plant");
+    await user.type(screen.getByLabelText("Class name"), "Plant and equipment");
+    await user.type(screen.getByLabelText("Rate %"), "15");
+    await user.selectOptions(screen.getByLabelText("Cost account"), "700");
+    await user.selectOptions(screen.getByLabelText("Accumulated depreciation account"), "705");
+    await user.selectOptions(screen.getByLabelText("Depreciation expense account"), "210");
+    await user.selectOptions(screen.getByLabelText("Gain/loss on disposal account"), "250");
+    await user.click(screen.getByRole("button", { name: "Add class" }));
+    await vi.waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toEqual({
+      id: expect.any(String),
+      kind: "create_asset_class",
+      payload: {
+        entity_type: "company",
+        key: "plant",
+        name: "Plant and equipment",
+        settings: {
+          method: { kind: "dv", rate_bp: 1500 },
+          part_year: { kind: "months_held", count_acquisition_month: true },
+          disposal_year: "to_disposal_date",
+        },
+        accounts: { cost: "700", accumulated: "705", expense: "210", gain_loss: "250" },
+      },
+    });
   });
 });

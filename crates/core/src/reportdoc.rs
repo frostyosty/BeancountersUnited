@@ -21,6 +21,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::chart::AccountCode;
+use crate::depreciation::AssetSchedule;
 use crate::ledger::{ClientYear, TrialBalance};
 use crate::mapping::{Mapping, MappingError};
 use crate::money::Money;
@@ -35,6 +36,11 @@ pub struct ReportDoc {
     pub prior_period: Option<Period>,
     pub comparatives: Comparatives,
     pub statements: Vec<ReportStatement>,
+    /// The fixed asset schedule, when the client has an asset register. Built separately by
+    /// [`crate::depreciation::build_asset_schedule`] and attached by the caller.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub asset_schedule: Option<AssetSchedule>,
     pub warnings: Vec<ReportWarning>,
 }
 
@@ -270,6 +276,7 @@ pub fn build_report(input: &ReportInput<'_>) -> Result<ReportDoc, Vec<BuildError
             Some(_) => Comparatives::Unfinalised,
         },
         statements,
+        asset_schedule: None,
         warnings,
     })
 }

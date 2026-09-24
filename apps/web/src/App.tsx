@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router";
 import { CurrentUser, useMe } from "./auth";
 import { Layout } from "./components/Layout";
 import { AccountPage } from "./pages/AccountPage";
+import { AssetsTab } from "./pages/AssetsTab";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
@@ -41,6 +42,7 @@ export function App() {
             <Route index element={<JournalsTab />} />
             <Route path="tb" element={<TrialBalanceTab />} />
             <Route path="import" element={<TbImportTab />} />
+            <Route path="assets" element={<AssetsTab />} />
             <Route path="statements" element={<StatementsTab />} />
           </Route>
           <Route path="settings" element={<SettingsPage />} />

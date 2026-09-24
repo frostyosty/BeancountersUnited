@@ -1,5 +1,6 @@
 //! The acct HTTP API: routes, auth, the command pipeline and the sync feed.
 
+pub mod assets;
 pub mod auth;
 pub mod commands;
 pub mod error;
@@ -59,6 +60,16 @@ pub fn app(state: AppState) -> Router {
             "/api/years/{id}/tb-import/preview",
             post(tb_import::preview),
         )
+        .route("/api/asset-classes", get(assets::list_classes))
+        .route(
+            "/api/clients/{id}/asset-classes",
+            get(assets::client_classes),
+        )
+        .route(
+            "/api/clients/{id}/asset-classes/{class_id}/apply-preview",
+            get(assets::apply_defaults_preview),
+        )
+        .route("/api/years/{id}/assets", get(assets::year_assets))
         .route("/api/sync", get(reads::sync));
     #[cfg(feature = "embed-web")]
     let router = router.fallback(web::serve);

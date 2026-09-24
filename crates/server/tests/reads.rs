@@ -99,7 +99,9 @@ async fn clients_years_charts_and_journals_read_back() {
     let client_fixture: serde_json::Value = serde_json::from_str(common::CLIENT).unwrap();
     let expected = client_fixture["years"][0]["journals"].as_array().unwrap();
     let journals = journals.as_array().unwrap();
-    assert_eq!(journals.len(), expected.len());
+    // The fixture's own journals, then the register's depreciation journal.
+    assert_eq!(journals.len(), expected.len() + 1);
+    assert_eq!(journals.last().unwrap()["kind"], "depreciation");
     assert_eq!(journals[0]["narration"], expected[0]["narration"]);
     assert_eq!(journals[0]["lines"], expected[0]["lines"]);
     assert_eq!(journals[0]["kind"], "manual");
@@ -207,7 +209,7 @@ async fn the_sync_feed_pages_through_changes() {
     assert_eq!(changes[0]["kind"], "initialise");
     assert_eq!(all["last_seq"], changes.last().unwrap()["seq"]);
     let last = changes.last().unwrap();
-    assert_eq!(last["kind"], "post_journal");
+    assert_eq!(last["kind"], "run_depreciation");
     assert_eq!(last["client_id"], json!(f.client_id));
     assert_eq!(last["client_year_id"], json!(f.year_ids[1]));
 

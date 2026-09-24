@@ -4,8 +4,10 @@
 //! transaction, so a rejected command leaves nothing behind.
 
 use acct_core::{
-    Account, AccountCode, AccountType, Chart, ChartError, ClientYear, Journal, JournalLine,
+    Account, AccountCode, AccountType, Asset, Chart, ChartError, ClientYear, DepreciationSettings,
+    Journal, JournalLine, RateSource,
 };
+use acct_store::assets::{self as asset_store, AssetClass, ClassOverride, StoredAsset};
 use acct_store::charts::MasterChart;
 use acct_store::clients::Client;
 use acct_store::journals::{JournalKind, StoredJournal};
@@ -22,6 +24,7 @@ use acct_store::{
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
+use crate::assets;
 use crate::auth;
 use crate::commands::{Accepted, Command, CommandEnvelope};
 use crate::error::CommandError;
@@ -601,7 +604,496 @@ async fn apply(
             )
             .await
         }
+
+        Command::CreateAssetClass {
+            entity_type,
+            key,
+            name,
+            settings,
+            accounts,
+        } => {
+            check_entity_type(entity_type)?;
+            check_class_key(key)?;
+            check_name(name)?;
+            assets::check_settings(settings)?;
+            let master = charts::for_entity_type(tx, entity_type)
+                .await?
+                .ok_or_else(|| {
+                    CommandError::invalid(
+                        "no_master_chart",
+                        format!("There's no master chart for {entity_type} yet."),
+                    )
+                })?;
+            assets::check_accounts(&master.chart, accounts)?;
+            let existing = asset_store::classes_for_entity_type(tx, entity_type).await?;
+            if existing.iter().any(|c| c.key == *key) {
+                return Err(CommandError::invalid(
+                    "asset_class_exists",
+                    format!("There's already an asset class {key} for {entity_type}."),
+                ));
+            }
+            let id = new_id();
+            asset_store::insert_class(
+                tx,
+                &AssetClass {
+                    id: id.clone(),
+                    entity_type: entity_type.clone(),
+                    key: key.clone(),
+                    name: name.trim().to_owned(),
+                    settings: *settings,
+                    accounts: accounts.clone(),
+                    created_seq: seq,
+                    updated_seq: seq,
+                },
+            )
+            .await?;
+            Ok(created(id))
+        }
+
+        Command::UpdateAssetClass {
+            class_id,
+            name,
+            settings,
+            accounts,
+        } => {
+            let class = asset_store::get_class(tx, class_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("asset class", class_id))?;
+            check_name(name)?;
+            assets::check_settings(settings)?;
+            let master = charts::for_entity_type(tx, &class.entity_type)
+                .await?
+                .ok_or_else(|| CommandError::not_found("master chart", &class.entity_type))?;
+            assets::check_accounts(&master.chart, accounts)?;
+            asset_store::update_class(
+                tx,
+                &AssetClass {
+                    name: name.trim().to_owned(),
+                    settings: *settings,
+                    accounts: accounts.clone(),
+                    updated_seq: seq,
+                    ..class
+                },
+            )
+            .await?;
+            Ok(created(class_id.clone()))
+        }
+
+        Command::SetClientAssetClass {
+            client_id,
+            class_id,
+            settings,
+            accounts,
+        } => {
+            let (_, chart, _) = client_class(tx, client_id, class_id).await?;
+            if let Some(s) = settings {
+                assets::check_settings(s)?;
+            }
+            if let Some(a) = accounts {
+                assets::check_accounts(&chart, a)?;
+            }
+            asset_store::set_override(
+                tx,
+                &ClassOverride {
+                    client_id: client_id.clone(),
+                    class_id: class_id.clone(),
+                    settings: *settings,
+                    accounts: accounts.clone(),
+                    updated_seq: seq,
+                },
+            )
+            .await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::CreateAsset {
+            client_id,
+            class_id,
+            name,
+            cost,
+            residual,
+            acquired,
+            settings,
+            opening,
+        } => {
+            let (class, chart, over) = client_class(tx, client_id, class_id).await?;
+            check_name(name)?;
+            let resolved = assets::resolve(&class, over.as_ref());
+            assets::check_accounts(&chart, &resolved.accounts)?;
+            let (settings, rate_source) = pick_settings(&resolved, settings.as_ref());
+            let asset = Asset {
+                cost: *cost,
+                residual: *residual,
+                acquired: *acquired,
+                settings,
+                opening: *opening,
+                disposal: None,
+            };
+            check_asset(tx, client_id, &asset).await?;
+            let id = new_id();
+            asset_store::insert_asset(
+                tx,
+                &StoredAsset {
+                    id: id.clone(),
+                    client_id: client_id.clone(),
+                    class_id: class_id.clone(),
+                    name: name.trim().to_owned(),
+                    rate_source,
+                    accounts: resolved.accounts,
+                    asset,
+                    created_seq: seq,
+                    updated_seq: seq,
+                },
+            )
+            .await?;
+            Ok(Effect {
+                entity_id: Some(id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::UpdateAsset {
+            asset_id,
+            name,
+            cost,
+            residual,
+            acquired,
+            settings,
+            opening,
+        } => {
+            let (stored, fixed) = asset_in_register(tx, asset_id).await?;
+            check_name(name)?;
+            let a = &stored.asset;
+            if fixed
+                && (a.cost != *cost
+                    || a.residual != *residual
+                    || a.acquired != *acquired
+                    || a.opening != *opening)
+            {
+                return Err(CommandError::invalid(
+                    "asset_fixed",
+                    "A finalised year holds this asset, so its cost, residual, acquisition date \
+                     and brought-forward balance can't change.",
+                ));
+            }
+            let (class, _, over) = client_class(tx, &stored.client_id, &stored.class_id).await?;
+            let resolved = assets::resolve(&class, over.as_ref());
+            let (settings, rate_source) = pick_settings(&resolved, settings.as_ref());
+            let asset = Asset {
+                cost: *cost,
+                residual: *residual,
+                acquired: *acquired,
+                settings,
+                opening: *opening,
+                disposal: stored.asset.disposal.clone(),
+            };
+            check_asset(tx, &stored.client_id, &asset).await?;
+            asset_store::update_asset(
+                tx,
+                &StoredAsset {
+                    name: name.trim().to_owned(),
+                    rate_source,
+                    asset,
+                    updated_seq: seq,
+                    ..stored.clone()
+                },
+            )
+            .await?;
+            Ok(client_effect(&stored.client_id))
+        }
+
+        Command::DeleteAsset { asset_id } => {
+            let (stored, fixed) = asset_in_register(tx, asset_id).await?;
+            if fixed {
+                return Err(CommandError::invalid(
+                    "asset_fixed",
+                    "A finalised year holds this asset, so it can't be deleted.",
+                ));
+            }
+            asset_store::delete_asset(tx, asset_id).await?;
+            Ok(client_effect(&stored.client_id))
+        }
+
+        Command::DisposeAsset { asset_id, disposal } => {
+            let (stored, _) = asset_in_register(tx, asset_id).await?;
+            if stored.asset.disposal.is_some() {
+                return Err(CommandError::invalid(
+                    "already_disposed",
+                    "This asset has already been disposed of. Reinstate it first to change the \
+                     disposal.",
+                ));
+            }
+            let year = year_containing(tx, &stored.client_id, disposal.date).await?;
+            let chart = clients::chart(tx, &stored.client_id).await?;
+            match chart.get(&disposal.proceeds_account) {
+                Some(a) if a.active => {}
+                _ => {
+                    return Err(CommandError::invalid(
+                        "invalid_proceeds_account",
+                        format!(
+                            "{} isn't an active account in the chart.",
+                            disposal.proceeds_account
+                        ),
+                    ));
+                }
+            }
+            let asset = Asset {
+                disposal: Some(disposal.clone()),
+                ..stored.asset.clone()
+            };
+            check_asset(tx, &stored.client_id, &asset).await?;
+            asset_store::update_asset(
+                tx,
+                &StoredAsset {
+                    asset,
+                    updated_seq: seq,
+                    ..stored.clone()
+                },
+            )
+            .await?;
+            regenerate(tx, &year, seq).await?;
+            Ok(Effect {
+                entity_id: None,
+                client_id: Some(stored.client_id),
+                client_year_id: Some(year.id),
+            })
+        }
+
+        Command::ReinstateAsset { asset_id } => {
+            let (stored, _) = asset_in_register(tx, asset_id).await?;
+            let Some(disposal) = &stored.asset.disposal else {
+                return Err(CommandError::invalid(
+                    "not_disposed",
+                    "This asset hasn't been disposed of.",
+                ));
+            };
+            let year = year_containing(tx, &stored.client_id, disposal.date).await?;
+            asset_store::update_asset(
+                tx,
+                &StoredAsset {
+                    asset: Asset {
+                        disposal: None,
+                        ..stored.asset.clone()
+                    },
+                    updated_seq: seq,
+                    ..stored.clone()
+                },
+            )
+            .await?;
+            regenerate(tx, &year, seq).await?;
+            Ok(Effect {
+                entity_id: None,
+                client_id: Some(stored.client_id),
+                client_year_id: Some(year.id),
+            })
+        }
+
+        Command::RunDepreciation { client_year_id } => {
+            let year = open_year(tx, client_year_id).await?;
+            for y in years::for_client(tx, &year.client_id).await? {
+                if y.status == YearStatus::Open && y.year.start() <= year.year.start() {
+                    regenerate(tx, &y, seq).await?;
+                }
+            }
+            Ok(Effect {
+                entity_id: None,
+                client_id: Some(year.client_id),
+                client_year_id: Some(year.id),
+            })
+        }
+
+        Command::ApplyAssetClassDefaults {
+            client_id,
+            class_id,
+        } => {
+            let (resolved, changes) = assets::apply_defaults_plan(tx, client_id, class_id).await?;
+            let chart = clients::chart(tx, client_id).await?;
+            if !changes.is_empty() {
+                assets::check_accounts(&chart, &resolved.accounts)?;
+            }
+            for change in &changes {
+                let stored = asset_store::get_asset(tx, &change.asset_id)
+                    .await?
+                    .ok_or_else(|| CommandError::not_found("asset", &change.asset_id))?;
+                let rate_source = if stored.rate_source == RateSource::Custom {
+                    RateSource::Custom
+                } else {
+                    resolved.source
+                };
+                asset_store::update_asset(
+                    tx,
+                    &StoredAsset {
+                        rate_source,
+                        accounts: change.accounts_to.clone(),
+                        asset: Asset {
+                            settings: change.settings_to,
+                            ..stored.asset.clone()
+                        },
+                        updated_seq: seq,
+                        ..stored
+                    },
+                )
+                .await?;
+            }
+            Ok(client_effect(client_id))
+        }
     }
+}
+
+/// Asset class keys are lowercase words joined by underscores, such as `plant` or
+/// `motor_vehicles`.
+fn check_class_key(key: &str) -> Result<(), CommandError> {
+    let ok = !key.is_empty()
+        && key.len() <= 40
+        && key.split('_').all(|w| {
+            !w.is_empty()
+                && w.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+        });
+    if !ok {
+        return Err(CommandError::invalid(
+            "invalid_class_key",
+            format!("{key:?} isn't a valid class key (e.g. plant, motor_vehicles)."),
+        ));
+    }
+    Ok(())
+}
+
+/// A client, a class for its entity type, the client's chart and its override of the class.
+async fn client_class(
+    tx: &mut SqliteConnection,
+    client_id: &str,
+    class_id: &str,
+) -> Result<(AssetClass, Chart, Option<ClassOverride>), CommandError> {
+    let client = clients::get(tx, client_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("client", client_id))?;
+    let class = asset_store::get_class(tx, class_id)
+        .await?
+        .filter(|c| c.entity_type == client.entity_type)
+        .ok_or_else(|| CommandError::not_found("asset class", class_id))?;
+    let chart = clients::chart(tx, client_id).await?;
+    let over = asset_store::overrides_for_client(tx, client_id)
+        .await?
+        .into_iter()
+        .find(|o| o.class_id == class_id);
+    Ok((class, chart, over))
+}
+
+/// The settings to put on an asset, and where they came from: `requested` if it's given and
+/// differs from the class's defaults, else the defaults.
+fn pick_settings(
+    resolved: &assets::ResolvedClass,
+    requested: Option<&DepreciationSettings>,
+) -> (DepreciationSettings, RateSource) {
+    match requested {
+        Some(s) if *s != resolved.settings => (*s, RateSource::Custom),
+        _ => (resolved.settings, resolved.source),
+    }
+}
+
+/// Checks an asset on its own and against the client's years.
+async fn check_asset(
+    tx: &mut SqliteConnection,
+    client_id: &str,
+    asset: &Asset,
+) -> Result<(), CommandError> {
+    asset.validate().map_err(|errors| {
+        CommandError::invalid_with("invalid_asset", "The asset has problems.", errors)
+    })?;
+    let years: Vec<ClientYear> = years::for_client(tx, client_id)
+        .await?
+        .iter()
+        .map(|y| y.year)
+        .collect();
+    acct_core::asset_years(asset, &years, &Default::default())
+        .map_err(|e| CommandError::invalid_with("invalid_asset", e.to_string(), [e]))?;
+    Ok(())
+}
+
+/// An asset, and whether a finalised year holds it.
+async fn asset_in_register(
+    tx: &mut SqliteConnection,
+    asset_id: &str,
+) -> Result<(StoredAsset, bool), CommandError> {
+    let stored = asset_store::get_asset(tx, asset_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("asset", asset_id))?;
+    let register = assets::load(tx, &stored.client_id).await?;
+    let i = register
+        .assets
+        .iter()
+        .position(|a| a.id == asset_id)
+        .expect("the asset is in its client's register");
+    Ok((stored, register.in_finalised_year(i)))
+}
+
+/// The client's open year containing `date`.
+async fn year_containing(
+    tx: &mut SqliteConnection,
+    client_id: &str,
+    date: chrono::NaiveDate,
+) -> Result<StoredYear, CommandError> {
+    let year = years::for_client(tx, client_id)
+        .await?
+        .into_iter()
+        .find(|y| y.year.contains(date))
+        .ok_or_else(|| {
+            CommandError::invalid(
+                "no_year_for_date",
+                format!("The client has no year containing {date}."),
+            )
+        })?;
+    open_year(tx, &year.id).await
+}
+
+/// Brings an open year's asset journals into line with the register: if they differ, reverses
+/// the ones in force and posts the new ones, and records each asset's charge. Posts nothing if
+/// they already match.
+async fn regenerate(
+    tx: &mut SqliteConnection,
+    year: &StoredYear,
+    seq: i64,
+) -> Result<(), CommandError> {
+    if year.status == YearStatus::Finalised {
+        return Ok(());
+    }
+    let register = assets::load(tx, &year.client_id).await?;
+    let i = register
+        .year_index(&year.id)
+        .expect("the year belongs to the client");
+    let desired = register.desired_journals(i);
+    let current = assets::current_journals(tx, &year.id).await?;
+    if !assets::journals_match(&current, &desired) {
+        for j in current {
+            let reversal = Journal {
+                date: j.journal.date,
+                narration: format!("Reversal of: {}", j.journal.narration),
+                lines: negated(&j.journal.lines),
+            };
+            post(tx, year, reversal, j.kind, Some(j.id), seq).await?;
+        }
+        if let Some(j) = desired.depreciation {
+            post(tx, year, j, JournalKind::Depreciation, None, seq).await?;
+        }
+        for j in desired.disposals {
+            post(tx, year, j, JournalKind::AssetDisposal, None, seq).await?;
+        }
+    }
+    let charges: Vec<asset_store::Charge> = register
+        .assets
+        .iter()
+        .zip(&register.rows)
+        .filter(|(_, rows)| !rows[i].depreciation.is_zero())
+        .map(|(a, rows)| asset_store::Charge {
+            asset_id: a.id.clone(),
+            client_year_id: year.id.clone(),
+            amount: rows[i].depreciation,
+        })
+        .collect();
+    asset_store::set_charges(tx, &year.id, &charges, seq).await?;
+    Ok(())
 }
 
 async fn create_user(

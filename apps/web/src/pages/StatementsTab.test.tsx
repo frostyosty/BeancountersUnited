@@ -96,4 +96,15 @@ describe("headings", () => {
     ]);
     expect(headings({ start: "2024-04-01", end: "2025-03-31" }, null)).toEqual(["2025 $", ""]);
   });
+  it("renders the fixed asset schedule by class with a total", async () => {
+    stubApi(routes(() => doc));
+    renderApp(<App />, "/years/y1/statements");
+    const schedule = await screen.findByRole("region", { name: "Property, plant and equipment" });
+    const rows = within(schedule).getAllByRole("row").map((r) => r.textContent);
+    expect(rows).toContain("Motor vehicles");
+    expect(rows).toContain("Total");
+    // The total block: book value agrees with the balance sheet, depreciation with the P&L.
+    expect(rows).toContain("Book value at the end of the year31,89715,725");
+    expect(rows).toContain("Depreciation for the year7,2852,775");
+  });
 });

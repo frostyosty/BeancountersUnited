@@ -1,3 +1,4 @@
+import type { AssetSchedule } from "@acct/types/AssetSchedule";
 import type { Period } from "@acct/types/Period";
 import type { ReportDoc } from "@acct/types/ReportDoc";
 import type { ReportRow } from "@acct/types/ReportRow";
@@ -104,7 +105,50 @@ export function Statements({ doc }: { doc: ReportDoc }) {
           {unfinalised && hasPrior && <p className={styles.footnote}>* Unfinalised.</p>}
         </section>
       ))}
+      {doc.asset_schedule && (
+        <AssetScheduleView schedule={doc.asset_schedule} currentHead={currentHead} priorHead={hasPrior ? priorHead : null} />
+      )}
     </div>
+  );
+}
+
+/** The fixed asset schedule: one block per class, then the total. Amounts come from the ReportDoc. */
+function AssetScheduleView({
+  schedule,
+  currentHead,
+  priorHead,
+}: {
+  schedule: AssetSchedule;
+  currentHead: string;
+  priorHead: string | null;
+}) {
+  return (
+    <section className={styles.statement} aria-label={schedule.title}>
+      <h2>{schedule.title}</h2>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th />
+            <th className="num">{currentHead}</th>
+            {priorHead !== null && <th className="num">{priorHead}</th>}
+          </tr>
+        </thead>
+        {schedule.blocks.map((b) => (
+          <tbody key={b.class ?? "total"}>
+            <tr className={styles.heading}>
+              <td colSpan={priorHead !== null ? 3 : 2}>{b.title}</td>
+            </tr>
+            {b.rows.map((r) => (
+              <tr key={r.key} className={r.style === "total" ? styles.group_total : undefined}>
+                <td style={{ paddingLeft: "1.5rem" }}>{r.label}</td>
+                <td className="num">{formatStatementDollars(r.current)}</td>
+                {priorHead !== null && <td className="num">{formatStatementDollars(r.prior)}</td>}
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </section>
   );
 }
 

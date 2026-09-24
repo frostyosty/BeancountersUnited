@@ -118,7 +118,7 @@ async fn build(
         }),
         rounding_priority: &client.rounding_priority,
     };
-    build_report(&input).map_err(|errors| {
+    let mut doc = build_report(&input).map_err(|errors| {
         let details: Vec<serde_json::Value> = errors
             .iter()
             .map(|e| match e {
@@ -131,5 +131,11 @@ async fn build(
             "The statements can't be built until these are fixed.",
             details,
         )
-    })
+    })?;
+    let register = crate::assets::load(conn, &client.id).await?;
+    let i = register
+        .year_index(&current.year.id)
+        .expect("the year belongs to the client");
+    doc.asset_schedule = register.schedule(i);
+    Ok(doc)
 }

@@ -135,10 +135,16 @@ pub const CHART: &str = include_str!("../../../../fixtures/practice/company-char
 pub const TEMPLATE: &str = include_str!("../../../../fixtures/practice/company-template.json");
 pub const MAPPING: &str = include_str!("../../../../fixtures/practice/company-mapping.json");
 pub const CLIENT: &str = include_str!("../../../../fixtures/clients/example-widgets.json");
+pub const ASSET_CLASSES: &str =
+    include_str!("../../../../fixtures/practice/company-asset-classes.json");
 
 pub struct LoadedFixture {
     pub client_id: String,
     pub year_ids: Vec<String>,
+    /// The practice asset classes, by key.
+    pub class_ids: Vec<(String, String)>,
+    /// The register, in fixture order.
+    pub asset_ids: Vec<String>,
 }
 
 impl Server {
@@ -150,9 +156,11 @@ impl Server {
     }
 
     /// Loads the fixture practice defaults (as `master_cookie`) and the fixture company with its
-    /// journals (as `staff_cookie`), entirely through `POST /api/commands`.
+    /// journals, asset register and depreciation (as `staff_cookie`), entirely through
+    /// `POST /api/commands`.
     pub async fn load_fixture(&self, master_cookie: &str, staff_cookie: &str) -> LoadedFixture {
         self.practice_defaults(master_cookie).await;
+        let class_ids = self.asset_classes(master_cookie).await;
         let (client_id, year_ids) = self.fixture_client(staff_cookie).await;
         let client: Value = serde_json::from_str(CLIENT).unwrap();
         for (year, year_id) in client["years"].as_array().unwrap().iter().zip(&year_ids) {
@@ -162,10 +170,56 @@ impl Server {
                 self.ok(staff_cookie, "post_journal", payload).await;
             }
         }
+        let mut asset_ids = Vec::new();
+        for asset in client["assets"].as_array().unwrap() {
+            let class_id = &class_ids
+                .iter()
+                .find(|(key, _)| asset["class"] == key.as_str())
+                .unwrap()
+                .1;
+            let id = self
+                .ok(
+                    staff_cookie,
+                    "create_asset",
+                    json!({
+                        "client_id": client_id,
+                        "class_id": class_id,
+                        "name": asset["name"],
+                        "cost": asset["cost"],
+                        "residual": asset["residual"],
+                        "acquired": asset["acquired"],
+                    }),
+                )
+                .await;
+            asset_ids.push(id);
+        }
+        let (status, body) = self
+            .command(
+                staff_cookie,
+                "run_depreciation",
+                json!({ "client_year_id": year_ids.last().unwrap() }),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "run_depreciation: {body}");
         LoadedFixture {
             client_id,
             year_ids,
+            class_ids,
+            asset_ids,
         }
+    }
+
+    /// The fixture's practice asset classes for companies. Returns (key, id) pairs.
+    pub async fn asset_classes(&self, master_cookie: &str) -> Vec<(String, String)> {
+        let classes: Value = serde_json::from_str(ASSET_CLASSES).unwrap();
+        let mut out = Vec::new();
+        for class in classes.as_array().unwrap() {
+            let mut payload = class.clone();
+            payload["entity_type"] = json!("company");
+            let id = self.ok(master_cookie, "create_asset_class", payload).await;
+            out.push((class["key"].as_str().unwrap().to_owned(), id));
+        }
+        out
     }
 
     /// The fixture's master chart, template and mapping for companies.

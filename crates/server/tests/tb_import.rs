@@ -187,9 +187,13 @@ async fn imported_books_give_the_same_statements_as_journals() {
             )
             .await;
         let doc: ReportDoc = serde_json::from_value(doc).unwrap();
+        // This client's depreciation came in with its books, and it has no asset register, so
+        // there's no schedule; everything else matches.
+        let mut expected: ReportDoc = serde_json::from_str(snapshot_body(snap)).unwrap();
+        expected.asset_schedule = None;
         assert_eq!(
             serde_json::to_string_pretty(&doc).unwrap(),
-            snapshot_body(snap)
+            serde_json::to_string_pretty(&expected).unwrap()
         );
     }
 }

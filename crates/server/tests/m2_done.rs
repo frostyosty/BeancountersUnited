@@ -30,6 +30,10 @@ async fn counts(server: &Server) -> Vec<i64> {
         "SELECT COUNT(*) FROM journals",
         "SELECT COUNT(*) FROM journal_lines",
         "SELECT COUNT(*) FROM snapshots",
+        "SELECT COUNT(*) FROM asset_classes",
+        "SELECT COUNT(*) FROM client_asset_classes",
+        "SELECT COUNT(*) FROM assets",
+        "SELECT COUNT(*) FROM asset_charges",
     ] {
         let (n,): (i64,) = acct_store::sqlx::query_as(sql)
             .fetch_one(&mut *r)

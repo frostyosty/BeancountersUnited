@@ -1,6 +1,9 @@
 //! The commands clients submit to `POST /api/commands`, and what they get back.
 
-use acct_core::{Account, AccountCode, JournalLine, Mapping, TbLine, Template};
+use acct_core::{
+    Account, AccountCode, AssetAccounts, DepreciationSettings, Disposal, JournalLine, Mapping,
+    Money, OpeningBalance, TbLine, Template,
+};
 use acct_store::users::Role;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -136,6 +139,82 @@ pub enum Command {
         #[ts(optional)]
         narration: Option<String>,
     },
+    /// Adds a practice asset class for an entity type. `key` is a stable name such as `plant`
+    /// (lowercase words joined by underscores) that the asset schedule uses. Master only.
+    CreateAssetClass {
+        entity_type: String,
+        key: String,
+        name: String,
+        settings: DepreciationSettings,
+        accounts: AssetAccounts,
+    },
+    /// Changes a practice asset class. Existing assets keep the settings and accounts copied onto
+    /// them; `apply_asset_class_defaults` pushes a change onto them. Master only.
+    UpdateAssetClass {
+        class_id: String,
+        name: String,
+        settings: DepreciationSettings,
+        accounts: AssetAccounts,
+    },
+    /// Sets a client's override of a practice asset class. `None` parts fall back to the
+    /// practice's, so both `None` removes the override. Existing assets aren't changed.
+    SetClientAssetClass {
+        client_id: String,
+        class_id: String,
+        #[ts(optional)]
+        settings: Option<DepreciationSettings>,
+        #[ts(optional)]
+        accounts: Option<AssetAccounts>,
+    },
+    /// Adds an asset to a client's register. The class's resolved settings and accounts are
+    /// copied onto it; `settings`, if given and different, makes them custom. `opening` is needed
+    /// for an asset acquired before the client's first year.
+    CreateAsset {
+        client_id: String,
+        class_id: String,
+        name: String,
+        cost: Money,
+        residual: Money,
+        #[ts(type = "string")]
+        acquired: NaiveDate,
+        #[ts(optional)]
+        settings: Option<DepreciationSettings>,
+        #[ts(optional)]
+        opening: Option<OpeningBalance>,
+    },
+    /// Edits an asset. Cost, residual, acquisition date and the brought-forward balance can
+    /// change only while no finalised year holds the asset. `settings` absent resets them to the
+    /// class's resolved defaults. The open years' depreciation becomes stale until it's run.
+    UpdateAsset {
+        asset_id: String,
+        name: String,
+        cost: Money,
+        residual: Money,
+        #[ts(type = "string")]
+        acquired: NaiveDate,
+        #[ts(optional)]
+        settings: Option<DepreciationSettings>,
+        #[ts(optional)]
+        opening: Option<OpeningBalance>,
+    },
+    /// Removes an asset that no finalised year holds. Its journals go at the next run.
+    DeleteAsset { asset_id: String },
+    /// Records a disposal and reposts that year's asset journals, including the disposal
+    /// journal. The year must be open.
+    DisposeAsset {
+        asset_id: String,
+        disposal: Disposal,
+    },
+    /// Undoes a disposal and reposts that year's asset journals. The year must be open.
+    ReinstateAsset { asset_id: String },
+    /// Reposts the asset journals (depreciation and disposals) of every open year up to and
+    /// including this one, reversing any that changed. Years already current post nothing.
+    RunDepreciation { client_year_id: String },
+    /// Pushes a class's current defaults (the client's override, else the practice's) onto the
+    /// client's assets in that class: settings unless an asset's are custom, and accounts.
+    /// Preview it with `GET /api/clients/{id}/asset-classes/{class_id}/apply-preview`. Only open
+    /// years change, at the next run.
+    ApplyAssetClassDefaults { client_id: String, class_id: String },
 }
 
 impl Command {
@@ -161,6 +240,16 @@ impl Command {
             Command::PostJournal { .. } => "post_journal",
             Command::ImportTb { .. } => "import_tb",
             Command::ReverseJournal { .. } => "reverse_journal",
+            Command::CreateAssetClass { .. } => "create_asset_class",
+            Command::UpdateAssetClass { .. } => "update_asset_class",
+            Command::SetClientAssetClass { .. } => "set_client_asset_class",
+            Command::CreateAsset { .. } => "create_asset",
+            Command::UpdateAsset { .. } => "update_asset",
+            Command::DeleteAsset { .. } => "delete_asset",
+            Command::DisposeAsset { .. } => "dispose_asset",
+            Command::ReinstateAsset { .. } => "reinstate_asset",
+            Command::RunDepreciation { .. } => "run_depreciation",
+            Command::ApplyAssetClassDefaults { .. } => "apply_asset_class_defaults",
         }
     }
 
@@ -189,7 +278,9 @@ impl Command {
             | Command::CreateTemplate { .. }
             | Command::ReviseTemplate { .. }
             | Command::CreateMapping { .. }
-            | Command::ReviseMapping { .. } => role == Role::Master,
+            | Command::ReviseMapping { .. }
+            | Command::CreateAssetClass { .. }
+            | Command::UpdateAssetClass { .. } => role == Role::Master,
             Command::CreateClient { .. }
             | Command::AddAccount { .. }
             | Command::RenameAccount { .. }
@@ -198,7 +289,15 @@ impl Command {
             | Command::CreateClientYear { .. }
             | Command::PostJournal { .. }
             | Command::ImportTb { .. }
-            | Command::ReverseJournal { .. } => matches!(role, Role::Master | Role::Staff),
+            | Command::ReverseJournal { .. }
+            | Command::SetClientAssetClass { .. }
+            | Command::CreateAsset { .. }
+            | Command::UpdateAsset { .. }
+            | Command::DeleteAsset { .. }
+            | Command::DisposeAsset { .. }
+            | Command::ReinstateAsset { .. }
+            | Command::RunDepreciation { .. }
+            | Command::ApplyAssetClassDefaults { .. } => matches!(role, Role::Master | Role::Staff),
         }
     }
 }

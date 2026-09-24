@@ -152,6 +152,59 @@ drill-down, although they still count in the totals, so this needs the practice'
 - Drill-down shows each account's real balance in cents. The difference between the line's whole
   dollars and those balances shows as a separate rounding entry, so the drill-down adds up to the line.
 
+### Depreciation (decided 2026-09-24)
+Accounting depreciation only; tax depreciation is out of scope.
+
+- **Methods.** `Dv`, `Sl` or `None`. A new asset class defaults to `Dv`.
+- **SL basis.** SL runs on either a rate (basis points a year) or a useful life (whole months). The
+  basis defaults to a rate. It follows the same cascade as the rate: practice class (master) → client
+  override → the asset itself. With a life, a year's charge is (cost − residual) × 12 ÷ life months,
+  prorated like a rate, so the asset writes off exactly at the end of its life.
+- **Client overrides.** Staff, as well as the master user, may set a client's override of a practice
+  asset class. Staff may also set custom settings on a single asset.
+- **Years that aren't 12 months.** A full year's charge is scaled by the months in the client-year ÷ 12,
+  so a 15-month year gets 15/12 of a year's charge.
+- **Part-year conventions** (the year of acquisition):
+  - `MonthsHeld { count_acquisition_month }`: whole calendar months from acquisition to year end ÷ 12.
+    The acquisition month counts only if `count_acquisition_month` is set.
+  - `Daily`: days held (acquisition day included) ÷ 365, or ÷ 366 if the client-year contains a
+    29 February.
+  - `FullYear`: a full year's charge (scaled for the year's length as above).
+- **Disposal-year conventions:**
+  - `None`: no depreciation in the year of disposal.
+  - `ToDisposalDate`: depreciation up to the disposal date, prorated with the asset's part-year
+    convention. Under `MonthsHeld` the disposal month counts exactly when the acquisition month does.
+    Under `Daily` the disposal day counts. Under `FullYear` it's a full year's charge.
+- **DV** charges rate × book value at the start of the year, or rate × cost in the year of acquisition,
+  times the year's fraction. It never takes book value below zero.
+- **SL** charges rate × (cost − residual) (or the life-based figure) times the year's fraction, and stops
+  at the residual.
+- **Rounding.** Each asset's charge for each year is computed exactly (i128) and rounded once to cents,
+  half away from zero.
+- **Additions** are not posted by the register. Purchases reach the ledger through TB import or journals.
+  A reconciliation check compares the register with the linked ledger accounts and shows any difference.
+- **Disposal.** Staff give the date, the proceeds and the account to debit with the proceeds, usually a
+  suspense account where the client's books coded the sale receipt. The disposal journal, dated on the
+  disposal date, debits that account with the proceeds and accumulated depreciation with the asset's
+  total to the disposal date, credits cost, and puts the balance to the class's gain/loss account.
+  Gain = proceeds − book value at the disposal date.
+- **Asset schedule layout.** One block per class, then a total block, each with the current and prior
+  columns like the statements:
+  cost (opening, additions, disposals, closing), accumulated depreciation (opening, depreciation for
+  the year, depreciation on disposals, closing), closing book value, and gain or loss on disposal.
+  The wording is our own.
+- **Schedule rounding** (revised 2026-09-24). Opening and closing book value and opening and closing
+  accumulated depreciation each show their exact amount rounded. Cost is book value plus accumulated
+  depreciation, so it can be $1 off its own exact amount rounded. Movements absorb any difference:
+  additions for cost (disposals if there are no additions), and depreciation for the year for
+  accumulated depreciation (depreciation on disposals if there's none). The total block is built the
+  same way from exact totals. So its book value agrees with a balance sheet line that holds just the
+  asset accounts, and its depreciation for the year with a P&L line that holds just the depreciation
+  accounts, unless those lines absorbed statement rounding. (Two earlier versions each broke one of
+  these; the fixture's FY2026 showed it. Exact: cost 41,956.28, additions 23,456.78, depreciation
+  7,284.61, accumulated 10,059.54, book value 31,896.74. Shown: 41,957, 23,457, 7,285, 10,060 and
+  31,897.)
+
 ### Account codes (decided 2026-09-23)
 - A code is one or more segments separated by `.`, such as `200`, `200.01`, `1100` or `A100`. Segments
   are ASCII letters and digits, and codes are at most 20 characters. Letters are stored uppercase, so
@@ -170,6 +223,13 @@ drill-down, although they still count in the totals, so this needs the practice'
 Example Widgets Limited (`fixtures/clients/example-widgets.json`), years ending 31 March 2025 and 2026.
 Rounding priority list: 235, 205, 290, 610, 800, 960. Snapshots: `crates/core/tests/snapshots/fixture__*.snap`.
 The figures below were recomputed by hand from the closing TBs, independently of `acct-core`.
+
+Depreciation (regenerated from the register, M4, 2026-09-24): the packing machine (plant, cost
+18,499.50, bought 5 April 2024) and the delivery van (motor vehicles, 23,456.78, bought 20 April 2025) at
+15% and 21% DV, counting the month of acquisition. FY2025: 18,499.50 × 15% = 2,774.93. FY2026: plant
+15,724.57 × 15% = 2,358.69, van 23,456.78 × 21% = 4,925.92, total 7,284.61. The hand-typed journals this
+replaced had 2,358.74 and 4,925.93, so FY2026's 210, 705 and 715 moved by a few cents. No whole-dollar
+figure below changed.
 
 Rollover: FY2025 profit is 87,676.52 − 60,791.57 = 26,884.95, which opens FY2026 in 960 (retained
 earnings) as a credit. Balance-sheet accounts carry forward unchanged (e.g. 700 at 18,499.50).
@@ -195,4 +255,7 @@ Results (whole dollars, 2026 with 2025 comparatives):
 - The comparatives in the 2026 statement equal the 2025 statement line for line.
 
 ## Open
-None yet.
+- **Gain or loss on disposal: where it's presented** (M4). The fixture's gain/loss account, 250, maps into
+  general expenses as a placeholder, so a gain would show as a negative expense. The fixture has no
+  disposals, so no statement shows it yet. Decide whether gains and losses get their own line(s), and
+  on which side.

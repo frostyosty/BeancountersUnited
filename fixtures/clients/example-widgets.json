@@ -10,6 +10,22 @@
     "800",
     "960"
   ],
+  "assets": [
+    {
+      "class": "plant",
+      "name": "Packing machine",
+      "cost": 1849950,
+      "residual": 0,
+      "acquired": "2024-04-05"
+    },
+    {
+      "class": "motor_vehicles",
+      "name": "Delivery van",
+      "cost": 2345678,
+      "residual": 0,
+      "acquired": "2025-04-20"
+    }
+  ],
   "years": [
     {
       "start": "2024-04-01",
@@ -164,20 +180,6 @@
             {
               "account": "810",
               "amount": -41
-            }
-          ]
-        },
-        {
-          "date": "2025-03-31",
-          "narration": "Depreciation on plant",
-          "lines": [
-            {
-              "account": "210",
-              "amount": 277493
-            },
-            {
-              "account": "705",
-              "amount": -277493
             }
           ]
         },
@@ -370,28 +372,6 @@
             {
               "account": "810",
               "amount": -1234
-            }
-          ]
-        },
-        {
-          "date": "2026-03-31",
-          "narration": "Depreciation",
-          "lines": [
-            {
-              "account": "210",
-              "amount": 235874
-            },
-            {
-              "account": "705",
-              "amount": -235874
-            },
-            {
-              "account": "210",
-              "amount": 492593
-            },
-            {
-              "account": "715",
-              "amount": -492593
             }
           ]
         },
