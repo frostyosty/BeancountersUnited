@@ -116,3 +116,10 @@ tools/           local-only utilities (M8)
 - Forwarded ports stay private. Never make them public.
 - The desktop apps compile and test here, but can't be run without a display. Windows builds happen only in GitHub Actions.
 - The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.
+
+## TODO
+- M3 browser walkthrough (then mark M3 done in `PLAN.md` and move to M4):
+  1. Run `make db-reset`, then `make dev`, and open port 5173. Log in as `staff`, password `fixture-password`.
+  2. Create a client, add two years, import a TB into the first year, and post a journal in the second.
+  3. Open **Statements** on the second year and click a line to see its accounts.
+  4. With a second browser window open, make a change and check that the other window updates within a few seconds.
