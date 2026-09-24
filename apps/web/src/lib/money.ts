@@ -69,6 +69,30 @@ export function formatDollars(dollars: number): string {
   return `${negative ? "-" : ""}${groupThousands(String(Math.abs(dollars)))}`;
 }
 
+/**
+ * A whole-dollar amount as the statements show it (`docs/domain.md`, Statement amounts):
+ * `1,234`, `(1,234)` for negatives, a dash for nil, and blank for no amount at all.
+ */
+export function formatStatementDollars(dollars: number | null): string {
+  if (dollars === null) {
+    return "";
+  }
+  if (dollars === 0) {
+    return "–";
+  }
+  const text = formatDollars(Math.abs(dollars));
+  return dollars < 0 ? `(${text})` : text;
+}
+
+/** Cents in statement style, for drill-down: `1,234.56`, `(1,234.56)`, a dash for nil. */
+export function formatStatementCents(cents: number): string {
+  if (cents === 0) {
+    return "–";
+  }
+  const text = formatMoney(Math.abs(cents));
+  return cents < 0 ? `(${text})` : text;
+}
+
 /** Sums cents exactly. */
 export function sumCents(amounts: Iterable<number>): number {
   let total = 0;

@@ -1,0 +1,108 @@
+.doc {
+  max-width: 48rem;
+}
+
+.notice {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid #c98a00;
+  background: #fff7e0;
+  border-radius: 4px;
+}
+
+.warnings {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.statement {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+
+.statement h2 {
+  margin: 0;
+  text-align: center;
+}
+
+.period {
+  text-align: center;
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 2px var(--space-2);
+}
+
+.table td:not(:first-child),
+.table th:not(:first-child) {
+  width: 8rem;
+}
+
+.heading td {
+  font-weight: 600;
+  padding-top: var(--space-3);
+}
+
+.group_total td:not(:first-child) {
+  border-top: 1px solid var(--text);
+}
+
+.group_total td:first-child {
+  font-style: italic;
+}
+
+.total td {
+  font-weight: 700;
+}
+
+.total td:not(:first-child) {
+  border-top: 1px solid var(--text);
+  border-bottom: 3px double var(--text);
+}
+
+.drill {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drill:hover {
+  text-decoration: underline dotted;
+}
+
+.drillRow > td {
+  background: var(--surface);
+  padding: var(--space-1) var(--space-2) var(--space-2) 2rem;
+}
+
+.accounts {
+  width: 100%;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.accounts td:nth-child(1) {
+  width: 5rem;
+}
+
+.accounts td.num {
+  width: 8rem;
+}
+
+.footnote {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}

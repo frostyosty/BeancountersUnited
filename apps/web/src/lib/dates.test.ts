@@ -16,5 +16,6 @@ describe("dates", () => {
 
   it("formats for display", () => {
     expect(formatDate("2026-03-31")).toBe("31 Mar 2026");
+    expect(formatDate("2026-09-01")).toBe("1 Sep 2026");
   });
 });

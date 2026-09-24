@@ -30,9 +30,10 @@ export function previousYear(start: string): { start: string; end: string } {
   return { start: format(d), end };
 }
 
-/** `31 Mar 2026`, for display. */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** `31 Mar 2026`, for display. A fixed table, not the locale, so every machine shows the same. */
 export function formatDate(iso: string): string {
   const d = parse(iso);
-  const month = d.toLocaleString("en-NZ", { month: "short", timeZone: "UTC" });
-  return `${d.getUTCDate()} ${month} ${d.getUTCFullYear()}`;
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }

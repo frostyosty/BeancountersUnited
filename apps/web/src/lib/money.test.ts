@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatDollars, formatMoney, MAX_CENTS, parseMoney, sumCents } from "./money";
+import {
+  formatDollars,
+  formatMoney,
+  formatStatementCents,
+  formatStatementDollars,
+  MAX_CENTS,
+  parseMoney,
+  sumCents,
+} from "./money";
 
 describe("parseMoney", () => {
   it.each([
@@ -73,5 +81,22 @@ describe("formatDollars", () => {
     expect(formatDollars(0)).toBe("0");
     expect(formatDollars(1234567)).toBe("1,234,567");
     expect(formatDollars(-999)).toBe("-999");
+  });
+});
+
+describe("formatStatementDollars", () => {
+  it("brackets negatives, dashes nil and blanks no amount", () => {
+    expect(formatStatementDollars(103464)).toBe("103,464");
+    expect(formatStatementDollars(-1912)).toBe("(1,912)");
+    expect(formatStatementDollars(0)).toBe("–");
+    expect(formatStatementDollars(null)).toBe("");
+  });
+});
+
+describe("formatStatementCents", () => {
+  it("brackets negatives and dashes nil", () => {
+    expect(formatStatementCents(10341260)).toBe("103,412.60");
+    expect(formatStatementCents(-60)).toBe("(0.60)");
+    expect(formatStatementCents(0)).toBe("–");
   });
 });

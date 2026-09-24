@@ -140,6 +140,18 @@ A line that shows $0 in both columns is left out, along with any group whose lin
 out. Totals such as net profit always show. The accounts on a left-out line then don't appear in
 drill-down, although they still count in the totals, so this needs the practice's confirmation.
 
+### Statement amounts and columns (decided 2026-09-24)
+- Negative amounts show in brackets: (1,234).
+- A nil amount shows as a dash (–). A column with no amount at all, such as the prior column when
+  there's no prior year, is blank.
+- Amount columns are headed with the year the period ends and a dollar sign: "2026 $" and
+  "2025 $". If both periods end in the same calendar year (a short or long year), the heading shows
+  the full end date instead, such as "30 Sep 2026 $".
+- When the prior year isn't finalised, a notice above the statements says so, and the prior column
+  heading carries an asterisk with a footnote.
+- Drill-down shows each account's real balance in cents. The difference between the line's whole
+  dollars and those balances shows as a separate rounding entry, so the drill-down adds up to the line.
+
 ### Account codes (decided 2026-09-23)
 - A code is one or more segments separated by `.`, such as `200`, `200.01`, `1100` or `A100`. Segments
   are ASCII letters and digits, and codes are at most 20 characters. Letters are stored uppercase, so

@@ -23,6 +23,16 @@ export function ErrorMessage({ error }: { error: Error | null }) {
 function describe(detail: unknown): string {
   if (detail && typeof detail === "object") {
     const d = detail as Record<string, unknown>;
+    switch (d.code) {
+      case "unmapped":
+        return `Account ${String(d.account)} has a balance but doesn't map to any report line.`;
+      case "overlap":
+        return `Mapping ranges ${String(d.first_from)}–${String(d.first_to)} and ${String(d.second_from)}–${String(d.second_to)} overlap.`;
+      case "unknown_line":
+        return `Mapping range ${String(d.from)}–${String(d.to)} points at a line the template doesn't have (${String(d.line)}).`;
+      case "reversed_range":
+        return `Mapping range ${String(d.from)}–${String(d.to)} runs backwards.`;
+    }
     const code = typeof d.code === "string" ? d.code.replace(/_/g, " ") : "problem";
     const account = typeof d.account === "string" ? ` ${d.account}` : "";
     return `${code}${account}`;
