@@ -48,6 +48,7 @@ export function YearLayout() {
           Journals
         </NavLink>
         <NavLink to="tb">Trial balance</NavLink>
+        <NavLink to="import">Import TB</NavLink>
       </nav>
       <Outlet context={context} />
     </>

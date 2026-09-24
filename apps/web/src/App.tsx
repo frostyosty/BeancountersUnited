@@ -7,6 +7,7 @@ import { ClientsPage } from "./pages/ClientsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { JournalsTab } from "./pages/JournalsTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { TbImportTab } from "./pages/TbImportTab";
 import { TrialBalanceTab } from "./pages/TrialBalanceTab";
 import { YearLayout } from "./pages/YearLayout";
 
@@ -35,6 +36,7 @@ export function App() {
         <Route path="years/:yearId" element={<YearLayout />}>
           <Route index element={<JournalsTab />} />
           <Route path="tb" element={<TrialBalanceTab />} />
+          <Route path="import" element={<TbImportTab />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -16,7 +16,7 @@ export function stubApi(routes: Record<string, Handler>) {
     const url = new URL(String(input), "http://localhost");
     const method = init?.method ?? "GET";
     const key = `${method} ${url.pathname}`;
-    calls.push({ method, path: url.pathname, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    calls.push({ method, path: url.pathname, body: init?.body === undefined ? undefined : parseBody(String(init.body)) });
     const handler = routes[key];
     if (!handler) {
       throw new Error(`unexpected request: ${key}`);
@@ -25,6 +25,14 @@ export function stubApi(routes: Record<string, Handler>) {
     return result instanceof Response ? result : new Response(JSON.stringify(result), { status: 200 });
   });
   return calls;
+}
+
+function parseBody(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 export function jsonResponse(status: number, body: unknown): Response {

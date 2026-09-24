@@ -4,6 +4,7 @@ import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { Me } from "@acct/types/Me";
+import type { TbImportPreview } from "@acct/types/TbImportPreview";
 import { newId } from "./id";
 
 /** A non-2xx response, carrying the server's structured error when it sent one. */
@@ -82,4 +83,14 @@ export function submitCommand(
   fetchFn: typeof fetch = fetch,
 ): Promise<Accepted> {
   return postJson<Accepted>("/api/commands", { id, ...command }, fetchFn);
+}
+
+/** Checks a TB CSV against a year without changing anything. */
+export async function previewTbImport(yearId: string, csv: string, fetchFn: typeof fetch = fetch): Promise<TbImportPreview> {
+  const path = `/api/years/${yearId}/tb-import/preview`;
+  const res = await fetchFn(path, { method: "POST", headers: { "content-type": "text/csv" }, body: csv });
+  if (!res.ok) {
+    return fail(res, `POST ${path}`);
+  }
+  return (await res.json()) as TbImportPreview;
 }
