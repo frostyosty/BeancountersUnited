@@ -220,12 +220,15 @@ async fn the_sync_feed_pages_through_changes() {
         .collect();
     assert_eq!(seqs, [3, 4, 5]);
     assert_eq!(page["last_seq"], 5);
+    // The head is the end of the log, whatever page was asked for.
+    assert_eq!(page["head_seq"], all["last_seq"]);
 
     let none = server
         .get_json(&format!("/api/sync?after={}", all["last_seq"]), &boss)
         .await;
     assert_eq!(none["changes"], json!([]));
     assert_eq!(none["last_seq"], all["last_seq"]);
+    assert_eq!(none["head_seq"], all["last_seq"]);
 
     let (status, body) = split(server.send(get("/api/sync?after=abc", Some(&boss))).await).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);

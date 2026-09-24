@@ -9,4 +9,9 @@ export type SyncFeed = { changes: Array<Change>,
 /**
  * The newest `seq` in `changes`, or `after` if there were none.
  */
-last_seq: number, };
+last_seq: number, 
+/**
+ * The newest `seq` in the whole log when this was read. A client starting up can follow the
+ * feed from here instead of paging through the history.
+ */
+head_seq: number, };

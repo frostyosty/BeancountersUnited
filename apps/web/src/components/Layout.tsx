@@ -1,10 +1,12 @@
 import type { Me } from "@acct/types/Me";
 import { Link, NavLink, Outlet } from "react-router";
 import { useSignOut } from "../auth";
+import { useLiveRefresh } from "../lib/sync";
 import styles from "./Layout.module.css";
 
 export function Layout({ me }: { me: Me }) {
   const signOut = useSignOut();
+  useLiveRefresh();
   return (
     <div className={styles.shell}>
       <header className={styles.header}>

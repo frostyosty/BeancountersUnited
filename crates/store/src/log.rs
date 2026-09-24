@@ -19,6 +19,14 @@ pub struct LoggedCommand {
     pub at: DateTime<Utc>,
 }
 
+/// The newest `seq` in the log, or 0 if it's empty.
+pub async fn head_seq(conn: &mut SqliteConnection) -> Result<i64> {
+    let (last,): (Option<i64>,) = sqlx::query_as("SELECT MAX(seq) FROM command_log")
+        .fetch_one(conn)
+        .await?;
+    Ok(last.unwrap_or(0))
+}
+
 /// The `seq` the next accepted command will get. Only meaningful on the writer connection, inside
 /// the command's transaction, where nothing else can append in between.
 pub async fn next_seq(conn: &mut SqliteConnection) -> Result<i64> {

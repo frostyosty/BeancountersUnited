@@ -18,7 +18,7 @@ export function stubApi(routes: Record<string, Handler>) {
     const method = init?.method ?? "GET";
     const key = `${method} ${url.pathname}`;
     calls.push({ method, path: url.pathname, body: init?.body === undefined ? undefined : parseBody(String(init.body)) });
-    const handler = routes[key];
+    const handler = routes[key] ?? (key === "GET /api/sync" ? quietFeed : undefined);
     if (!handler) {
       throw new Error(`unexpected request: ${key}`);
     }
@@ -27,6 +27,9 @@ export function stubApi(routes: Record<string, Handler>) {
   });
   return calls;
 }
+
+/** The sync feed when a test doesn't care about it: nothing ever changes. */
+const quietFeed: Handler = () => ({ changes: [], last_seq: 0, head_seq: 0 });
 
 function parseBody(text: string): unknown {
   try {

@@ -108,6 +108,9 @@ pub struct SyncFeed {
     pub changes: Vec<Change>,
     /// The newest `seq` in `changes`, or `after` if there were none.
     pub last_seq: i64,
+    /// The newest `seq` in the whole log when this was read. A client starting up can follow the
+    /// feed from here instead of paging through the history.
+    pub head_seq: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -385,6 +388,8 @@ pub async fn sync(
     let mut conn = state.store.reader().await?;
     let entries = log::after(&mut conn, q.after, limit).await?;
     let last_seq = entries.last().map_or(q.after, |e| e.seq);
+    // Read after the entries, so it's never older than them.
+    let head_seq = log::head_seq(&mut conn).await?;
     Ok(Json(SyncFeed {
         changes: entries
             .into_iter()
@@ -397,5 +402,6 @@ pub async fn sync(
             })
             .collect(),
         last_seq,
+        head_seq,
     }))
 }
