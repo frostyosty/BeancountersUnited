@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import { useMe } from "./auth";
 import { Layout } from "./components/Layout";
+import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -27,6 +28,7 @@ export function App() {
       <Route element={<Layout me={me.data} />}>
         <Route index element={<ClientsPage />} />
         <Route path="clients/:clientId" element={<ClientPage />} />
+        <Route path="clients/:clientId/chart" element={<ChartPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

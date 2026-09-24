@@ -190,6 +190,8 @@ pub enum ChartError {
     DuplicateCode(AccountCode),
     #[error("account {0} has no name")]
     EmptyName(AccountCode),
+    #[error("there's no account {0} in the chart")]
+    UnknownAccount(AccountCode),
 }
 
 /// A client's chart of accounts, kept sorted by code.
@@ -222,6 +224,37 @@ impl Chart {
     /// Accounts in code order.
     pub fn accounts(&self) -> &[Account] {
         &self.accounts
+    }
+
+    /// The chart with `account` added. Its code must be new.
+    pub fn with_account(&self, account: Account) -> Result<Chart, ChartError> {
+        let mut accounts = self.accounts.clone();
+        accounts.push(account);
+        Chart::new(accounts)
+    }
+
+    /// The chart with `code` renamed. The code and account type never change.
+    pub fn renamed(&self, code: &AccountCode, name: &str) -> Result<Chart, ChartError> {
+        self.edited(code, |a| a.name = name.to_owned())
+    }
+
+    /// The chart with `code` made active or inactive. Journals can't use an inactive account.
+    pub fn with_active(&self, code: &AccountCode, active: bool) -> Result<Chart, ChartError> {
+        self.edited(code, |a| a.active = active)
+    }
+
+    fn edited(
+        &self,
+        code: &AccountCode,
+        edit: impl FnOnce(&mut Account),
+    ) -> Result<Chart, ChartError> {
+        let mut accounts = self.accounts.clone();
+        let account = accounts
+            .iter_mut()
+            .find(|a| &a.code == code)
+            .ok_or_else(|| ChartError::UnknownAccount(code.clone()))?;
+        edit(account);
+        Chart::new(accounts)
     }
 }
 
@@ -311,6 +344,55 @@ pub(crate) mod tests {
 
         let blank = Chart::new(vec![account("200", "  ", AccountType::Income)]);
         assert_eq!(blank, Err(ChartError::EmptyName(code("200"))));
+    }
+
+    #[test]
+    fn edits_keep_the_chart_valid() {
+        let chart = Chart::new(vec![account("200", "Sales", AccountType::Income)]).unwrap();
+
+        let added = chart
+            .with_account(account("090", "Interest", AccountType::Income))
+            .unwrap();
+        let codes: Vec<&str> = added.accounts().iter().map(|a| a.code.as_str()).collect();
+        assert_eq!(codes, ["090", "200"]);
+        assert_eq!(
+            chart.with_account(account("200", "Again", AccountType::Asset)),
+            Err(ChartError::DuplicateCode(code("200")))
+        );
+        assert_eq!(
+            chart.with_account(account("300", " ", AccountType::Asset)),
+            Err(ChartError::EmptyName(code("300")))
+        );
+
+        let renamed = chart.renamed(&code("200"), "Revenue").unwrap();
+        assert_eq!(renamed.get(&code("200")).unwrap().name, "Revenue");
+        assert_eq!(
+            renamed.get(&code("200")).unwrap().account_type,
+            AccountType::Income
+        );
+        assert_eq!(
+            chart.renamed(&code("200"), ""),
+            Err(ChartError::EmptyName(code("200")))
+        );
+        assert_eq!(
+            chart.renamed(&code("999"), "X"),
+            Err(ChartError::UnknownAccount(code("999")))
+        );
+
+        let inactive = chart.with_active(&code("200"), false).unwrap();
+        assert!(!inactive.get(&code("200")).unwrap().active);
+        assert!(
+            inactive
+                .with_active(&code("200"), true)
+                .unwrap()
+                .get(&code("200"))
+                .unwrap()
+                .active
+        );
+        assert_eq!(
+            chart.with_active(&code("999"), false),
+            Err(ChartError::UnknownAccount(code("999")))
+        );
     }
 
     #[test]

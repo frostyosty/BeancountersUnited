@@ -75,7 +75,7 @@ Status: done (2026-09-23). `crates/server/tests/m2_done.rs` is the check. M1's s
 Done when: an HTTP integration test takes the fixture company from empty to a ReportDoc identical to M1's snapshot, and rejected commands (unbalanced journal, unknown account, wrong role) leave no partial writes.
 
 ## M3 — Web UI: first usable loop
-Status: in progress (started 2026-09-24). Done so far: `money.ts`, `id.ts`, the API client, the app shell (router, TanStack Query, CSS modules, sign-in), `GET /api/practice` and `GET /api/users`, and the client list, client creation and adding years.
+Status: in progress (started 2026-09-24). Done so far: `money.ts`, `id.ts`, the API client, the app shell (router, TanStack Query, CSS modules, sign-in), `GET /api/practice` and `GET /api/users`, the client list, client creation and adding years, and the chart editor (add, rename, activate and deactivate accounts; the rounding priority list).
 - Login, and a client list with client creation.
 - Chart editor.
 - Journal entry grid with a live out-of-balance figure (integer cents). Separate Debit and Credit columns, converted to signed cents (decided 2026-09-24).
@@ -183,4 +183,4 @@ Status: waiting on a decision
 - Workpapers; minutes and resolutions from our own paragraph library.
 - GL listing and audit-trail reports (hide matched reversal pairs by default).
 - Login throttling (M2 has none; a LAN with a handful of users makes it low priority until M7).
-- Commands still to come for M3: editing a client's chart (add, rename, deactivate accounts), editing a client's rounding priority list, users changing their own password, a master user resetting a password or deactivating a user.
+- Commands still to come for M3: users changing their own password, a master user resetting a password or deactivating a user.

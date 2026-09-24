@@ -103,3 +103,32 @@ pub async fn chart(conn: &mut SqliteConnection, client_id: &str) -> Result<Chart
             .await?;
     to_chart(rows)
 }
+
+/// Updates an existing account's name and active flag. Codes and account types never change.
+pub async fn update_account(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    account: &Account,
+) -> Result<()> {
+    sqlx::query("UPDATE accounts SET name = ?, active = ? WHERE client_id = ? AND code = ?")
+        .bind(&account.name)
+        .bind(account.active)
+        .bind(client_id)
+        .bind(account.code.as_str())
+        .execute(conn)
+        .await?;
+    Ok(())
+}
+
+pub async fn set_rounding_priority(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    rounding_priority: &[AccountCode],
+) -> Result<()> {
+    sqlx::query("UPDATE clients SET rounding_priority = ? WHERE id = ?")
+        .bind(to_json(&rounding_priority))
+        .bind(client_id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}

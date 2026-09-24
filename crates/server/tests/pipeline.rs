@@ -96,6 +96,14 @@ impl Harness {
         }
     }
 
+    /// Runs a command that creates nothing, and panics if it's rejected.
+    async fn ok_none(&self, command: Command) {
+        let kind = command.kind();
+        if let Err(e) = self.run(command).await {
+            panic!("{kind}: {:?}", e.body());
+        }
+    }
+
     /// Row counts in every table a command can write, to show a rejection left nothing.
     async fn counts(&self) -> Vec<i64> {
         let mut r = self.store.reader().await.unwrap();
@@ -714,5 +722,150 @@ async fn bad_templates_and_mappings_are_rejected() {
         },
         "invalid_entity_type",
     )
+    .await;
+}
+
+async fn chart_of(h: &Harness, client_id: &str) -> Vec<Account> {
+    let mut r = h.store.reader().await.unwrap();
+    clients::chart(&mut r, client_id)
+        .await
+        .unwrap()
+        .accounts()
+        .to_vec()
+}
+
+#[tokio::test]
+async fn charts_are_edited_by_command() {
+    let h = Harness::new().await;
+    let (client_id, _) = company_with_year(&h).await;
+    let add = |c: &str, name: &str| Command::AddAccount {
+        client_id: client_id.clone(),
+        account: Account {
+            code: code(c),
+            name: name.into(),
+            account_type: acct_core::AccountType::Expense,
+            active: true,
+        },
+    };
+    let rename = |c: &str, name: &str| Command::RenameAccount {
+        client_id: client_id.clone(),
+        code: code(c),
+        name: name.into(),
+    };
+
+    h.ok_none(add("236", "  Cleaning ")).await;
+    let chart = chart_of(&h, &client_id).await;
+    let cleaning = chart.iter().find(|a| a.code == code("236")).unwrap();
+    assert_eq!(cleaning.name, "Cleaning");
+
+    h.rejects(&master(), add("235", "Again"), "duplicate_account")
+        .await;
+    h.rejects(&master(), add("237", " "), "empty_name").await;
+    h.rejects(&as_role(Role::Viewer), add("237", "X"), "forbidden")
+        .await;
+    h.rejects(
+        &master(),
+        Command::AddAccount {
+            client_id: "nope".into(),
+            account: chart[0].clone(),
+        },
+        "not_found",
+    )
+    .await;
+
+    let before = chart_of(&h, &client_id).await;
+    h.rejects(&master(), rename("999", "X"), "unknown_account")
+        .await;
+    h.rejects(&master(), rename("235", ""), "empty_name").await;
+    h.rejects(&as_role(Role::Viewer), rename("235", "X"), "forbidden")
+        .await;
+    assert_eq!(chart_of(&h, &client_id).await, before);
+
+    h.run_as(&as_role(Role::Staff), rename("235", "Repairs"))
+        .await
+        .unwrap();
+    let after = chart_of(&h, &client_id).await;
+    let repairs = after.iter().find(|a| a.code == code("235")).unwrap();
+    assert_eq!(repairs.name, "Repairs");
+    assert_eq!(repairs.account_type, acct_core::AccountType::Expense);
+}
+
+#[tokio::test]
+async fn rounding_priority_lists_are_checked() {
+    let h = Harness::new().await;
+    let (client_id, _) = company_with_year(&h).await;
+    let set = |codes: Vec<&str>| Command::SetRoundingPriority {
+        client_id: client_id.clone(),
+        rounding_priority: codes.into_iter().map(code).collect(),
+    };
+    let err = h
+        .rejects(
+            &master(),
+            set(vec!["205", "999", "205"]),
+            "invalid_rounding_priority",
+        )
+        .await;
+    assert_eq!(err.body().details.as_array().unwrap().len(), 2);
+    h.ok_none(set(vec!["290", "205"])).await;
+    let mut r = h.store.reader().await.unwrap();
+    let client = clients::get(&mut r, &client_id).await.unwrap().unwrap();
+    assert_eq!(client.rounding_priority, [code("290"), code("205")]);
+}
+
+#[tokio::test]
+async fn accounts_in_use_stay_active() {
+    let h = Harness::new().await;
+    let (client_id, y1) = company_with_year(&h).await;
+    let set_active = |c: &str, active: bool| Command::SetAccountActive {
+        client_id: client_id.clone(),
+        code: code(c),
+        active,
+    };
+    h.ok(journal_on(
+        &y1,
+        "2024-06-30",
+        vec![line("600", 10_000), line("100", -10_000)],
+    ))
+    .await;
+
+    let err = h
+        .rejects(&master(), set_active("600", false), "account_in_use")
+        .await;
+    assert_eq!(err.body().details[0]["client_year_id"], y1.as_str());
+    h.rejects(&master(), set_active("960", false), "account_in_use")
+        .await;
+    h.rejects(&master(), set_active("999", false), "unknown_account")
+        .await;
+
+    // Once FY2025 is finalised, sales (P&L) have no balance in an open year, but the bank
+    // balance rolls into FY2026.
+    let y2 = create_year(&h, &client_id, "2025-04-01", "2026-03-31").await;
+    {
+        let mut w = h.store.writer().await;
+        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
+            .bind(&y1)
+            .execute(&mut *w)
+            .await
+            .unwrap();
+    }
+    let err = h
+        .rejects(&master(), set_active("600", false), "account_in_use")
+        .await;
+    assert_eq!(err.body().details[0]["client_year_id"], y2.as_str());
+    h.ok_none(set_active("100", false)).await;
+
+    // An inactive account takes no journals until it's made active again.
+    h.rejects(
+        &master(),
+        journal_on(&y2, "2025-06-30", vec![line("600", 500), line("100", -500)]),
+        "invalid_journal",
+    )
+    .await;
+    h.ok_none(set_active("100", true)).await;
+    h.ok(journal_on(
+        &y2,
+        "2025-06-30",
+        vec![line("600", 500), line("100", -500)],
+    ))
     .await;
 }

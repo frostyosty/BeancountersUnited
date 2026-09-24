@@ -33,6 +33,9 @@ export function ClientPage() {
         <dt>Rounding priority</dt>
         <dd>{c.rounding_priority.length ? c.rounding_priority.join(", ") : "none set"}</dd>
       </dl>
+      <p>
+        <Link to={`/clients/${c.id}/chart`}>Chart of accounts and rounding priority</Link>
+      </p>
 
       <h2>Years</h2>
       {c.years.length === 0 ? (

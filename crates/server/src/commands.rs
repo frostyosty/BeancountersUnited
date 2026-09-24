@@ -68,6 +68,26 @@ pub enum Command {
         retained_earnings: AccountCode,
         rounding_priority: Vec<AccountCode>,
     },
+    /// Adds an account to a client's chart. Its code must be new to the chart.
+    AddAccount { client_id: String, account: Account },
+    /// Renames an account in a client's chart. Codes and account types never change.
+    RenameAccount {
+        client_id: String,
+        code: AccountCode,
+        name: String,
+    },
+    /// Makes an account active or inactive. An account can't be made inactive while it has a
+    /// balance in an open year, or while it's the retained earnings account.
+    SetAccountActive {
+        client_id: String,
+        code: AccountCode,
+        active: bool,
+    },
+    /// Replaces a client's rounding priority list (`docs/domain.md`, Rounding).
+    SetRoundingPriority {
+        client_id: String,
+        rounding_priority: Vec<AccountCode>,
+    },
     /// Adds a year directly before a client's first year or after its last. Without
     /// `mapping_id`, it pins the same template and mapping versions as the neighbouring year, or
     /// for a client's first year, the latest version of the only mapping for its entity type.
@@ -117,6 +137,10 @@ impl Command {
             Command::CreateMapping { .. } => "create_mapping",
             Command::ReviseMapping { .. } => "revise_mapping",
             Command::CreateClient { .. } => "create_client",
+            Command::AddAccount { .. } => "add_account",
+            Command::RenameAccount { .. } => "rename_account",
+            Command::SetAccountActive { .. } => "set_account_active",
+            Command::SetRoundingPriority { .. } => "set_rounding_priority",
             Command::CreateClientYear { .. } => "create_client_year",
             Command::PostJournal { .. } => "post_journal",
             Command::ImportTb { .. } => "import_tb",
@@ -146,6 +170,10 @@ impl Command {
             | Command::CreateMapping { .. }
             | Command::ReviseMapping { .. } => role == Role::Master,
             Command::CreateClient { .. }
+            | Command::AddAccount { .. }
+            | Command::RenameAccount { .. }
+            | Command::SetAccountActive { .. }
+            | Command::SetRoundingPriority { .. }
             | Command::CreateClientYear { .. }
             | Command::PostJournal { .. }
             | Command::ImportTb { .. }

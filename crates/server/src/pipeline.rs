@@ -3,7 +3,9 @@
 //! Each command runs in one transaction on the writer connection. Any error drops the
 //! transaction, so a rejected command leaves nothing behind.
 
-use acct_core::{AccountType, Chart, ClientYear, Journal, JournalLine};
+use acct_core::{
+    Account, AccountCode, AccountType, Chart, ChartError, ClientYear, Journal, JournalLine,
+};
 use acct_store::charts::MasterChart;
 use acct_store::clients::Client;
 use acct_store::journals::{JournalKind, StoredJournal};
@@ -23,6 +25,7 @@ use serde_json::{Value, json};
 use crate::auth;
 use crate::commands::{Accepted, Command, CommandEnvelope};
 use crate::error::CommandError;
+use crate::ledger;
 use crate::tb_import;
 
 /// Who is submitting a command. `user_id` is `None` only for `acctd init` on the server itself.
@@ -262,21 +265,7 @@ async fn apply(
                     ));
                 }
             }
-            let mut problems = Vec::new();
-            for (i, code) in rounding_priority.iter().enumerate() {
-                if chart.get(code).is_none() {
-                    problems.push(json!({ "code": "unknown_account", "account": code }));
-                } else if rounding_priority[..i].contains(code) {
-                    problems.push(json!({ "code": "duplicate", "account": code }));
-                }
-            }
-            if !problems.is_empty() {
-                return Err(CommandError::invalid_with(
-                    "invalid_rounding_priority",
-                    "The rounding priority list has accounts that aren't in the chart, or repeats.",
-                    problems,
-                ));
-            }
+            check_rounding_priority(&chart, rounding_priority)?;
             let id = new_id();
             clients::insert(
                 tx,
@@ -298,6 +287,78 @@ async fn apply(
                 client_id: Some(id),
                 client_year_id: None,
             })
+        }
+
+        Command::AddAccount { client_id, account } => {
+            let chart = client_chart(tx, client_id).await?;
+            let account = Account {
+                name: account.name.trim().to_owned(),
+                ..account.clone()
+            };
+            chart.with_account(account.clone()).map_err(chart_error)?;
+            clients::insert_account(tx, client_id, &account).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::RenameAccount {
+            client_id,
+            code,
+            name,
+        } => {
+            let chart = client_chart(tx, client_id).await?;
+            let edited = chart.renamed(code, name.trim()).map_err(chart_error)?;
+            let account = edited.get(code).expect("just renamed");
+            clients::update_account(tx, client_id, account).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::SetAccountActive {
+            client_id,
+            code,
+            active,
+        } => {
+            let client = clients::get(tx, client_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("client", client_id))?;
+            let chart = clients::chart(tx, client_id).await?;
+            let edited = chart.with_active(code, *active).map_err(chart_error)?;
+            if !*active {
+                if *code == client.retained_earnings {
+                    return Err(CommandError::invalid(
+                        "account_in_use",
+                        format!("{code} is the retained earnings account, so it stays active."),
+                    ));
+                }
+                let open_with_balance: Vec<Value> = ledger::client_balances(tx, &client, &chart)
+                    .await?
+                    .iter()
+                    .filter(|b| b.year.status == YearStatus::Open)
+                    .filter(|b| !b.closing.balance(code).is_zero())
+                    .map(|b| json!({ "client_year_id": b.year.id, "end": b.year.year.end() }))
+                    .collect();
+                if !open_with_balance.is_empty() {
+                    return Err(CommandError::invalid_with(
+                        "account_in_use",
+                        format!(
+                            "{code} has a balance in an open year, so it can't be made inactive."
+                        ),
+                        open_with_balance,
+                    ));
+                }
+            }
+            let account = edited.get(code).expect("just edited");
+            clients::update_account(tx, client_id, account).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::SetRoundingPriority {
+            client_id,
+            rounding_priority,
+        } => {
+            let chart = client_chart(tx, client_id).await?;
+            check_rounding_priority(&chart, rounding_priority)?;
+            clients::set_rounding_priority(tx, client_id, rounding_priority).await?;
+            Ok(client_effect(client_id))
         }
 
         Command::CreateClientYear {
@@ -623,6 +684,59 @@ async fn pin_latest(
 }
 
 /// A year that exists and isn't finalised.
+/// A client's chart; not found if the client doesn't exist.
+async fn client_chart(tx: &mut SqliteConnection, client_id: &str) -> Result<Chart, CommandError> {
+    clients::get(tx, client_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("client", client_id))?;
+    Ok(clients::chart(tx, client_id).await?)
+}
+
+fn client_effect(client_id: &str) -> Effect {
+    Effect {
+        entity_id: None,
+        client_id: Some(client_id.to_owned()),
+        client_year_id: None,
+    }
+}
+
+fn chart_error(e: ChartError) -> CommandError {
+    let code = match e {
+        ChartError::DuplicateCode(_) => "duplicate_account",
+        ChartError::EmptyName(_) => "empty_name",
+        ChartError::UnknownAccount(_) => "unknown_account",
+    };
+    let mut message = e.to_string();
+    if let Some(first) = message.get_mut(0..1) {
+        first.make_ascii_uppercase();
+    }
+    CommandError::invalid(code, format!("{message}."))
+}
+
+/// Every account on the list must be in the chart, once.
+fn check_rounding_priority(
+    chart: &Chart,
+    rounding_priority: &[AccountCode],
+) -> Result<(), CommandError> {
+    let mut problems = Vec::new();
+    for (i, code) in rounding_priority.iter().enumerate() {
+        if chart.get(code).is_none() {
+            problems.push(json!({ "code": "unknown_account", "account": code }));
+        } else if rounding_priority[..i].contains(code) {
+            problems.push(json!({ "code": "duplicate", "account": code }));
+        }
+    }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(CommandError::invalid_with(
+            "invalid_rounding_priority",
+            "The rounding priority list has accounts that aren't in the chart, or repeats.",
+            problems,
+        ))
+    }
+}
+
 async fn open_year(tx: &mut SqliteConnection, id: &str) -> Result<StoredYear, CommandError> {
     let year = years::get(tx, id)
         .await?
