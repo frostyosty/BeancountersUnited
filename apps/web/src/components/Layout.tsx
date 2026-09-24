@@ -15,10 +15,11 @@ export function Layout({ me }: { me: Me }) {
           <NavLink to="/" end>
             Clients
           </NavLink>
+          {me.role === "master" && <NavLink to="/settings">Practice settings</NavLink>}
         </nav>
-        <span className={styles.user}>
+        <NavLink to="/account" className={styles.user}>
           {me.display_name} <span className={styles.role}>{me.role}</span>
-        </span>
+        </NavLink>
         <button type="button" onClick={() => void signOut()}>
           Sign out
         </button>

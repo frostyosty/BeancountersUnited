@@ -226,3 +226,140 @@ async fn a_server_initialises_only_once() {
         .unwrap_err();
     assert_eq!(err.body().code, "already_initialised");
 }
+
+async fn login_with(server: &Server, username: &str, password: &str) -> StatusCode {
+    server
+        .send(post_json(
+            "/api/login",
+            None,
+            &json!({ "username": username, "password": password }),
+        ))
+        .await
+        .status()
+}
+
+async fn user_id(server: &Server, username: &str) -> String {
+    let mut r = server.state.store.reader().await.unwrap();
+    acct_store::users::by_username(&mut r, username)
+        .await
+        .unwrap()
+        .unwrap()
+        .id
+}
+
+#[tokio::test]
+async fn anyone_can_change_their_own_password() {
+    let server = Server::new().await;
+    let val = server.login("val").await;
+    let change =
+        |current: &str, new: &str| json!({ "current_password": current, "new_password": new });
+
+    let (status, body) = server
+        .command(
+            &val,
+            "change_own_password",
+            change("wrong password!", "a new long password"),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["code"], "wrong_password");
+    let (_, body) = server
+        .command(&val, "change_own_password", change(PASSWORD, "short"))
+        .await;
+    assert_eq!(body["code"], "weak_password");
+    assert_eq!(login_with(&server, "val", PASSWORD).await, StatusCode::OK);
+
+    let (status, body) = server
+        .command(
+            &val,
+            "change_own_password",
+            change(PASSWORD, "a new long password"),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        login_with(&server, "val", PASSWORD).await,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        login_with(&server, "val", "a new long password").await,
+        StatusCode::OK
+    );
+    // The session that changed it carries on.
+    let (status, _) = split(server.send(get("/api/me", Some(&val))).await).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let mut r = server.state.store.reader().await.unwrap();
+    let log = acct_store::log::after(&mut r, 0, 100).await.unwrap();
+    let entry = log
+        .iter()
+        .find(|e| e.kind == "change_own_password")
+        .unwrap();
+    assert!(!entry.payload.contains("a new long password"));
+    assert!(!entry.payload.contains(PASSWORD));
+}
+
+#[tokio::test]
+async fn a_master_resets_passwords_and_ends_sessions() {
+    let server = Server::new().await;
+    let boss = server.login("boss").await;
+    let sam = server.login("sam").await;
+    let sam_id = user_id(&server, "sam").await;
+    let reset = json!({ "user_id": sam_id, "new_password": "reset by the boss" });
+
+    let (status, _) = server.command(&sam, "reset_password", reset.clone()).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (_, body) = server
+        .command(
+            &boss,
+            "reset_password",
+            json!({ "user_id": "nope", "new_password": "reset by the boss" }),
+        )
+        .await;
+    assert_eq!(body["code"], "not_found");
+
+    let (status, body) = server.command(&boss, "reset_password", reset).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, _) = split(server.send(get("/api/me", Some(&sam))).await).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        login_with(&server, "sam", "reset by the boss").await,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn a_master_deactivates_users_but_not_themselves() {
+    let server = Server::new().await;
+    let boss = server.login("boss").await;
+    let sam = server.login("sam").await;
+    let boss_id = user_id(&server, "boss").await;
+    let sam_id = user_id(&server, "sam").await;
+    let set = |id: &str, active: bool| json!({ "user_id": id, "active": active });
+
+    let (status, _) = server
+        .command(&sam, "set_user_active", set(&boss_id, false))
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (_, body) = server
+        .command(&boss, "set_user_active", set(&boss_id, false))
+        .await;
+    assert_eq!(body["code"], "cannot_deactivate_self");
+
+    let (status, body) = server
+        .command(&boss, "set_user_active", set(&sam_id, false))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, _) = split(server.send(get("/api/me", Some(&sam))).await).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        login_with(&server, "sam", PASSWORD).await,
+        StatusCode::UNAUTHORIZED
+    );
+
+    let (status, _) = server
+        .command(&boss, "set_user_active", set(&sam_id, true))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(login_with(&server, "sam", PASSWORD).await, StatusCode::OK);
+}

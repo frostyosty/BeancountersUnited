@@ -16,8 +16,8 @@ use acct_store::templates::{MappingInfo, TemplateInfo};
 use acct_store::users::{Role, User};
 use acct_store::years::{BooksSource, StoredYear, YearStatus};
 use acct_store::{
-    SqliteConnection, Store, charts, clients, journals, log, new_id, practice, templates, users,
-    years,
+    SqliteConnection, Store, charts, clients, journals, log, new_id, practice, sessions, templates,
+    users, years,
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
@@ -75,7 +75,7 @@ pub async fn submit(
     }
 
     let seq = log::next_seq(&mut tx).await?;
-    let effect = apply(&mut tx, &command, seq).await?;
+    let effect = apply(&mut tx, actor, &command, seq).await?;
     let accepted = Accepted {
         seq,
         entity_id: effect.entity_id,
@@ -102,6 +102,7 @@ pub async fn submit(
 /// Validates the command against the current state, then applies it.
 async fn apply(
     tx: &mut SqliteConnection,
+    actor: &Actor,
     command: &Command,
     seq: i64,
 ) -> Result<Effect, CommandError> {
@@ -139,6 +140,64 @@ async fn apply(
         } => {
             let id = create_user(tx, username, display_name, password, *role, seq).await?;
             Ok(created(id))
+        }
+
+        Command::ChangeOwnPassword {
+            current_password,
+            new_password,
+        } => {
+            let user_id = actor.user_id.as_deref().ok_or(CommandError::Forbidden)?;
+            let user = users::get(tx, user_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("user", user_id))?;
+            if !auth::verify_password(current_password, &user.password_hash) {
+                return Err(CommandError::invalid(
+                    "wrong_password",
+                    "The current password isn't right.",
+                ));
+            }
+            auth::check_password_rules(new_password)?;
+            users::set_password_hash(tx, user_id, &auth::hash_password(new_password)).await?;
+            Ok(no_effect())
+        }
+
+        Command::ResetPassword {
+            user_id,
+            new_password,
+        } => {
+            users::get(tx, user_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("user", user_id))?;
+            auth::check_password_rules(new_password)?;
+            users::set_password_hash(tx, user_id, &auth::hash_password(new_password)).await?;
+            sessions::delete_for_user(tx, user_id).await?;
+            Ok(no_effect())
+        }
+
+        Command::SetUserActive { user_id, active } => {
+            let user = users::get(tx, user_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("user", user_id))?;
+            if !*active {
+                if actor.user_id.as_deref() == Some(user_id.as_str()) {
+                    return Err(CommandError::invalid(
+                        "cannot_deactivate_self",
+                        "You can't make yourself inactive.",
+                    ));
+                }
+                if user.active
+                    && user.role == Role::Master
+                    && users::count_active(tx, Role::Master).await? <= 1
+                {
+                    return Err(CommandError::invalid(
+                        "last_master",
+                        "The practice needs at least one active master user.",
+                    ));
+                }
+                sessions::delete_for_user(tx, user_id).await?;
+            }
+            users::set_active(tx, user_id, *active).await?;
+            Ok(no_effect())
         }
 
         Command::CreateMasterChart {
@@ -690,6 +749,14 @@ async fn client_chart(tx: &mut SqliteConnection, client_id: &str) -> Result<Char
         .await?
         .ok_or_else(|| CommandError::not_found("client", client_id))?;
     Ok(clients::chart(tx, client_id).await?)
+}
+
+fn no_effect() -> Effect {
+    Effect {
+        entity_id: None,
+        client_id: None,
+        client_year_id: None,
+    }
 }
 
 fn client_effect(client_id: &str) -> Effect {

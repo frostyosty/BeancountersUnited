@@ -3,6 +3,7 @@ import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { ClientSummary } from "@acct/types/ClientSummary";
 import type { JournalView } from "@acct/types/JournalView";
 import type { PracticeView } from "@acct/types/PracticeView";
+import type { UserView } from "@acct/types/UserView";
 import type { YearSummary } from "@acct/types/YearSummary";
 import type { YearTrialBalance } from "@acct/types/YearTrialBalance";
 import { useQuery } from "@tanstack/react-query";
@@ -53,4 +54,8 @@ export function useJournals(yearId: string) {
 
 export function useTrialBalance(yearId: string) {
   return useQuery({ queryKey: keys.tb(yearId), queryFn: () => getJson<YearTrialBalance>(`/api/years/${yearId}/tb`) });
+}
+
+export function useUsers() {
+  return useQuery({ queryKey: keys.users, queryFn: () => getJson<UserView[]>("/api/users") });
 }

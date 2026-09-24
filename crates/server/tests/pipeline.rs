@@ -869,3 +869,39 @@ async fn accounts_in_use_stay_active() {
     ))
     .await;
 }
+
+#[tokio::test]
+async fn the_last_active_master_stays_active() {
+    let h = Harness::new().await;
+    let system = Actor {
+        user_id: None,
+        role: Role::Master,
+    };
+    let boss = h
+        .run_as(
+            &system,
+            Command::Initialise {
+                practice_name: "P".into(),
+                username: "boss".into(),
+                display_name: "Boss".into(),
+                password: "correct horse battery".into(),
+            },
+        )
+        .await
+        .unwrap()
+        .entity_id
+        .unwrap();
+    let before = h.counts().await;
+    let err = h
+        .run_as(
+            &system,
+            Command::SetUserActive {
+                user_id: boss,
+                active: false,
+            },
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(err.body().code, "last_master");
+    assert_eq!(h.counts().await, before);
+}

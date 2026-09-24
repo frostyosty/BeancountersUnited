@@ -58,3 +58,12 @@ pub async fn delete_expired(conn: &mut SqliteConnection, now: DateTime<Utc>) -> 
     }
     Ok(n)
 }
+
+/// Ends every session a user has, so they must log in again.
+pub async fn delete_for_user(conn: &mut SqliteConnection, user_id: &str) -> Result<()> {
+    sqlx::query("DELETE FROM sessions WHERE user_id = ?")
+        .bind(user_id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}

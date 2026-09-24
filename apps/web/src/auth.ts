@@ -1,6 +1,7 @@
 import type { Me } from "@acct/types/Me";
 import type { Role } from "@acct/types/Role";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext } from "react";
 import { fetchMe, login, logout } from "./lib/api";
 
 const ME = ["me"] as const;
@@ -29,9 +30,12 @@ export function useSignOut() {
     });
 }
 
-/** The logged-in user, inside the signed-in part of the app (where `App` has already checked). */
+/** The signed-in user, provided by `App` around the signed-in part of the app. */
+export const CurrentUser = createContext<Me | null>(null);
+
+/** The logged-in user, inside the signed-in part of the app. */
 export function useCurrentUser(): Me {
-  const me = useMe().data;
+  const me = useContext(CurrentUser);
   if (!me) {
     throw new Error("useCurrentUser outside a session");
   }

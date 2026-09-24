@@ -28,6 +28,7 @@
 
 .user {
   color: var(--text-muted);
+  text-decoration: none;
 }
 
 .role {

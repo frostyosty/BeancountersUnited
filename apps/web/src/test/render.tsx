@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router";
 import { vi } from "vitest";
+import { makeQueryClient } from "../lib/queryClient";
 
 type Handler = (init: RequestInit | undefined, url: URL) => unknown;
 
@@ -40,7 +41,7 @@ export function jsonResponse(status: number, body: unknown): Response {
 }
 
 export function renderApp(ui: ReactElement, path = "/") {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = makeQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>

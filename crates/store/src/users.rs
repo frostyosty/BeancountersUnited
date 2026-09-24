@@ -102,3 +102,34 @@ pub async fn list(conn: &mut SqliteConnection) -> Result<Vec<User>> {
         .await?;
     rows.into_iter().map(User::try_from).collect()
 }
+
+pub async fn set_password_hash(
+    conn: &mut SqliteConnection,
+    id: &str,
+    password_hash: &str,
+) -> Result<()> {
+    sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?")
+        .bind(password_hash)
+        .bind(id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}
+
+pub async fn set_active(conn: &mut SqliteConnection, id: &str, active: bool) -> Result<()> {
+    sqlx::query("UPDATE users SET active = ? WHERE id = ?")
+        .bind(active)
+        .bind(id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}
+
+/// How many active users have `role`.
+pub async fn count_active(conn: &mut SqliteConnection, role: Role) -> Result<i64> {
+    let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE active AND role = ?")
+        .bind(crate::enum_text(&role))
+        .fetch_one(conn)
+        .await?;
+    Ok(n)
+}

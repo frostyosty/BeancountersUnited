@@ -38,6 +38,19 @@ pub enum Command {
         password: String,
         role: Role,
     },
+    /// Changes the submitting user's own password. Any role.
+    ChangeOwnPassword {
+        current_password: String,
+        new_password: String,
+    },
+    /// Sets a user's password and ends their sessions. Master only.
+    ResetPassword {
+        user_id: String,
+        new_password: String,
+    },
+    /// Makes a user active or inactive; making one inactive ends their sessions. Master only.
+    /// Nobody can make themselves inactive, and the last active master stays active.
+    SetUserActive { user_id: String, active: bool },
     /// Sets up the practice master chart for an entity type. Master only.
     CreateMasterChart {
         entity_type: String,
@@ -131,6 +144,9 @@ impl Command {
         match self {
             Command::Initialise { .. } => "initialise",
             Command::CreateUser { .. } => "create_user",
+            Command::ChangeOwnPassword { .. } => "change_own_password",
+            Command::ResetPassword { .. } => "reset_password",
+            Command::SetUserActive { .. } => "set_user_active",
             Command::CreateMasterChart { .. } => "create_master_chart",
             Command::CreateTemplate { .. } => "create_template",
             Command::ReviseTemplate { .. } => "revise_template",
@@ -152,8 +168,10 @@ impl Command {
     pub fn logged_payload(&self) -> serde_json::Value {
         let mut v = serde_json::to_value(self).expect("commands serialise");
         let mut payload = v["payload"].take();
-        if let Some(password) = payload.get_mut("password") {
-            *password = "[redacted]".into();
+        for key in ["password", "current_password", "new_password"] {
+            if let Some(secret) = payload.get_mut(key) {
+                *secret = "[redacted]".into();
+            }
         }
         payload
     }
@@ -163,7 +181,10 @@ impl Command {
         let role = actor.role;
         match self {
             Command::Initialise { .. } => actor.user_id.is_none(),
+            Command::ChangeOwnPassword { .. } => actor.user_id.is_some(),
             Command::CreateUser { .. }
+            | Command::ResetPassword { .. }
+            | Command::SetUserActive { .. }
             | Command::CreateMasterChart { .. }
             | Command::CreateTemplate { .. }
             | Command::ReviseTemplate { .. }
