@@ -1,0 +1,73 @@
+name: Release
+
+# Builds the three Windows desktop apps (ADR 006) and publishes them:
+# - every push to master (and "Run workflow") replaces the rolling `master-build` pre-release
+# - a `v*` tag makes a proper release of that version
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Quicksaves come quickly: a newer push to master cancels an older build.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The master and dev apps serve the web app from inside the exe, so build it first.
+      - run: pnpm --filter web build
+      - run: cargo build --release --locked -p acct-master -p acct-client -p acct-dev
+
+      - name: Collect the exes
+        run: |
+          mkdir out
+          cp target/release/acct-master.exe target/release/acct-client.exe target/release/acct-dev.exe out/
+          cd out && sha256sum *.exe > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acct-windows
+          path: out/
+
+      - name: Publish the rolling master build
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete master-build --yes --cleanup-tag || true
+          gh release create master-build out/* \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "master build ${GITHUB_SHA::7}" \
+            --notes "Built from ${GITHUB_SHA::7} on master. Replaced by every push. acct-master runs the office server, acct-client connects staff PCs to it, and acct-dev is for development only. Needs Windows 10 or 11 (WebView2). Unsigned, so Windows SmartScreen will ask before the first run."
+
+      - name: Publish the tagged release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* \
+            --title "acct $GITHUB_REF_NAME" \
+            --generate-notes

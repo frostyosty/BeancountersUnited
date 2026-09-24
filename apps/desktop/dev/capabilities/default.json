@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "The local control and connect pages. Windows onto the server (remote pages) get nothing.",
+  "windows": ["control", "connect-*"],
+  "permissions": ["core:default"]
+}

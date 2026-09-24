@@ -1,6 +1,7 @@
-.PHONY: setup dev test check types types-check db-reset
+.PHONY: setup dev test check types types-check db-reset web desktop desktop-check
 
 TYPES_DIR := packages/types/src
+DESKTOP := -p acct-desktop -p acct-master -p acct-client -p acct-dev
 
 setup:
 	cargo fetch
@@ -11,12 +12,12 @@ dev:
 	./scripts/dev.sh
 
 test:
-	cargo test --workspace
+	cargo test
 	pnpm -r test
 
 check:
 	cargo fmt --all --check
-	cargo clippy --workspace --all-targets -- -D warnings
+	cargo clippy --all-targets -- -D warnings
 	$(MAKE) test
 	pnpm -r typecheck
 	$(MAKE) types-check
@@ -25,7 +26,7 @@ check:
 # Clear the folder first so a type removed from Rust doesn't leave a stale file behind.
 types:
 	rm -f $(TYPES_DIR)/*.ts
-	cargo test --workspace --quiet export_bindings
+	cargo test --quiet export_bindings
 
 types-check: types
 	@git diff --quiet -- $(TYPES_DIR) && test -z "$$(git ls-files --others --exclude-standard -- $(TYPES_DIR))" \
@@ -35,3 +36,17 @@ types-check: types
 db-reset:
 	rm -f data/*.db data/*.db-*
 	cargo run -q -p acct-server --bin acct-load-fixtures
+
+web:
+	pnpm --filter web build
+
+# The desktop apps (ADR 006): acct-master, acct-client and acct-dev. They build the web app in, and
+# on Linux need the webview libraries that scripts/desktop-deps.sh installs. The release workflow
+# builds the Windows .exe files.
+desktop: web
+	cargo build --release $(DESKTOP)
+
+desktop-check: web
+	cargo clippy $(DESKTOP) --all-targets -- -D warnings
+	cargo test $(DESKTOP)
+	cargo test -p acct-server --features embed-web --lib web

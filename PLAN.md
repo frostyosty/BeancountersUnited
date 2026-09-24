@@ -75,7 +75,7 @@ Status: done (2026-09-23). `crates/server/tests/m2_done.rs` is the check. M1's s
 Done when: an HTTP integration test takes the fixture company from empty to a ReportDoc identical to M1's snapshot, and rejected commands (unbalanced journal, unknown account, wrong role) leave no partial writes.
 
 ## M3 — Web UI: first usable loop
-Status: not started
+Status: not started. A bare sign-in and sign-out form landed early (2026-09-24) so the desktop apps have something to show.
 - Login, and a client list with client creation.
 - Chart editor.
 - Journal entry grid with a live out-of-balance figure (integer cents).
@@ -139,7 +139,7 @@ Status: not started
 Done when: re-importing an overlapping file creates no duplicates, a gap is flagged, and synthetic statements code to the fixture's expected TB.
 
 ## M7 — LAN deployment
-Status: not started
+Status: partly brought forward (2026-09-24, ADR 006). Done: the server embeds the web app; Tauri 2 apps `acct-master`, `acct-client` and `acct-dev`; Windows builds on a GitHub Actions runner, published as releases. Still to do: the rest below (host choice, TLS, device trust, discovery, backups).
 - Two ADRs:
   - server host: a Windows service, or Docker on a small Linux box
   - client: a browser with a practice certificate authority installed, or a Tauri shell that trusts only the server's own certificate
@@ -176,9 +176,9 @@ Status: waiting on a decision
 - Which server host OS and which client (M7)?
 
 ## Backlog (not scheduled)
+- Desktop apps: code signing, an installer, a log file for `acct-master`, running the master as a Windows service (M7 decides), and a "reset" button in `acct-dev`.
 - Templates for trusts, partnerships and sole traders.
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
-- A "master dev" sync simulator: one `acctd` with many simulated clients sending commands and following `/api/sync`, checking that they all converge on the same state. Needs M2's sync feed.
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
 - GL listing and audit-trail reports (hide matched reversal pairs by default).

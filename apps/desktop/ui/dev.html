@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="UTF-8" />
+    <title>acct dev</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="dev.js" defer></script>
+  </head>
+  <body>
+    <h1>acct dev</h1>
+    <p class="sub">A throwaway master with the synthetic fixtures. Everything is deleted when you close this window.</p>
+
+    <section id="failed" hidden>
+      <h2 class="error">The dev master didn't start</h2>
+      <p id="failed-reason"></p>
+    </section>
+
+    <section>
+      <h2>Master</h2>
+      <p>Serving <code id="url"></code>, loaded with <span id="loaded"></span>.</p>
+      <p class="sub">Every dev user's password is <code id="password"></code>.</p>
+    </section>
+
+    <section>
+      <h2>Clients</h2>
+      <p class="sub">Each window has its own browser profile, so each is signed in separately.</p>
+      <div class="buttons" id="users"></div>
+      <p></p>
+      <div class="buttons">
+        <button class="plain" id="signed-out">Signed-out window</button>
+        <button class="plain" id="connect">Client connect screen</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Sync simulator</h2>
+      <p class="sub">Simulated clients sign in as staff, post journals at the same time and follow the sync feed. It checks they all converge on the same ledger.</p>
+      <form id="sim-form" class="row">
+        <label><span>Clients</span><input class="num" name="clients" type="number" min="1" max="50" value="5" /></label>
+        <label><span>Journals each</span><input class="num" name="journals" type="number" min="1" max="200" value="20" /></label>
+        <button type="submit">Run</button>
+      </form>
+      <p id="sim-result"></p>
+      <ul class="checks" id="sim-checks"></ul>
+    </section>
+
+    <p class="sub">Version <span id="version"></span></p>
+  </body>
+</html>

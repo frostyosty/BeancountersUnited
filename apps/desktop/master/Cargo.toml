@@ -1,0 +1,27 @@
+[package]
+name = "acct-master"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "The office server as a desktop app: it owns the database and serves the LAN."
+
+[[bin]]
+name = "acct-master"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+acct-desktop = { workspace = true, features = ["server"] }
+acct-server.workspace = true
+acct-store.workspace = true
+chrono.workspace = true
+serde.workspace = true
+tauri.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

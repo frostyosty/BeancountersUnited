@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "The local connect page. The window onto the master (a remote page) gets nothing.",
+  "windows": ["connect"],
+  "permissions": ["core:default"]
+}

@@ -1,0 +1,26 @@
+[package]
+name = "acct-desktop"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "What the acct desktop apps share: running the server in-process and reaching a master."
+
+[features]
+# Running the server in-process (acct-master and acct-dev). acct-client leaves it off.
+server = ["dep:acct-server", "dep:acct-store"]
+
+[dependencies]
+acct-server = { workspace = true, optional = true, features = ["embed-web"] }
+acct-store = { workspace = true, optional = true }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

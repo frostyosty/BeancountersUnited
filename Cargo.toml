@@ -1,6 +1,18 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/store", "crates/server", "crates/import"]
+members = [
+    "crates/core",
+    "crates/store",
+    "crates/server",
+    "crates/import",
+    "apps/desktop/shell",
+    "apps/desktop/master",
+    "apps/desktop/client",
+    "apps/desktop/dev",
+]
+# Plain `cargo build`, `test` and `clippy` skip the desktop apps: they need the system webview
+# libraries (see ADR 006). `make desktop` and `make desktop-check` build and check them.
+default-members = ["crates/core", "crates/store", "crates/server", "crates/import"]
 
 [workspace.package]
 version = "0.1.0"
@@ -11,6 +23,8 @@ publish = false
 acct-core = { path = "crates/core" }
 acct-store = { path = "crates/store" }
 acct-import = { path = "crates/import" }
+acct-server = { path = "crates/server" }
+acct-desktop = { path = "apps/desktop/shell" }
 
 argon2 = "0.6"
 axum = "0.8"
@@ -19,14 +33,18 @@ chrono = { version = "0.4", default-features = false, features = ["std", "serde"
 getrandom = "0.4"
 insta = "1"
 proptest = "1"
+reqwest = { version = "0.13", default-features = false, features = ["json", "cookies", "query"] }
 rpassword = "7"
+rust-embed = { version = "8", features = ["mime-guess"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.11"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "chrono"] }
+tauri = { version = "2.11", features = ["custom-protocol"] }
+tauri-build = { version = "2.6", features = [] }
 tempfile = "3"
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -41,3 +59,8 @@ unsafe_code = "forbid"
 opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
+
+# Full debug info for every dependency (Tauri's especially) filled a Codespace's 32 GB disk.
+# Line tables keep backtraces readable; our own crates keep full debug info.
+[profile.dev.package."*"]
+debug = "line-tables-only"

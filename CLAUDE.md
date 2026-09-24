@@ -78,6 +78,7 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - `staff`: client work, including custom depreciation rates.
   - `viewer`: read-only.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
+- **Desktop apps (ADR 006):** Tauri 2 shells in `apps/desktop`: `acct-master` (the server in-process, plus practice setup), `acct-client` (connects staff and viewer PCs to a master), and `acct-dev` (a throwaway master with the fixtures, a window per role, and the sync simulator). They show the master's web app; permissions come only from the user's account on the master. `.github/workflows/release.yml` builds the Windows exes.
 
 ## Layout
 ```text
@@ -86,6 +87,7 @@ crates/store     SQLite schema, migrations, repositories
 crates/server    axum API, auth, command pipeline, sync feed; binary `acctd`
 crates/import    bank statement parsers (OFX, QIF, per-bank CSV) and TB import
 apps/web         React UI
+apps/desktop     Tauri apps (master, client, dev), their shared crate and local pages
 packages/types   generated TS types (never hand-edited)
 fixtures/        synthetic data only
 docs/            domain.md (glossary and worked examples), decisions/ (ADRs)
@@ -99,6 +101,8 @@ tools/           local-only utilities (M8)
 - `make check`: fmt check, clippy with `-D warnings`, all tests, `tsc --noEmit`, and a check that generated types are up to date. It must pass before you call a task done.
 - `make types`: regenerate the TypeScript types.
 - `make db-reset`: wipe the dev database and load fixtures through the command pipeline.
+- `make desktop-check`: clippy and tests for the desktop apps (needs `scripts/desktop-deps.sh` on Linux). `make check` skips them.
+- `make desktop`: release builds of the desktop apps for this OS.
 
 ## Working conventions
 - Work directly on `master`; don't create branches. Commit each finished task there. The user saves and pushes with `zz_quicksave.txt` (stage all, commit, pull --rebase, push), so leave the tree in a state that is safe to commit as a whole.
@@ -110,4 +114,5 @@ tools/           local-only utilities (M8)
 
 ## Codespaces
 - Forwarded ports stay private. Never make them public.
-- The desktop shell and Windows builds aren't done here. Stay web-first until M7.
+- The desktop apps compile and test here, but can't be run without a display. Windows builds happen only in GitHub Actions.
+- The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.

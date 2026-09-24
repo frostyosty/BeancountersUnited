@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="UTF-8" />
+    <title>acct master</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="master.js" defer></script>
+  </head>
+  <body>
+    <h1>acct master</h1>
+    <p class="sub">This computer is the office's acct server. Closing this window stops it for everyone.</p>
+
+    <section id="failed" hidden>
+      <h2 class="error">The server isn't running</h2>
+      <p id="failed-reason"></p>
+    </section>
+
+    <section id="setup" hidden>
+      <h2>Set up the practice</h2>
+      <p class="sub">The first user is a master user: they add everyone else and decide what each person may do.</p>
+      <form id="setup-form">
+        <label><span>Practice name</span><input name="practice" required /></label>
+        <label><span>Your username</span><input name="username" required autocomplete="username" /></label>
+        <label><span>Your full name</span><input name="display" required /></label>
+        <label><span>Password (at least 10 characters)</span><input name="password" type="password" required autocomplete="new-password" /></label>
+        <label><span>Password again</span><input name="again" type="password" required autocomplete="new-password" /></label>
+        <p id="setup-error" class="error" hidden></p>
+        <button type="submit">Set up</button>
+      </form>
+    </section>
+
+    <section id="running" hidden>
+      <h2 class="pass">Running</h2>
+      <p>Staff connect <b>acct-client</b> to:</p>
+      <p class="addr" id="lan-address"></p>
+      <p class="sub" id="no-lan" hidden>This computer isn't on a network. Staff can use its computer name instead.</p>
+      <div class="buttons"><button id="open">Open acct</button></div>
+    </section>
+
+    <p class="sub">Version <span id="version"></span>. Database: <code id="db"></code></p>
+  </body>
+</html>

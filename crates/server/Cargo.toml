@@ -8,6 +8,10 @@ publish.workspace = true
 name = "acctd"
 path = "src/main.rs"
 
+[features]
+# Build the web app into the binary (release and desktop builds). Needs `apps/web/dist`.
+embed-web = ["dep:rust-embed"]
+
 [dependencies]
 acct-core.workspace = true
 acct-import.workspace = true
@@ -17,6 +21,7 @@ axum.workspace = true
 chrono.workspace = true
 getrandom.workspace = true
 rpassword.workspace = true
+rust-embed = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

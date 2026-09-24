@@ -3,10 +3,13 @@
 pub mod auth;
 pub mod commands;
 pub mod error;
+pub mod fixtures;
 pub mod ledger;
 pub mod pipeline;
 pub mod reads;
 pub mod tb_import;
+#[cfg(feature = "embed-web")]
+pub mod web;
 
 use std::sync::Arc;
 
@@ -37,7 +40,7 @@ pub struct Health {
 }
 
 pub fn app(state: AppState) -> Router {
-    Router::new()
+    let router = Router::new()
         .route("/api/health", get(health))
         .route("/api/login", post(auth::login))
         .route("/api/logout", post(auth::logout))
@@ -54,8 +57,22 @@ pub fn app(state: AppState) -> Router {
             "/api/years/{id}/tb-import/preview",
             post(tb_import::preview),
         )
-        .route("/api/sync", get(reads::sync))
-        .with_state(state)
+        .route("/api/sync", get(reads::sync));
+    #[cfg(feature = "embed-web")]
+    let router = router.fallback(web::serve);
+    router.with_state(state)
+}
+
+/// Serves the API (and, with `embed-web`, the web app) on `listener` until `shutdown` resolves.
+/// `acctd` and the desktop apps all run the server through this.
+pub async fn serve(
+    listener: tokio::net::TcpListener,
+    state: AppState,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
+    axum::serve(listener, app(state))
+        .with_graceful_shutdown(shutdown)
+        .await
 }
 
 async fn health() -> Json<Health> {

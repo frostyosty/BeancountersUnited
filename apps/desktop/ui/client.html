@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="UTF-8" />
+    <title>acct</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="client.js" defer></script>
+  </head>
+  <body>
+    <h1>acct</h1>
+    <p class="sub">Connect to the office's acct master. You'll sign in with the username and password your master user gave you.</p>
+    <section>
+      <form id="connect-form">
+        <label><span>Master's address, as shown on the master's screen</span><input name="address" required placeholder="192.168.1.20" /></label>
+        <p id="error" class="error" hidden></p>
+        <button type="submit">Connect</button>
+      </form>
+    </section>
+    <p class="sub">Version <span id="version"></span></p>
+  </body>
+</html>

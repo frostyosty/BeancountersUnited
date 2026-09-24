@@ -1,0 +1,48 @@
+/* The desktop apps' local pages: master control, client connect, dev control. */
+:root {
+  color-scheme: light dark;
+  --fg: #1d2430;
+  --muted: #5b6573;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --line: #d8dde4;
+  --accent: #1f4e79;
+  --ok: #1d7a4f;
+  --bad: #b3261e;
+  font: 15px/1.45 system-ui, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6e9ee;
+    --muted: #a0a8b4;
+    --bg: #15181d;
+    --panel: #1e232a;
+    --line: #333a44;
+    --accent: #7fb0e0;
+    --ok: #5fc494;
+    --bad: #f08a80;
+  }
+}
+body { margin: 0; padding: 20px; background: var(--bg); color: var(--fg); }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 16px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+label { display: block; margin-bottom: 10px; }
+label span { display: block; color: var(--muted); font-size: 13px; margin-bottom: 3px; }
+input { width: 100%; box-sizing: border-box; padding: 7px 9px; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; }
+input.num { width: 90px; }
+.row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.row label { margin-bottom: 0; }
+button { font: inherit; padding: 7px 14px; border-radius: 5px; border: 1px solid var(--accent); background: var(--accent); color: var(--panel); cursor: pointer; }
+button.plain { background: transparent; color: var(--accent); }
+button:disabled { opacity: 0.6; cursor: default; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.error { color: var(--bad); }
+.pass { color: var(--ok); }
+.fail { color: var(--bad); }
+code, .addr { font-family: ui-monospace, Consolas, monospace; }
+.addr { font-size: 22px; font-weight: 600; }
+ul.checks { list-style: none; padding: 0; margin: 8px 0 0; }
+ul.checks li { margin-bottom: 4px; }
+[hidden] { display: none !important; }

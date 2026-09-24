@@ -5,9 +5,9 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use acct_server::AppState;
 use acct_server::commands::{Command, CommandEnvelope};
 use acct_server::pipeline::{self, Actor};
-use acct_server::{AppState, app};
 use acct_store::Store;
 use acct_store::users::Role;
 use tracing_subscriber::EnvFilter;
@@ -48,11 +48,10 @@ async fn serve(store: Store) -> Result<(), BoxError> {
     let state = AppState {
         store: Arc::new(store),
     };
-    axum::serve(listener, app(state))
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+    acct_server::serve(listener, state, async {
+        let _ = tokio::signal::ctrl_c().await;
+    })
+    .await?;
     Ok(())
 }
 

@@ -6,5 +6,5 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "forwardPorts": [8080, 5173],
-  "postCreateCommand": "npm install -g pnpm && make setup"
+  "postCreateCommand": "npm install -g pnpm && ./scripts/desktop-deps.sh && make setup"
 }

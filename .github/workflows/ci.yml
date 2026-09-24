@@ -26,3 +26,20 @@ jobs:
 
       - run: make setup
       - run: make check
+
+  # The desktop apps (ADR 006): clippy and tests on Linux. The release workflow builds Windows.
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: ./scripts/desktop-deps.sh
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: make desktop-check
