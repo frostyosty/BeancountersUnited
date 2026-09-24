@@ -5,7 +5,10 @@ import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { JournalsTab } from "./pages/JournalsTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { TrialBalanceTab } from "./pages/TrialBalanceTab";
+import { YearLayout } from "./pages/YearLayout";
 
 export function App() {
   const me = useMe();
@@ -29,6 +32,10 @@ export function App() {
         <Route index element={<ClientsPage />} />
         <Route path="clients/:clientId" element={<ClientPage />} />
         <Route path="clients/:clientId/chart" element={<ChartPage />} />
+        <Route path="years/:yearId" element={<YearLayout />}>
+          <Route index element={<JournalsTab />} />
+          <Route path="tb" element={<TrialBalanceTab />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

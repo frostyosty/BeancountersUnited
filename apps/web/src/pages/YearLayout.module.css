@@ -1,0 +1,37 @@
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+.tabs a {
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: -1px;
+}
+
+.tabs a[aria-current="page"] {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+
+.open,
+.finalised {
+  font-size: 0.8rem;
+  font-weight: 400;
+  vertical-align: middle;
+  padding: 1px var(--space-2);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.finalised {
+  color: var(--ok);
+  border-color: var(--ok);
+}

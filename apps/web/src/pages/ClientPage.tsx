@@ -53,7 +53,9 @@ export function ClientPage() {
             {[...c.years].reverse().map((y) => (
               <tr key={y.id}>
                 <td>
-                  {formatDate(y.start)} to {formatDate(y.end)}
+                  <Link to={`/years/${y.id}`}>
+                    {formatDate(y.start)} to {formatDate(y.end)}
+                  </Link>
                 </td>
                 <td>{y.status}</td>
                 <td>{y.books_source === null ? "—" : y.books_source.replace(/_/g, " ")}</td>

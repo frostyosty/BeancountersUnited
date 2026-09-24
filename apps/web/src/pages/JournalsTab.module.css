@@ -1,0 +1,75 @@
+.entry {
+  max-width: 52rem;
+}
+
+.grow {
+  flex: 1;
+}
+
+.grid td {
+  padding: 2px var(--space-2);
+  vertical-align: top;
+}
+
+.grid input {
+  width: 100%;
+}
+
+.name {
+  min-width: 14rem;
+  color: var(--text-muted);
+}
+
+.bad {
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+}
+
+.balanced {
+  color: var(--ok);
+}
+
+.unbalanced {
+  color: var(--danger);
+}
+
+.small {
+  font-size: 0.85rem;
+  padding: 0 var(--space-2);
+}
+
+.list {
+  min-width: 40rem;
+}
+
+.linkButton {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-align: left;
+}
+
+.tag {
+  margin-left: var(--space-2);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.reversed td {
+  color: var(--text-muted);
+}
+
+.detail td {
+  background: var(--surface);
+}
+
+.lines td {
+  padding: 0 var(--space-3) 0 0;
+  border: none;
+}
+
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
