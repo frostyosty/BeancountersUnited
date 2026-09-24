@@ -1,0 +1,6 @@
+#!/bin/bash
+# Stages everything, commits if there's anything staged, then rebases and pushes.
+git add -A
+git diff --cached --quiet || git commit -m "[quicksave note here] $(date '+%Y-%m-%d %H:%M:%S')"
+git pull --rebase origin master
+git push origin master
