@@ -1,89 +1,32 @@
-import type { Health } from "@acct/types/Health";
-import type { Me } from "@acct/types/Me";
-import { type FormEvent, useEffect, useState } from "react";
-import { fetchHealth, fetchMe, login, logout } from "./lib/api";
-
-type State =
-  | { kind: "loading" }
-  | { kind: "ok"; health: Health; me: Me | null }
-  | { kind: "error"; message: string };
+import { Route, Routes } from "react-router";
+import { useMe } from "./auth";
+import { Layout } from "./components/Layout";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 
 export function App() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const me = useMe();
 
-  useEffect(() => {
-    Promise.all([fetchHealth(), fetchMe()])
-      .then(([health, me]) => setState({ kind: "ok", health, me }))
-      .catch((err: unknown) => setState({ kind: "error", message: String(err) }));
-  }, []);
-
-  const setMe = (me: Me | null) => setState((s) => (s.kind === "ok" ? { ...s, me } : s));
-
-  return (
-    <main>
-      <h1>acct</h1>
-      {state.kind === "loading" && <p>Checking server…</p>}
-      {state.kind === "ok" && (
-        <>
-          <p>
-            Server {state.health.status}, version {state.health.version}
-          </p>
-          {state.me ? (
-            <p>
-              Signed in as {state.me.display_name} ({state.me.role}).{" "}
-              <button type="button" onClick={() => void logout().then(() => setMe(null))}>
-                Sign out
-              </button>
-            </p>
-          ) : (
-            <LoginForm onLogin={setMe} />
-          )}
-        </>
-      )}
-      {state.kind === "error" && <p role="alert">Server unreachable: {state.message}</p>}
-    </main>
-  );
-}
-
-function LoginForm({ onLogin }: { onLogin: (me: Me) => void }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    login({ username, password })
-      .then(onLogin)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
-      .finally(() => setBusy(false));
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <p>
-        <label>
-          Username{" "}
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-        </label>
+  if (me.isPending) {
+    return <p className="page">Checking server…</p>;
+  }
+  if (me.isError) {
+    return (
+      <p className="page" role="alert">
+        Server unreachable: {me.error.message}
       </p>
-      <p>
-        <label>
-          Password{" "}
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </label>
-      </p>
-      {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>
-        Sign in
-      </button>
-    </form>
+    );
+  }
+  if (!me.data) {
+    return <LoginPage />;
+  }
+  return (
+    <Routes>
+      <Route element={<Layout me={me.data} />}>
+        <Route index element={<HomePage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }

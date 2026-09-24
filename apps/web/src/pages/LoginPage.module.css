@@ -1,0 +1,16 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.form {
+  width: min(22rem, 100% - 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

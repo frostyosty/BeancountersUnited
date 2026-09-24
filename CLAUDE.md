@@ -10,7 +10,7 @@ double-entry ledger per client-year, and produce financial statements and fixed 
 behave like MYOB AO Classic's. One office server owns the data; clients are browsers on the office
 network. Nothing talks to the internet at runtime.
 
-**Current milestone: M2.** Before starting work, read that milestone's section in `PLAN.md`.
+**Current milestone: M3.** Before starting work, read that milestone's section in `PLAN.md`.
 
 ## What "AO-like" means here (behaviour, not content)
 - A practice master chart per entity type; each client's chart starts as a copy of it.

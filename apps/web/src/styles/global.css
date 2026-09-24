@@ -1,0 +1,110 @@
+/* Shared tokens and element defaults. Component styles live in CSS modules beside each component.
+   System fonts only: the app loads nothing from the network (CLAUDE.md hard rule 2). */
+
+:root {
+  --font: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1.25rem;
+
+  --surface: #f6f7f9;
+  --surface-raised: #ffffff;
+  --text: #1c2129;
+  --text-muted: #5b6573;
+  --border: #d4d9e0;
+  --accent: #1f5fae;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --ok: #1e7b3a;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--surface);
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 var(--space-3);
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+a {
+  color: var(--accent);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+button {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.page {
+  padding: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

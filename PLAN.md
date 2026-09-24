@@ -75,16 +75,16 @@ Status: done (2026-09-23). `crates/server/tests/m2_done.rs` is the check. M1's s
 Done when: an HTTP integration test takes the fixture company from empty to a ReportDoc identical to M1's snapshot, and rejected commands (unbalanced journal, unknown account, wrong role) leave no partial writes.
 
 ## M3 — Web UI: first usable loop
-Status: not started. A bare sign-in and sign-out form landed early (2026-09-24) so the desktop apps have something to show.
+Status: in progress (started 2026-09-24). Done so far: `money.ts`, `id.ts`, the API client, and the app shell (router, TanStack Query, CSS modules, sign-in).
 - Login, and a client list with client creation.
 - Chart editor.
-- Journal entry grid with a live out-of-balance figure (integer cents).
+- Journal entry grid with a live out-of-balance figure (integer cents). Separate Debit and Credit columns, converted to signed cents (decided 2026-09-24).
 - TB import with a preview and errors shown per row.
 - Statement preview: an HTML render of the ReportDoc, with drill-down from a line to its accounts.
 - Practice settings (master only).
 - Live refresh from the sync feed.
 
-Done when: a user, in a browser in the Codespace, goes from an empty client to previewed statements with comparatives.
+Done when: a user, in a browser in the Codespace, goes from an empty client to previewed statements with comparatives. Checked by vitest and Testing Library component tests plus a manual walkthrough; no Playwright (decided 2026-09-24).
 
 ## M4 — Fixed assets (accounting depreciation)
 Status: not started

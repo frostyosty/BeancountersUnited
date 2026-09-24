@@ -1,42 +1,85 @@
+import type { Accepted } from "@acct/types/Accepted";
 import type { ApiError } from "@acct/types/ApiError";
+import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { Me } from "@acct/types/Me";
+import { newId } from "./id";
 
-export async function fetchHealth(fetchFn: typeof fetch = fetch): Promise<Health> {
-  const res = await fetchFn("/api/health");
-  if (!res.ok) {
-    throw new Error(`GET /api/health failed: ${res.status}`);
+/** A non-2xx response, carrying the server's structured error when it sent one. */
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly details: unknown;
+
+  constructor(status: number, body: ApiError | null, fallback: string) {
+    super(body?.message ?? fallback);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = body?.code ?? "http_error";
+    this.details = body?.details ?? null;
   }
-  return (await res.json()) as Health;
+}
+
+async function fail(res: Response, what: string): Promise<never> {
+  const body = (await res.json().catch(() => null)) as ApiError | null;
+  throw new ApiRequestError(res.status, body, `${what} failed: ${res.status}`);
+}
+
+/** `GET`s a query endpoint and returns its JSON. */
+export async function getJson<T>(path: string, fetchFn: typeof fetch = fetch): Promise<T> {
+  const res = await fetchFn(path);
+  if (!res.ok) {
+    return fail(res, `GET ${path}`);
+  }
+  return (await res.json()) as T;
+}
+
+async function postJson<T>(path: string, body: unknown, fetchFn: typeof fetch): Promise<T> {
+  const res = await fetchFn(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    return fail(res, `POST ${path}`);
+  }
+  return (await res.json()) as T;
+}
+
+export function fetchHealth(fetchFn: typeof fetch = fetch): Promise<Health> {
+  return getJson<Health>("/api/health", fetchFn);
 }
 
 /** The logged-in user, or `null` if there's no session. */
 export async function fetchMe(fetchFn: typeof fetch = fetch): Promise<Me | null> {
-  const res = await fetchFn("/api/me");
-  if (res.status === 401) {
-    return null;
+  try {
+    return await getJson<Me>("/api/me", fetchFn);
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.status === 401) {
+      return null;
+    }
+    throw err;
   }
-  if (!res.ok) {
-    throw new Error(`GET /api/me failed: ${res.status}`);
-  }
-  return (await res.json()) as Me;
 }
 
 /** Logs in; rejects with the server's message (for example, wrong username or password). */
-export async function login(req: LoginRequest, fetchFn: typeof fetch = fetch): Promise<Me> {
-  const res = await fetchFn("/api/login", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(req),
-  });
-  if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as ApiError | null;
-    throw new Error(err?.message ?? `POST /api/login failed: ${res.status}`);
-  }
-  return (await res.json()) as Me;
+export function login(req: LoginRequest, fetchFn: typeof fetch = fetch): Promise<Me> {
+  return postJson<Me>("/api/login", req, fetchFn);
 }
 
 export async function logout(fetchFn: typeof fetch = fetch): Promise<void> {
   await fetchFn("/api/logout", { method: "POST" });
+}
+
+/**
+ * Submits a command. Pass the same `id` to retry safely: the server returns the original result.
+ * Rejects with an `ApiRequestError` whose `code` and `details` say what was wrong.
+ */
+export function submitCommand(
+  command: Command,
+  id: string = newId(),
+  fetchFn: typeof fetch = fetch,
+): Promise<Accepted> {
+  return postJson<Accepted>("/api/commands", { id, ...command }, fetchFn);
 }
