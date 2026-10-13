@@ -169,9 +169,9 @@ Status: waiting on a decision
 - Commands made while away queue locally. On check-in, the server revalidates them and reports conflicts.
 
 ## Open questions
-- Does anyone need to edit away from the office network? This decides M9.
+- Does anyone need to edit away from the office network? This decides M9. yes.
 - Which entity types come after companies: trusts, partnerships, sole traders?
-- Which server host OS and which client (M7)?
+- Which server host OS and which client (M7)? not sure which free centralised service to use - supabase? or is there a better one?
 
 ## Backlog (not scheduled)
 - Desktop apps: code signing, an installer, a log file for `acct-master`, running the master as a Windows service (M7 decides), and a "reset" button in `acct-dev`.
@@ -181,3 +181,7 @@ Status: waiting on a decision
 - Workpapers; minutes and resolutions from our own paragraph library.
 - GL listing and audit-trail reports (hide matched reversal pairs by default).
 - Login throttling (M2 has none; a LAN with a handful of users makes it low priority until M7).
+
+
+TODO
+
