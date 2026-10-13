@@ -184,4 +184,13 @@ Status: waiting on a decision
 
 
 TODO
+please make roadmap around getting the skeleton of the following working:
+Need pnl, balseet, notes, and analysis all checked 
+need to be able to upload sample bank statements and reconcile
+major selling point needs to be round something Xero has been notoriously bad at - transparency around who's edited what. so im thinking when you log in on the left you can see whos logged in and changed things and what theyve changed, very comprehesively and very UX friendly.
+Need to be able to file GSTS and income tax returns
+importing from xero/myob/whatever including xero's historical things somehow
+QOL
+Change name of this bad boy project to White Label Accounting (from beancounters united) can leave github file name as is though
+
 
