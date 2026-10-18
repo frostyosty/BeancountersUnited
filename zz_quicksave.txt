@@ -1,3 +1,4 @@
+
 #!/bin/bash
 # Stages everything, commits if there's anything staged, then rebases and pushes.
 git add -A
