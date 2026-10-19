@@ -162,35 +162,45 @@ numbers aren't reused, because code comments and a committed migration still ref
 | M9 | Off-network editing | Dropped: the hosted server works from anywhere. |
 
 ## M10 — Upload statements, see the tax
-Status: not started. Answer the M10 items under "Open" in `docs/domain.md` first.
+Status: not started. The M10 questions are answered in `docs/domain.md` (2026-10-19), with a worked example a person still has to check. Items marked **check** there go to the tax specialist before M14.
 - Rename the UI to White Label Accounting: page title, header and login screen. Crates and binaries keep the `acct` name.
 - Sole traders first (this answers the old entity-type question): a sole-trader master chart and template in our own words. Owners never see account codes; categories are accounts underneath.
-- Setting up a business: name, GST registered or not, GST filing frequency and basis, balance date, bank accounts.
+- Setting up a business: name, start date, whether GST registered and from when, GST filing frequency, and bank accounts. In M10 the balance date is always 31 March and the GST basis is always payments; setup turns down the invoice and hybrid bases with a plain reason.
 - Parsers in `crates/import`: OFX, QIF, and one versioned CSV parser per NZ bank format. The right parser is picked by inspecting the file. Synthetic sample statements for each format go in `fixtures/`.
 - Checks per bank account:
   - flag date gaps between statements
   - check opening balance + transactions = closing balance, where balances are present
 - Duplicate detection keys on account, date, amount, normalised description, and an occurrence count within that key. That way two identical purchases on the same day both survive. Ambiguous overlaps go to the user.
-- Proposed (confirm in `docs/domain.md`): every imported line posts straight away as a bank-coded journal, deposits to assumed income and withdrawals to drawings. The ledger is then always complete, the conservative figure comes out of it, and M11 recodes lines.
-- Tax engine in `crates/core`, pure:
-  - GST for a period: output tax on assumed income at the practice GST rate; input tax only on categorised lines.
-  - Income tax for a year: taxable income through a rate table per tax year, kept as versioned data with its source recorded in `docs/domain.md`, less the credits we know of.
+- Every imported line posts straight away as its own bank-coded journal ("Bank statements to the ledger" in `docs/domain.md`):
+  - deposits go to money in, not yet sorted, split for GST when the owner is registered
+  - withdrawals go to money out, not yet sorted
+  - there's an opening-balance journal per bank account, and a gap journal wherever the balance changes across a gap
+  - likely transfers between the owner's accounts, and payments to or from IRD, are detected but not applied
+
+  The ledger is then always complete, the conservative figure comes out of it, and M11 recodes lines.
+- Tax engine in `crates/core`, pure ("GST" and "Income tax for sole traders" in `docs/domain.md`):
+  - GST for a period: the return's boxes on period totals, at the GST rate for the date (versioned data in core); input tax only on categorised lines.
+  - Income tax for a year: taxable income through a rate table per income year (2026 and 2027), kept as versioned data with its source recorded in `docs/domain.md`. Until the owner answers, 39% flat and a 12% student loan.
   - Rates in basis points and amounts in cents, with `i128` for intermediate products (hard rule 4, ADR 002).
 - The three-area screen. Submit is shown but disabled until M14.
 - Reconciliation per bank account: the ledger's bank balance equals the latest statement's closing balance.
 
-Done when: the synthetic sole trader's sample statements give the GST and income tax figures of a hand-checked worked example in `docs/domain.md`, uploading an overlapping statement changes nothing, a gap is flagged, and every bank account reconciles.
+Done when: the synthetic sole trader's sample statements give the figures of the worked example in `docs/domain.md`, once a person has checked it: GST 569.62 and tax to pay 2,506.32, or 968.35 when the tax engine is told the business is the owner's only income. Uploading an overlapping statement changes nothing, both gaps are flagged, and every bank account whose statements give a closing balance reconciles.
 
 ## M11 — Save tax
 Status: not started
-- **Save tax** opens a queue of transactions, biggest possible saving first, with a running "saved so far" figure.
+- **Save tax** opens one queue, biggest possible saving first, with a running "saved so far" figure. It's re-sorted after each answer, and cards that would save nothing are hidden. It holds:
+  - questions: "Is this business your only income?" (and if not, the other income and the tax deducted from it), "Do you have a student loan?", and the independent earner tax credit
+  - detected items to confirm: transfers between the owner's accounts, payments to IRD (income tax already paid, or GST), possible duplicates, and missing statements
+  - transactions to categorise
 - Deposits can be marked as not income: a transfer between the owner's own accounts, a loan, money the owner put in, a GST refund, wages already taxed through PAYE, or the sale of a personal item.
 - Withdrawals can be marked as:
-  - a business expense category, with its GST code (`standard | zero | exempt | none`)
+  - a business expense category, with its GST code (`standard | zero | exempt | none`). GST on a line over $200 is claimed only once the owner confirms they hold the supplier's taxable supply information.
   - partly private, by percentage
   - an asset purchase, which goes into the M4 register so depreciation follows
   - personal
-- Rules per business (for example "always treat COUNTDOWN as personal") match on description text, amount range and direction, with practice-level suggestions. Standard-rate GST splits use the practice's GST rate.
+- Rules per business (for example "always treat COUNTDOWN as personal") match on description text, amount range and direction, with practice-level suggestions. Standard-rate GST splits use the GST rate for the line's date.
+- NZD credit card statements: the M10 parsers extended to cards, with a liability account per card.
 - AI suggestions pre-fill categories, and the owner accepts them one at a time or all at once. Write an ADR first covering:
   - the provider
   - what leaves the server (for example descriptions and amounts, but not names or IRD numbers)
@@ -284,6 +294,8 @@ Done when: a synthetic Xero export imports to a TB that matches the export's tot
 - Tax agent mode: an accountant links many clients through IRD's intermediation services and files for them.
 - Bank feeds instead of uploads, through an NZ open-banking provider (for example Akahu).
 - Provisional tax, ACC levies, tax depreciation, home office and vehicle apportionment, and the IR10.
+- GST: the invoice and hybrid bases (these need sales invoicing), and deregistering. Entertainment's half-claim rule.
+- Income tax: non-standard balance dates, and older income years (2025's composite rates) for late filers. Penalties and interest on late returns.
 - Companies (IR4), partnerships and trusts: templates and returns.
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
 - Client-level mapping overrides.

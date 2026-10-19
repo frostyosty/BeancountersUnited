@@ -7,10 +7,24 @@ question that isn't answered yet is listed under "Open" with the milestone that 
 ## Glossary
 
 **Practice.** The accounting firm using acct. It owns the practice-level defaults: master charts, asset
-classes, templates, mappings, the paragraph library and settings such as the GST rate.
+classes, templates, mappings, the paragraph library and its own settings. Tax rates (GST and income tax)
+aren't practice settings. They're versioned data in core, chosen by date.
 
 **Client.** A business or entity the practice prepares accounts for. Each client has an entity type
-(company first; others later).
+(company or sole trader; others later).
+
+**Tax to pay if submitted.** The figure on the owner's screen: GST, income tax and student loan on every
+unfiled return with uploaded lines. It starts from conservative assumptions, so it's never lower than
+what IRD would ask for on those statements.
+
+**Save tax.** The queue that brings the figure down, one card at a time, biggest saving first. A card is a
+question (such as "Is this business your only income?") or transactions to categorise.
+
+**Not yet sorted.** The holding accounts that imported lines post to until someone categorises them: 140
+for money in, which counts as income, and 965 for money out, which counts as drawings.
+
+**Gap journal.** A system journal for a run of days that no statement covers. It posts the change in
+balance across the gap, so the ledger still reconciles and a rise still counts as income.
 
 **Client-year.** One client's financial year, with explicit start and end dates. It's the unit that holds
 journals, gets finalised and produces statements. A first or last year can be shorter or longer than 12
@@ -44,8 +58,9 @@ re-import.
 **Books source.** Where a client-year's transactions come from: TB import or bank coding, never both.
 
 **Rollover.** Computing a year's opening balances from the prior year. Balance-sheet accounts carry
-forward. P&L accounts close to the client's designated equity account (retained earnings, for a company).
-Rollover is computed, never posted.
+forward. P&L accounts close to the client's designated equity account: retained earnings for a company,
+owner's equity (970) for a sole trader, whose capital, drawings and "money out, not yet sorted" accounts
+close to it as well. Rollover is computed, never posted.
 
 **Template.** The layout of a set of statements for an entity type: a tree of report lines (groups, lines,
 subtotals and totals), each with a stable key and a presentation sign.
@@ -219,6 +234,341 @@ Accounting depreciation only; tax depreciation is out of scope.
   NZ style (similar code ranges and groupings to common small-business charts), written in our own
   words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
 
+### How the M10 answers were reached (2026-10-19)
+The owner asked for the M10 questions to be answered as conservatively as possible at the start, and as
+completely as possible once someone chooses Save tax. Claude answered them on 2026-10-19 from IRD's
+published pages, read that day and linked below. Anything marked **check** rests on a source that isn't
+IRD's own, or on our reading of IRD's. The tax specialist confirms those before M14 files anything; the
+list is under "Open".
+
+### The conservative figure and Save tax (decided 2026-10-19)
+- **The rule.** "Tax to pay if submitted" is never lower than what IRD would ask for on the statements
+  uploaded. Every unknown is assumed to cost the most until the owner answers it in Save tax.
+- **Starting assumptions.** Save tax removes each one:
+
+  | Until the owner says otherwise | Effect on the figure |
+  |---|---|
+  | Every deposit is business income, GST-inclusive at the standard rate if the owner is GST registered | Output GST and income tax on all of it |
+  | Every withdrawal is personal | Nothing claimed |
+  | The owner has other income, so the business income is taxed at the top rate | 39% on all of it instead of the bands |
+  | The owner has a student loan, and other income already over its threshold | 12% of all of it |
+  | Nothing is already paid or credited (PAYE, RWT, provisional tax, IETC) | Nothing deducted |
+  | Where the balance rose across a gap between statements, the rise was income | See "Gaps" below |
+
+- **What the owner sees first.** One figure, with one line under it: "Counts every deposit as income and
+  claims nothing. Save tax to bring it down." Opening the figure breaks it down by return (each GST period,
+  each income year), each marked "can file now" or "can file after" a date.
+- **What it covers.** Every GST period and income year with uploaded lines that hasn't been filed,
+  including the open ones, which are marked "so far". It never leaves out tax owed just because the return
+  can't be filed yet.
+- **Save tax order.** One queue of cards, sorted by the saving each would make now, largest first, and
+  re-sorted after every answer, because the tax bands make savings depend on order. A card that would
+  save nothing is hidden. Question cards and M11's categorising share the queue. The questions:
+  - "Is this business your only income?" Yes: the bands apply from zero. No: the owner enters the other
+    income and the tax deducted from it, or M14 prefills both from IRD.
+  - "Do you have a student loan?"
+  - Likely transfers between the owner's own accounts, which are paired on import and applied only once
+    confirmed.
+  - Payments to IRD found in the statements: which were income tax for this year (a credit), and which
+    were GST.
+  - Possible duplicates, and missing statements (gaps) with what each gap is costing.
+  - The independent earner tax credit, offered only when income is between $24,000 and $70,000.
+
+### Bank statements to the ledger (decided 2026-10-19)
+- **Every imported line posts straight away**, one journal per line (kind `bank_line`), dated with the
+  bank's posting date. Recoding in M11 reverses and reposts that one journal. M15's GL listing hides
+  matched reversal pairs, which is enough.
+- **A deposit** debits the bank account and credits 140 *Money in, not yet sorted*. If the owner is GST
+  registered on that date, it's split: GST is amount × 1500 ÷ 11500, rounded half away from zero to cents,
+  credited to 810 *GST*, and the rest goes to 140.
+- **A withdrawal** debits 965 *Money out, not yet sorted*, an equity account, so nothing is claimed. It
+  isn't split for GST.
+- **Holding accounts.** 140 and 965 are ordinary accounts in the sole-trader chart, recorded on the
+  business as its "not yet sorted" accounts. Owners never see their names, only "not yet sorted".
+  Accountants see them as their own lines in the TB and statements, and M15's finalise pre-check stops on
+  a balance in either.
+- **Start date.** The business start date. For a business that started before its earliest uploaded
+  income year, it's that year's first day.
+- **Opening balance**, posted once per bank account on its first upload, dated the start date. It
+  credits 950 *Owner's capital* if the business started that year, or 970 *Owner's equity* if it started
+  earlier.
+  - If the first statement begins on the start date, the opening balance is the balance before its first
+    line. That's the statement's opening balance; or the first running balance less the first line; or,
+    for OFX, the closing balance less the lines.
+  - Otherwise the owner is asked once for the balance on the start date, and the days up to the first
+    statement are a gap.
+- **Gaps.** A gap is a run of days between the start date and the latest statement that no statement
+  covers.
+  - If the balance at both ends is known, a *gap journal* posts the difference on the gap's last day: a
+    rise is treated like a deposit (140, plus GST), a fall like a withdrawal (965).
+  - A gap journal is a system journal. It is reversed or regenerated when a statement covering the gap
+    arrives.
+  - If either end's balance is unknown, the gap is flagged with no amount, and the figure carries a notice
+    that it's incomplete.
+- **Transfers between the owner's own accounts** aren't netted automatically. The importer pairs likely
+  ones: the same amount with opposite signs, in two of the business's accounts, posted at most 3 days
+  apart.
+  - Until the owner confirms a pair, its two lines stay as income and drawings.
+  - Confirming reposts both lines as one transfer between the bank accounts.
+- **Other withdrawals that aren't spending**, such as transfers out, loan repayments and payments to IRD,
+  stay in 965 until sorted.
+- **Which client-year a line belongs to:** the one containing its date. A sole trader's client-years run
+  from 1 April to 31 March, and the first starts on the business start date.
+  - Import creates any missing year between the business start and the line's date.
+  - Lines dated before the business start date aren't imported; the owner is shown them, with the reason.
+  - A line dated after today is refused.
+- **Books source.** Every sole trader is bank-coded. A business moving from Xero part-way through a year is
+  M16's question. It needs an ADR, because a cut-over TB plus bank lines bends the books-source rule.
+
+### GST (decided 2026-10-19)
+- **Rate.** The rate is versioned data in core, keyed by date, not a practice setting: 1500 bp (15%) for
+  dates from 1 October 2010. A date with no rate gets no GST figure, and the screen says why.
+- **Registration.** Setup asks whether the owner is registered and from which date. There's no GST before
+  that date, and the first period runs from that date to the end of the period it falls in.
+  - An unregistered owner sees no GST. If their deposits in any 12 months exceed $60,000, a notice says
+    they may have to register (**check**: the threshold came from non-IRD sources).
+  - Deregistering is backlog.
+- **Basis.** M10 supports the payments basis only, which IRD allows up to $2 million of sales in 12
+  months.
+  - Setup turns down the invoice and hybrid bases with a plain reason: bank statements don't show unpaid
+    invoices, so the figure couldn't stay conservative.
+  - Invoice basis waits for sales invoicing (backlog).
+- **Filing frequency and periods.** M10 supports a 31 March balance date only:
+  - monthly
+  - two-monthly, ending in odd months (January, March, May, July, September, November), which IRD gives for
+    a 31 March balance date; even months are allowed if that's what IRD has on record
+  - six-monthly, ending 30 September and 31 March. This is allowed under $500,000 of GST-exclusive sales in
+    12 months, with a notice if deposits exceed that.
+
+  Source: IRD, [Which GST accounting basis and filing frequency should I
+  use](https://www.ird.govt.nz/gst/registering-for-gst/which-gst-accounting-basis-and-filing-frequency-should-i-use)
+  (updated 12 Aug 2026).
+- **Due dates.** M10 doesn't show them. M14 takes them from IRD (`RetrieveFilingObligation`), so we never
+  encode weekends and holidays.
+  - For reference: the 28th of the next month; 7 May for a period ending 31 March; 15 January for one
+    ending 30 November ([IRD](https://www.ird.govt.nz/gst/filing-and-paying-gst-and-refunds)).
+- **Which period a line falls in:** its posting date, the date that drives the running balance.
+- **Output tax.** Every deposit from the registration date counts as GST-inclusive at the standard rate.
+  In M11 the owner can mark deposits as not income, exempt (interest, for example) or zero-rated.
+- **The return**, computed on period totals as the GST return form lays out:
+
+  | Box | What it holds | M10 value |
+  |---|---|---|
+  | 5 | Sales and income in the period, GST-inclusive, zero-rated included | Total deposits |
+  | 6 | Zero-rated supplies included in box 5 | 0 |
+  | 7 | Box 5 − box 6 | |
+  | 8 | Box 7 × 1500 ÷ 11500 (that is, 3/23) | |
+  | 9 | Adjustments | 0 |
+  | 10 | GST collected: box 8 + box 9 | |
+  | 11 | Purchases and expenses with a standard GST code, GST-inclusive | 0 |
+  | 12 | Box 11 × 3/23 | 0 |
+  | 13 | Credit adjustments | 0 |
+  | 14 | GST credit: box 12 + box 13 | 0 |
+  | 15 | Box 10 − box 14: to pay if positive, a refund if negative | The M10 GST figure |
+
+  - Boxes 8 and 12 round half away from zero to cents. IRD doesn't say how to round them, so that's our
+    choice (**check**).
+  - The box layout comes from a secondary summary of the GST101A (**check** against M14's build pack).
+  - The 3/23 calculation is IRD's
+    ([IRD GST workshop](https://www.ird.govt.nz/about-us/videos/webinars/gst-workshop/registering)).
+- **Ledger against return.**
+  - The ledger splits GST per line, so its GST balance can differ by a few cents from box 10 − box 14. The
+    worked example below is 1 cent out.
+  - When a return is filed (M14), a system journal clears the difference to 295 *GST rounding*.
+  - Until then, the figure uses the return's number.
+- **Input tax.** None in M10. In M11, a withdrawal categorised with a standard GST code claims its GST,
+  split per line. The records rules, from IRD's
+  [taxable supply information](https://www.ird.govt.nz/gst/tax-invoices-for-gst/how-taxable-supply-information-for-gst-works)
+  page:
+  - Up to $200, the bank line is enough.
+  - Over $200, the owner confirms they hold the supplier's taxable supply information before the GST is
+    claimed. It's one tick per line, with an option to confirm all at once.
+  - Over $1,000, that information must also name the owner.
+
+  The tiers come from secondary summaries (**check**).
+- **Income tax treatment.** For a registered owner, income and expenses are GST-exclusive. GST collected,
+  GST paid to IRD and GST refunds are never income or expenses. A GST refund deposit counts as income in
+  M10 only because nothing is sorted yet; M11 marks it.
+
+### Income tax for sole traders (decided 2026-10-19)
+- **Years.** M10 supports the 2026 income year (1 April 2025 to 31 March 2026) and the 2027 income year
+  (1 April 2026 to 31 March 2027), with a 31 March balance date only.
+  - A year with no rate table shows no income tax figure, and the screen says so. We never guess a rate.
+  - Older years import into the ledger as normal.
+  - Backlog: 2025's composite table, for late filers, and non-standard balance dates.
+- **Rate table.** Bands apply to taxable income in cents. Each rate applies to income above From, up to
+  and including To:
+
+  | Income years | From (cents) | To (cents) | Rate (bp) |
+  |---|---|---|---|
+  | 2026, 2027 | 0 | 1,560,000 | 1050 |
+  | | 1,560,000 | 5,350,000 | 1750 |
+  | | 5,350,000 | 7,810,000 | 3000 |
+  | | 7,810,000 | 18,000,000 | 3300 |
+  | | 18,000,000 | (none) | 3900 |
+
+  - Source: IRD, [Tax rates for
+    individuals](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/tax-codes-and-tax-rates-for-individuals/tax-rates-for-individuals),
+    the "From 1 April 2025" table (page updated 3 Jun 2025, read 2026-10-19).
+  - IRD writes the bands in whole dollars ("0 – $15,600", "$15,601 – $53,500"). We read them as "up to
+    $15,600.00, then above it".
+  - 2027 uses the same table. IRD's page gives it with no end date, and Budget 2026 made no change
+    ([RSM](https://www.rsm.global/newzealand/news/budget-2026-closer-look-tax-measures); **check** when the
+    2027 IR3 build pack arrives).
+- **Computing it.** Each band's tax is computed exactly in `i128`. The bands are summed, then rounded once
+  to cents, half away from zero (**check** against IRD's test cases in M14).
+- **Taxable income** is the year's income accounts less its expense accounts, from the ledger, and
+  GST-exclusive for a registered owner. In the conservative position, that's every deposit after GST plus
+  any rising gap, less nothing.
+- **The conservative rate.** 39% flat, until the owner says the business is their only income.
+  - After that, the bands apply.
+  - If they have other income, they enter it and the tax deducted from it (M11), or M14 prefills both from
+    IRD. The bands then run on total income, and the tax deducted is a credit.
+- **What "Tax to pay if submitted" includes:**
+
+  | Item | In the figure? | Rule and source |
+  |---|---|---|
+  | GST for each unfiled period | In | Above |
+  | Income tax | In | Above |
+  | Student loan | In, until the owner says they have none | 12% of all taxable business income until "only income" is answered. Then 12% of income over the threshold: $24,128 for 2026 ([IRD](https://www.ird.govt.nz/se-repay-student-loan)). The 2027 threshold is said to be unchanged by non-IRD sources (**check**). |
+  | PAYE and RWT already deducted | Out, until entered (M11) or prefilled (M14) | Leaving them out only overstates the figure. Interest arrives net of RWT, and taxing the net amount with no credit is still at least the true tax. |
+  | Income tax already paid (provisional or terminal) | Out, until confirmed | M11 card from IRD payments found in the statements; M14 from IRD |
+  | Independent earner tax credit | Out, until the owner confirms eligibility | $520 a year, reduced by 13c per dollar over $66,000, gone at $70,000, worked out on whole months. Not available with Working for Families, an income-tested benefit or NZ Super ([IRD](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/individual-tax-credits/independent-earner-tax-credit-ietc)). |
+  | ACC levies | Out | ACC invoices them, not IRD. Levies paid are an expense category in M11. An estimate is backlog. |
+  | Next year's provisional tax | Out | After filing, a notice when residual income tax is over $5,000 (**check**; backlog: provisional tax) |
+  | Late filing penalties and interest | Out | Later, with M14's due dates |
+  | Donations, Working for Families, KiwiSaver, child support | Out | Not part of the IR3 figure |
+
+- **Part years.** Bands are annual and never prorated for a sole trader: a business that starts in August
+  still files the whole income year. The figure covers the lines uploaded so far and doesn't project to
+  the year end. An open year is labelled "so far".
+- **Depreciation.** M10 claims nothing, so tax depreciation doesn't come up.
+  - M11 puts asset purchases into the M4 register at accounting rates no higher than IRD's rate for that
+    kind of asset, with each rate's source recorded. Depreciation in the ledger is then never more than tax
+    allows.
+- **IR10.** IRD lists the IR10 among the forms needed with an IR3 "for untaxed income from your business"
+  ([IRD](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/what-happens-at-the-end-of-the-tax-year/individual-income-tax-return---ir3/complete-my-individual-income-tax-return---ir3)).
+  IRD's [tax technical article](https://www.taxtechnical.ird.govt.nz/general-articles/revised-ir10-financial-statements-summary)
+  says it isn't mandatory, though preferred. CLAUDE.md keeps it out of scope.
+  - M14 checks the build pack. If the IR3 needs it, an ADR brings it in. Until then there's no IR10
+    mapping.
+
+### Sole-trader chart and template (decided 2026-10-19)
+- **Entity type** `sole_trader`.
+  - Company charts, templates and mappings don't change.
+  - Names and structure are our own (hard rule 3).
+  - Codes follow the company chart's ranges where the two overlap.
+- **Owners never see codes.** The categories they pick from are the expense accounts, by name, plus 150,
+  each with a default GST code they can change on a line.
+
+  | Code | Name | Type | Default GST | Notes |
+  |---|---|---|---|---|
+  | 100 | Sales | income | standard | |
+  | 110 | Interest received | income | exempt | |
+  | 120 | Other income | income | standard | |
+  | 140 | Money in, not yet sorted | income | standard | Holding account |
+  | 150 | Purchases and materials | expense | standard | Cost of sales |
+  | 200 | Accountancy fees | expense | standard | |
+  | 202 | ACC levies | expense | standard | GST code **check** |
+  | 204 | Advertising and marketing | expense | standard | |
+  | 205 | Bank fees | expense | exempt | |
+  | 210 | Depreciation | expense | none | System journals only |
+  | 215 | Insurance | expense | standard | Life and income cover are exempt; the owner changes the code |
+  | 220 | Interest paid | expense | exempt | |
+  | 225 | Vehicle costs | expense | standard | Business share by percentage |
+  | 230 | Rent | expense | standard | |
+  | 235 | Repairs and maintenance | expense | standard | |
+  | 240 | Wages | expense | none | |
+  | 242 | Subcontractors | expense | standard | |
+  | 245 | Phone and internet | expense | standard | Business share by percentage |
+  | 250 | Loss (gain) on disposal of assets | expense | none | Presentation still open |
+  | 255 | Power and gas | expense | standard | Business share by percentage |
+  | 260 | Freight and courier | expense | standard | |
+  | 265 | Stationery and office supplies | expense | standard | |
+  | 270 | Software and subscriptions | expense | standard | |
+  | 275 | Travel | expense | standard | |
+  | 280 | Small tools and equipment (under $1,000 each) | expense | standard | Low-value threshold **check** |
+  | 290 | General expenses | expense | standard | |
+  | 295 | GST rounding | expense | none | System journals only |
+  | 600.01, 600.02, … | One per bank account, in the order added | asset | | |
+  | 610 | Accounts receivable | asset | | Unused until invoice basis |
+  | 700, 705 | Tools and equipment: cost, accumulated depreciation | asset | | |
+  | 710, 715 | Vehicles: cost, accumulated depreciation | asset | | |
+  | 720, 725 | Computers and office equipment: cost, accumulated depreciation | asset | | |
+  | 730, 735 | Furniture and fittings: cost, accumulated depreciation | asset | | |
+  | 800 | Accounts payable | liability | | Unused until invoice basis |
+  | 810 | GST | liability | | |
+  | 850.01, … | One per credit card (M11) | liability | | |
+  | 900 | Loans | liability | | |
+  | 950 | Owner's capital | equity | | Money put in during the year, and the first year's opening balances |
+  | 960 | Drawings | equity | | Confirmed personal |
+  | 965 | Money out, not yet sorted | equity | | Holding account |
+  | 970 | Owner's equity | equity | | The designated equity account |
+
+- **Rollover.** P&L accounts close to 970, and so do 950, 960 and 965. Each year's equity section then
+  starts from one opening figure.
+- **Template** (our wording):
+  - **P&L.** Income: sales, interest received, other income, then income not yet sorted, and total
+    income. Purchases and materials, then gross profit. One expense line per expense account (225's
+    sub-accounts fold into vehicle costs). Net profit (`protect: 1`).
+  - **Balance sheet.**
+    - Current assets: bank, receivables.
+    - Fixed assets at book value.
+    - Total assets (`protect: 2`).
+    - Current liabilities: payables, GST, credit cards.
+    - Loans.
+    - Net assets.
+    - Owner's equity: opening equity (970), capital introduced (950), net profit, drawings (960), money
+      out not yet sorted (965), and closing equity (`protect: 3`). Drawings show in brackets.
+- **Rounding priority default:** 290, 205, 120, 960, 810.
+- **Asset purchases** go to the cost account of the class the owner picks. The default classes, all DV:
+  tools and equipment, vehicles, computers and office equipment, furniture and fittings. M11 copies each
+  rate from IRD's rate for a typical asset of the class, records the source, and never sets it higher.
+- **Not lined up with the IR3 in M10.** That waits on the IR10 question above.
+- **Entertainment** has no category yet. IRD's half-claim rule is backlog (**check**), so until it's
+  built, entertainment can only be marked personal.
+
+### Bank statement formats (decided 2026-10-19)
+- **Order.**
+  1. OFX first. It gives every line an id and gives a closing balance, and most NZ banks offer it
+     (**check** per bank).
+  2. A CSV parser per bank, the largest banks first: ANZ, ASB, BNZ, Westpac, Kiwibank.
+  3. QIF.
+
+  Revisit the order once we know the first customers' banks.
+- **Real layouts.** A bank's CSV layout can't be written from memory.
+  - For each bank, someone with an account there exports a statement and copies only the layout into a
+    synthetic sample with invented values (hard rule 1). The layout is the preamble, headers, date and
+    amount formats, and encoding.
+  - The real export never enters the repo. A local-only check in `tools/` runs the parser over it on that
+    person's own machine.
+  - Until then, the fixtures' two invented layouts stand in.
+- **Each CSV parser records:**
+  - the preamble and header rows
+  - one signed amount column, or separate debit and credit columns
+  - whether there's a running balance
+  - the text columns, and the order they're joined in
+  - the date format and encoding
+  - where the account number is
+- **OFX** 1.x in SGML (unclosed tags) and 2.x in XML.
+- **QIF.** The `!Type:Bank` section, with day-first dates (dd/mm/yyyy, d/m/yy). A file whose dates only
+  make sense month first is refused.
+- **Credit cards and foreign currency.** NZD credit cards come in M11, where they start saving tax.
+  Foreign-currency accounts are out (multi-currency is out of scope), and refused with a message.
+- **Versions.** Each parser has an id and a version, such as `kowhai-csv-1`, and the right one is found by
+  inspecting the file.
+  - When a bank changes its layout, we add a version and keep the old one, so old files still read.
+  - When no parser matches, the owner sees "We can't read this file", the formats we read, and how to
+    export OFX. Nothing is stored.
+- **Duplicates.** The key is account, posting date, amount, normalised description, and an occurrence
+  count.
+  - The normalised description is the text fields joined in the parser's order with single spaces: OFX
+    `NAME` then `MEMO`; QIF `P` then `M`; CSV per parser. It's uppercased, with runs of spaces collapsed
+    and the ends trimmed.
+  - Nothing else is stripped. Reference numbers and card fragments tell real transactions apart.
+  - When unsure, keep the line and offer it as a possible duplicate in Save tax. A duplicate deposit only
+    overstates the figure; a dropped one would understate it.
+
 ## Worked example: the fixture company (hand-checked 2026-09-23)
 Example Widgets Limited (`fixtures/clients/example-widgets.json`), years ending 31 March 2025 and 2026.
 Rounding priority list: 235, 205, 290, 610, 800, 960. Snapshots: `crates/core/tests/snapshots/fixture__*.snap`.
@@ -254,17 +604,101 @@ Results (whole dollars, 2026 with 2025 comparatives):
   statement, where it is nil in the only column.
 - The comparatives in the 2026 statement equal the 2025 statement line for line.
 
+## Worked example: the synthetic sole trader (worked 2026-10-19; a person still has to check it)
+This is M10's "Done when" check. It uses the statements in `fixtures/bank-statements/`, whose README
+describes the files. Claude worked it by hand from the files and cross-checked it with a separate script,
+independently of `acct-core`. It counts as hand-checked only once a person has gone through it.
+
+**Setup.** These facts aren't in the files; they were chosen for this example.
+- Q Marsh, a sole trader trading as Marsh Hollow Candles. The business started on 1 August 2025.
+- GST registered from 1 August 2025, payments basis, two-monthly periods ending in odd months. So 1 August
+  to 30 September 2025 is one full period.
+- Balance date 31 March, so this is the 2026 income year.
+- Bank accounts: 600.01 Harbourlight cheque, 600.02 Kowhai business, 600.03 Rimu savings.
+- The owner hasn't answered any Save tax questions. This is the M10 position.
+- The fixture's `IRD GST REFUND` deposit doesn't fit a business registered on 1 August. It's there for M11
+  to mark as not income; M10 treats it like any other deposit.
+
+**Opening balances.** Dated 1 August 2025, credited to 950.
+- 600.01: 2,000.00. That's the OFX closing balance, 2,022.56, less August's lines, which net to +22.56.
+- 600.02: 1,250.00, from the statement.
+- 600.03: 1,000.00, entered by the owner, because the file has no balances. Rimu's first line is on
+  29 August, so 1 to 28 August is a gap with no amount. It's flagged, nothing is posted, and the figure
+  says it's incomplete.
+
+**Gap journal.** Kowhai, 1 to 9 September. The September statement opens at 2,480.01; August closed at
+2,100.01. The rise of 380.00 posts on 9 September: debit 600.02 380.00, credit 810 49.57, credit 140 330.43.
+
+**Detected for Save tax, not applied.** A transfer pair on 22 August (600.01 −500.00, 600.02 +500.00), and a
+payment from IRD on 25 September (+163.42).
+
+**GST, 1 August to 30 September 2025:**
+- Box 5: 4,367.08. That's the deposits: Harbourlight 1,884.90 + Kowhai 1,798.42 + Rimu 303.76 + the
+  gap 380.00.
+- Boxes 6, 9 and 11 to 14: 0.
+- Box 7: 4,367.08.
+- Boxes 8 and 10: 4,367.08 × 3 ÷ 23 = 569.619… → 569.62.
+- Box 15: 569.62 to pay.
+- The ledger's 13 per-line splits total 569.63:
+  - Harbourlight: 53.80, 37.43, 24.78, 83.48, 46.36
+  - Kowhai: 94.57, 65.22, 53.48, 21.32
+  - Rimu: 0.24, 39.13, 0.25
+  - the gap: 49.57
+
+  The 0.01 difference clears to 295 when the return is filed (M14).
+
+**Income tax, 2026 income year so far:**
+- Taxable income is 140's balance: 4,367.08 − 569.63 = 3,797.45.
+- Income tax at 39%: 1,481.0055 → 1,481.01.
+- Student loan at 12%: 455.694 → 455.69.
+- **Tax to pay if submitted: 569.62 + 1,481.01 + 455.69 = 2,506.32.**
+- After "This business is my only income":
+  - The bands apply: 3,797.45 × 10.5% = 398.73225 → 398.73.
+  - The student loan is 12% of income over $24,128, so 0.00, and the student loan card disappears.
+  - Income is under $24,000, so there's no IETC.
+  - Tax to pay: 569.62 + 398.73 = 968.35, a saving of 1,537.97.
+
+**Ledger at 30 September 2025.** The journals are 33 bank lines, 3 opening balances and 1 gap.
+
+| Account | Debit | Credit |
+|---|---|---|
+| 600.01 Harbourlight cheque | 2,247.12 | |
+| 600.02 Kowhai business | 2,830.73 | |
+| 600.03 Rimu savings | 1,153.76 | |
+| 965 Money out, not yet sorted | 2,385.47 | |
+| 810 GST | | 569.63 |
+| 140 Money in, not yet sorted | | 3,797.45 |
+| 950 Owner's capital | | 4,250.00 |
+| Total | 8,617.08 | 8,617.08 |
+
+Withdrawals: Harbourlight 1,637.78 + Kowhai 597.69 + Rimu 150.00 = 2,385.47.
+
+**Reconciliation:**
+- 600.01: 2,247.12, which equals the 30 September closing balance derived from the QIF. At 31 August it
+  also agrees with the OFX's 2,022.56.
+- 600.02: 2,830.73, which equals the September statement's closing balance, with the gap journal
+  included. The gap from 1 to 9 September is flagged.
+- 600.03: not checked, because the statement has no balance. The gap from 1 to 28 August is flagged,
+  with no amount.
+
+Hand-checked by: (nobody yet).
+
 ## Open
-- **Gain or loss on disposal: where it's presented** (M4). The fixture's gain/loss account, 250, maps into
-  general expenses as a placeholder, so a gain would show as a negative expense. The fixture has no
-  disposals, so no statement shows it yet. Decide whether gains and losses get their own line(s), and
-  on which side.
-- **The conservative starting position** (M10). Proposed: an uncategorised deposit counts as income
-  (GST-inclusive at the standard rate, if the owner is GST registered), and an uncategorised withdrawal
-  posts to drawings, so nothing is claimed. Confirm the accounts, and the GST treatment of deposits.
-- **What "Tax to pay if submitted" includes** (M10). Income tax and GST only, or ACC levies and
-  provisional tax too? And how do amounts already paid (PAYE, RWT, provisional tax) show?
-- **GST basis** (M10). Bank statements fit the payments basis. What happens for an owner on the
-  invoice basis?
-- **Income tax rate tables** (M10). Which tax years to support, and the source each table is copied
-  from.
+- **Gain or loss on disposal: where it's presented** (M4, and now sole traders too). The fixture's
+  gain/loss account, 250, maps into general expenses as a placeholder, so a gain would show as a negative
+  expense. The fixture has no disposals, so no statement shows it yet. Decide whether gains and losses get
+  their own line(s), and on which side.
+- **The worked example above needs a person to check it** before M10 is called done.
+- **Bank CSV layouts** (M10). Someone with accounts at ANZ, ASB, BNZ, Westpac and Kiwibank exports a
+  statement from each, so the layouts can be copied into synthetic samples (see "Bank statement formats").
+  It's also worth noting whether each bank offers OFX.
+- **For the tax specialist, before M14 files anything.** These are the items marked **check** above:
+  1. The $60,000 GST registration threshold behind the "you may have to register" notice.
+  2. The GST return's box layout, and rounding boxes 8 and 12 half away from zero to cents.
+  3. Rounding income tax once, to cents.
+  4. The 2027 rate table and the 2027 student loan threshold.
+  5. The taxable supply information tiers ($200 and $1,000).
+  6. The $5,000 residual income tax threshold for provisional tax.
+  7. The GST code for ACC levies, and the $1,000 low-value threshold behind "small tools and equipment".
+  8. The half-claim rule for entertainment.
+  9. Whether an IR3 filed through the gateway needs an IR10 (from M14's build pack).
