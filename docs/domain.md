@@ -259,3 +259,12 @@ Results (whole dollars, 2026 with 2025 comparatives):
   general expenses as a placeholder, so a gain would show as a negative expense. The fixture has no
   disposals, so no statement shows it yet. Decide whether gains and losses get their own line(s), and
   on which side.
+- **The conservative starting position** (M10). Proposed: an uncategorised deposit counts as income
+  (GST-inclusive at the standard rate, if the owner is GST registered), and an uncategorised withdrawal
+  posts to drawings, so nothing is claimed. Confirm the accounts, and the GST treatment of deposits.
+- **What "Tax to pay if submitted" includes** (M10). Income tax and GST only, or ACC levies and
+  provisional tax too? And how do amounts already paid (PAYE, RWT, provisional tax) show?
+- **GST basis** (M10). Bank statements fit the payments basis. What happens for an owner on the
+  invoice basis?
+- **Income tax rate tables** (M10). Which tax years to support, and the source each table is copied
+  from.

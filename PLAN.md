@@ -1,9 +1,47 @@
-# PLAN — milestones for acct
+# PLAN — milestones for White Label Accounting
 
 <!-- Claude reads this on demand: CLAUDE.md names the current milestone. Update each "Status" line as work lands. -->
 
 Each milestone ends in something that runs and a "Done when" check. Don't start the next milestone's work
 early; put ideas in the Backlog instead.
+
+## Direction (2026-10-19)
+White Label Accounting is online accounting for NZ small businesses and their accountants, built to take
+them off Xero. ADR 007 records the move from a LAN-only practice tool to an online service, and the removal
+of hard rule 2. The owner's whole screen is three areas:
+
+1. **Upload bank statements.** Drop the files in, and income is picked up automatically.
+2. **Tax to pay if submitted.** A conservative figure: every deposit counts as income and nothing is
+   claimed. A **Save tax** button beside it walks the owner through categorising expenses and the deposits
+   that aren't income, and the figure drops as they go.
+3. **Submit to IRD.** Files the return as it stands. Overpaying doesn't get anyone into trouble (confirmed
+   with a tax specialist, 2026-10-19), so an owner can file the conservative figure without categorising
+   anything.
+
+Principles:
+- No chat. AI works in the background, pre-filling categories for a person to accept. Core computes every
+  amount.
+- The figure on screen can always be filed. Categorising only brings it down.
+- Every change shows who made it, what changed, and what it did to the tax. This is the main selling point
+  against Xero.
+- Underneath is the double-entry ledger from M1–M4, so an accountant gets the P&L, balance sheet, notes
+  and asset schedule from the same data.
+
+## Business track (start now; runs alongside the milestones)
+IRD's approval gates M14 and has its own review steps, so start early. None of this is code.
+- Register the organisation for gateway services in IRD's Gateway Customer Support Portal. IRD then reviews
+  business alignment, the tax compliance and integrity of the organisation and its key people, and our
+  security through the Operational Security Framework questionnaire (aligned with ISO 27001, and repeated
+  every year).
+- Product requests: the Return service (GST and income tax), and the access services owners use to
+  authorise us with their myIR sign-in.
+- Once approved: accept the gateway terms of use, get developer portal and test environment access, and
+  read the build packs. Record anything they require on screen (declaration wording, consent, IRD
+  messages) in `docs/ird.md`.
+- Customer terms and a privacy policy, including consent to file for the owner. IRD can ask for evidence
+  of that consent.
+- In the business alignment review, lead with getting returns filed on time with less effort; the
+  conservative starting figure errs towards overpaying.
 
 ## M0 — Repo and dev environment
 Status: done, except for one check: a Codespace built fresh from `.devcontainer`. CI is green on `master`.
@@ -111,86 +149,143 @@ Status: code complete (2026-09-24); waiting on the snapshot review and a browser
 
 Done when: the fixture's assets produce a schedule and a depreciation journal that reconcile to the balance sheet.
 
-## M5 — Finalise, snapshots, PDF
+## Retired milestone numbers (2026-10-19)
+The roadmap was restructured around the direction above. The old M5–M9 were folded into M10–M16. Their
+numbers aren't reused, because code comments and a committed migration still refer to them.
+
+| Old | Was | Now |
+|---|---|---|
+| M5 | Finalise, snapshots, PDF | M15 |
+| M6 | Bank import and coding | M10 (import) and M11 (coding) |
+| M7 | LAN deployment | M12 (HTTPS, backups). The practice certificate authority, device trust and mDNS are dropped (ADR 007). |
+| M8 | Classic import and oracle | M16 |
+| M9 | Off-network editing | Dropped: the hosted server works from anywhere. |
+
+## M10 — Upload statements, see the tax
+Status: not started. Answer the M10 items under "Open" in `docs/domain.md` first.
+- Rename the UI to White Label Accounting: page title, header and login screen. Crates and binaries keep the `acct` name.
+- Sole traders first (this answers the old entity-type question): a sole-trader master chart and template in our own words. Owners never see account codes; categories are accounts underneath.
+- Setting up a business: name, GST registered or not, GST filing frequency and basis, balance date, bank accounts.
+- Parsers in `crates/import`: OFX, QIF, and one versioned CSV parser per NZ bank format. The right parser is picked by inspecting the file. Synthetic sample statements for each format go in `fixtures/`.
+- Checks per bank account:
+  - flag date gaps between statements
+  - check opening balance + transactions = closing balance, where balances are present
+- Duplicate detection keys on account, date, amount, normalised description, and an occurrence count within that key. That way two identical purchases on the same day both survive. Ambiguous overlaps go to the user.
+- Proposed (confirm in `docs/domain.md`): every imported line posts straight away as a bank-coded journal, deposits to assumed income and withdrawals to drawings. The ledger is then always complete, the conservative figure comes out of it, and M11 recodes lines.
+- Tax engine in `crates/core`, pure:
+  - GST for a period: output tax on assumed income at the practice GST rate; input tax only on categorised lines.
+  - Income tax for a year: taxable income through a rate table per tax year, kept as versioned data with its source recorded in `docs/domain.md`, less the credits we know of.
+  - Rates in basis points and amounts in cents, with `i128` for intermediate products (hard rule 4, ADR 002).
+- The three-area screen. Submit is shown but disabled until M14.
+- Reconciliation per bank account: the ledger's bank balance equals the latest statement's closing balance.
+
+Done when: the synthetic sole trader's sample statements give the GST and income tax figures of a hand-checked worked example in `docs/domain.md`, uploading an overlapping statement changes nothing, a gap is flagged, and every bank account reconciles.
+
+## M11 — Save tax
 Status: not started
+- **Save tax** opens a queue of transactions, biggest possible saving first, with a running "saved so far" figure.
+- Deposits can be marked as not income: a transfer between the owner's own accounts, a loan, money the owner put in, a GST refund, wages already taxed through PAYE, or the sale of a personal item.
+- Withdrawals can be marked as:
+  - a business expense category, with its GST code (`standard | zero | exempt | none`)
+  - partly private, by percentage
+  - an asset purchase, which goes into the M4 register so depreciation follows
+  - personal
+- Rules per business (for example "always treat COUNTDOWN as personal") match on description text, amount range and direction, with practice-level suggestions. Standard-rate GST splits use the practice's GST rate.
+- AI suggestions pre-fill categories, and the owner accepts them one at a time or all at once. Write an ADR first covering:
+  - the provider
+  - what leaves the server (for example descriptions and amounts, but not names or IRD numbers)
+  - consent and retention
+  - whether IRD's terms allow it
+
+  Suggestions are inputs to commands, validated like anything from the UI, and the log records which changes were suggested.
+- Recoding a line reverses and reposts its journal, because posted journals never change.
+
+Done when: categorising the synthetic statements as the fixture specifies gives the expected TB, and the tax figures fall by exactly the worked example's amounts.
+
+## M12 — Online: hosting, sign-up and security
+Status: not started
+- ADR 008: host and region, continuous database backup, and deploys. See "Hosting" under Open questions.
+- Owners sign up themselves. A new `owner` role sees and changes only its own business, and can invite the business's accountant. Every read and command checks this, with tests that one owner can't read another's data.
+- HTTPS, `Secure` cookies, login throttling, two-factor sign-in with an authenticator app, and encryption at rest.
+- `docs/security.md`: the controls behind the OSF questionnaire, access logging, and a breach response plan. IRD must be told about a breach immediately.
+- Backups (from the old M7):
+  - `acctd backup <path>`, using `VACUUM INTO`, plus continuous backup on the host
+  - a documented restore drill
+- Deploys from GitHub Actions to staging, then production.
+- Desktop apps (ADR 007): retire `acct-master`, and decide whether `acct-client` points at the hosted address and whether `acct-dev` stays.
+
+Done when: staging runs over HTTPS, two owners sign up and neither can read the other's data, and a restore drill brings staging back with an identical `command_log`.
+
+## M13 — Who changed what
+Status: not started. This is the selling point against Xero.
+- A panel on the left of every page shows:
+  - who's signed in now
+  - a live feed of changes in plain English, for example "Sam marked 12 COUNTDOWN transactions as personal. Tax to pay went up $84."
+- Each change shows its before and after values and its effect on the tax figure.
+- Clicking any figure lists the changes that moved it (the drill-down plus the command log).
+- Filters by person, date and business. AI-suggested changes are marked as such, along with who accepted them.
+- Built from `command_log` and the sync feed. There's no second record of changes.
+
+Done when: every command kind has a plain-English description covered by a test, and two browsers see each other's presence and changes within a few seconds.
+
+## M14 — File with IRD
+Status: not started. Needs IRD test environment access (see the business track).
+- `crates/ird` calls the gateway Return service:
+  - `RetrieveFilingObligation`: what's due
+  - `Prepop`
+  - `File`: file and amend
+  - `RetrieveStatus`
+  - `RetrieveReturn`
+
+  GST first, then the IR3. Confirm the income tax operations in the build pack.
+- Owners authorise us through IRD's myIR sign-in (the access services). Tokens are stored encrypted; we never see or store myIR passwords.
+- Core builds each return's payload from the ledger, deterministically, with snapshot tests.
+- Submit shows the return's lines and the declaration, then files. The exact payload, IRD's response and a SHA-256 of the payload are stored and never regenerated, like a finalisation snapshot.
+- A filed GST period or income year rejects changes to its numbers. Corrections go through an amendment.
+- After filing, show how to pay. We don't process payments.
+
+Done when: in IRD's test environment, a synthetic business files a GST return and an IR3, checks their status, retrieves them and amends one, and changes to a filed period are rejected.
+
+## M15 — Accountant view: statements, notes, finalise, PDF
+Status: not started (was M5)
+- The P&L and balance sheet (built in M1–M3), checked against a sole-trader worked example. Add notes, analysis reports (for example expenses by category, year on year), and a GL listing that hides matched reversal pairs by default.
+- Bank reconciliation view: statement balance against the ledger, with any unmatched items.
 - Finalise (master only):
-  - pre-checks: the prior year is finalised, the TB balances, mapping is complete, depreciation is current, and (once M6 exists) there are no uncoded bank lines
+  - pre-checks: the prior year is finalised, the TB balances, mapping is complete, depreciation is current, and there are no uncategorised bank lines unless the accountant accepts them as they are
   - then write the snapshot and lock the year
 - Lock enforcement in every command that touches amounts or dates. Reopening is master only, needs a reason, and is logged.
 - Comparatives use the prior year's snapshot TB, as CLAUDE.md describes.
 - Accounting policies and notes come from the practice paragraph library: our own text, with client fields filled in.
 - PDF renderer: choose between embedded Typst and headless Chromium in an ADR, then build it.
 
-Done when: a finalised year's ReportDoc is byte-identical across restarts and after template edits, and posting into that year is rejected.
+Done when: a finalised year's ReportDoc is byte-identical across restarts and after template edits, posting into that year is rejected, and the fixture's bank accounts reconcile.
 
-## M6 — Bank import and coding
-Status: not started
-- Parsers in `crates/import`: OFX, QIF, and one versioned CSV parser per bank format. The right parser is picked by inspecting the file.
-- Checks per bank account:
-  - flag date gaps between statements
-  - check opening balance + transactions = closing balance, where balances are present
-- Duplicate detection keys on account, date, amount, normalised description, and an occurrence count within that key. That way two identical purchases on the same day both survive. Ambiguous overlaps go to the user.
-- Coding rules: set per client, with practice-level suggestions.
-  - Match on description text, amount range and direction.
-  - Result: an account, a GST code (`standard | zero | exempt | none`), and an optional split.
-  - Standard-rate GST splits use the practice's GST rate setting.
-- Coding UI. Coded lines post as journals; uncoded lines block finalisation.
+## M16 — Bring your history: Xero and MYOB
+Status: not started (takes in the old M8)
+- Import from Xero's and MYOB's standard exports: chart of accounts, trial balance, general ledger detail and contacts. Their accounts map onto ours with a preview, and earlier years become comparatives.
+- Pulling history through Xero's API is a later option: write an ADR after checking Xero's developer terms and pricing.
+- MYOB AO Classic, on an office machine only (hard rule 1):
+  - Spike: find out how Classic stores data under `C:\MYOBAO\DATA` (FoxPro .dbf, SQL Server, or both). Record the structure in `docs/domain.md`, never the data.
+  - `tools/classic-import`: a read-only extractor that outputs our own import formats (chart CSV, TB CSV, asset register CSV). It never writes to our database directly.
+  - `tools/oracle`: compares our TB and statement totals with Classic's exported reports, and writes a diff report to a gitignored folder.
 
-Done when: re-importing an overlapping file creates no duplicates, a gap is flagged, and synthetic statements code to the fixture's expected TB.
-
-## M7 — LAN deployment
-Status: partly brought forward (2026-09-24, ADR 006). Done: the server embeds the web app; Tauri 2 apps `acct-master`, `acct-client` and `acct-dev`; Windows builds on a GitHub Actions runner, published as releases. Still to do: the rest below (host choice, TLS, device trust, discovery, backups).
-- Two ADRs:
-  - server host: a Windows service, or Docker on a small Linux box
-  - client: a browser with a practice certificate authority installed, or a Tauri shell that trusts only the server's own certificate
-- Build:
-  - the server binary embeds the built web app
-  - if Docker is chosen, a multi-stage Dockerfile and a compose file with a data volume
-  - Windows builds run on a Windows GitHub Actions runner
-- TLS from a practice-local certificate authority created at install, a device trust procedure, and optional mDNS discovery.
-- Backups:
-  - `acctd backup <path>`, using `VACUUM INTO`
-  - guidance for an encrypted off-site rotation
-  - a documented restore drill
-
-Done when: two PCs on the office WiFi edit the same client concurrently, and a restore reproduces finalised snapshots byte-for-byte.
-
-## M8 — Classic import and oracle (office machine only)
-Status: not started
-- Spike: find out how Classic stores data under `C:\MYOBAO\DATA` (FoxPro .dbf, SQL Server, or both). Record the structure in `docs/domain.md`, never the data.
-- `tools/classic-import`: a read-only extractor that outputs our own import formats (chart CSV, TB CSV, asset register CSV). It never writes to our database directly.
-- `tools/oracle`: compares our TB and statement totals with Classic's exported reports, and writes a diff report to a gitignored folder.
-
-Done when: the chosen client-years match Classic to the dollar, or every difference is explained in `docs/domain.md`.
-
-## M9 — Off-network editing (only if needed)
-Status: waiting on a decision
-- A client-year can be checked out while someone is away; nobody else can edit it until it's checked back in.
-- Commands made while away queue locally. On check-in, the server revalidates them and reports conflicts.
+Done when: a synthetic Xero export imports to a TB that matches the export's totals, with comparatives, and the chosen Classic client-years match to the dollar or every difference is explained in `docs/domain.md`.
 
 ## Open questions
-- Does anyone need to edit away from the office network? This decides M9. yes.
-- Which entity types come after companies: trusts, partnerships, sole traders?
-- Which server host OS and which client (M7)? not sure which free centralised service to use - supabase? or is there a better one?
+- **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirm.
+- **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often.
+- **Hosting (M12).** On Supabase: it's hosted Postgres with its own sign-in, so using it means replacing the SQLite store and the sign-in we've already built, and its free tier pauses idle projects. Neither suits tax data that IRD's security review covers. Suggested instead: keep the Rust server and SQLite, and run it on a small always-on host in an Australian or New Zealand region, with a persistent disk and continuous backups. Expect a small monthly cost; free tiers don't fit.
+- **AI provider (M11).** Decided in M11's ADR.
+- **Which entity types come after sole traders:** companies, partnerships or trusts?
+- ~~Does anyone need to edit away from the office network?~~ Yes, answered by going online (ADR 007).
 
 ## Backlog (not scheduled)
-- Desktop apps: code signing, an installer, a log file for `acct-master`, running the master as a Windows service (M7 decides), and a "reset" button in `acct-dev`.
-- Templates for trusts, partnerships and sole traders.
+- White label: practices run it for their clients under their own brand and domain.
+- Tax agent mode: an accountant links many clients through IRD's intermediation services and files for them.
+- Bank feeds instead of uploads, through an NZ open-banking provider (for example Akahu).
+- Provisional tax, ACC levies, tax depreciation, home office and vehicle apportionment, and the IR10.
+- Companies (IR4), partnerships and trusts: templates and returns.
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
-- GL listing and audit-trail reports (hide matched reversal pairs by default).
-- Login throttling (M2 has none; a LAN with a handful of users makes it low priority until M7).
-
-
-TODO
-please make roadmap around getting the skeleton of the following working:
-Need pnl, balseet, notes, and analysis all checked 
-need to be able to upload sample bank statements and reconcile
-major selling point needs to be round something Xero has been notoriously bad at - transparency around who's edited what. so im thinking when you log in on the left you can see whos logged in and changed things and what theyve changed, very comprehesively and very UX friendly.
-Need to be able to file GSTS and income tax returns
-importing from xero/myob/whatever including xero's historical things somehow
-QOL
-Change name of this bad boy project to White Label Accounting (from beancounters united) can leave github file name as is though
-
-
+- Quality-of-life improvements: list to come.

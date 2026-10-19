@@ -1,6 +1,7 @@
 # 001: The LAN server has authority over the data
 
-Status: accepted
+Status: accepted. Amended by 007 (2026-10-19): the server is now hosted online rather than on the office
+LAN, and everyone uses a browser over HTTPS. The rest of this decision stands.
 
 ## Context
 The practice's data must stay in the office, and nothing may talk to the internet at runtime. Several staff

@@ -1,5 +1,5 @@
 /* Shared tokens and element defaults. Component styles live in CSS modules beside each component.
-   System fonts only: the app loads nothing from the network (CLAUDE.md hard rule 2). */
+   System fonts only, so the app loads no font files. */
 
 :root {
   --font: system-ui, "Segoe UI", Roboto, sans-serif;

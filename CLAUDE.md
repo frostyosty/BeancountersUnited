@@ -1,18 +1,19 @@
-# acct — LAN-only practice accounts and financial statements
+# White Label Accounting (code name `acct`)
 
 <!-- Maintainers: Claude Code loads this file every session, so keep it under ~200 lines.
      Milestone detail lives in PLAN.md (read on demand); decision history lives in docs/decisions/.
      Update "Current milestone" as work lands. Once the repo exists, trim anything Claude can read
-     from the code itself (e.g. the Layout section). "acct" is a placeholder name. -->
+     from the code itself (e.g. the Layout section). Crates and binaries keep the `acct` code name. -->
 
-An offline, LAN-only tool for a small NZ accounting practice. Staff enter or import client data, keep a
-double-entry ledger per client-year, and produce financial statements and fixed asset schedules that
-behave like MYOB AO Classic's. One office server owns the data; clients are browsers on the office
-network. Nothing talks to the internet at runtime.
+Online accounting for NZ small businesses and their accountants. An owner uploads bank statements and
+sees the tax they'd pay if they filed now. **Save tax** walks them through categorising to bring it down,
+and **Submit** files the return with IRD. Underneath is a double-entry ledger per business-year, with the
+statements, asset register and finalisation an accountant needs, behaving like MYOB AO Classic. One hosted
+server owns the data, and everyone uses a browser (ADR 007).
 
-**Current milestone: M3.** Before starting work, read that milestone's section in `PLAN.md`.
+**Current milestone: M10.** Before starting work, read that milestone's section in `PLAN.md`.
 
-## What "AO-like" means here (behaviour, not content)
+## The accountant view is "AO-like" (behaviour, not content)
 - A practice master chart per entity type; each client's chart starts as a copy of it.
 - Account-code ranges map to report lines; a template per entity type lays those lines out.
 - Statements show whole dollars with prior-year comparatives, use rounding lines so every column foots, and let any line drill down to its accounts.
@@ -20,13 +21,17 @@ network. Nothing talks to the internet at runtime.
 - An asset register drives depreciation journals and the fixed asset schedule.
 
 ## Scope
-- In: clients and client-years, charts, journals, TB import, bank statement import and coding (with GST splits for GST-exclusive ledgers), a fixed asset register with user-set accounting depreciation, mappings and templates, statements, finalisation snapshots, PDF output, multi-user on a LAN.
-- Out. Don't build these, and don't scaffold them "for later": IRD connectivity; tax calculations (tax depreciation book, IR10, taxable-income reconciliation, RWT/imputation workings); GST returns; payroll; multi-currency; cloud or internet sync; peer-to-peer replication.
-- Statements are accounting presentation only. Where the Tax Administration (Financial Statements) Order 2014 applies, its tax items are prepared outside this tool.
+- In:
+  - For owners: bank statement upload, the conservative "tax to pay" figure, categorising to bring it down (Save tax), and filing GST and income tax returns with IRD.
+  - The tax calculations behind the returns we file: GST, and income tax for sole traders first.
+  - For accountants: clients and client-years, charts, journals, TB import, bank coding (with GST splits for GST-exclusive ledgers), a fixed asset register with user-set accounting depreciation, mappings and templates, statements, finalisation snapshots and PDF output.
+  - A visible history of who changed what, import from Xero and MYOB, multi-user, hosted online.
+- Out. Don't build these, and don't scaffold them "for later": payroll; multi-currency; peer-to-peer replication; tax workings beyond the returns PLAN.md schedules (tax depreciation book, IR10, taxable-income reconciliation, RWT/imputation workings).
+- Statements are accounting presentation only. Tax figures come from the tax engine in core, which reads the ledger. Where the Tax Administration (Financial Statements) Order 2014 applies, its tax items are prepared outside this tool.
 
 ## Hard rules
-1. No real client data in this repo, its git history, or any Codespace. Fixtures in `fixtures/` are synthetic. Anything that touches real data (M8) runs on an office machine and writes only to gitignored paths.
-2. No network access at runtime. That means no CDN scripts, web fonts, telemetry, update checks or external APIs. The UI bundles everything it uses.
+1. No real client data in this repo, its git history, or any Codespace. Fixtures in `fixtures/` are synthetic. Anything that touches real data (the MYOB Classic extractor in M16) runs on an office machine and writes only to gitignored paths.
+2. *Removed 2026-10-19 (ADR 007): the app is online and files with IRD. The number stays unused so references to rules 3–7 still hold.*
 3. Don't reproduce MYOB content: template wording, paragraph text, icons or UI assets, and don't transcribe their report templates. Borrow behaviour; write our own content.
 4. No floating point for money or rates.
    - Rust: money is `Money(i64)` in cents; rates are `rate_bp: u32` in basis points (12.5% = 1250).
@@ -61,11 +66,12 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
 - Compute per asset per year in i128, then round once to cents, half away from zero.
 
 ## Architecture (settled; change only with an ADR in `docs/decisions/`)
-- **Data ownership:** one office server owns the database; there is no multi-master merge. Clients are browsers until M7 decides otherwise.
+- **Data ownership:** one hosted server owns the database (ADR 001, amended by ADR 007); there is no multi-master merge. Clients are browsers.
+- **Outside services (ADR 007):** the server may call IRD's gateway services (M14) and an AI provider (M11). Each integration lives in its own crate behind a trait, so tests run without a network. Core computes every amount and builds every payload; whatever comes back is input to a command, validated like anything from the UI.
 - **Server:** Rust, axum and tokio, SQLite via sqlx in WAL mode. One writer connection serialises commands; a read pool serves queries. The server also serves the built web app.
 - **SQL:** sqlx runtime queries (`query_as` with `FromRow`), not the `query!` macros, so builds and CI never need a database. Integration tests cover the SQL.
 - **Commands:** `POST /api/commands` with `{ id, kind, payload }`.
-  - `id` is a v4 UUID from `newId()` in `apps/web/src/lib/id.ts`, built on `crypto.getRandomValues`. `crypto.randomUUID` only exists in secure contexts (HTTPS or localhost), and the office LAN is plain HTTP until M7.
+  - `id` is a v4 UUID from `newId()` in `apps/web/src/lib/id.ts`, built on `crypto.getRandomValues`, which, unlike `crypto.randomUUID`, also works over plain HTTP.
   - `id` is the idempotency key: resubmitting it returns the original result.
   - Accepted commands get an increasing `seq`. Entity ids are server-generated UUIDv7.
 - **Reads:** `GET` query endpoints, plus `GET /api/sync?after=<seq>` as the change feed for live refresh.
@@ -78,7 +84,7 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - `staff`: client work, including custom depreciation rates.
   - `viewer`: read-only.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
-- **Desktop apps (ADR 006):** Tauri 2 shells in `apps/desktop`: `acct-master` (the server in-process, plus practice setup), `acct-client` (connects staff and viewer PCs to a master), and `acct-dev` (a throwaway master with the fixtures, a window per role, and the sync simulator). They show the master's web app; permissions come only from the user's account on the master. `.github/workflows/release.yml` builds the Windows exes.
+- **Desktop apps (ADR 006):** Tauri 2 shells in `apps/desktop`: `acct-master` (the server in-process, plus practice setup), `acct-client` (connects staff and viewer PCs to a master), and `acct-dev` (a throwaway master with the fixtures, a window per role, and the sync simulator). They show the master's web app; permissions come only from the user's account on the master. `.github/workflows/release.yml` builds the Windows exes. ADR 007 retires `acct-master` in M12, and M12 decides the futures of the other two.
 
 ## Layout
 ```text
@@ -91,7 +97,7 @@ apps/desktop     Tauri apps (master, client, dev), their shared crate and local 
 packages/types   generated TS types (never hand-edited)
 fixtures/        synthetic data only
 docs/            domain.md (glossary and worked examples), decisions/ (ADRs)
-tools/           local-only utilities (M8)
+tools/           local-only utilities (M16)
 ```
 
 ## Commands
@@ -118,7 +124,8 @@ tools/           local-only utilities (M8)
 - The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.
 
 ## TODO
-- M3 browser walkthrough (then mark M3 done in `PLAN.md` and move to M4):
+- M4 is also waiting on its snapshot review and a browser check (see its Status line in `PLAN.md`).
+- M3 browser walkthrough (then mark M3 done in `PLAN.md`):
   1. Run `make db-reset`, then `make dev`, and open port 5173. Log in as `staff`, password `fixture-password`.
   2. Create a client, add two years, import a TB into the first year, and post a journal in the second.
   3. Open **Statements** on the second year and click a line to see its accounts.

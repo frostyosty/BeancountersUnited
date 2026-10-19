@@ -1,7 +1,8 @@
 # 006: Three Tauri desktop apps, built for Windows by GitHub Actions
 
 Status: accepted (2026-09-24). Brings forward part of M7. Amends ADR 005: the web app is still the
-only UI for accounting work, and these apps show it in a webview.
+only UI for accounting work, and these apps show it in a webview. Partly superseded by 007
+(2026-10-19): `acct-master` retires in M12, and M12 decides the futures of `acct-client` and `acct-dev`.
 
 ## Context
 The practice wants to install programs rather than point browsers at an address. It also wants a

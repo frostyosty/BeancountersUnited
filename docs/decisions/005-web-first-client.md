@@ -1,6 +1,7 @@
 # 005: The client is a web app first
 
-Status: accepted
+Status: accepted. Amended by 007 (2026-10-19): the app is served over HTTPS from a hosted server, so
+the notes below about the office LAN and M7 are history. The web app is still the only client.
 
 ## Context
 Staff use Windows PCs on the office network. Development happens in Codespaces, which can't build or run a
