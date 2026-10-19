@@ -1,0 +1,2 @@
+# Snapshot files are compared byte-for-byte by tests, so keep LF on every platform.
+*.snap text eol=lf
