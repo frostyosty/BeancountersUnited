@@ -5,7 +5,6 @@ pub mod auth;
 pub mod commands;
 pub mod error;
 pub mod fixtures;
-pub mod gate;
 pub mod ledger;
 pub mod pipeline;
 pub mod reads;
@@ -84,8 +83,7 @@ pub async fn serve(
     state: AppState,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> std::io::Result<()> {
-    let router = gate::apply(app(state), gate::Gate::from_config());
-    axum::serve(listener, router)
+    axum::serve(listener, app(state))
         .with_graceful_shutdown(shutdown)
         .await
 }

@@ -326,3 +326,19 @@
 .mockTotal {
   font-weight: 700;
 }
+
+.tiers {
+  max-width: 76rem;
+  margin-inline: auto;
+}
+
+.featured {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.price small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}

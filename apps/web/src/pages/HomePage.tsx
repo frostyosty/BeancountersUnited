@@ -70,17 +70,6 @@ const accountantTools = [
   },
 ];
 
-const plans = [
-  {
-    title: "For owners",
-    perks: ["Bank statement upload", "Tax-to-pay figure", "Save tax walkthrough", "GST and income tax returns"],
-  },
-  {
-    title: "For accountants",
-    perks: ["Clients and client-years", "Charts, journals and bank coding", "Asset register and depreciation", "Statements and finalisation"],
-  },
-];
-
 const steps = [
   { title: "Upload", body: "Add your bank statements." },
   { title: "Review", body: "See the tax you'd pay right now." },
@@ -93,12 +82,12 @@ export function HomePage() {
     <div className={styles.site}>
       <header className={styles.nav}>
         <a href="#top" className={styles.brand}>
-          <Icon name="home.brand" fallback="🫘" /> acct
+          <Icon name="home.brand" fallback="🫘" /> White Label Accounting
         </a>
         <nav aria-label="Sections" className={styles.links}>
           <Link to="/product">Product</Link>
           <a href="#accountants">Accountants</a>
-          <a href="#pricing">Pricing</a>
+          <Link to="/pricing">Pricing</Link>
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
           <a href="#how">How it works</a>
@@ -175,35 +164,13 @@ export function HomePage() {
           </ul>
         </section>
 
-        <section id="pricing" className={styles.section}>
-          <h2 className={styles.sectionTitle}>Pricing</h2>
-          <p className={styles.sectionLede}>Simple plans for owners and for accountants.</p>
-          <ul className={`${styles.grid} ${styles.plans}`}>
-            {plans.map((p) => (
-              <li key={p.title} className={styles.feature}>
-                <h3>{p.title}</h3>
-                <p className={styles.price}>Pricing to be announced</p>
-                <ul className={styles.perks}>
-                  {p.perks.map((perk) => (
-                    <li key={perk}>
-                      <Icon name="home.check" fallback="✅" /> {perk}
-                    </li>
-                  ))}
-                </ul>
-                <a href="#signin" className={styles.planCta}>
-                  Sign in to get started
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
 
         <section id="about" className={`${styles.section} ${styles.about}`}>
           <h2 className={styles.sectionTitle}>
-            <Icon name="home.about" fallback="🥝" /> About acct
+            <Icon name="home.about" fallback="🥝" /> About White Label Accounting
           </h2>
           <p>
-            acct is online accounting for New Zealand small businesses and the accountants who look after them. Owners
+            White Label Accounting is online accounting for New Zealand small businesses and the accountants who look after them. Owners
             get a clear picture of their tax and simple ways to reduce it. Accountants get proper double-entry books,
             statements and year-end finalisation.
           </p>
@@ -234,7 +201,7 @@ export function HomePage() {
 
       <footer className={styles.footer}>
         <span>
-          <Icon name="home.brand" fallback="🫘" /> acct · white label accounting
+          <Icon name="home.brand" fallback="🫘" /> White Label Accounting
         </span>
         <a href="#top">Back to top</a>
       </footer>

@@ -12,7 +12,7 @@ export function Layout({ me }: { me: Me }) {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to="/" className={styles.brand}>
-          acct
+          White Label Accounting
         </Link>
         <nav className={styles.nav} aria-label="Main">
           <NavLink to="/" end>

@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import { CurrentUser, useMe } from "./auth";
 import { Layout } from "./components/Layout";
+import { SiteGate } from "./components/SiteGate";
 import { AccountPage } from "./pages/AccountPage";
 import { AssetsTab } from "./pages/AssetsTab";
 import { ChartPage } from "./pages/ChartPage";
@@ -9,6 +10,7 @@ import { ClientsPage } from "./pages/ClientsPage";
 import { HomePage } from "./pages/HomePage";
 import { JournalsTab } from "./pages/JournalsTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatementsTab } from "./pages/StatementsTab";
@@ -31,10 +33,13 @@ export function App() {
   }
   if (!me.data) {
     return (
-      <Routes>
+      <SiteGate>
+        <Routes>
+          <Route path="pricing" element={<PricingPage />} />
         <Route path="product" element={<ProductPage />} />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </SiteGate>
     );
   }
   return (

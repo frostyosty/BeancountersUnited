@@ -24,6 +24,8 @@
     "email": { "type": "emoji", "value": "📧" },
     "phone": { "type": "emoji", "value": "📞" },
     "address": { "type": "emoji", "value": "📍" },
+    "pricing": { "type": "emoji", "value": "🏷️" },
+    "faq": { "type": "emoji", "value": "💬" },
     "product": { "type": "emoji", "value": "🧭" }
   },
   "emoji": {}

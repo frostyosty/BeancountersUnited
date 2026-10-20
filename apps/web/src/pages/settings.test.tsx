@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { boss, practice, sam } from "../test/data";
 import { jsonResponse, renderApp, stubApi } from "../test/render";
@@ -10,6 +10,10 @@ const users = [
   { id: "u0", username: "boss", display_name: "Bo Boss", role: "master", active: true },
   { id: "u1", username: "sam", display_name: "Sam Staff", role: "staff", active: true },
 ];
+
+beforeEach(() => {
+  sessionStorage.setItem("site-revealed", "1");
+});
 
 afterEach(() => {
   cleanup();
