@@ -33,8 +33,26 @@
       ]
     },
     "signin": {
-      "type": "emoji",
-      "value": "👋"
+      "type": "image",
+      "value": "icons/home_signin_3_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "👋"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_3_icon.png"
+        }
+      ]
     },
     "upload": {
       "type": "emoji",
@@ -69,8 +87,18 @@
       "value": "✍️"
     },
     "assets": {
-      "type": "emoji",
-      "value": "🏗️"
+      "type": "image",
+      "value": "icons/home_assets_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🏗️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_assets_1_icon.png"
+        }
+      ]
     },
     "finalise": {
       "type": "emoji",
