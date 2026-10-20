@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pushes master to GitHub, then deploys it to Fly.io so it's live.
+# Usage: ./release ["commit note"]
+# Migrations run when acctd starts on the new machine, so the database updates with the deploy.
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+command -v fly >/dev/null 2>&1 || { echo "fly CLI not found. Install it: iwr https://fly.io/install.ps1 -useb | iex"; exit 1; }
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+[ "$branch" = "master" ] || { echo "Releases come from master; you're on $branch."; exit 1; }
+
+echo "==> Checking before release"
+make check
+
+echo "==> Committing and pushing"
+git add -A
+git diff --cached --quiet || git commit -m "[release] ${1:-$(date '+%Y-%m-%d %H:%M:%S')}"
+git pull --rebase origin master
+git push origin master
+
+echo "==> Deploying to Fly.io (single machine, SQLite needs --ha=false)"
+fly deploy --ha=false
+
+echo "==> Health check"
+app=$(sed -n 's/^app *= *"\(.*\)"/\1/p' fly.toml)
+curl -fsS "https://${app}.fly.dev/api/health" && echo && echo "Live at https://${app}.fly.dev"
