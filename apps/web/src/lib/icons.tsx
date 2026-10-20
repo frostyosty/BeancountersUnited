@@ -33,9 +33,7 @@ function Glyph({ entry, className }: { entry: IconEntry; className?: string }) {
         src={`/${entry.value}`}
         alt=""
         aria-hidden="true"
-        width="1em"
-        height="1em"
-        style={{ verticalAlign: "-0.15em" }}
+        style={{ width: "1em", height: "1em", verticalAlign: "-0.15em" }}
       />
     );
   }
