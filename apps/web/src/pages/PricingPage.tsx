@@ -16,26 +16,27 @@ const tiers = [
       "Your tax-to-pay figure, any day",
       "Real double-entry books underneath",
       "Statements with last year alongside",
+      "History of who changed what",
     ],
   },
   {
     name: "Owner",
     audience: "For owners who want to pay less tax",
-    price: "$9",
+    price: "$4.99",
     per: "per month",
     featured: true,
     perks: [
       "Everything in Free",
       "Save tax walkthrough",
-      "File GST and income tax returns with IRD",
+      "One button to file GST returns with IRD",
+      "One button to file income tax returns with IRD",
       "Up to 3 businesses",
-      "History of who changed what",
     ],
   },
   {
     name: "Practice",
     audience: "For accountants and bookkeepers",
-    price: "$19",
+    price: "$9.99",
     per: "per month, up to 25 clients",
     perks: [
       "Everything in Owner",
@@ -49,7 +50,7 @@ const tiers = [
   {
     name: "Practice Plus",
     audience: "For larger practices",
-    price: "$49",
+    price: "$24.99",
     per: "per month, unlimited clients",
     perks: ["Everything in Practice", "Unlimited clients", "Import from Xero and MYOB", "Priority support"],
   },
@@ -58,7 +59,7 @@ const tiers = [
 const faqs = [
   ["Is the Free plan really free?", "Yes. No card needed, no time limit, and your data stays yours."],
   ["Can I switch plans?", "Any time. Upgrade when you're ready to file, and drop back down afterwards."],
-  ["Are these final prices?", "These are sample prices while we finish the product. They'll only stay this low or go lower."],
+  ["Will these prices change? They'll only stay this low or go lower."],
 ];
 
 export function PricingPage() {
