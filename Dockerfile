@@ -9,6 +9,7 @@ COPY packages/types/package.json packages/types/
 RUN pnpm install --frozen-lockfile
 COPY apps/web apps/web
 COPY packages/types packages/types
+COPY config.env* ./
 RUN pnpm --filter web build
 
 FROM rust:1-bookworm AS server

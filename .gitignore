@@ -8,3 +8,4 @@ tools/**/out/
 .claude/settings.local.json
 # Tauri writes these on every build.
 apps/desktop/*/gen/
+config.env

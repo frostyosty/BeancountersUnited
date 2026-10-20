@@ -1,32 +1,121 @@
 {
   "nav": {
-    "clients": { "type": "emoji", "value": "📒" },
-    "settings": { "type": "emoji", "value": "⚙️" },
-    "account": { "type": "emoji", "value": "👤" },
-    "signout": { "type": "emoji", "value": "🚪" }
+    "clients": {
+      "type": "emoji",
+      "value": "📒"
+    },
+    "settings": {
+      "type": "emoji",
+      "value": "⚙️"
+    },
+    "account": {
+      "type": "emoji",
+      "value": "👤"
+    },
+    "signout": {
+      "type": "emoji",
+      "value": "🚪"
+    }
   },
   "home": {
-    "brand": { "type": "emoji", "value": "🫘" },
-    "signin": { "type": "emoji", "value": "👋" },
-    "upload": { "type": "emoji", "value": "📤" },
-    "tax": { "type": "emoji", "value": "💰" },
-    "save": { "type": "emoji", "value": "✂️" },
-    "books": { "type": "emoji", "value": "📒" },
-    "statements": { "type": "emoji", "value": "📑" },
-    "check": { "type": "emoji", "value": "✅" },
-    "charts": { "type": "emoji", "value": "🗂️" },
-    "journals": { "type": "emoji", "value": "✍️" },
-    "assets": { "type": "emoji", "value": "🏗️" },
-    "finalise": { "type": "emoji", "value": "🔒" },
-    "about": { "type": "emoji", "value": "🥝" },
-    "history": { "type": "emoji", "value": "🕑" },
-    "contact": { "type": "emoji", "value": "✉️" },
-    "email": { "type": "emoji", "value": "📧" },
-    "phone": { "type": "emoji", "value": "📞" },
-    "address": { "type": "emoji", "value": "📍" },
-    "pricing": { "type": "emoji", "value": "🏷️" },
-    "faq": { "type": "emoji", "value": "💬" },
-    "product": { "type": "emoji", "value": "🧭" }
+    "brand": {
+      "type": "image",
+      "value": "icons/home_brand_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🫘"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_brand_1_icon.png"
+        }
+      ]
+    },
+    "signin": {
+      "type": "emoji",
+      "value": "👋"
+    },
+    "upload": {
+      "type": "emoji",
+      "value": "📤"
+    },
+    "tax": {
+      "type": "emoji",
+      "value": "💰"
+    },
+    "save": {
+      "type": "emoji",
+      "value": "✂️"
+    },
+    "books": {
+      "type": "emoji",
+      "value": "📒"
+    },
+    "statements": {
+      "type": "emoji",
+      "value": "📑"
+    },
+    "check": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "charts": {
+      "type": "emoji",
+      "value": "🗂️"
+    },
+    "journals": {
+      "type": "emoji",
+      "value": "✍️"
+    },
+    "assets": {
+      "type": "emoji",
+      "value": "🏗️"
+    },
+    "finalise": {
+      "type": "emoji",
+      "value": "🔒"
+    },
+    "about": {
+      "type": "emoji",
+      "value": "🥝"
+    },
+    "history": {
+      "type": "emoji",
+      "value": "🕑"
+    },
+    "contact": {
+      "type": "emoji",
+      "value": "✉️"
+    },
+    "email": {
+      "type": "emoji",
+      "value": "📧"
+    },
+    "phone": {
+      "type": "emoji",
+      "value": "📞"
+    },
+    "address": {
+      "type": "emoji",
+      "value": "📍"
+    },
+    "pricing": {
+      "type": "emoji",
+      "value": "🏷️"
+    },
+    "faq": {
+      "type": "emoji",
+      "value": "💬"
+    },
+    "accountants": {
+      "type": "emoji",
+      "value": "🧮"
+    },
+    "product": {
+      "type": "emoji",
+      "value": "🧭"
+    }
   },
   "emoji": {}
 }

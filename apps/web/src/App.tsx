@@ -2,6 +2,9 @@ import { Route, Routes } from "react-router";
 import { CurrentUser, useMe } from "./auth";
 import { Layout } from "./components/Layout";
 import { SiteGate } from "./components/SiteGate";
+import { ContactPage } from "./pages/ContactPage";
+import { AboutPage } from "./pages/AboutPage";
+import { AccountantsPage } from "./pages/AccountantsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { AssetsTab } from "./pages/AssetsTab";
 import { ChartPage } from "./pages/ChartPage";
@@ -35,7 +38,10 @@ export function App() {
     return (
       <SiteGate>
         <Routes>
-          <Route path="pricing" element={<PricingPage />} />
+          <Route path="accountants" element={<AccountantsPage />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="contact" element={<ContactPage />} />
+        <Route path="pricing" element={<PricingPage />} />
         <Route path="product" element={<ProductPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>

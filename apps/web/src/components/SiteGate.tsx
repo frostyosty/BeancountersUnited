@@ -21,7 +21,7 @@ export function SiteGate({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(wasRevealed);
   const taps = useRef({ count: 0, last: 0 });
 
-  if (open) {
+  if (!__SITE_GATE__ || open) {
     return <>{children}</>;
   }
 

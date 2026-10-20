@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
 
@@ -63,18 +64,7 @@ const faqs = [
 export function PricingPage() {
   return (
     <div className={styles.site}>
-      <header className={styles.nav}>
-        <Link to="/" className={styles.brand}>
-          <Icon name="home.brand" fallback="🫘" /> White Label Accounting
-        </Link>
-        <nav aria-label="Sections" className={styles.links}>
-          <Link to="/">Home</Link>
-          <Link to="/product">Product</Link>
-          <Link to="/#signin" className={styles.navCta}>
-            Sign in
-          </Link>
-        </nav>
-      </header>
+      <SiteHeader />
       <main>
         <section className={styles.section}>
           <h1 className={styles.sectionTitle}>
