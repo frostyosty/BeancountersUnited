@@ -125,8 +125,4 @@ tools/           local-only utilities (M16)
 
 ## TODO
 - M4 is also waiting on its snapshot review and a browser check (see its Status line in `PLAN.md`).
-- M3 browser walkthrough (then mark M3 done in `PLAN.md`):
-  1. Run `make db-reset`, then `make dev`, and open port 5173. Log in as `staff`, password `fixture-password`.
-  2. Create a client, add two years, import a TB into the first year, and post a journal in the second.
-  3. Open **Statements** on the second year and click a line to see its accounts.
-  4. With a second browser window open, make a change and check that the other window updates within a few seconds.
+
