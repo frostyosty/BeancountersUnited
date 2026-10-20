@@ -6,9 +6,10 @@ import { AssetsTab } from "./pages/AssetsTab";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
-import { LoginPage } from "./pages/LoginPage";
+import { HomePage } from "./pages/HomePage";
 import { JournalsTab } from "./pages/JournalsTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ProductPage } from "./pages/ProductPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatementsTab } from "./pages/StatementsTab";
 import { TbImportTab } from "./pages/TbImportTab";
@@ -29,7 +30,12 @@ export function App() {
     );
   }
   if (!me.data) {
-    return <LoginPage />;
+    return (
+      <Routes>
+        <Route path="product" element={<ProductPage />} />
+        <Route path="*" element={<HomePage />} />
+      </Routes>
+    );
   }
   return (
     <CurrentUser value={me.data}>

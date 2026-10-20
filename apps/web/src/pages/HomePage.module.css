@@ -1,0 +1,328 @@
+.site {
+  --navy: var(--theme-color-1, #0d1b36);
+  --navy-2: var(--theme-color-2, #16305f);
+  --glow: var(--theme-accent, #5aa2ff);
+  font-family: var(--theme-font, inherit);
+  min-height: 100vh;
+  scroll-behavior: smooth;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem clamp(1rem, 5vw, 4rem);
+  background: rgba(13, 27, 54, 0.92);
+  backdrop-filter: blur(8px);
+  color: #fff;
+}
+
+.brand {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.links a {
+  color: #c9d6ee;
+  text-decoration: none;
+}
+
+.links a:hover {
+  color: #fff;
+}
+
+.links .navCta {
+  color: #fff;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: center;
+  padding: clamp(2.5rem, 7vw, 6rem) clamp(1rem, 5vw, 4rem);
+  color: #fff;
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, rgba(90, 162, 255, 0.35), transparent 60%),
+    linear-gradient(160deg, var(--navy), var(--navy-2));
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--glow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
+.headline {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  max-width: 34rem;
+  margin: 1.25rem 0 1.75rem;
+  color: #c9d6ee;
+  font-size: 1.1rem;
+  line-height: 1.55;
+}
+
+.ticket {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1.4rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+}
+
+.ticketLabel {
+  color: #c9d6ee;
+  font-size: 0.85rem;
+}
+
+.ticketAmount {
+  font-size: 2.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticketSave {
+  color: #8fe3a8;
+  font-size: 0.9rem;
+}
+
+.heroCard {
+  width: 100%;
+  max-width: 24rem;
+  justify-self: center;
+}
+
+.section {
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 5vw, 4rem);
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  text-align: center;
+}
+
+.sectionLede {
+  margin: var(--space-2) 0 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.grid {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.25rem;
+}
+
+.sectionLede + .grid {
+  margin-top: 0;
+}
+
+.feature {
+  padding: 1.4rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.feature:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(13, 27, 54, 0.12);
+}
+
+.feature h3,
+.step h3 {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 1.05rem;
+}
+
+.feature p,
+.step p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.featureIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  font-size: var(--theme-icon-size, 1.4rem);
+  background: #e8f0fc;
+  border-radius: 10px;
+}
+
+.how {
+  max-width: none;
+  background: var(--surface-raised);
+  border-block: 1px solid var(--border);
+}
+
+.steps {
+  list-style: none;
+  margin: 2rem auto 0;
+  padding: 0;
+  max-width: 76rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.5rem;
+}
+
+.step {
+  text-align: center;
+}
+
+.stepNo {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 1.5rem clamp(1rem, 5vw, 4rem);
+  background: var(--navy);
+  color: #c9d6ee;
+}
+
+.footer a {
+  color: #fff;
+}
+
+@media (max-width: 52rem) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .links a:not(.navCta) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature {
+    transition: none;
+  }
+
+  .feature:hover {
+    transform: none;
+  }
+}
+
+.plans {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.perks {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.planCta {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.accountants {
+  max-width: 76rem;
+  margin-inline: auto;
+}
+
+.about {
+  max-width: 44rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+.contact {
+  max-width: 44rem;
+  text-align: center;
+}
+
+.contactList {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.mock {
+  padding: 1.4rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.mockRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.mockTotal {
+  font-weight: 700;
+}
