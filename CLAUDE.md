@@ -97,7 +97,7 @@ apps/desktop     Tauri apps (master, client, dev), their shared crate and local 
 packages/types   generated TS types (never hand-edited)
 fixtures/        synthetic data only
 docs/            domain.md (glossary and worked examples), decisions/ (ADRs)
-tools/           local-only utilities (M16)
+tools/           local-only utilities: icon-studio (icons for the web app), and M16's extractor
 ```
 
 ## Commands
@@ -109,6 +109,15 @@ tools/           local-only utilities (M16)
 - `make db-reset`: wipe the dev database and load fixtures through the command pipeline.
 - `make desktop-check`: clippy and tests for the desktop apps (needs `scripts/desktop-deps.sh` on Linux). `make check` skips them.
 - `make desktop`: release builds of the desktop apps for this OS.
+- `make icons`: Icon Studio on :8081, for making and swapping the web app's icon images (see Icons and emoji below).
+
+## Icons and emoji 🎨
+- Be liberal with emoji and icons in the web UI: nav links, buttons, empty states, section headings, status messages. 🧾 💰 📒 ✅ ⚠️ Friendly, scannable screens suit owners who aren't accountants. They're also welcome in chat replies, commit messages and docs. 😊
+- Always keep the text label next to an icon. Icons are decorative (`aria-hidden`), never the only way to tell what something does.
+- In the web app, don't type a bare emoji or an `<img>` for an icon. Use `<Icon name="group.name" fallback="🧾" />` (a slot in `apps/web/src/icons/registry.json`) or `<Emoji>💬</Emoji>`, both from `apps/web/src/lib/icons.tsx`. Then Icon Studio can swap any of them for a generated image without touching the code.
+- Add the new slot to `registry.json` with an emoji (`{ "type": "emoji", "value": "🧾" }`) when you use it. Only Icon Studio writes images and variants: don't hand-edit those, or `apps/web/public/icons/`.
+- Icon Studio sends its prompts to a public image service (Pollinations). Describe the icon only; never put client data in a prompt (hard rule 1). Icons are our own (hard rule 3).
+- Don't use emoji where accounting output is rendered: statements, ReportDoc, PDFs. Those stay plain. Emoji are for the app's chrome, not the accounts.
 
 ## Working conventions
 - Work directly on `master`; don't create branches. Commit each finished task there. The user saves and pushes with `zz_quicksave.txt` (stage all, commit, pull --rebase, push), so leave the tree in a state that is safe to commit as a whole.

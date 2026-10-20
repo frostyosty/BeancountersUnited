@@ -1,0 +1,9 @@
+{
+  "nav": {
+    "clients": { "type": "emoji", "value": "📒" },
+    "settings": { "type": "emoji", "value": "⚙️" },
+    "account": { "type": "emoji", "value": "👤" },
+    "signout": { "type": "emoji", "value": "🚪" }
+  },
+  "emoji": {}
+}

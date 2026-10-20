@@ -1,4 +1,4 @@
-.PHONY: setup dev test check types types-check db-reset web desktop desktop-check
+.PHONY: setup dev test check types types-check db-reset web icons desktop desktop-check
 
 TYPES_DIR := packages/types/src
 DESKTOP := -p acct-desktop -p acct-master -p acct-client -p acct-dev
@@ -39,6 +39,10 @@ db-reset:
 
 web:
 	pnpm --filter web build
+
+# Icon Studio: makes icon images for the web app's slots (tools/icon-studio). Opens http://localhost:8081.
+icons:
+	./icon_studio.sh
 
 # The desktop apps (ADR 006): acct-master, acct-client and acct-dev. They build the web app in, and
 # on Linux need the webview libraries that scripts/desktop-deps.sh installs. The release workflow
