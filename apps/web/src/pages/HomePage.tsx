@@ -40,7 +40,7 @@ const features = [
     icon: "home.history",
     fallback: "🕑",
     title: "Who changed what",
-    body: "A visible history of every change, and finalised years stay locked unless a master user reopens them.",
+    body: "A supremely intuitive history of every change, and finalised years stay locked.",
   },
 ];
 
