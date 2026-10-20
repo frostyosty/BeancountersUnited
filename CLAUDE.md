@@ -132,6 +132,9 @@ tools/           local-only utilities: icon-studio (icons for the web app), and 
 - The desktop apps compile and test here, but can't be run without a display. Windows builds happen only in GitHub Actions.
 - The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.
 
+<<<<<<< HEAD
 ## TODO
 - M4 is also waiting on its snapshot review and a browser check (see its Status line in `PLAN.md`).
+=======
+>>>>>>> 3fed29a ([quicksave note here] 2026-10-20 20:01:21)
 
