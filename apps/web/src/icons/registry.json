@@ -63,8 +63,22 @@
       "value": "🏛️"
     },
     "tax": {
-      "type": "emoji",
-      "value": "💰"
+      "type": "image",
+      "value": "icons/home_tax_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "💰"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_tax_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_tax_2_icon.png"
+        }
+      ]
     },
     "save": {
       "type": "emoji",

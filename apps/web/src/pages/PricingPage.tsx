@@ -20,7 +20,7 @@ const tiers = [
       "Real double-entry books underneath",
       "Statements with last year alongside",
       "History of who changed what",
-      "Seven year data retention period".
+      "Seven year data retention period",
     ],
   },
   {
@@ -65,7 +65,7 @@ const tiers = [
 const faqs = [
   ["Is the Free plan really free?", "Yes. No card needed, no time limit, and your data stays yours."],
   ["Can I switch plans?", "Any time. Upgrade when you're ready to file, and drop back down afterwards."],
-  ["Will these prices change? They'll only stay this low. Or they might even go lower."],
+  ["Will these prices change?", "They'll only stay this low. Or they might even go lower."],
 ];
 
 export function PricingPage() {
