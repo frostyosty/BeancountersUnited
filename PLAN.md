@@ -147,7 +147,7 @@ Status: code complete (2026-09-24); waiting on the snapshot review and a browser
   - proptest: book value never goes negative; SL never goes below the residual
   - a reconciliation check: register totals equal the linked ledger accounts
 
-Done when: the fixture's assets produce a schedule and a depreciation journal that reconcile to the balance sheet.
+Done when: the fixture's assets produce a schedule and a depreciation journal that reconcile to the balance sheet. DONE
 
 ## Retired milestone numbers (2026-10-19)
 The roadmap was restructured around the direction above. The old M5–M9 were folded into M10–M16. Their
