@@ -10,7 +10,7 @@ describe("icons", () => {
   });
 
   it("reads a slot from the registry", () => {
-    expect(slotEntry("nav.clients")?.type).toBe("emoji");
+    expect(["emoji", "image"]).toContain(slotEntry("nav.clients")?.type);
     expect(slotEntry("nope.missing")).toBeUndefined();
     expect(slotEntry("malformed")).toBeUndefined();
   });
@@ -24,9 +24,11 @@ describe("icons", () => {
         <Emoji>💬</Emoji>
       </>,
     );
+    // The studio may have swapped any slot for an image, so only count the glyphs.
+    const glyphs = container.querySelectorAll("[aria-hidden='true']");
+    expect(glyphs).toHaveLength(3);
     const spans = container.querySelectorAll("span[aria-hidden='true']");
-    expect(spans).toHaveLength(3);
-    expect(spans[1]?.textContent).toBe("🧾");
-    expect(spans[2]?.textContent).toBe("💬");
+    expect(spans[spans.length - 2]?.textContent).toBe("🧾");
+    expect(spans[spans.length - 1]?.textContent).toBe("💬");
   });
 });
