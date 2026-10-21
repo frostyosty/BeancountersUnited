@@ -58,6 +58,10 @@
       "type": "emoji",
       "value": "📤"
     },
+    "file": {
+      "type": "emoji",
+      "value": "🏛️"
+    },
     "tax": {
       "type": "emoji",
       "value": "💰"
@@ -97,6 +101,10 @@
         {
           "type": "image",
           "value": "icons/home_assets_1_icon.png"
+        },
+        {
+          "type": "emoji",
+          "value": "🏗"
         }
       ]
     },
@@ -145,5 +153,56 @@
       "value": "🧭"
     }
   },
-  "emoji": {}
+  "emoji": {
+    "1f3d7": {
+      "type": "image",
+      "value": "icons/home_assets_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🏗"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_assets_1_icon.png"
+        }
+      ]
+    },
+    "1f44b": {
+      "type": "image",
+      "value": "icons/home_signin_3_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "👋"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_signin_3_icon.png"
+        }
+      ]
+    },
+    "1fad8": {
+      "type": "image",
+      "value": "icons/home_brand_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🫘"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_brand_1_icon.png"
+        }
+      ]
+    }
+  }
 }

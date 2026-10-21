@@ -13,10 +13,14 @@ const tiers = [
     perks: [
       "1 business",
       "Unlimited bank statement uploads",
+      "Up to 100,000 invoice uploads",
+      "One button to file GST returns with IRD",
+      "One button to file income tax returns with IRD",
       "Your tax-to-pay figure, any day",
       "Real double-entry books underneath",
       "Statements with last year alongside",
       "History of who changed what",
+      "Seven year data retention period".
     ],
   },
   {
@@ -28,9 +32,11 @@ const tiers = [
     perks: [
       "Everything in Free",
       "Save tax walkthrough",
-      "One button to file GST returns with IRD",
-      "One button to file income tax returns with IRD",
+      "Unlimited invoice uploads",
+      "History of who changed what",
       "Up to 3 businesses",
+      "Editable history of who changed what",
+      "Unlimited data retention",
     ],
   },
   {
@@ -59,7 +65,7 @@ const tiers = [
 const faqs = [
   ["Is the Free plan really free?", "Yes. No card needed, no time limit, and your data stays yours."],
   ["Can I switch plans?", "Any time. Upgrade when you're ready to file, and drop back down afterwards."],
-  ["Will these prices change? They'll only stay this low or go lower."],
+  ["Will these prices change? They'll only stay this low. Or they might even go lower."],
 ];
 
 export function PricingPage() {

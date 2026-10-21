@@ -145,6 +145,33 @@
   gap: 1.25rem;
 }
 
+.flow {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 30rem;
+}
+
+.flowItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.arrowGlyph {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
 .sectionLede + .grid {
   margin-top: 0;
 }

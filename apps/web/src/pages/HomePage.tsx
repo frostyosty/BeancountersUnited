@@ -5,25 +5,39 @@ import { Icon } from "../lib/icons";
 import { LoginPage } from "./LoginPage";
 import styles from "./HomePage.module.css";
 
-const features = [
+// `next` is the label on the arrow leading to the following step.
+const steps = [
   {
     icon: "home.upload",
     fallback: "📤",
-    title: "Upload your bank statements",
+    title: "Upload bank statements",
     body: "Drop in a statement and your transactions are ready to sort. No re-typing.",
+    next: "one click",
   },
   {
     icon: "home.tax",
     fallback: "💰",
     title: "See your tax, any day",
     body: "A cautious estimate of the tax you'd pay if you filed today, so there are no surprises.",
+    next: "a few clicks",
   },
   {
     icon: "home.save",
     fallback: "✂️",
     title: "Save tax",
     body: "Step through your spending and categorise it properly to bring that figure down.",
+    next: "one click",
   },
+  {
+    icon: "home.file",
+    fallback: "🏛️",
+    title: "File tax",
+    body: "No-nonsense direct submission to the IRD.",
+    next: "",
+  },
+];
+
+const features = [
   {
     icon: "home.books",
     fallback: "📒",
@@ -77,8 +91,34 @@ export function HomePage() {
         </section>
 
         <section id="features" className={styles.section}>
-          <h2 className={styles.sectionTitle}>Built for owners and their accountants</h2>
-          <p className={styles.sectionLede}>One place for the everyday and the year-end.</p>
+          <h2 className={styles.sectionTitle}>From bank statement to IRD</h2>
+          <p className={styles.sectionLede}>Four steps, hardly any clicking.</p>
+          <ol className={styles.flow}>
+            {steps.map((s) => (
+              <li key={s.title} className={styles.flowItem}>
+                <div className={styles.feature}>
+                  <span className={styles.featureIcon}>
+                    <Icon name={s.icon} fallback={s.fallback} />
+                  </span>
+                  <h3>{s.title}</h3>
+                  <p>{s.body}</p>
+                </div>
+                {s.next && (
+                  <div className={styles.arrow}>
+                    <span aria-hidden="true" className={styles.arrowGlyph}>
+                      ↓
+                    </span>
+                    <span>{s.next}</span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section id="accountants" className={styles.section}>
+          <h2 className={styles.sectionTitle}>The boring stuff, for accountants</h2>
+          <p className={styles.sectionLede}>Proper books underneath, so nothing is lost when you hand over.</p>
           <ul className={styles.grid}>
             {features.map((f) => (
               <li key={f.title} className={styles.feature}>
