@@ -1,20 +1,76 @@
 {
   "nav": {
     "clients": {
-      "type": "emoji",
-      "value": "📒"
+      "type": "image",
+      "value": "icons/home_books_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📒"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_books_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_books_2_icon.png"
+        }
+      ]
     },
     "settings": {
-      "type": "emoji",
-      "value": "⚙️"
+      "type": "image",
+      "value": "icons/nav_settings_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚙️"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_settings_1_icon.png"
+        }
+      ]
     },
     "account": {
-      "type": "emoji",
-      "value": "👤"
+      "type": "image",
+      "value": "icons/nav_account_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "👤"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_account_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_account_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_account_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_account_4_icon.png"
+        }
+      ]
     },
     "signout": {
-      "type": "emoji",
-      "value": "🚪"
+      "type": "image",
+      "value": "icons/nav_signout_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🚪"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_signout_1_icon.png"
+        }
+      ]
     }
   },
   "home": {
@@ -55,12 +111,40 @@
       ]
     },
     "upload": {
-      "type": "emoji",
-      "value": "📤"
+      "type": "image",
+      "value": "icons/home_upload_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📤"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_upload_1_icon.png"
+        }
+      ]
     },
     "file": {
-      "type": "emoji",
-      "value": "🏛️"
+      "type": "image",
+      "value": "icons/home_file_3_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🏛️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_3_icon.png"
+        }
+      ]
     },
     "tax": {
       "type": "image",
@@ -81,24 +165,66 @@
       ]
     },
     "save": {
-      "type": "emoji",
-      "value": "✂️"
-    },
-    "books": {
-      "type": "emoji",
-      "value": "📒"
+      "type": "image",
+      "value": "icons/home_save_4_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "✂️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_4_icon.png"
+        }
+      ]
     },
     "statements": {
-      "type": "emoji",
-      "value": "📑"
+      "type": "image",
+      "value": "icons/home_statements_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📑"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_statements_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_statements_2_icon.png"
+        }
+      ]
     },
     "check": {
       "type": "emoji",
       "value": "✅"
     },
     "charts": {
-      "type": "emoji",
-      "value": "🗂️"
+      "type": "image",
+      "value": "icons/home_charts_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🗂️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_charts_1_icon.png"
+        }
+      ]
     },
     "journals": {
       "type": "emoji",
@@ -123,16 +249,54 @@
       ]
     },
     "finalise": {
-      "type": "emoji",
-      "value": "🔒"
+      "type": "image",
+      "value": "icons/home_finalise_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔒"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_finalise_1_icon.png"
+        }
+      ]
     },
     "about": {
-      "type": "emoji",
-      "value": "🥝"
+      "type": "image",
+      "value": "icons/home_about_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🥝"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_about_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_about_2_icon.png"
+        }
+      ]
     },
     "history": {
-      "type": "emoji",
-      "value": "🕑"
+      "type": "image",
+      "value": "icons/home_history_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🕑"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_2_icon.png"
+        }
+      ]
     },
     "contact": {
       "type": "emoji",
@@ -143,12 +307,36 @@
       "value": "📧"
     },
     "phone": {
-      "type": "emoji",
-      "value": "📞"
+      "type": "image",
+      "value": "icons/home_phone_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📞"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_phone_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_phone_2_icon.png"
+        }
+      ]
     },
     "address": {
-      "type": "emoji",
-      "value": "📍"
+      "type": "image",
+      "value": "icons/home_address_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📍"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_address_1_icon.png"
+        }
+      ]
     },
     "pricing": {
       "type": "emoji",
@@ -159,8 +347,18 @@
       "value": "💬"
     },
     "accountants": {
-      "type": "emoji",
-      "value": "🧮"
+      "type": "image",
+      "value": "icons/home_accountants_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🧮"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_accountants_1_icon.png"
+        }
+      ]
     },
     "product": {
       "type": "emoji",

@@ -39,7 +39,7 @@ const steps = [
 
 const features = [
   {
-    icon: "home.books",
+    icon: "nav.clients",
     fallback: "📒",
     title: "Real double-entry books",
     body: "Every business-year has a proper ledger underneath, so your accountant can pick up where you left off.",
