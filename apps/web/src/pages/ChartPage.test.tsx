@@ -50,6 +50,29 @@ describe("chart page", () => {
     ]);
   });
 
+  it("sets an income or expense account's default GST code by command", async () => {
+    const calls = stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/clients/c1": () => widgets,
+      "GET /api/clients/c1/chart": () => accounts,
+      "POST /api/commands": () => ({ seq: 1, entity_id: null }),
+    });
+    renderApp(<App />, "/clients/c1/chart");
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText("100 default GST"), "exempt");
+    // Equity accounts have no GST code to pick.
+    expect(screen.queryByLabelText("800 default GST")).toBeNull();
+
+    await vi.waitFor(() => expect(posted(calls)).toHaveLength(1));
+    expect(posted(calls)).toEqual([
+      {
+        kind: "set_account_gst",
+        payload: { client_id: "c1", code: "100", default_gst: "exempt" },
+        id: expect.any(String),
+      },
+    ]);
+  });
+
   it("shows why an account can't be made inactive", async () => {
     stubApi({
       "GET /api/me": () => sam,

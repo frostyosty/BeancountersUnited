@@ -26,6 +26,7 @@ use serde_json::{Value, json};
 
 use crate::assets;
 use crate::auth;
+use crate::business;
 use crate::commands::{Accepted, Command, CommandEnvelope};
 use crate::error::CommandError;
 use crate::ledger;
@@ -78,7 +79,7 @@ pub async fn submit(
     }
 
     let seq = log::next_seq(&mut tx).await?;
-    let effect = apply(&mut tx, actor, &command, seq).await?;
+    let effect = apply(&mut tx, actor, &command, seq, at.date_naive()).await?;
     let accepted = Accepted {
         seq,
         entity_id: effect.entity_id,
@@ -108,8 +109,73 @@ async fn apply(
     actor: &Actor,
     command: &Command,
     seq: i64,
+    today: chrono::NaiveDate,
 ) -> Result<Effect, CommandError> {
     match command {
+        Command::SetUpBusiness {
+            name,
+            start_date,
+            gst,
+        } => {
+            check_name(name)?;
+            let id = business::set_up(tx, seq, name, *start_date, gst.as_ref()).await?;
+            Ok(Effect {
+                entity_id: Some(id.clone()),
+                client_id: Some(id),
+                client_year_id: None,
+            })
+        }
+
+        Command::AddBankAccount {
+            client_id,
+            name,
+            account_number,
+        } => {
+            let account =
+                business::add_bank_account(tx, seq, client_id, name, account_number.as_deref())
+                    .await?;
+            Ok(Effect {
+                entity_id: Some(account.id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::ImportStatement {
+            client_id,
+            file_name,
+            content_base64,
+            bank_account_id,
+        } => {
+            let bytes = business::decode_base64(content_base64).ok_or_else(|| {
+                CommandError::invalid("bad_file", "The file didn't arrive intact. Try again.")
+            })?;
+            let outcome = business::import_statement(
+                tx,
+                seq,
+                today,
+                client_id,
+                file_name,
+                &bytes,
+                bank_account_id.as_deref(),
+            )
+            .await?;
+            Ok(Effect {
+                entity_id: Some(outcome.bank_account_id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::SetOpeningBalance {
+            bank_account_id,
+            balance,
+        } => {
+            let client_id =
+                business::set_opening_balance(tx, seq, bank_account_id, *balance).await?;
+            Ok(client_effect(&client_id))
+        }
+
         Command::Initialise {
             practice_name,
             username,
@@ -370,6 +436,20 @@ async fn apply(
             let chart = client_chart(tx, client_id).await?;
             let edited = chart.renamed(code, name.trim()).map_err(chart_error)?;
             let account = edited.get(code).expect("just renamed");
+            clients::update_account(tx, client_id, account).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::SetAccountGst {
+            client_id,
+            code,
+            default_gst,
+        } => {
+            let chart = client_chart(tx, client_id).await?;
+            let edited = chart
+                .with_default_gst(code, *default_gst)
+                .map_err(chart_error)?;
+            let account = edited.get(code).expect("just edited");
             clients::update_account(tx, client_id, account).await?;
             Ok(client_effect(client_id))
         }
@@ -1264,6 +1344,7 @@ fn chart_error(e: ChartError) -> CommandError {
         ChartError::DuplicateCode(_) => "duplicate_account",
         ChartError::EmptyName(_) => "empty_name",
         ChartError::UnknownAccount(_) => "unknown_account",
+        ChartError::GstOnBalanceSheet(_) => "gst_on_balance_sheet",
     };
     let mut message = e.to_string();
     if let Some(first) = message.get_mut(0..1) {

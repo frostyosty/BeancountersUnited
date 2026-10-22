@@ -1,0 +1,90 @@
+[
+  {
+    "key": "tools",
+    "name": "Tools and equipment",
+    "rate_placeholder": "PLACEHOLDER rate: 1 bp (0.01%) only so the class validates. M11 replaces it with IRD's rate for a typical asset of the class, records the source, and never sets it higher.",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 1
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "700",
+      "accumulated": "705",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  },
+  {
+    "key": "vehicles",
+    "name": "Vehicles",
+    "rate_placeholder": "PLACEHOLDER rate: 1 bp (0.01%) only so the class validates. M11 replaces it with IRD's rate for a typical asset of the class, records the source, and never sets it higher.",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 1
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "710",
+      "accumulated": "715",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  },
+  {
+    "key": "computers",
+    "name": "Computers and office equipment",
+    "rate_placeholder": "PLACEHOLDER rate: 1 bp (0.01%) only so the class validates. M11 replaces it with IRD's rate for a typical asset of the class, records the source, and never sets it higher.",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 1
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "720",
+      "accumulated": "725",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  },
+  {
+    "key": "furniture",
+    "name": "Furniture and fittings",
+    "rate_placeholder": "PLACEHOLDER rate: 1 bp (0.01%) only so the class validates. M11 replaces it with IRD's rate for a typical asset of the class, records the source, and never sets it higher.",
+    "settings": {
+      "method": {
+        "kind": "dv",
+        "rate_bp": 1
+      },
+      "part_year": {
+        "kind": "months_held",
+        "count_acquisition_month": true
+      },
+      "disposal_year": "to_disposal_date"
+    },
+    "accounts": {
+      "cost": "730",
+      "accumulated": "735",
+      "expense": "210",
+      "gain_loss": "250"
+    }
+  }
+]

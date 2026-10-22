@@ -735,6 +735,49 @@ async fn chart_of(h: &Harness, client_id: &str) -> Vec<Account> {
 }
 
 #[tokio::test]
+async fn default_gst_codes_are_set_by_command() {
+    let h = Harness::new().await;
+    let (client_id, _) = company_with_year(&h).await;
+    let set = |c: &str, gst: Option<acct_core::GstCode>| Command::SetAccountGst {
+        client_id: client_id.clone(),
+        code: code(c),
+        default_gst: gst,
+    };
+    let gst_of = async |c: &str| {
+        chart_of(&h, &client_id)
+            .await
+            .into_iter()
+            .find(|a| a.code == code(c))
+            .unwrap()
+            .default_gst
+    };
+    use acct_core::GstCode::{Exempt, Standard};
+
+    // Staff can set and clear it on income and expense accounts.
+    h.run_as(&as_role(Role::Staff), set("205", Some(Exempt)))
+        .await
+        .unwrap();
+    assert_eq!(gst_of("205").await, Some(Exempt));
+    h.ok_none(set("100", Some(Standard))).await;
+    h.ok_none(set("205", None)).await;
+    assert_eq!(gst_of("205").await, None);
+    assert_eq!(gst_of("100").await, Some(Standard));
+
+    let before = chart_of(&h, &client_id).await;
+    h.rejects(
+        &master(),
+        set("600", Some(Standard)),
+        "gst_on_balance_sheet",
+    )
+    .await;
+    h.rejects(&master(), set("999", Some(Standard)), "unknown_account")
+        .await;
+    h.rejects(&as_role(Role::Viewer), set("100", None), "forbidden")
+        .await;
+    assert_eq!(chart_of(&h, &client_id).await, before);
+}
+
+#[tokio::test]
 async fn charts_are_edited_by_command() {
     let h = Harness::new().await;
     let (client_id, _) = company_with_year(&h).await;
@@ -745,6 +788,7 @@ async fn charts_are_edited_by_command() {
             name: name.into(),
             account_type: acct_core::AccountType::Expense,
             active: true,
+            default_gst: None,
         },
     };
     let rename = |c: &str, name: &str| Command::RenameAccount {

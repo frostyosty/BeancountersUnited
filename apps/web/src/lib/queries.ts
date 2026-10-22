@@ -1,10 +1,12 @@
 import type { Account } from "@acct/types/Account";
 import type { AssetClassView } from "@acct/types/AssetClassView";
+import type { BusinessView } from "@acct/types/BusinessView";
 import type { ClientClassView } from "@acct/types/ClientClassView";
 import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { ClientSummary } from "@acct/types/ClientSummary";
 import type { JournalView } from "@acct/types/JournalView";
 import type { PracticeView } from "@acct/types/PracticeView";
+import type { TaxPosition } from "@acct/types/TaxPosition";
 import type { UserView } from "@acct/types/UserView";
 import type { YearAssets } from "@acct/types/YearAssets";
 import type { YearSummary } from "@acct/types/YearSummary";
@@ -33,6 +35,9 @@ export const keys = {
   /** Practice asset classes; with a client id, as that client sees them. */
   assetClasses: ["asset-classes"] as const,
   clientAssetClasses: (clientId: string) => ["asset-classes", clientId] as const,
+  /** A business (M10): its settings and bank accounts, and its tax figure. */
+  business: (clientId: string) => ["business", clientId] as const,
+  tax: (clientId: string) => ["business", clientId, "tax"] as const,
 };
 
 export function usePractice() {
@@ -80,4 +85,12 @@ export function useClientAssetClasses(clientId: string) {
 
 export function useYearAssets(yearId: string) {
   return useQuery({ queryKey: keys.assets(yearId), queryFn: () => getJson<YearAssets>(`/api/years/${yearId}/assets`) });
+}
+
+export function useBusiness(clientId: string) {
+  return useQuery({ queryKey: keys.business(clientId), queryFn: () => getJson<BusinessView>(`/api/businesses/${clientId}`) });
+}
+
+export function useTax(clientId: string) {
+  return useQuery({ queryKey: keys.tax(clientId), queryFn: () => getJson<TaxPosition>(`/api/businesses/${clientId}/tax`) });
 }

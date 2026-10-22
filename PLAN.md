@@ -19,7 +19,7 @@ of hard rule 2. The owner's whole screen is three areas:
    anything.
 
 Principles:
-- No chat. AI works in the background, pre-filling categories for a person to accept. Core computes every
+- No chat (wait maybe a chat but very unintrusive. Suggests where the user might send the largest tax affectant - gives them say 3 options or hwatever, and for each option theres a little drop down "How would I know if it should go to [dropdown name]?" sort of vibe. AI works in the background, pre-filling categories for a person to accept. Core computes every
   amount.
 - The figure on screen can always be filed. Categorising only brings it down.
 - Every change shows who made it, what changed, and what it did to the tax. This is the main selling point
@@ -162,7 +162,7 @@ numbers aren't reused, because code comments and a committed migration still ref
 | M9 | Off-network editing | Dropped: the hosted server works from anywhere. |
 
 ## M10 — Upload statements, see the tax
-Status: in progress. Done: the rename; the tax engine (`acct_core::tax::{gst, income_tax}`), which gives the worked example's 569.62, 2,506.32 and 968.35 in unit tests; and the posting rule for an unsorted bank line (`acct_core::bank::unsorted_lines`: money in is income less GST, money out goes to 965 and claims nothing). Next: the parsers, the sole-trader chart, then the commands and screen. The M10 questions are answered in `docs/domain.md` (2026-10-19), with a worked example a person still has to check. Items marked **check** there go to the tax specialist before M14.
+Status: code complete (2026-10-23); waiting on a person to check the worked example, and a browser check. Built: the tax engine (`acct_core::tax`), the posting rule, gaps, transfer pairing and IRD spotting (`acct_core::bank`), the parsers (`acct_import::bank`), the sole-trader chart, template and mapping (`fixtures/practice/sole-trader-*`), migrations 0003 (default GST codes) and 0004 (businesses, bank accounts, statements, bank lines, gap journals), the commands `set_up_business`, `add_bank_account`, `import_statement` and `set_opening_balance`, the reads `GET /api/businesses/{id}` and `/api/businesses/{id}/tax`, and the owner screen at `/businesses/{id}` (Save tax and Submit shown but switched off). The done check is `crates/server/tests/m10.rs` (`m10_is_done`): the statements give GST 569.62 and 2,506.32 (968.35 when only income), re-uploading changes nothing, both gaps are flagged, and the accounts with closing balances reconcile. The M10 questions are answered in `docs/domain.md` (2026-10-19), with a worked example a person still has to check. Items marked **check** there go to the tax specialist before M14.
 - Rename the UI to White Label Accounting: page title, header and login screen. Crates and binaries keep the `acct` name.
 - Sole traders first (this answers the old entity-type question): a sole-trader master chart and template in our own words. Owners never see account codes; categories are accounts underneath.
 - Setting up a business: name, start date, whether GST registered and from when, GST filing frequency, and bank accounts. In M10 the balance date is always 31 March and the GST basis is always payments; setup turns down the invoice and hybrid bases with a plain reason.
@@ -282,11 +282,11 @@ Status: not started (takes in the old M8)
 Done when: a synthetic Xero export imports to a TB that matches the export's totals, with comparatives, and the chosen Classic client-years match to the dollar or every difference is explained in `docs/domain.md`.
 
 ## Open questions
-- **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirm.
-- **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often.
-- **Hosting (M12).** On Supabase: it's hosted Postgres with its own sign-in, so using it means replacing the SQLite store and the sign-in we've already built, and its free tier pauses idle projects. Neither suits tax data that IRD's security review covers. Suggested instead: keep the Rust server and SQLite, and run it on a small always-on host in an Australian or New Zealand region, with a persistent disk and continuous backups. Expect a small monthly cost; free tiers don't fit.
+- **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
+- **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
+- **Hosting (M12).** Suggested: keep the Rust server and SQLite, and run it on a small always-on host in an Australian or New Zealand region, with a persistent disk and continuous backups. Expect a small monthly cost; free tiers don't fit. yes using fly.io
 - **AI provider (M11).** Decided in M11's ADR.
-- **Which entity types come after sole traders:** companies, partnerships or trusts?
+- **Which entity types come after sole traders:** companies, partnerships or trusts? Whatever is most prudent.
 - ~~Does anyone need to edit away from the office network?~~ Yes, answered by going online (ADR 007).
 
 ## Backlog (not scheduled)
@@ -300,4 +300,3 @@ Done when: a synthetic Xero export imports to a TB that matches the export's tot
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
-- Quality-of-life improvements: list to come.

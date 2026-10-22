@@ -67,6 +67,7 @@ name = "acct-import"
 version = "0.1.0"
 dependencies = [
  "acct-core",
+ "chrono",
  "csv",
  "serde",
  "ts-rs",

@@ -36,6 +36,11 @@ export function ClientPage() {
       <p>
         <Link to={`/clients/${c.id}/chart`}>Chart of accounts and rounding priority</Link>
       </p>
+      {c.entity_type === "sole_trader" && (
+        <p>
+          <Link to={`/businesses/${c.id}`}>Owner's view: statements and tax</Link>
+        </p>
+      )}
 
       <h2>Years</h2>
       {c.years.length === 0 ? (

@@ -175,6 +175,21 @@ impl AccountType {
     }
 }
 
+/// How GST applies to a line, such as a bank line categorised to an account.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
+pub enum GstCode {
+    /// Taxable at the standard rate.
+    Standard,
+    /// Taxable at 0%, such as exports.
+    Zero,
+    /// Exempt supplies, such as interest and bank fees.
+    Exempt,
+    /// Outside GST altogether, such as wages and depreciation.
+    None,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Account {
@@ -182,6 +197,11 @@ pub struct Account {
     pub name: String,
     pub account_type: AccountType,
     pub active: bool,
+    /// The GST code a line categorised to this account starts with; the owner can change it on
+    /// the line. Only income and expense accounts have one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub default_gst: Option<GstCode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -192,6 +212,8 @@ pub enum ChartError {
     EmptyName(AccountCode),
     #[error("there's no account {0} in the chart")]
     UnknownAccount(AccountCode),
+    #[error("account {0} is a balance-sheet account, so it can't have a default GST code")]
+    GstOnBalanceSheet(AccountCode),
 }
 
 /// A client's chart of accounts, kept sorted by code.
@@ -210,6 +232,12 @@ impl Chart {
         }
         if let Some(account) = accounts.iter().find(|a| a.name.trim().is_empty()) {
             return Err(ChartError::EmptyName(account.code.clone()));
+        }
+        if let Some(account) = accounts
+            .iter()
+            .find(|a| a.default_gst.is_some() && a.account_type.is_balance_sheet())
+        {
+            return Err(ChartError::GstOnBalanceSheet(account.code.clone()));
         }
         Ok(Chart { accounts })
     }
@@ -241,6 +269,16 @@ impl Chart {
     /// The chart with `code` made active or inactive. Journals can't use an inactive account.
     pub fn with_active(&self, code: &AccountCode, active: bool) -> Result<Chart, ChartError> {
         self.edited(code, |a| a.active = active)
+    }
+
+    /// The chart with `code`'s default GST code set, or cleared with `None`. Only income and
+    /// expense accounts can have one.
+    pub fn with_default_gst(
+        &self,
+        code: &AccountCode,
+        default_gst: Option<GstCode>,
+    ) -> Result<Chart, ChartError> {
+        self.edited(code, |a| a.default_gst = default_gst)
     }
 
     fn edited(
@@ -286,6 +324,7 @@ pub(crate) mod tests {
             name: name.to_owned(),
             account_type,
             active: true,
+            default_gst: None,
         }
     }
 
@@ -412,6 +451,55 @@ pub(crate) mod tests {
         let dup = r#"[{"code":"200","name":"A","account_type":"income","active":true},{"code":"200","name":"B","account_type":"income","active":true}]"#;
         assert!(serde_json::from_str::<Chart>(dup).is_err());
         assert!(serde_json::from_str::<AccountCode>(r#""2..0""#).is_err());
+    }
+
+    #[test]
+    fn only_income_and_expense_accounts_have_a_default_gst_code() {
+        let chart = Chart::new(vec![
+            account("200", "Sales", AccountType::Income),
+            account("300", "Bank fees", AccountType::Expense),
+            account("1100", "Bank", AccountType::Asset),
+        ])
+        .unwrap();
+        let sales = chart
+            .with_default_gst(&code("200"), Some(GstCode::Standard))
+            .unwrap();
+        assert_eq!(
+            sales.get(&code("200")).unwrap().default_gst,
+            Some(GstCode::Standard)
+        );
+        let json = serde_json::to_string(&sales).unwrap();
+        assert!(
+            json.contains(r#""account_type":"income","active":true,"default_gst":"standard"}"#)
+        );
+        assert_eq!(serde_json::from_str::<Chart>(&json).unwrap(), sales);
+
+        let cleared = sales.with_default_gst(&code("200"), None).unwrap();
+        assert_eq!(cleared, chart);
+        assert!(
+            chart
+                .with_default_gst(&code("300"), Some(GstCode::Exempt))
+                .is_ok()
+        );
+
+        for t in [
+            AccountType::Asset,
+            AccountType::Liability,
+            AccountType::Equity,
+        ] {
+            let mut a = account("1100", "Bank", t);
+            a.default_gst = Some(GstCode::None);
+            assert_eq!(
+                Chart::new(vec![a]),
+                Err(ChartError::GstOnBalanceSheet(code("1100")))
+            );
+        }
+        assert_eq!(
+            chart.with_default_gst(&code("1100"), Some(GstCode::Standard)),
+            Err(ChartError::GstOnBalanceSheet(code("1100")))
+        );
+        let bad = r#"[{"code":"1100","name":"Bank","account_type":"asset","active":true,"default_gst":"standard"}]"#;
+        assert!(serde_json::from_str::<Chart>(bad).is_err());
     }
 
     fn arb_code() -> impl Strategy<Value = AccountCode> {

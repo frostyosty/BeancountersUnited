@@ -80,7 +80,8 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - The HTML preview and the PDF only render a ReportDoc. Golden tests snapshot the ReportDoc JSON, never the PDFs.
 - **Shared types:** ts-rs generates TypeScript into `packages/types`; don't edit those files by hand. ts-rs maps i64 to `bigint` by default, but JSON delivers plain numbers, so `.cargo/config.toml` sets `TS_RS_LARGE_INT = "number"` under `[env]`.
 - **Roles:**
-  - `master`: practice settings, users, defaults, master charts, templates, finalising and reopening years.
+- - 'overseer': new one. allows toggling between all views.
+  - `practice owner`: practice settings, users, defaults, master charts, templates, finalising and reopening years. (changed from master)
   - `staff`: client work, including custom depreciation rates.
   - `viewer`: read-only.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
@@ -131,10 +132,3 @@ tools/           local-only utilities: icon-studio (icons for the web app), and 
 - Forwarded ports stay private. Never make them public.
 - The desktop apps compile and test here, but can't be run without a display. Windows builds happen only in GitHub Actions.
 - The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.
-
-<<<<<<< HEAD
-## TODO
-- M4 is also waiting on its snapshot review and a browser check (see its Status line in `PLAN.md`).
-=======
->>>>>>> 3fed29a ([quicksave note here] 2026-10-20 20:01:21)
-

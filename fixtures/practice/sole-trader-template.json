@@ -1,0 +1,410 @@
+{
+  "name": "Sole trader (standard)",
+  "statements": [
+    {
+      "key": "performance",
+      "title": "Statement of Financial Performance",
+      "body": [
+        {
+          "kind": "group",
+          "key": "income",
+          "label": "Income",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "sales",
+              "label": "Sales",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "interest_income",
+              "label": "Interest received",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "other_income",
+              "label": "Other income",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "unsorted_income",
+              "label": "Income not yet sorted",
+              "presentation": "credit_positive"
+            }
+          ],
+          "total_label": "Total income",
+          "protect": null
+        },
+        {
+          "kind": "group",
+          "key": "cost_of_sales",
+          "label": "Cost of sales",
+          "presentation": "debit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "purchases",
+              "label": "Purchases and materials",
+              "presentation": "debit_positive"
+            }
+          ],
+          "total_label": null,
+          "protect": null
+        },
+        {
+          "kind": "total",
+          "key": "gross_profit",
+          "label": "Gross profit",
+          "presentation": "credit_positive",
+          "of": [
+            "income",
+            "cost_of_sales"
+          ],
+          "protect": null
+        },
+        {
+          "kind": "group",
+          "key": "expenses",
+          "label": "Expenses",
+          "presentation": "debit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "accountancy",
+              "label": "Accountancy fees",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "acc_levies",
+              "label": "ACC levies",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "advertising",
+              "label": "Advertising and marketing",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "bank_fees",
+              "label": "Bank fees",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "depreciation",
+              "label": "Depreciation",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "insurance",
+              "label": "Insurance",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "interest_expense",
+              "label": "Interest paid",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "vehicle",
+              "label": "Vehicle costs",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "rent",
+              "label": "Rent",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "repairs",
+              "label": "Repairs and maintenance",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "wages",
+              "label": "Wages",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "subcontractors",
+              "label": "Subcontractors",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "phone_internet",
+              "label": "Phone and internet",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "disposal_loss",
+              "label": "Loss (gain) on disposal of assets",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "power_gas",
+              "label": "Power and gas",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "freight",
+              "label": "Freight and courier",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "stationery",
+              "label": "Stationery and office supplies",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "software",
+              "label": "Software and subscriptions",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "travel",
+              "label": "Travel",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "small_tools",
+              "label": "Small tools and equipment",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "general_expenses",
+              "label": "General expenses",
+              "presentation": "debit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "gst_rounding",
+              "label": "GST rounding",
+              "presentation": "debit_positive"
+            }
+          ],
+          "total_label": "Total expenses",
+          "protect": null
+        },
+        {
+          "kind": "total",
+          "key": "net_profit",
+          "label": "Net profit for the year",
+          "presentation": "credit_positive",
+          "of": [
+            "income",
+            "cost_of_sales",
+            "expenses"
+          ],
+          "protect": 1
+        }
+      ]
+    },
+    {
+      "key": "position",
+      "title": "Statement of Financial Position",
+      "body": [
+        {
+          "kind": "group",
+          "key": "assets",
+          "label": "Assets",
+          "presentation": "debit_positive",
+          "children": [
+            {
+              "kind": "group",
+              "key": "current_assets",
+              "label": "Current assets",
+              "presentation": "debit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "bank",
+                  "label": "Bank accounts",
+                  "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "receivables",
+                  "label": "Accounts receivable",
+                  "presentation": "debit_positive"
+                }
+              ],
+              "total_label": "Total current assets",
+              "protect": null
+            },
+            {
+              "kind": "group",
+              "key": "non_current_assets",
+              "label": "Fixed assets at book value",
+              "presentation": "debit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "fixed_tools",
+                  "label": "Tools and equipment",
+                  "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "fixed_vehicles",
+                  "label": "Vehicles",
+                  "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "fixed_computers",
+                  "label": "Computers and office equipment",
+                  "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "fixed_furniture",
+                  "label": "Furniture and fittings",
+                  "presentation": "debit_positive"
+                }
+              ],
+              "total_label": "Total fixed assets",
+              "protect": null
+            }
+          ],
+          "total_label": "Total assets",
+          "protect": 2
+        },
+        {
+          "kind": "group",
+          "key": "liabilities",
+          "label": "Liabilities",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "group",
+              "key": "current_liabilities",
+              "label": "Current liabilities",
+              "presentation": "credit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "payables",
+                  "label": "Accounts payable",
+                  "presentation": "credit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "gst",
+                  "label": "GST payable",
+                  "presentation": "credit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "credit_cards",
+                  "label": "Credit cards",
+                  "presentation": "credit_positive"
+                }
+              ],
+              "total_label": "Total current liabilities",
+              "protect": null
+            },
+            {
+              "kind": "group",
+              "key": "non_current_liabilities",
+              "label": "Non-current liabilities",
+              "presentation": "credit_positive",
+              "children": [
+                {
+                  "kind": "line",
+                  "key": "loans",
+                  "label": "Loans",
+                  "presentation": "credit_positive"
+                }
+              ],
+              "total_label": "Total non-current liabilities",
+              "protect": null
+            }
+          ],
+          "total_label": "Total liabilities",
+          "protect": null
+        },
+        {
+          "kind": "total",
+          "key": "net_assets",
+          "label": "Net assets",
+          "presentation": "debit_positive",
+          "of": [
+            "assets",
+            "liabilities"
+          ],
+          "protect": null
+        },
+        {
+          "kind": "group",
+          "key": "equity",
+          "label": "Owner's equity",
+          "presentation": "credit_positive",
+          "children": [
+            {
+              "kind": "line",
+              "key": "opening_equity",
+              "label": "Opening equity",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "capital",
+              "label": "Capital introduced",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "link",
+              "key": "profit_for_year",
+              "label": "Net profit for the year",
+              "presentation": "credit_positive",
+              "from": "net_profit"
+            },
+            {
+              "kind": "line",
+              "key": "drawings",
+              "label": "Drawings",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "unsorted_money_out",
+              "label": "Money out not yet sorted",
+              "presentation": "credit_positive"
+            }
+          ],
+          "total_label": "Closing equity",
+          "protect": 3
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "left": "net_assets",
+      "right": "equity"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ pub mod reportdoc;
 pub mod tax;
 pub mod template;
 
-pub use chart::{Account, AccountCode, AccountCodeError, AccountType, Chart, ChartError};
+pub use chart::{Account, AccountCode, AccountCodeError, AccountType, Chart, ChartError, GstCode};
 pub use depreciation::{
     Asset, AssetAccounts, AssetError, AssetSchedule, AssetYear, DepreciationSettings, Disposal,
     DisposalYear, Method, OpeningBalance, PartYear, RateSource, ReconciliationLine, RegisterAsset,

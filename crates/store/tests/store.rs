@@ -292,6 +292,7 @@ async fn client_account_codes_are_unique_per_client() {
         name: "Duplicate".into(),
         account_type: acct_core::AccountType::Income,
         active: true,
+        default_gst: None,
     };
     assert!(is_constraint_error(
         &clients::insert_account(&mut w, &client_id, &a)

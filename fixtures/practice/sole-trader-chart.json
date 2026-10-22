@@ -1,0 +1,287 @@
+[
+  {
+    "code": "100",
+    "name": "Sales",
+    "account_type": "income",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "110",
+    "name": "Interest received",
+    "account_type": "income",
+    "active": true,
+    "default_gst": "exempt"
+  },
+  {
+    "code": "120",
+    "name": "Other income",
+    "account_type": "income",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "140",
+    "name": "Money in, not yet sorted",
+    "account_type": "income",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "150",
+    "name": "Purchases and materials",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "200",
+    "name": "Accountancy fees",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "202",
+    "name": "ACC levies",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "204",
+    "name": "Advertising and marketing",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "205",
+    "name": "Bank fees",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "exempt"
+  },
+  {
+    "code": "210",
+    "name": "Depreciation",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "none"
+  },
+  {
+    "code": "215",
+    "name": "Insurance",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "220",
+    "name": "Interest paid",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "exempt"
+  },
+  {
+    "code": "225",
+    "name": "Vehicle costs",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "230",
+    "name": "Rent",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "235",
+    "name": "Repairs and maintenance",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "240",
+    "name": "Wages",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "none"
+  },
+  {
+    "code": "242",
+    "name": "Subcontractors",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "245",
+    "name": "Phone and internet",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "250",
+    "name": "Loss (gain) on disposal of assets",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "none"
+  },
+  {
+    "code": "255",
+    "name": "Power and gas",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "260",
+    "name": "Freight and courier",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "265",
+    "name": "Stationery and office supplies",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "270",
+    "name": "Software and subscriptions",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "275",
+    "name": "Travel",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "280",
+    "name": "Small tools and equipment (under $1,000 each)",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "290",
+    "name": "General expenses",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "standard"
+  },
+  {
+    "code": "295",
+    "name": "GST rounding",
+    "account_type": "expense",
+    "active": true,
+    "default_gst": "none"
+  },
+  {
+    "code": "610",
+    "name": "Accounts receivable",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "700",
+    "name": "Tools and equipment at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "705",
+    "name": "Tools and equipment accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "710",
+    "name": "Vehicles at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "715",
+    "name": "Vehicles accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "720",
+    "name": "Computers and office equipment at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "725",
+    "name": "Computers and office equipment accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "730",
+    "name": "Furniture and fittings at cost",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "735",
+    "name": "Furniture and fittings accumulated depreciation",
+    "account_type": "asset",
+    "active": true
+  },
+  {
+    "code": "800",
+    "name": "Accounts payable",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "810",
+    "name": "GST payable",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "900",
+    "name": "Loans",
+    "account_type": "liability",
+    "active": true
+  },
+  {
+    "code": "950",
+    "name": "Owner's capital",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "960",
+    "name": "Drawings",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "965",
+    "name": "Money out, not yet sorted",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "970",
+    "name": "Owner's equity",
+    "account_type": "equity",
+    "active": true
+  }
+]

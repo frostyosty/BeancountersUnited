@@ -7,11 +7,13 @@ import { AboutPage } from "./pages/AboutPage";
 import { AccountantsPage } from "./pages/AccountantsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { AssetsTab } from "./pages/AssetsTab";
+import { BusinessPage } from "./pages/BusinessPage";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { HomePage } from "./pages/HomePage";
 import { JournalsTab } from "./pages/JournalsTab";
+import { NewBusinessPage } from "./pages/NewBusinessPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
@@ -55,6 +57,8 @@ export function App() {
           <Route index element={<ClientsPage />} />
           <Route path="clients/:clientId" element={<ClientPage />} />
           <Route path="clients/:clientId/chart" element={<ChartPage />} />
+          <Route path="businesses/new" element={<NewBusinessPage />} />
+          <Route path="businesses/:clientId" element={<BusinessPage />} />
           <Route path="years/:yearId" element={<YearLayout />}>
             <Route index element={<JournalsTab />} />
             <Route path="tb" element={<TrialBalanceTab />} />

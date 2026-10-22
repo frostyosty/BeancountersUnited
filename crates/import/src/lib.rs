@@ -3,4 +3,5 @@
 //! Parsers are pure: they take the file's text and return rows or row-numbered problems. The
 //! server checks the rows against the client's chart and books.
 
+pub mod bank;
 pub mod tb;

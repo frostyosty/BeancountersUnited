@@ -416,5 +416,47 @@
         }
       ]
     }
+  },
+  "business": {
+    "new": {
+      "type": "emoji",
+      "value": "🧾"
+    },
+    "upload": {
+      "type": "emoji",
+      "value": "📤"
+    },
+    "tax": {
+      "type": "emoji",
+      "value": "💰"
+    },
+    "save": {
+      "type": "emoji",
+      "value": "✂️"
+    },
+    "submit": {
+      "type": "emoji",
+      "value": "📨"
+    },
+    "bank": {
+      "type": "emoji",
+      "value": "🏦"
+    },
+    "gap": {
+      "type": "emoji",
+      "value": "⚠️"
+    },
+    "ok": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "notice": {
+      "type": "emoji",
+      "value": "ℹ️"
+    },
+    "detected": {
+      "type": "emoji",
+      "value": "🔎"
+    }
   }
 }

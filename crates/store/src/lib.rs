@@ -18,6 +18,7 @@ use thiserror::Error;
 use tokio::sync::{Mutex, MutexGuard};
 
 pub mod assets;
+pub mod bank;
 pub mod charts;
 pub mod clients;
 pub mod journals;

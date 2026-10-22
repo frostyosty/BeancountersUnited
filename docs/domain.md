@@ -460,6 +460,10 @@ list is under "Open".
   - Codes follow the company chart's ranges where the two overlap.
 - **Owners never see codes.** The categories they pick from are the expense accounts, by name, plus 150,
   each with a default GST code they can change on a line.
+- **Default GST codes (decided 2026-10-23)** are stored on the account: `standard`, `zero`, `exempt` or
+  `none`. Only income and expense accounts have one. A client's chart copies them from the master chart,
+  and accountants (staff and the practice owner) can change a client's defaults with `set_account_gst`.
+  That changes no figures, so it's allowed in finalised years too.
 
   | Code | Name | Type | Default GST | Notes |
   |---|---|---|---|---|
@@ -497,7 +501,7 @@ list is under "Open".
   | 720, 725 | Computers and office equipment: cost, accumulated depreciation | asset | | |
   | 730, 735 | Furniture and fittings: cost, accumulated depreciation | asset | | |
   | 800 | Accounts payable | liability | | Unused until invoice basis |
-  | 810 | GST | liability | | |
+  | 810 | GST payable | liability | | |
   | 850.01, … | One per credit card (M11) | liability | | |
   | 900 | Loans | liability | | |
   | 950 | Owner's capital | equity | | Money put in during the year, and the first year's opening balances |
@@ -520,6 +524,17 @@ list is under "Open".
     - Net assets.
     - Owner's equity: opening equity (970), capital introduced (950), net profit, drawings (960), money
       out not yet sorted (965), and closing equity (`protect: 3`). Drawings show in brackets.
+- **Template details (decided 2026-10-23).**
+  - Titles are "Statement of Financial Performance" and "Statement of Financial Position", as for
+    companies.
+  - Purchases and materials sit under a "Cost of sales" heading.
+  - Fixed assets show one line per asset class, at book value (cost less accumulated depreciation),
+    with a total.
+  - Liabilities are split into current (payables, GST payable, credit cards) and non-current (loans),
+    each with a total.
+  - 810 is called "GST payable".
+  - GST rounding (295) and loss (gain) on disposal (250) each have their own expense line. Where 295
+    shows is the practice's choice, through the mapping.
 - **Rounding priority default:** 290, 205, 120, 960, 810.
 - **Asset purchases** go to the cost account of the class the owner picks. The default classes, all DV:
   tools and equipment, vehicles, computers and office equipment, furniture and fittings. M11 copies each

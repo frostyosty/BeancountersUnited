@@ -81,14 +81,15 @@ pub async fn insert_account(
     account: &Account,
 ) -> Result<()> {
     sqlx::query(
-        "INSERT INTO accounts (client_id, code, name, account_type, active)
-         VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (client_id, code, name, account_type, active, default_gst)
+         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(client_id)
     .bind(account.code.as_str())
     .bind(&account.name)
     .bind(enum_text(&account.account_type))
     .bind(account.active)
+    .bind(account.default_gst.as_ref().map(enum_text))
     .execute(conn)
     .await?;
     Ok(())
@@ -96,24 +97,29 @@ pub async fn insert_account(
 
 /// A client's chart. Empty if the client doesn't exist.
 pub async fn chart(conn: &mut SqliteConnection, client_id: &str) -> Result<Chart> {
-    let rows: Vec<AccountRow> =
-        sqlx::query_as("SELECT code, name, account_type, active FROM accounts WHERE client_id = ?")
-            .bind(client_id)
-            .fetch_all(conn)
-            .await?;
+    let rows: Vec<AccountRow> = sqlx::query_as(
+        "SELECT code, name, account_type, active, default_gst FROM accounts WHERE client_id = ?",
+    )
+    .bind(client_id)
+    .fetch_all(conn)
+    .await?;
     to_chart(rows)
 }
 
-/// Updates an existing account's name and active flag. Codes and account types never change.
+/// Updates an existing account's name, active flag and default GST code. Codes and account types
+/// never change.
 pub async fn update_account(
     conn: &mut SqliteConnection,
     client_id: &str,
     account: &Account,
 ) -> Result<()> {
-    sqlx::query("UPDATE accounts SET name = ?, active = ? WHERE client_id = ? AND code = ?")
-        .bind(&account.name)
-        .bind(account.active)
-        .bind(client_id)
+    sqlx::query(
+        "UPDATE accounts SET name = ?, active = ?, default_gst = ? WHERE client_id = ? AND code = ?",
+    )
+    .bind(&account.name)
+    .bind(account.active)
+    .bind(account.default_gst.as_ref().map(enum_text))
+    .bind(client_id)
         .bind(account.code.as_str())
         .execute(conn)
         .await?;

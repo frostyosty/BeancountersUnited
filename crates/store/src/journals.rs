@@ -17,6 +17,12 @@ pub enum JournalKind {
     Depreciation,
     /// A disposal journal, posted by the depreciation run for an asset disposed of in the year.
     AssetDisposal,
+    /// One imported bank line, posted unsorted (M10). Recoding reverses and reposts it (M11).
+    BankLine,
+    /// A bank account's balance on the business's start date.
+    BankOpening,
+    /// The change in a bank account's balance across days no statement covers.
+    BankGap,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

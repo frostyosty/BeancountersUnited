@@ -1,14 +1,15 @@
 //! The commands clients submit to `POST /api/commands`, and what they get back.
 
 use acct_core::{
-    Account, AccountCode, AssetAccounts, DepreciationSettings, Disposal, JournalLine, Mapping,
-    Money, OpeningBalance, TbLine, Template,
+    Account, AccountCode, AssetAccounts, DepreciationSettings, Disposal, GstCode, JournalLine,
+    Mapping, Money, OpeningBalance, TbLine, Template,
 };
 use acct_store::users::Role;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::business::GstSetup;
 use crate::pipeline::Actor;
 
 /// The request body: `{ id, kind, payload }`. `id` is a UUID the client makes with `newId()`, and
@@ -98,6 +99,13 @@ pub enum Command {
         client_id: String,
         code: AccountCode,
         active: bool,
+    },
+    /// Sets or clears the default GST code of an income or expense account in a client's chart.
+    /// It changes no figures, so it's allowed in finalised years too.
+    SetAccountGst {
+        client_id: String,
+        code: AccountCode,
+        default_gst: Option<GstCode>,
     },
     /// Replaces a client's rounding priority list (`docs/domain.md`, Rounding).
     SetRoundingPriority {
@@ -215,6 +223,38 @@ pub enum Command {
     /// Preview it with `GET /api/clients/{id}/asset-classes/{class_id}/apply-preview`. Only open
     /// years change, at the next run.
     ApplyAssetClassDefaults { client_id: String, class_id: String },
+    /// Sets up a business (M10): a sole-trader client whose chart is a copy of the master chart,
+    /// with its start date and GST registration. Only the payments basis is accepted.
+    SetUpBusiness {
+        name: String,
+        #[ts(type = "string")]
+        start_date: NaiveDate,
+        #[ts(optional)]
+        gst: Option<GstSetup>,
+    },
+    /// Adds a bank account to a business, with its own account (600.01, ...) in the chart.
+    AddBankAccount {
+        client_id: String,
+        name: String,
+        #[ts(optional)]
+        account_number: Option<String>,
+    },
+    /// Uploads a bank statement file (base64). Every new line posts straight away: money in as
+    /// income (less GST), money out as not yet sorted. Lines already imported are skipped. Without
+    /// `bank_account_id`, the file's account number picks the account, or adds one.
+    ImportStatement {
+        client_id: String,
+        file_name: String,
+        content_base64: String,
+        #[ts(optional)]
+        bank_account_id: Option<String>,
+    },
+    /// The owner's balance for a bank account on the start date, when its first statement starts
+    /// later. Posts the opening-balance journal; set once.
+    SetOpeningBalance {
+        bank_account_id: String,
+        balance: Money,
+    },
 }
 
 impl Command {
@@ -235,6 +275,7 @@ impl Command {
             Command::AddAccount { .. } => "add_account",
             Command::RenameAccount { .. } => "rename_account",
             Command::SetAccountActive { .. } => "set_account_active",
+            Command::SetAccountGst { .. } => "set_account_gst",
             Command::SetRoundingPriority { .. } => "set_rounding_priority",
             Command::CreateClientYear { .. } => "create_client_year",
             Command::PostJournal { .. } => "post_journal",
@@ -250,6 +291,10 @@ impl Command {
             Command::ReinstateAsset { .. } => "reinstate_asset",
             Command::RunDepreciation { .. } => "run_depreciation",
             Command::ApplyAssetClassDefaults { .. } => "apply_asset_class_defaults",
+            Command::SetUpBusiness { .. } => "set_up_business",
+            Command::AddBankAccount { .. } => "add_bank_account",
+            Command::ImportStatement { .. } => "import_statement",
+            Command::SetOpeningBalance { .. } => "set_opening_balance",
         }
     }
 
@@ -285,6 +330,7 @@ impl Command {
             | Command::AddAccount { .. }
             | Command::RenameAccount { .. }
             | Command::SetAccountActive { .. }
+            | Command::SetAccountGst { .. }
             | Command::SetRoundingPriority { .. }
             | Command::CreateClientYear { .. }
             | Command::PostJournal { .. }
@@ -297,7 +343,11 @@ impl Command {
             | Command::DisposeAsset { .. }
             | Command::ReinstateAsset { .. }
             | Command::RunDepreciation { .. }
-            | Command::ApplyAssetClassDefaults { .. } => matches!(role, Role::Master | Role::Staff),
+            | Command::ApplyAssetClassDefaults { .. }
+            | Command::SetUpBusiness { .. }
+            | Command::AddBankAccount { .. }
+            | Command::ImportStatement { .. }
+            | Command::SetOpeningBalance { .. } => matches!(role, Role::Master | Role::Staff),
         }
     }
 }

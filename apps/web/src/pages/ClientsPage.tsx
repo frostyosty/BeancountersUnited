@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { Icon } from "../lib/icons";
 import { keys, useClients, usePractice } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 
@@ -25,13 +26,20 @@ export function ClientsPage() {
             {clients.data.map((c) => (
               <tr key={c.id}>
                 <td>
-                  <Link to={`/clients/${c.id}`}>{c.name}</Link>
+                  <Link to={c.entity_type === "sole_trader" ? `/businesses/${c.id}` : `/clients/${c.id}`}>{c.name}</Link>
                 </td>
                 <td>{c.entity_type}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+      {can(me, "staff") && (
+        <p>
+          <Link to="/businesses/new">
+            <Icon name="business.new" fallback="🧾" /> Set up a business
+          </Link>
+        </p>
       )}
       {can(me, "staff") && <NewClientForm />}
     </>

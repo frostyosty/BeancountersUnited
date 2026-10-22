@@ -1,6 +1,7 @@
 import type { Account } from "@acct/types/Account";
 import type { AccountType } from "@acct/types/AccountType";
 import type { ClientDetail } from "@acct/types/ClientDetail";
+import type { GstCode } from "@acct/types/GstCode";
 import { type FormEvent, useState } from "react";
 import { Link, useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
@@ -10,6 +11,17 @@ import { useCommand } from "../lib/useCommand";
 import styles from "./ChartPage.module.css";
 
 const TYPES: AccountType[] = ["income", "expense", "asset", "liability", "equity"];
+
+/** Default GST codes, in the order the picker shows them. */
+const GST_CODES: { code: GstCode; label: string }[] = [
+  { code: "standard", label: "Standard" },
+  { code: "zero", label: "Zero-rated" },
+  { code: "exempt", label: "Exempt" },
+  { code: "none", label: "No GST" },
+];
+
+/** Only income and expense accounts have a default GST code. */
+const hasGst = (type: AccountType) => type === "income" || type === "expense";
 
 export function ChartPage() {
   const { clientId = "" } = useParams();
@@ -62,6 +74,7 @@ function AccountTable({ client, accounts, editable }: { client: ClientDetail; ac
             <th>Code</th>
             <th>Name</th>
             <th>Type</th>
+            <th>Default GST</th>
             <th>Active</th>
           </tr>
         </thead>
@@ -94,6 +107,32 @@ function AccountTable({ client, accounts, editable }: { client: ClientDetail; ac
                 {a.code === client.retained_earnings && <span className={styles.tag}>retained earnings</span>}
               </td>
               <td>{a.account_type}</td>
+              <td>
+                {hasGst(a.account_type) && (
+                  <select
+                    aria-label={`${a.code} default GST`}
+                    value={a.default_gst ?? ""}
+                    disabled={!editable || command.isPending}
+                    onChange={(e) =>
+                      command.mutate({
+                        kind: "set_account_gst",
+                        payload: {
+                          client_id: client.id,
+                          code: a.code,
+                          default_gst: e.target.value === "" ? null : (e.target.value as GstCode),
+                        },
+                      })
+                    }
+                  >
+                    <option value="">Not set</option>
+                    {GST_CODES.map((g) => (
+                      <option key={g.code} value={g.code}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </td>
               <td>
                 <input
                   type="checkbox"

@@ -2,12 +2,14 @@
 
 pub mod assets;
 pub mod auth;
+pub mod business;
 pub mod commands;
 pub mod error;
 pub mod fixtures;
 pub mod ledger;
 pub mod pipeline;
 pub mod reads;
+pub mod tax;
 pub mod tb_import;
 #[cfg(feature = "embed-web")]
 pub mod web;
@@ -70,6 +72,8 @@ pub fn app(state: AppState) -> Router {
             get(assets::apply_defaults_preview),
         )
         .route("/api/years/{id}/assets", get(assets::year_assets))
+        .route("/api/businesses/{id}", get(tax::get_business))
+        .route("/api/businesses/{id}/tax", get(tax::get_tax))
         .route("/api/sync", get(reads::sync));
     #[cfg(feature = "embed-web")]
     let router = router.fallback(web::serve);

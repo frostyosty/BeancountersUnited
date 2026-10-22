@@ -20,6 +20,7 @@ pub(crate) struct AccountRow {
     name: String,
     account_type: String,
     active: bool,
+    default_gst: Option<String>,
 }
 
 impl TryFrom<AccountRow> for Account {
@@ -30,6 +31,7 @@ impl TryFrom<AccountRow> for Account {
             name: r.name,
             account_type: parse_enum(&r.account_type)?,
             active: r.active,
+            default_gst: r.default_gst.as_deref().map(parse_enum).transpose()?,
         })
     }
 }
@@ -62,14 +64,16 @@ pub async fn insert(conn: &mut SqliteConnection, chart: &MasterChart) -> Result<
     .await?;
     for a in chart.chart.accounts() {
         sqlx::query(
-            "INSERT INTO master_chart_accounts (chart_id, code, name, account_type, active)
-             VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO master_chart_accounts
+                 (chart_id, code, name, account_type, active, default_gst)
+             VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(&chart.id)
         .bind(a.code.as_str())
         .bind(&a.name)
         .bind(enum_text(&a.account_type))
         .bind(a.active)
+        .bind(a.default_gst.as_ref().map(enum_text))
         .execute(&mut *conn)
         .await?;
     }
@@ -87,7 +91,8 @@ pub async fn for_entity_type(
         .await?;
     let Some(row) = row else { return Ok(None) };
     let accounts: Vec<AccountRow> = sqlx::query_as(
-        "SELECT code, name, account_type, active FROM master_chart_accounts WHERE chart_id = ?",
+        "SELECT code, name, account_type, active, default_gst
+         FROM master_chart_accounts WHERE chart_id = ?",
     )
     .bind(&row.id)
     .fetch_all(&mut *conn)
