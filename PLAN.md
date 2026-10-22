@@ -162,7 +162,7 @@ numbers aren't reused, because code comments and a committed migration still ref
 | M9 | Off-network editing | Dropped: the hosted server works from anywhere. |
 
 ## M10 — Upload statements, see the tax
-Status: not started. The M10 questions are answered in `docs/domain.md` (2026-10-19), with a worked example a person still has to check. Items marked **check** there go to the tax specialist before M14.
+Status: in progress. Done: the rename; the tax engine (`acct_core::tax::{gst, income_tax}`), which gives the worked example's 569.62, 2,506.32 and 968.35 in unit tests; and the posting rule for an unsorted bank line (`acct_core::bank::unsorted_lines`: money in is income less GST, money out goes to 965 and claims nothing). Next: the parsers, the sole-trader chart, then the commands and screen. The M10 questions are answered in `docs/domain.md` (2026-10-19), with a worked example a person still has to check. Items marked **check** there go to the tax specialist before M14.
 - Rename the UI to White Label Accounting: page title, header and login screen. Crates and binaries keep the `acct` name.
 - Sole traders first (this answers the old entity-type question): a sole-trader master chart and template in our own words. Owners never see account codes; categories are accounts underneath.
 - Setting up a business: name, start date, whether GST registered and from when, GST filing frequency, and bank accounts. In M10 the balance date is always 31 March and the GST basis is always payments; setup turns down the invoice and hybrid bases with a plain reason.

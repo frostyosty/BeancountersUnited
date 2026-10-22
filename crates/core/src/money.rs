@@ -60,6 +60,20 @@ impl Money {
     }
 }
 
+/// `n ÷ d` rounded half away from zero. `d` must be positive. Callers compute exactly in i128 and
+/// round once with this.
+pub(crate) fn div_round_half_away(n: i128, d: i128) -> i128 {
+    debug_assert!(d > 0);
+    let q = n / d;
+    let r = n % d;
+    if r.abs() * 2 >= d { q + n.signum() } else { q }
+}
+
+/// i128 cents back to [`Money`]. Panics if it doesn't fit, like the rest of `Money`'s arithmetic.
+pub(crate) fn money_from_i128(cents: i128) -> Money {
+    Money(i64::try_from(cents).expect("Money overflow"))
+}
+
 impl Add for Money {
     type Output = Money;
     fn add(self, rhs: Money) -> Money {

@@ -19,7 +19,7 @@ use ts_rs::TS;
 
 use crate::chart::AccountCode;
 use crate::ledger::{ClientYear, Journal, JournalLine, TrialBalance};
-use crate::money::Money;
+use crate::money::{Money, div_round_half_away};
 
 /// Rates are basis points a year: 12.5% = 1250. At most 100%.
 pub const MAX_RATE_BP: u32 = 10_000;
@@ -351,14 +351,6 @@ fn month_index(d: NaiveDate) -> i128 {
 fn contains_leap_day(year: &ClientYear) -> bool {
     (year.start().year()..=year.end().year())
         .any(|y| NaiveDate::from_ymd_opt(y, 2, 29).is_some_and(|d| year.contains(d)))
-}
-
-/// `n ÷ d` rounded half away from zero. `d` must be positive.
-fn div_round_half_away(n: i128, d: i128) -> i128 {
-    debug_assert!(d > 0);
-    let q = n / d;
-    let r = n % d;
-    if r.abs() * 2 >= d { q + n.signum() } else { q }
 }
 
 /// One asset's movements in one client-year, in cents. Accumulated depreciation is positive.
