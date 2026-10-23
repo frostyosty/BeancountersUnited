@@ -24,6 +24,7 @@ use acct_store::{
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
+use crate::access;
 use crate::ai;
 use crate::assets;
 use crate::auth;
@@ -33,9 +34,12 @@ use crate::error::CommandError;
 use crate::ledger;
 use crate::merchants;
 use crate::save_tax;
+use crate::signup;
 use crate::tb_import;
 
-/// Who is submitting a command. `user_id` is `None` only for `acctd init` on the server itself.
+/// Who is submitting a command. `user_id` is `None` only for the server itself (`acctd init`, the
+/// fixture loader) and for the sign-up endpoint, which submits as a `BusinessOwner` with no user
+/// yet. `crate::access` tells these apart by role.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Actor {
     pub user_id: Option<String>,
@@ -91,9 +95,8 @@ pub async fn submit_via(
             .map_err(|e| CommandError::Store(acct_store::StoreError::Corrupt(e.to_string())));
     }
 
-    if !command.allowed_for(actor) {
-        return Err(CommandError::Forbidden);
-    }
+    // The one access check for commands (crate::access): role, and which businesses it touches.
+    access::check_command(&mut tx, actor, &command).await?;
 
     let seq = log::next_seq(&mut tx).await?;
     // Before applying: coding a line deletes any suggestion still waiting on it, so the ones being
@@ -361,6 +364,58 @@ async fn apply(
             Ok(client_effect(client_id))
         }
 
+        Command::SignUp {
+            email,
+            display_name,
+            password,
+            business_name,
+            start_date,
+            gst,
+        } => {
+            let client_id = signup::sign_up(
+                tx,
+                seq,
+                signup::NewOwner {
+                    email,
+                    display_name,
+                    password,
+                    business_name,
+                    start_date: *start_date,
+                    gst: gst.as_ref(),
+                },
+            )
+            .await?;
+            Ok(Effect {
+                entity_id: Some(client_id.clone()),
+                client_id: Some(client_id),
+                client_year_id: None,
+            })
+        }
+
+        Command::CreateInvite {
+            client_id,
+            email,
+            token,
+        } => {
+            let by = actor.user_id.as_deref().ok_or(CommandError::Forbidden)?;
+            let id = signup::create_invite(tx, seq, today, client_id, email, token, by).await?;
+            Ok(Effect {
+                entity_id: Some(id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::AcceptInvite { token } => {
+            let by = actor.user_id.as_deref().ok_or(CommandError::Forbidden)?;
+            let client_id = signup::accept_invite(tx, seq, today, token, by).await?;
+            Ok(Effect {
+                entity_id: Some(client_id.clone()),
+                client_id: Some(client_id),
+                client_year_id: None,
+            })
+        }
+
         Command::Initialise {
             practice_name,
             username,
@@ -382,7 +437,15 @@ async fn apply(
                 },
             )
             .await?;
-            let id = create_user(tx, username, display_name, password, Role::Master, seq).await?;
+            let id = create_user(
+                tx,
+                username,
+                display_name,
+                password,
+                Role::PracticeAdmin,
+                seq,
+            )
+            .await?;
             Ok(created(id))
         }
 
@@ -440,12 +503,12 @@ async fn apply(
                     ));
                 }
                 if user.active
-                    && user.role == Role::Master
-                    && users::count_active(tx, Role::Master).await? <= 1
+                    && user.role == Role::PracticeAdmin
+                    && users::count_active(tx, Role::PracticeAdmin).await? <= 1
                 {
                     return Err(CommandError::invalid(
-                        "last_master",
-                        "The practice needs at least one active master user.",
+                        "last_practice_admin",
+                        "The practice needs at least one active practice admin.",
                     ));
                 }
                 sessions::delete_for_user(tx, user_id).await?;
@@ -1427,14 +1490,26 @@ async fn create_user(
             "A username is 1 to 64 letters, digits, dots, dashes or underscores.",
         ));
     }
-    check_name(display_name)?;
-    auth::check_password_rules(password)?;
     if users::by_username(tx, username).await?.is_some() {
         return Err(CommandError::invalid(
             "username_taken",
             format!("There's already a user called {username}."),
         ));
     }
+    insert_user(tx, username, display_name, password, role, seq).await
+}
+
+/// Adds a user whose username is already checked and free. Returns their id.
+pub(crate) async fn insert_user(
+    tx: &mut SqliteConnection,
+    username: &str,
+    display_name: &str,
+    password: &str,
+    role: Role,
+    seq: i64,
+) -> Result<String, CommandError> {
+    check_name(display_name)?;
+    auth::check_password_rules(password)?;
     let id = new_id();
     users::insert(
         tx,
@@ -1469,7 +1544,7 @@ fn created(id: String) -> Effect {
     }
 }
 
-fn check_name(name: &str) -> Result<(), CommandError> {
+pub(crate) fn check_name(name: &str) -> Result<(), CommandError> {
     if name.trim().is_empty() {
         return Err(CommandError::invalid("empty_name", "A name is required."));
     }

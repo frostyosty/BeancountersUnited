@@ -3,4 +3,4 @@
 /**
  * What a user may do (CLAUDE.md, Roles).
  */
-export type Role = "master" | "staff" | "viewer";
+export type Role = "overseer" | "practice_admin" | "staff" | "viewer" | "business_owner";

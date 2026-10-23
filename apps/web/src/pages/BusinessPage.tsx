@@ -3,10 +3,11 @@ import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { can, useCurrentUser } from "../auth";
+import { can, isOwner, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate } from "../lib/dates";
 import { fileToBase64 } from "../lib/files";
+import { newToken } from "../lib/id";
 import { Icon } from "../lib/icons";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useBusiness, useTax } from "../lib/queries";
@@ -33,9 +34,15 @@ export function BusinessPage() {
   const canEdit = can(me, "staff");
   return (
     <>
-      <p className="crumbs">
-        <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>Accountant view</Link>
-      </p>
+      {isOwner(me) ? (
+        <p className="crumbs">
+          <Link to="/">My business</Link> /
+        </p>
+      ) : (
+        <p className="crumbs">
+          <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>Accountant view</Link>
+        </p>
+      )}
       <h1>{b.name}</h1>
 
       <div className={styles.areas}>
@@ -75,7 +82,53 @@ export function BusinessPage() {
       )}
 
       <Detected transfers={b.transfers} ird={b.ird_payments} duplicates={b.possible_duplicates} />
+
+      {isOwner(me) && <InviteAccountant clientId={clientId} />}
     </>
+  );
+}
+
+/**
+ * The owner invites their accountant (M12). Email isn't sent yet, so the owner copies the link to
+ * them. The link's token is made here; the server keeps only its hash, and it works once, for 14 days.
+ */
+function InviteAccountant({ clientId }: { clientId: string }) {
+  const invite = useCommand();
+  const [email, setEmail] = useState("");
+  const [link, setLink] = useState<string | null>(null);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const token = newToken();
+    invite.mutate(
+      { kind: "create_invite", payload: { client_id: clientId, email: email.trim(), token } },
+      { onSuccess: () => setLink(`${window.location.origin}/invite/${token}`) },
+    );
+  };
+
+  return (
+    <section aria-labelledby="invite-heading">
+      <h2 id="invite-heading">
+        <Icon name="business.invite" fallback="🤝" /> Invite your accountant
+      </h2>
+      <p className="muted">They'll be able to see and work on this business. Nobody else can.</p>
+      <form onSubmit={submit} className="form">
+        <label>
+          Their email
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+        <button type="submit" disabled={email.trim() === "" || invite.isPending}>
+          Make an invite link
+        </button>
+        <ErrorMessage error={invite.error} />
+      </form>
+      {link && (
+        <p role="status">
+          We don't email it yet, so send them this link yourself. It works once, for 14 days:{" "}
+          <input readOnly value={link} aria-label="Invite link" onFocus={(e) => e.target.select()} />
+        </p>
+      )}
+    </section>
   );
 }
 

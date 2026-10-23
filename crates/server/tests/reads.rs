@@ -302,7 +302,11 @@ async fn only_a_master_lists_users_and_never_sees_hashes() {
         .collect();
     assert_eq!(
         names,
-        [("boss", "master"), ("sam", "staff"), ("val", "viewer")]
+        [
+            ("boss", "practice_admin"),
+            ("sam", "staff"),
+            ("val", "viewer")
+        ]
     );
     assert!(!users.to_string().contains("argon2"));
     assert_eq!(users[0]["active"], json!(true));

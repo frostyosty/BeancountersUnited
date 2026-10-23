@@ -23,7 +23,7 @@ pub const DEV_PASSWORD: &str = "fixture-password";
 
 /// The dev users `load` creates, one per role.
 pub const DEV_USERS: [(&str, Role); 3] = [
-    ("admin", Role::Master),
+    ("admin", Role::PracticeAdmin),
     ("staff", Role::Staff),
     ("viewer", Role::Viewer),
 ];
@@ -104,7 +104,7 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
         store,
         actor: Actor {
             user_id: None,
-            role: Role::Master,
+            role: Role::PracticeAdmin,
         },
     };
 
@@ -118,7 +118,7 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
         .await?;
     loader.actor = Actor {
         user_id: Some(admin),
-        role: Role::Master,
+        role: Role::PracticeAdmin,
     };
     for (username, role) in &DEV_USERS[1..] {
         loader

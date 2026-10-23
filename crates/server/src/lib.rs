@@ -1,5 +1,6 @@
 //! The acct HTTP API: routes, auth, the command pipeline and the sync feed.
 
+pub mod access;
 pub mod ai;
 pub mod assets;
 pub mod auth;
@@ -12,17 +13,20 @@ pub mod merchants;
 pub mod pipeline;
 pub mod reads;
 pub mod save_tax;
+pub mod signup;
 pub mod tax;
 pub mod tb_import;
 #[cfg(feature = "embed-web")]
 pub mod web;
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use acct_store::Store;
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
-use axum::routing::{get, post};
+use axum::http::Method;
+use axum::routing::{MethodRouter, get, post};
 use axum::{Json, Router};
 use serde::Serialize;
 use ts_rs::TS;
@@ -58,53 +62,122 @@ pub struct Health {
     pub version: String,
 }
 
-pub fn app(state: AppState) -> Router {
-    let router = Router::new()
-        .route("/api/health", get(health))
-        .route("/api/login", post(auth::login))
-        .route("/api/logout", post(auth::logout))
-        .route("/api/me", get(auth::me))
-        .route("/api/commands", post(submit_command))
-        .route("/api/practice", get(reads::get_practice))
-        .route("/api/users", get(reads::list_users))
-        .route("/api/clients", get(reads::list_clients))
-        .route("/api/clients/{id}", get(reads::get_client))
-        .route("/api/clients/{id}/chart", get(reads::get_chart))
-        .route("/api/years/{id}", get(reads::get_year))
-        .route("/api/years/{id}/journals", get(reads::list_journals))
-        .route("/api/years/{id}/tb", get(reads::get_trial_balance))
-        .route("/api/years/{id}/report", get(reads::get_report))
-        .route(
+/// Every API route: its method, its path and its handler. `app` builds the router from this, and
+/// `tests/tenancy.rs` walks it, so a route can't be added without a tenancy test seeing it. Each
+/// one also needs a rule in `access::route_rule`, or the access layer refuses it.
+fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
+    vec![
+        (Method::GET, "/api/health", get(health)),
+        (Method::POST, "/api/login", post(auth::login)),
+        (Method::POST, "/api/logout", post(auth::logout)),
+        (Method::POST, "/api/signup", post(signup::sign_up_route)),
+        (Method::GET, "/api/me", get(auth::me)),
+        (Method::POST, "/api/commands", post(submit_command)),
+        (Method::GET, "/api/practice", get(reads::get_practice)),
+        (Method::GET, "/api/users", get(reads::list_users)),
+        (Method::GET, "/api/clients", get(reads::list_clients)),
+        (Method::GET, "/api/clients/{id}", get(reads::get_client)),
+        (
+            Method::GET,
+            "/api/clients/{id}/chart",
+            get(reads::get_chart),
+        ),
+        (Method::GET, "/api/years/{id}", get(reads::get_year)),
+        (
+            Method::GET,
+            "/api/years/{id}/journals",
+            get(reads::list_journals),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/tb",
+            get(reads::get_trial_balance),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/report",
+            get(reads::get_report),
+        ),
+        (
+            Method::POST,
             "/api/years/{id}/tb-import/preview",
             post(tb_import::preview),
-        )
-        .route("/api/asset-classes", get(assets::list_classes))
-        .route(
+        ),
+        (Method::GET, "/api/asset-classes", get(assets::list_classes)),
+        (
+            Method::GET,
             "/api/clients/{id}/asset-classes",
             get(assets::client_classes),
-        )
-        .route(
+        ),
+        (
+            Method::GET,
             "/api/clients/{id}/asset-classes/{class_id}/apply-preview",
             get(assets::apply_defaults_preview),
-        )
-        .route("/api/years/{id}/assets", get(assets::year_assets))
-        .route("/api/businesses/{id}", get(tax::get_business))
-        .route("/api/businesses/{id}/tax", get(tax::get_tax))
-        .route("/api/businesses/{id}/save-tax", get(save_tax::get_save_tax))
-        .route(
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/assets",
+            get(assets::year_assets),
+        ),
+        (Method::GET, "/api/businesses/{id}", get(tax::get_business)),
+        (Method::GET, "/api/businesses/{id}/tax", get(tax::get_tax)),
+        (
+            Method::GET,
+            "/api/businesses/{id}/save-tax",
+            get(save_tax::get_save_tax),
+        ),
+        (
+            Method::GET,
             "/api/businesses/{id}/coding-settings",
             get(save_tax::get_coding_settings),
-        )
-        .route("/api/businesses/{id}/rules", get(save_tax::get_rules))
-        .route(
+        ),
+        (
+            Method::GET,
+            "/api/businesses/{id}/rules",
+            get(save_tax::get_rules),
+        ),
+        (
+            Method::GET,
             "/api/merchants/{entity_type}",
             get(merchants::get_merchants),
-        )
-        .route(
+        ),
+        (
+            Method::GET,
             "/api/businesses/{id}/ai-suggestions",
-            get(ai::get_ai_suggestions).post(ai::post_ai_suggestions),
-        )
-        .route("/api/sync", get(reads::sync));
+            get(ai::get_ai_suggestions),
+        ),
+        (
+            Method::POST,
+            "/api/businesses/{id}/ai-suggestions",
+            post(ai::post_ai_suggestions),
+        ),
+        (Method::GET, "/api/sync", get(reads::sync)),
+    ]
+}
+
+/// Every API route's method and path, as registered.
+pub fn api_routes() -> Vec<(Method, &'static str)> {
+    routes().into_iter().map(|(m, p, _)| (m, p)).collect()
+}
+
+pub fn app(state: AppState) -> Router {
+    let mut by_path: BTreeMap<&'static str, MethodRouter<AppState>> = BTreeMap::new();
+    for (_, path, handler) in routes() {
+        let merged = match by_path.remove(path) {
+            Some(existing) => existing.merge(handler),
+            None => handler,
+        };
+        by_path.insert(path, merged);
+    }
+    let mut router = Router::new();
+    for (path, handler) in by_path {
+        router = router.route(path, handler);
+    }
+    // The access layer runs for every route above (not the web app's files), before its handler.
+    let router = router.route_layer(axum::middleware::from_fn_with_state(
+        state.clone(),
+        access::guard,
+    ));
     #[cfg(feature = "embed-web")]
     let router = router.fallback(web::serve);
     router.with_state(state)

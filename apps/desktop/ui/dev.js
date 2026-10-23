@@ -19,7 +19,6 @@ invoke("status").then((s) => {
 });
 
 $("signed-out").addEventListener("click", () => invoke("open_as", { username: null }).catch(fail));
-$("connect").addEventListener("click", () => invoke("open_connect").catch(fail));
 
 $("sim-form").addEventListener("submit", async (e) => {
   e.preventDefault();

@@ -79,13 +79,14 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - It refers to accounts by code and to lines by template key. It holds no generated ids, timestamps or HashMaps, so its JSON is byte-stable.
   - The HTML preview and the PDF only render a ReportDoc. Golden tests snapshot the ReportDoc JSON, never the PDFs.
 - **Shared types:** ts-rs generates TypeScript into `packages/types`; don't edit those files by hand. ts-rs maps i64 to `bigint` by default, but JSON delivers plain numbers, so `.cargo/config.toml` sets `TS_RS_LARGE_INT = "number"` under `[env]`.
-- **Roles:**
-- - 'overseer': new one. allows toggling between all views.
-  - `practice owner`: practice settings, users, defaults, master charts, templates, finalising and reopening years. (changed from master)
+- **Roles** (M12; every check is in `crates/server/src/access.rs`):
+  - `overseer`: us, running the service. Every business and every view. Only an overseer (or the server itself) makes another.
+  - `practice_admin` (was `master`): practice settings, users, defaults, master charts, templates, finalising and reopening years.
   - `staff`: client work, including custom depreciation rates.
   - `viewer`: read-only.
+  - `business_owner`: signs up themselves and sees only their own business: uploads, Save tax, and inviting their accountant. Practice users see an owner's business only after accepting that invite.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
-- **Desktop apps (ADR 006):** Tauri 2 shells in `apps/desktop`: `acct-master` (the server in-process, plus practice setup), `acct-client` (connects staff and viewer PCs to a master), and `acct-dev` (a throwaway master with the fixtures, a window per role, and the sync simulator). They show the master's web app; permissions come only from the user's account on the master. `.github/workflows/release.yml` builds the Windows exes. ADR 007 retires `acct-master` in M12, and M12 decides the futures of the other two.
+- **Desktop app (ADR 006, amended in M12):** one Tauri 2 app, `acct-dev` in `apps/desktop` (with its shared crate `acct-desktop` in `apps/desktop/shell`): a throwaway server with the synthetic fixtures, a window per role, and the sync simulator, for development and trying builds on Windows. `.github/workflows/release.yml` builds its exe. `acct-master` and `acct-client` are retired: `acctd` is the server, and everyone else uses a browser.
 
 ## Layout
 ```text

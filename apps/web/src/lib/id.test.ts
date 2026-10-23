@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newId } from "./id";
+import { newId, newToken } from "./id";
 
 const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -23,5 +23,13 @@ describe("newId", () => {
     } finally {
       Object.defineProperty(crypto, "randomUUID", { value: original, configurable: true });
     }
+  });
+});
+
+describe("newToken", () => {
+  it("makes 32 random bytes as hex", () => {
+    expect(newToken()).toMatch(/^[0-9a-f]{64}$/);
+    expect(newToken()).not.toBe(newToken());
+    expect(newToken((b) => b.fill(0xab))).toBe("ab".repeat(32));
   });
 });

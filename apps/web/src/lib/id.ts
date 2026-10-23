@@ -12,3 +12,10 @@ export function newId(fill: (bytes: Uint8Array<ArrayBuffer>) => void = (b) => cr
   const hex = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+
+/** 32 random bytes as hex: the secret in an invite link (M12). Only its hash is kept on the server. */
+export function newToken(fill: (bytes: Uint8Array<ArrayBuffer>) => void = (b) => crypto.getRandomValues(b)): string {
+  const b = new Uint8Array(32);
+  fill(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+}

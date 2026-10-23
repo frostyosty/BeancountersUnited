@@ -529,6 +529,20 @@
     "save_ai_off": {
       "type": "emoji",
       "value": "🚫"
+    },
+    "invite": {
+      "type": "emoji",
+      "value": "🤝"
+    }
+  },
+  "signup": {
+    "title": {
+      "type": "emoji",
+      "value": "🌱"
+    },
+    "invite": {
+      "type": "emoji",
+      "value": "🤝"
     }
   }
 }

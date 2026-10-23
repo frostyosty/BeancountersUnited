@@ -19,6 +19,7 @@ use tokio::sync::{Mutex, MutexGuard};
 
 pub mod ai;
 pub mod assets;
+pub mod backup;
 pub mod bank;
 pub mod charts;
 pub mod clients;
@@ -29,6 +30,7 @@ pub mod merchants;
 pub mod practice;
 pub mod sessions;
 pub mod templates;
+pub mod tenancy;
 pub mod users;
 pub mod years;
 

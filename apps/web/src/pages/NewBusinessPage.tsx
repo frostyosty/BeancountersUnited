@@ -6,9 +6,9 @@ import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 
-type Frequency = GstSetup["frequency"];
+export type Frequency = GstSetup["frequency"];
 
-const FREQUENCIES: { value: Frequency; label: string }[] = [
+export const FREQUENCIES: { value: Frequency; label: string }[] = [
   { value: "two_monthly_odd", label: "Every two months (periods ending Jan, Mar, May, …)" },
   { value: "two_monthly_even", label: "Every two months (periods ending Feb, Apr, Jun, …)" },
   { value: "monthly", label: "Monthly" },

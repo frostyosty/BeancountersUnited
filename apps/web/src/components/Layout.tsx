@@ -1,6 +1,6 @@
 import type { Me } from "@acct/types/Me";
 import { Link, NavLink, Outlet } from "react-router";
-import { useSignOut } from "../auth";
+import { can, isOwner, useSignOut } from "../auth";
 import { Icon } from "../lib/icons";
 import { useLiveRefresh } from "../lib/sync";
 import styles from "./Layout.module.css";
@@ -17,9 +17,9 @@ export function Layout({ me }: { me: Me }) {
         <nav className={styles.nav} aria-label="Main">
           <NavLink to="/" end>
             <Icon name="nav.clients" className={styles.icon} />
-            Clients
+            {isOwner(me) ? "My business" : "Clients"}
           </NavLink>
-          {me.role === "master" && (
+          {can(me, "practice_admin") && (
             <NavLink to="/settings">
               <Icon name="nav.settings" className={styles.icon} />
               Practice settings

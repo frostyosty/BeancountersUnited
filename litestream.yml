@@ -1,0 +1,20 @@
+# Continuous backup of the database to a Tigris bucket (ADR 008). Copied into the image as
+# /etc/litestream.yml. Litestream fills in ${...} from the environment; `fly storage create` sets
+# BUCKET_NAME, AWS_ENDPOINT_URL_S3, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as app secrets, and
+# Litestream reads the two AWS keys itself.
+
+snapshot:
+  # A full snapshot each day, kept a week: any point in the last 7 days can be restored.
+  interval: 24h
+  retention: 168h
+
+dbs:
+  - path: ${ACCT_DB}
+    replica:
+      type: s3
+      bucket: ${BUCKET_NAME}
+      path: acct.db
+      endpoint: ${AWS_ENDPOINT_URL_S3}
+      region: auto
+      # Push changes every 10 s at most: the restore point objective. Idle periods upload nothing.
+      sync-interval: 10s

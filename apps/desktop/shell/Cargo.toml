@@ -3,10 +3,10 @@ name = "acct-desktop"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-description = "What the acct desktop apps share: running the server in-process and reaching a master."
+description = "What acct-dev builds on: running the server in-process and opening windows onto it."
 
 [features]
-# Running the server in-process (acct-master and acct-dev). acct-client leaves it off.
+# Running the server in-process (acct-dev).
 server = ["dep:acct-server", "dep:acct-store"]
 
 [dependencies]

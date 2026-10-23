@@ -1,0 +1,42 @@
+# Staging on Fly.io (ADR 008): `fly deploy --config fly.staging.toml`. Production is fly.toml; keep
+# the two in step. Synthetic data only (hard rule 1). Restore drills run here, never on production.
+# One volume, one writer: always exactly one machine (`--ha=false`).
+#
+# The app name is the only place staging's name is written. To rename, see fly.toml.
+app = "wla-staging"
+primary_region = "syd"
+
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
+[build]
+  [build.args]
+    SITE_URL = "https://wla-staging.fly.dev"
+    SITE_GATE = "on"
+
+[env]
+  ACCT_REQUIRE_BACKUP = "1"
+
+[mounts]
+  source = "acct_data"
+  destination = "/data"
+  snapshot_retention = 5
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Staging sleeps when idle to save money. Litestream syncs on the way down.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,7 +1,7 @@
 .PHONY: setup dev test check types types-check db-reset web icons desktop desktop-check
 
 TYPES_DIR := packages/types/src
-DESKTOP := -p acct-desktop -p acct-master -p acct-client -p acct-dev
+DESKTOP := -p acct-desktop -p acct-dev
 
 setup:
 	cargo fetch
@@ -44,9 +44,9 @@ web:
 icons:
 	./icon_studio.sh
 
-# The desktop apps (ADR 006): acct-master, acct-client and acct-dev. They build the web app in, and
-# on Linux need the webview libraries that scripts/desktop-deps.sh installs. The release workflow
-# builds the Windows .exe files.
+# The desktop app (ADR 006): acct-dev, the only one left after M12. It builds the web app in, and on
+# Linux needs the webview libraries that scripts/desktop-deps.sh installs. The release workflow
+# builds its Windows .exe.
 desktop: web
 	cargo build --release $(DESKTOP)
 

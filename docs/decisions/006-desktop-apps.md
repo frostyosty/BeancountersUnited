@@ -45,3 +45,21 @@ system working. Codespaces can't run Windows, but GitHub Actions has Windows run
 - Windows SmartScreen warns before the first run of an unsigned exe. Code signing is future work.
 - The master only serves while `acct-master` is open and someone is logged in to that PC. A
   Windows service is still an M7 option.
+
+## Amendment (M12, 2026-10-24): one desktop app left
+ADR 007 made acct a hosted service that everyone reaches in a browser over HTTPS. M12 settles the three
+apps:
+- `acct-master` is retired. A server on an office PC doesn't fit a hosted service; `acctd` is the only
+  server.
+- `acct-client` is retired, in favour of the browser. Pointed at the hosted address it would only be a
+  browser window locked to one URL, and its exact-version check would strand installed copies after
+  every deploy. It also spoke only `http://`, and an unsigned exe is one more thing for owners to trust
+  and for IRD's security review to ask about. A bookmark, or the browser's "install as app", covers
+  people who want an icon.
+- `acct-dev` stays: a throwaway server on `127.0.0.1` with the synthetic fixtures, a window per dev
+  user (each with its own webview profile), and the sync simulator. It's the way to see the whole
+  system on Windows without a Rust and pnpm toolchain; `make dev` is the way with one. Its "client
+  connect screen" went with `acct-client`.
+- `release.yml` builds only `acct-dev.exe`. The rest of this ADR (the `embed-web` feature, local pages
+  as the only IPC callers, desktop crates outside `default-members`) still applies to it. The
+  consequences above about staff PCs, the LAN and a master's uptime no longer apply.

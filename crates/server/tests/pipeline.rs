@@ -41,7 +41,7 @@ fn fixture() -> FixtureClient {
 fn master() -> Actor {
     Actor {
         user_id: None,
-        role: Role::Master,
+        role: Role::PracticeAdmin,
     }
 }
 
@@ -915,11 +915,11 @@ async fn accounts_in_use_stay_active() {
 }
 
 #[tokio::test]
-async fn the_last_active_master_stays_active() {
+async fn the_last_active_practice_admin_stays_active() {
     let h = Harness::new().await;
     let system = Actor {
         user_id: None,
-        role: Role::Master,
+        role: Role::PracticeAdmin,
     };
     let boss = h
         .run_as(
@@ -946,6 +946,6 @@ async fn the_last_active_master_stays_active() {
         )
         .await
         .unwrap_err();
-    assert_eq!(err.body().code, "last_master");
+    assert_eq!(err.body().code, "last_practice_admin");
     assert_eq!(h.counts().await, before);
 }

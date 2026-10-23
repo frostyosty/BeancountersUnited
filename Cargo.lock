@@ -15,19 +15,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "acct-client"
-version = "0.1.0"
-dependencies = [
- "acct-desktop",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "acct-core"
 version = "0.1.0"
 dependencies = [
@@ -83,22 +70,6 @@ dependencies = [
  "csv",
  "serde",
  "ts-rs",
-]
-
-[[package]]
-name = "acct-master"
-version = "0.1.0"
-dependencies = [
- "acct-desktop",
- "acct-server",
- "acct-store",
- "chrono",
- "serde",
- "tauri",
- "tauri-build",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

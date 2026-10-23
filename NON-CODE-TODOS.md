@@ -70,3 +70,12 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       (hard rule 1); describe the columns only.
 - [ ] Which entity type comes after sole traders: companies, partnerships or trusts (`PLAN.md`, Open
       questions).
+
+## M12 tenancy (Agent 3): decisions and checks
+- [ ] Make the `austin` overseer on the hosted server, once it runs a build with M12's roles:
+      `fly ssh console -a <app>`, then `acctd init` (if the database is new) and `acctd add-overseer`.
+- [ ] Check sign-up and invites in a browser: sign up as an owner, make an invite link, open it as staff
+      in another browser and accept, then confirm a second owner sees neither business.
+- [ ] Decide where the "Sign up" link goes on the public home page (the page is at `/signup`).
+- [ ] The overseer's "toggle between all views" in the web app isn't built yet; today an overseer sees
+      the practice screens plus every business.

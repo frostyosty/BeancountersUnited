@@ -47,7 +47,7 @@ pub async fn start(db: &Path, bind: SocketAddr) -> Result<RunningServer, String>
 pub async fn start_with(store: Arc<Store>, bind: SocketAddr) -> Result<RunningServer, String> {
     let listener = tokio::net::TcpListener::bind(bind)
         .await
-        .map_err(|e| format!("Couldn't listen on {bind}: {e}. Is another acct master running?"))?;
+        .map_err(|e| format!("Couldn't listen on {bind}: {e}. Is another acct server running?"))?;
     let addr = listener.local_addr().map_err(|e| e.to_string())?;
     let (stop, stopped) = oneshot::channel::<()>();
     let state = AppState::new(store.clone());
@@ -79,7 +79,7 @@ pub async fn is_initialised(store: &Store) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::check_master;
+    use crate::check_server;
 
     #[tokio::test]
     async fn a_started_server_answers_health_and_serves_the_app() {
@@ -89,7 +89,7 @@ mod tests {
             .unwrap();
         assert!(!is_initialised(&server.store).await.unwrap());
 
-        let health = check_master(&server.local_url()).await.unwrap();
+        let health = check_server(&server.local_url()).await.unwrap();
         assert_eq!(health.version, crate::VERSION);
         let index = reqwest::get(format!("{}/", server.local_url()))
             .await
@@ -100,6 +100,6 @@ mod tests {
         let url = server.local_url();
         drop(server);
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        assert!(check_master(&url).await.is_err());
+        assert!(check_server(&url).await.is_err());
     }
 }

@@ -2,7 +2,8 @@ import type { Me } from "@acct/types/Me";
 import type { Role } from "@acct/types/Role";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
-import { fetchMe, login, logout } from "./lib/api";
+import type { SignUpRequest } from "@acct/types/SignUpRequest";
+import { fetchMe, login, logout, signUp } from "./lib/api";
 
 const ME = ["me"] as const;
 
@@ -17,6 +18,16 @@ export function useSignIn() {
     login({ username, password }).then((me) => {
       qc.setQueryData<Me | null>(ME, me);
       return me;
+    });
+}
+
+/** Signs a business owner up and in (M12). Resolves with their new business's id. */
+export function useSignUp() {
+  const qc = useQueryClient();
+  return (req: SignUpRequest) =>
+    signUp(req).then((res) => {
+      qc.setQueryData<Me | null>(ME, res.me);
+      return res.business_id;
     });
 }
 
@@ -42,9 +53,16 @@ export function useCurrentUser(): Me {
   return me;
 }
 
-const RANK: Record<Role, number> = { viewer: 0, staff: 1, master: 2 };
+/** A business owner ranks with staff here because both can work on a business they can see; the
+ * server stops owners doing accountants' work (and limits them to their own business). */
+const RANK: Record<Role, number> = { viewer: 0, business_owner: 1, staff: 1, practice_admin: 2, overseer: 3 };
 
 /** Whether `me` has at least `role`'s permissions. The server checks again; this only hides UI. */
 export function can(me: Me, role: Role): boolean {
   return RANK[me.role] >= RANK[role];
+}
+
+/** A business owner, who sees only their own business and the owner's screens. */
+export function isOwner(me: Me): boolean {
+  return me.role === "business_owner";
 }

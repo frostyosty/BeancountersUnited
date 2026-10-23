@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the desktop apps' icons: a rounded square, one colour per app, with three ledger lines
+"""Draws the desktop apps' icons: a rounded square, one colour per app (only acct-dev is left), with three ledger lines
 and a total rule. Our own design (CLAUDE.md hard rule 3). Needs Pillow.
 
 Run from anywhere: python3 apps/desktop/make-icons.py (on Ubuntu, apt install python3-pil)
@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
-APPS = {"master": (31, 78, 121), "client": (34, 120, 84), "dev": (184, 92, 20)}
+APPS = {"dev": (184, 92, 20)}
 SIZE = 512
 
 

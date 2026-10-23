@@ -38,4 +38,4 @@ asset_class_id?: string, } } | { "kind": "code_bank_lines", "payload": { lines: 
 /**
  * The model that made them, such as `claude-haiku-5-5`.
  */
-model: string, suggestions: Array<SuggestedCoding>, } });
+model: string, suggestions: Array<SuggestedCoding>, } } | { "kind": "sign_up", "payload": { email: string, display_name: string, password: string, business_name: string, start_date: string, gst?: GstSetup, } } | { "kind": "create_invite", "payload": { client_id: string, email: string, token: string, } } | { "kind": "accept_invite", "payload": { token: string, } });

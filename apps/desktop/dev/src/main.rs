@@ -5,7 +5,6 @@
 //! `ACCT_BIND`). From its control window you can:
 //! - open a window signed in as each dev user (master, staff, viewer), or a signed-out one;
 //!   each has its own browser profile, so their logins don't share a cookie
-//! - open the same connect screen acct-client shows, to try that flow against this master
 //! - run the sync simulator (`sim`)
 //!
 //! Everything is deleted when it quits. Never point it at a real practice's data.
@@ -18,16 +17,13 @@ use std::net::SocketAddr;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use acct_desktop::VERSION;
 use acct_desktop::server::{self, RunningServer};
 use acct_desktop::windows::ServerWindow;
-use acct_desktop::{VERSION, check_master, server_url};
 use acct_server::fixtures::{self, DEV_PASSWORD, DEV_USERS, Loaded};
 use acct_store::users::Role;
 use serde::Serialize;
-use tauri::{
-    AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-    WindowEvent,
-};
+use tauri::{AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tempfile::TempDir;
 use tracing_subscriber::EnvFilter;
 
@@ -57,12 +53,12 @@ struct DevUser {
     role: Role,
 }
 
-fn role_name(role: Role) -> &'static str {
-    match role {
-        Role::Master => "master",
-        Role::Staff => "staff",
-        Role::Viewer => "viewer",
-    }
+/// The role's name as the API spells it ("staff", "practice_admin"), so new roles need no change here.
+fn role_name(role: Role) -> String {
+    serde_json::to_value(role)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| format!("{role:?}"))
 }
 
 #[derive(Serialize)]
@@ -133,69 +129,6 @@ async fn open_as(
     .map(|_| ())
 }
 
-/// Opens acct-client's connect screen, to try that flow against this master.
-#[tauri::command]
-async fn open_connect(app: AppHandle, state: State<'_, Dev>) -> Result<(), String> {
-    let n = state.next_window.fetch_add(1, Ordering::Relaxed);
-    WebviewWindowBuilder::new(
-        &app,
-        format!("connect-{n}"),
-        WebviewUrl::App("client.html".into()),
-    )
-    .title("acct dev: client connect screen")
-    .inner_size(480.0, 360.0)
-    .build()
-    .map(|_| ())
-    .map_err(|e| e.to_string())
-}
-
-#[derive(Serialize)]
-struct Start {
-    version: &'static str,
-    address: Option<String>,
-}
-
-/// The connect screen's opening state: this master's address, filled in.
-#[tauri::command]
-fn start(state: State<'_, Dev>) -> Start {
-    Start {
-        version: VERSION,
-        address: state
-            .server
-            .as_ref()
-            .ok()
-            .map(|s| s.local_url().trim_start_matches("http://").to_owned()),
-    }
-}
-
-/// The connect screen's Connect button: like acct-client's, but each connection gets its own
-/// fresh browser profile, and nothing is remembered.
-#[tauri::command]
-async fn connect(
-    app: AppHandle,
-    window: WebviewWindow,
-    state: State<'_, Dev>,
-    address: String,
-) -> Result<(), String> {
-    let url = server_url(&address)?;
-    check_master(&url).await?;
-    let n = state.next_window.fetch_add(1, Ordering::Relaxed);
-    let label = format!("client-{n}");
-    ServerWindow {
-        profile_dir: Some(state.profile_dir(&label)?),
-        title: format!(
-            "acct dev: client {n} ({})",
-            url.trim_start_matches("http://")
-        ),
-        label,
-        url,
-        auto_login: None,
-    }
-    .open(&app)?;
-    let _ = window.close();
-    Ok(())
-}
-
 #[tauri::command]
 async fn simulate(
     state: State<'_, Dev>,
@@ -234,14 +167,7 @@ fn main() {
         .init();
 
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            status,
-            open_as,
-            open_connect,
-            start,
-            connect,
-            simulate
-        ])
+        .invoke_handler(tauri::generate_handler![status, open_as, simulate])
         .setup(|app| {
             let dir = tempfile::Builder::new().prefix("acct-dev-").tempdir()?;
             let (server, loaded) = match tauri::async_runtime::block_on(start_master(&dir)) {

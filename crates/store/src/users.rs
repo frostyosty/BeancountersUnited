@@ -9,12 +9,27 @@ use crate::{Result, parse_enum};
 #[serde(rename_all = "snake_case")]
 #[ts(export, rename_all = "snake_case")]
 pub enum Role {
-    /// Practice settings, users, defaults, master charts, templates, finalising and reopening.
-    Master,
+    /// Us, running the service: every business, every practice view, every command a signed-in
+    /// user can submit. Only an overseer can make or manage another overseer.
+    Overseer,
+    /// The practice's top user: practice settings, users, defaults, master charts, templates,
+    /// finalising and reopening. Was `master` before M12; old log payloads still say that.
+    #[serde(alias = "master")]
+    PracticeAdmin,
     /// Client work, including custom depreciation rates.
     Staff,
     /// Read-only.
     Viewer,
+    /// A business owner who signed up: their own business only, and only the owner's screens
+    /// (upload, Save tax, invite their accountant). Not part of the practice.
+    BusinessOwner,
+}
+
+impl Role {
+    /// The practice's own roles. Practice data (settings, defaults, the user list) is theirs.
+    pub fn is_practice(self) -> bool {
+        matches!(self, Role::PracticeAdmin | Role::Staff | Role::Viewer)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

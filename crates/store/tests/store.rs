@@ -189,7 +189,7 @@ async fn users_round_trip_and_usernames_ignore_case() {
         username: "Pat".into(),
         display_name: "Pat Example".into(),
         password_hash: "$argon2id$placeholder".into(),
-        role: Role::Master,
+        role: Role::PracticeAdmin,
         active: true,
         created_seq: 1,
     };

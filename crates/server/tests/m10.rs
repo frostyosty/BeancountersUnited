@@ -68,7 +68,7 @@ impl Setup {
     async fn run(&self, command: Command) -> Result<Option<String>, serde_json::Value> {
         let actor = Actor {
             user_id: None,
-            role: Role::Master,
+            role: Role::PracticeAdmin,
         };
         let envelope = CommandEnvelope {
             id: uuid::Uuid::now_v7().to_string(),

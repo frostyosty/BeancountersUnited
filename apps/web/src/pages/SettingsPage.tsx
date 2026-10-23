@@ -3,18 +3,18 @@ import type { MasterChartView } from "@acct/types/MasterChartView";
 import type { Role } from "@acct/types/Role";
 import type { UserView } from "@acct/types/UserView";
 import { type FormEvent, useState } from "react";
-import { useCurrentUser } from "../auth";
+import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { AssetAccountFields, DepreciationFields, NO_ACCOUNTS } from "../components/DepreciationFields";
 import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft, toDraft, toSettings } from "../lib/depreciation";
 import { keys, useAssetClasses, usePractice, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 
-/** Practice settings: master users only (the server checks too). */
+/** Practice settings: practice admins only (the server checks too). */
 export function SettingsPage() {
   const me = useCurrentUser();
-  if (me.role !== "master") {
-    return <p>Only master users can change practice settings.</p>;
+  if (!can(me, "practice_admin")) {
+    return <p>Only practice admins can change practice settings.</p>;
   }
   return (
     <>
@@ -207,7 +207,7 @@ function NewUserForm() {
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             <option value="staff">staff</option>
             <option value="viewer">viewer</option>
-            <option value="master">master</option>
+            <option value="practice_admin">practice admin</option>
           </select>
         </label>
       </div>

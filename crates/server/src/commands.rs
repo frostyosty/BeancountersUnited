@@ -12,7 +12,6 @@ use ts_rs::TS;
 
 use crate::ai::SuggestedCoding;
 use crate::business::GstSetup;
-use crate::pipeline::Actor;
 
 /// The request body: `{ id, kind, payload }`. `id` is a UUID the client makes with `newId()`, and
 /// is the idempotency key.
@@ -100,15 +99,15 @@ pub enum IrdPayment {
 #[serde(tag = "kind", content = "payload", rename_all = "snake_case")]
 #[ts(export, rename_all = "snake_case")]
 pub enum Command {
-    /// Names the practice and creates its first master user. Only `acctd init` on the server can
-    /// submit it, and only once.
+    /// Names the practice and creates its first practice admin. Only `acctd init` on the server
+    /// can submit it, and only once.
     Initialise {
         practice_name: String,
         username: String,
         display_name: String,
         password: String,
     },
-    /// Adds a user. Master only.
+    /// Adds a user. Practice admin only.
     CreateUser {
         username: String,
         display_name: String,
@@ -120,36 +119,36 @@ pub enum Command {
         current_password: String,
         new_password: String,
     },
-    /// Sets a user's password and ends their sessions. Master only.
+    /// Sets a user's password and ends their sessions. Practice admin only.
     ResetPassword {
         user_id: String,
         new_password: String,
     },
-    /// Makes a user active or inactive; making one inactive ends their sessions. Master only.
-    /// Nobody can make themselves inactive, and the last active master stays active.
+    /// Makes a user active or inactive; making one inactive ends their sessions. Practice admin only.
+    /// Nobody can make themselves inactive, and the last active practice admin stays active.
     SetUserActive { user_id: String, active: bool },
-    /// Sets up the practice master chart for an entity type. Master only.
+    /// Sets up the practice master chart for an entity type. Practice admin only.
     CreateMasterChart {
         entity_type: String,
         name: String,
         accounts: Vec<Account>,
     },
-    /// Creates a statement template with its first version. Master only.
+    /// Creates a statement template with its first version. Practice admin only.
     CreateTemplate {
         entity_type: String,
         name: String,
         body: Template,
     },
     /// Writes a new version of a template. Years already pinned to an older version keep it.
-    /// Master only.
+    /// Practice admin only.
     ReviseTemplate { template_id: String, body: Template },
-    /// Creates a mapping onto a template, with its first version. Master only.
+    /// Creates a mapping onto a template, with its first version. Practice admin only.
     CreateMapping {
         template_id: String,
         name: String,
         body: Mapping,
     },
-    /// Writes a new version of a mapping. Master only.
+    /// Writes a new version of a mapping. Practice admin only.
     ReviseMapping { mapping_id: String, body: Mapping },
     /// Creates a client whose chart is a copy of the master chart for its entity type.
     CreateClient {
@@ -221,7 +220,7 @@ pub enum Command {
         narration: Option<String>,
     },
     /// Adds a practice asset class for an entity type. `key` is a stable name such as `plant`
-    /// (lowercase words joined by underscores) that the asset schedule uses. Master only.
+    /// (lowercase words joined by underscores) that the asset schedule uses. Practice admin only.
     CreateAssetClass {
         entity_type: String,
         key: String,
@@ -230,7 +229,7 @@ pub enum Command {
         accounts: AssetAccounts,
     },
     /// Changes a practice asset class. Existing assets keep the settings and accounts copied onto
-    /// them; `apply_asset_class_defaults` pushes a change onto them. Master only.
+    /// them; `apply_asset_class_defaults` pushes a change onto them. Practice admin only.
     UpdateAssetClass {
         class_id: String,
         name: String,
@@ -394,8 +393,7 @@ pub enum Command {
     /// Turns AI category suggestions on or off for a business (ADR 009). Off by default.
     /// Turning them on needs `consent_version`, from `GET /api/businesses/{id}/ai-suggestions`,
     /// once the owner has agreed to the wording; turning them off stops all requests and deletes
-    /// the suggestions still waiting. Until M12 adds the owner role, staff and the practice owner
-    /// do this on the owner's behalf. `activity` (the owner's phrase for what the business does)
+    /// the suggestions still waiting. The business owner does this, or staff on their behalf. `activity` (the owner's phrase for what the business does)
     /// and `private_names` (names to strip from what's sent, besides the business's own), when
     /// absent, keep what's stored.
     SetAiSuggestions {
@@ -411,13 +409,13 @@ pub enum Command {
     /// Adds an entry to an entity type's merchant list (ADR 009's layer 3), such as "Z ENERGY is
     /// vehicle costs", in the master chart's codes. Save tax suggests it after the business's
     /// rules and history. It never changes a coded line. Use synthetic or consented data only.
-    /// Practice owner only.
+    /// Practice admin only.
     AddMerchant {
         entity_type: String,
         description_contains: String,
         coding: Coding,
     },
-    /// Takes an entry off the merchant list. Practice owner only.
+    /// Takes an entry off the merchant list. Practice admin only.
     RemoveMerchant { merchant_id: String },
     /// Stores AI suggestions for unsorted lines as pre-fills. It changes no figures. The server
     /// submits it from `POST /api/businesses/{id}/ai-suggestions`.
@@ -427,6 +425,29 @@ pub enum Command {
         model: String,
         suggestions: Vec<SuggestedCoding>,
     },
+    /// A business owner signs up (M12): their account, with `email` as the username, and their
+    /// business, set up as `set_up_business` does. Only `POST /api/signup` submits it, before
+    /// there's a session; it then signs the owner in.
+    SignUp {
+        email: String,
+        display_name: String,
+        password: String,
+        business_name: String,
+        #[ts(type = "string")]
+        start_date: NaiveDate,
+        #[ts(optional)]
+        gst: Option<GstSetup>,
+    },
+    /// The owner invites their accountant. `token` is 32 random bytes as hex, made by the browser
+    /// for the link the owner copies; only its hash is kept, and it's redacted from the log.
+    /// Sending the email is out of scope for now. An invite lasts 14 days and is used once.
+    CreateInvite {
+        client_id: String,
+        email: String,
+        token: String,
+    },
+    /// A practice user accepts an invite, which lets them see and work on that business.
+    AcceptInvite { token: String },
 }
 
 impl Command {
@@ -482,6 +503,9 @@ impl Command {
             Command::RecordSuggestions { .. } => "record_suggestions",
             Command::AddMerchant { .. } => "add_merchant",
             Command::RemoveMerchant { .. } => "remove_merchant",
+            Command::SignUp { .. } => "sign_up",
+            Command::CreateInvite { .. } => "create_invite",
+            Command::AcceptInvite { .. } => "accept_invite",
         }
     }
 
@@ -489,68 +513,12 @@ impl Command {
     pub fn logged_payload(&self) -> serde_json::Value {
         let mut v = serde_json::to_value(self).expect("commands serialise");
         let mut payload = v["payload"].take();
-        for key in ["password", "current_password", "new_password"] {
+        for key in ["password", "current_password", "new_password", "token"] {
             if let Some(secret) = payload.get_mut(key) {
                 *secret = "[redacted]".into();
             }
         }
         payload
-    }
-
-    /// Whether `actor` may submit this command.
-    pub fn allowed_for(&self, actor: &Actor) -> bool {
-        let role = actor.role;
-        match self {
-            Command::Initialise { .. } => actor.user_id.is_none(),
-            Command::ChangeOwnPassword { .. } => actor.user_id.is_some(),
-            Command::CreateUser { .. }
-            | Command::ResetPassword { .. }
-            | Command::SetUserActive { .. }
-            | Command::CreateMasterChart { .. }
-            | Command::CreateTemplate { .. }
-            | Command::ReviseTemplate { .. }
-            | Command::CreateMapping { .. }
-            | Command::ReviseMapping { .. }
-            | Command::CreateAssetClass { .. }
-            | Command::UpdateAssetClass { .. }
-            | Command::AddMerchant { .. }
-            | Command::RemoveMerchant { .. } => role == Role::Master,
-            Command::CreateClient { .. }
-            | Command::AddAccount { .. }
-            | Command::RenameAccount { .. }
-            | Command::SetAccountActive { .. }
-            | Command::SetAccountGst { .. }
-            | Command::SetRoundingPriority { .. }
-            | Command::CreateClientYear { .. }
-            | Command::PostJournal { .. }
-            | Command::ImportTb { .. }
-            | Command::ReverseJournal { .. }
-            | Command::SetClientAssetClass { .. }
-            | Command::CreateAsset { .. }
-            | Command::UpdateAsset { .. }
-            | Command::DeleteAsset { .. }
-            | Command::DisposeAsset { .. }
-            | Command::ReinstateAsset { .. }
-            | Command::RunDepreciation { .. }
-            | Command::ApplyAssetClassDefaults { .. }
-            | Command::SetUpBusiness { .. }
-            | Command::AddBankAccount { .. }
-            | Command::ImportStatement { .. }
-            | Command::SetOpeningBalance { .. }
-            | Command::CodeBankLine { .. }
-            | Command::CodeBankLines { .. }
-            | Command::AddRule { .. }
-            | Command::RemoveRule { .. }
-            | Command::AnswerQuestion { .. }
-            | Command::ConfirmTransfer { .. }
-            | Command::ConfirmIrdPayment { .. }
-            | Command::ResolveDuplicate { .. }
-            | Command::ConfirmSupplyInfo { .. }
-            | Command::AddCardAccount { .. }
-            | Command::SetCodingSettings { .. }
-            | Command::SetAiSuggestions { .. }
-            | Command::RecordSuggestions { .. } => matches!(role, Role::Master | Role::Staff),
-        }
     }
 }
 

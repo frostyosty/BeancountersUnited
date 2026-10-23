@@ -1,27 +1,49 @@
-# Test deployment on Fly.io. SQLite lives on one volume, so this must stay a single machine.
-# The app name must be globally unique: change it (or run `fly launch --copy-config`).
-app = "acct-test"
+# Production on Fly.io (ADR 008). Staging is fly.staging.toml; keep the two in step.
+# SQLite lives on one volume with one writer, so this is always exactly one machine: deploy with
+# `--ha=false` and never `fly scale count` above 1.
+#
+# The app name is the only place production's name is written. To rename, create the new app and
+# its bucket, change it here and in SITE_URL below, and restore into it from the backup (ADR 008).
+app = "wla-prod"
 primary_region = "syd"
 
+# SIGINT is what acctd shuts down on. Litestream passes it on, waits for acctd to exit, then pushes
+# the last changes to the bucket before the machine stops.
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
 [build]
+  [build.args]
+    # Read by the web build (apps/web/vite.site.ts). The gate stays on until launch.
+    SITE_URL = "https://wla-prod.fly.dev"
+    SITE_GATE = "on"
+
+[env]
+  # Refuse to start without a backup bucket, so production never runs unreplicated.
+  ACCT_REQUIRE_BACKUP = "1"
 
 [mounts]
   source = "acct_data"
   destination = "/data"
+  # Fly's daily snapshots are the second layer behind Litestream (ADR 008).
+  snapshot_retention = 14
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  # Always on: one machine owns the data and keeps the backup streaming.
+  auto_stop_machines = "off"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   [[http_service.checks]]
     method = "GET"
     path = "/api/health"
     interval = "30s"
     timeout = "5s"
-    grace_period = "10s"
+    # Fly's maximum. A restore onto an empty volume may take longer, which only fails the check
+    # for a while; it doesn't stop the machine.
+    grace_period = "60s"
 
 [[vm]]
   size = "shared-cpu-1x"

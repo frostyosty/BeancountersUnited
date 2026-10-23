@@ -2,7 +2,7 @@ import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { Me } from "@acct/types/Me";
 import type { PracticeView } from "@acct/types/PracticeView";
 
-export const boss: Me = { id: "u0", username: "boss", display_name: "Bo Boss", role: "master" };
+export const boss: Me = { id: "u0", username: "boss", display_name: "Bo Boss", role: "practice_admin" };
 export const sam: Me = { id: "u1", username: "sam", display_name: "Sam Staff", role: "staff" };
 export const val: Me = { id: "u2", username: "val", display_name: "Val Viewer", role: "viewer" };
 

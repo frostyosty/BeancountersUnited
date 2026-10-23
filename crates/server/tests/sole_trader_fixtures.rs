@@ -278,7 +278,7 @@ async fn pipeline_accepts_the_defaults() {
     let store = Store::open(&dir.path().join("acct.db")).await.unwrap();
     let actor = Actor {
         user_id: None,
-        role: Role::Master,
+        role: Role::PracticeAdmin,
     };
     let run = async |command: Command| -> String {
         let kind = command.kind();

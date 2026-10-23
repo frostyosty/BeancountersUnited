@@ -34,7 +34,7 @@ impl Server {
         let store = Store::open(&dir.path().join("acct.db")).await.unwrap();
         let system = Actor {
             user_id: None,
-            role: Role::Master,
+            role: Role::PracticeAdmin,
         };
         let init = CommandEnvelope {
             id: new_id(),

@@ -7,8 +7,6 @@ members = [
     "crates/import",
     "crates/ai",
     "apps/desktop/shell",
-    "apps/desktop/master",
-    "apps/desktop/client",
     "apps/desktop/dev",
 ]
 # Plain `cargo build`, `test` and `clippy` skip the desktop apps: they need the system webview

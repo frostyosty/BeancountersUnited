@@ -5,6 +5,8 @@ import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { Me } from "@acct/types/Me";
+import type { SignedUp } from "@acct/types/SignedUp";
+import type { SignUpRequest } from "@acct/types/SignUpRequest";
 import type { TbImportPreview } from "@acct/types/TbImportPreview";
 import type { Via } from "@acct/types/Via";
 import { newId } from "./id";
@@ -69,6 +71,11 @@ export async function fetchMe(fetchFn: typeof fetch = fetch): Promise<Me | null>
 /** Logs in; rejects with the server's message (for example, wrong username or password). */
 export function login(req: LoginRequest, fetchFn: typeof fetch = fetch): Promise<Me> {
   return postJson<Me>("/api/login", req, fetchFn);
+}
+
+/** Signs a business owner up (M12): their account and business in one go, then signs them in. */
+export function signUp(req: SignUpRequest, fetchFn: typeof fetch = fetch): Promise<SignedUp> {
+  return postJson<SignedUp>("/api/signup", req, fetchFn);
 }
 
 export async function logout(fetchFn: typeof fetch = fetch): Promise<void> {

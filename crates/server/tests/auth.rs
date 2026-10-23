@@ -30,7 +30,7 @@ async fn login_sets_a_strict_http_only_cookie_and_logout_ends_it() {
     let cookie = set_cookie.split(';').next().unwrap().to_owned();
     let (_, me) = split(response).await;
     assert_eq!(me["username"], "boss");
-    assert_eq!(me["role"], "master");
+    assert_eq!(me["role"], "practice_admin");
 
     let (status, me) = split(server.send(get("/api/me", Some(&cookie))).await).await;
     assert_eq!(status, StatusCode::OK);
@@ -210,7 +210,7 @@ async fn a_server_initialises_only_once() {
     let server = Server::new().await;
     let system = acct_server::pipeline::Actor {
         user_id: None,
-        role: acct_store::users::Role::Master,
+        role: acct_store::users::Role::PracticeAdmin,
     };
     let again = acct_server::commands::CommandEnvelope {
         id: new_id(),

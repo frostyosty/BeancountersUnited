@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::AppState;
+use crate::access;
 use crate::auth::CurrentUser;
 use crate::business;
 use crate::commands::{Command, CommandEnvelope, LineCoding, Via};
@@ -730,13 +731,20 @@ pub async fn suggest(
     client_id: &str,
 ) -> Result<AiSuggestRun, CommandError> {
     let actor = user.actor();
-    let record = Command::RecordSuggestions {
-        client_id: String::new(),
-        model: String::new(),
-        suggestions: Vec::new(),
-    };
-    if !record.allowed_for(&actor) {
-        return Err(CommandError::Forbidden);
+    // The route's access layer has checked this already; `suggest` checks again because it's
+    // also called directly, and it spends the AI provider's time before any command runs.
+    {
+        let mut conn = state.store.reader().await?;
+        access::check(
+            &mut conn,
+            &actor,
+            &access::Target::Client(access::ClientRef {
+                client_id: client_id.to_owned(),
+                named: ("client", client_id.to_owned()),
+            }),
+            access::Need::Owner,
+        )
+        .await?;
     }
     let Some(suggester) = state.suggester.clone() else {
         return Err(CommandError::invalid(

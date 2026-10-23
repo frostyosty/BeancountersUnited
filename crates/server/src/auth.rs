@@ -222,6 +222,29 @@ pub async fn me(user: CurrentUser) -> Json<Me> {
     Json(Me::from(&user.0))
 }
 
+/// Starts a session for `user_id` and returns its `Set-Cookie` value. Sign-up (M12) uses this,
+/// so a new owner is signed in with the same session and cookie as a login.
+pub(crate) async fn start_session(
+    state: &AppState,
+    user_id: &str,
+) -> Result<HeaderValue, CommandError> {
+    let token = new_token();
+    let now = Utc::now();
+    let mut w = state.store.writer().await;
+    sessions::delete_expired(&mut w, now).await?;
+    sessions::insert(
+        &mut w,
+        &Session {
+            token_hash: token_hash(&token),
+            user_id: user_id.to_owned(),
+            created_at: now,
+            expires_at: now + Duration::hours(SESSION_HOURS),
+        },
+    )
+    .await?;
+    Ok(session_cookie(&token, SESSION_HOURS * 3600))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

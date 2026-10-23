@@ -1,4 +1,5 @@
-//! `GET` query endpoints and the sync feed. Every one needs a login; any role may read.
+//! `GET` query endpoints and the sync feed. `crate::access::guard` checks each request before it
+//! gets here; the lists that mix businesses are filtered with `access::visible`.
 
 use acct_core::{Account, AccountCode, JournalLine, ReportDoc, TbLine};
 use acct_store::journals::JournalKind;
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::AppState;
+use crate::access;
 use crate::auth::CurrentUser;
 use crate::error::CommandError;
 use crate::ledger;
@@ -223,18 +225,17 @@ pub async fn get_practice(
     }))
 }
 
-/// `GET /api/users`: master only.
+/// `GET /api/users`: practice admins see the practice's users; an overseer sees everyone.
 pub async fn list_users(
     State(state): State<AppState>,
     user: CurrentUser,
 ) -> ApiResult<Vec<UserView>> {
-    if user.0.role != Role::Master {
-        return Err(CommandError::Forbidden);
-    }
     let mut conn = state.store.reader().await?;
     let all = users::list(&mut conn).await?;
+    let everyone = user.0.role == Role::Overseer;
     Ok(Json(
         all.into_iter()
+            .filter(|u| everyone || u.role.is_practice())
             .map(|u| UserView {
                 id: u.id,
                 username: u.username,
@@ -249,12 +250,14 @@ pub async fn list_users(
 /// `GET /api/clients`
 pub async fn list_clients(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
 ) -> ApiResult<Vec<ClientSummary>> {
     let mut conn = state.store.reader().await?;
+    let visible = access::visible(&mut conn, &user.actor()).await?;
     let all = clients::list(&mut conn).await?;
     Ok(Json(
         all.into_iter()
+            .filter(|c| visible.shows(Some(&c.id)))
             .map(|c| ClientSummary {
                 id: c.id,
                 name: c.name,
@@ -380,19 +383,22 @@ pub async fn get_report(
 /// `GET /api/sync?after=<seq>&limit=<n>`: the change feed for live refresh.
 pub async fn sync(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     query: Result<Query<SyncQuery>, QueryRejection>,
 ) -> ApiResult<SyncFeed> {
     let Query(q) = query.map_err(|e| CommandError::Malformed(e.body_text()))?;
     let limit = q.limit.unwrap_or(SYNC_MAX).clamp(1, SYNC_MAX);
     let mut conn = state.store.reader().await?;
+    let visible = access::visible(&mut conn, &user.actor()).await?;
     let entries = log::after(&mut conn, q.after, limit).await?;
+    // `last_seq` still moves past entries the user can't see, so paging never stalls.
     let last_seq = entries.last().map_or(q.after, |e| e.seq);
     // Read after the entries, so it's never older than them.
     let head_seq = log::head_seq(&mut conn).await?;
     Ok(Json(SyncFeed {
         changes: entries
             .into_iter()
+            .filter(|e| visible.shows(e.client_id.as_deref()))
             .map(|e| Change {
                 seq: e.seq,
                 kind: e.kind,

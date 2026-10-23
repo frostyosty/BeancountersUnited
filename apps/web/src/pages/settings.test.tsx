@@ -7,7 +7,7 @@ import { boss, practice, sam } from "../test/data";
 import { jsonResponse, renderApp, stubApi } from "../test/render";
 
 const users = [
-  { id: "u0", username: "boss", display_name: "Bo Boss", role: "master", active: true },
+  { id: "u0", username: "boss", display_name: "Bo Boss", role: "practice_admin", active: true },
   { id: "u1", username: "sam", display_name: "Sam Staff", role: "staff", active: true },
 ];
 
@@ -36,7 +36,7 @@ describe("practice settings", () => {
     renderApp(<App />, "/settings");
     const user = userEvent.setup();
 
-    // A master can't deactivate themselves from here.
+    // A practice admin can't deactivate themselves from here.
     expect(((await screen.findByLabelText("boss active")) as HTMLInputElement).disabled).toBe(true);
     await user.click(screen.getByLabelText("sam active"));
     await user.click(screen.getAllByRole("button", { name: "Reset password…" })[1]!);
@@ -60,10 +60,10 @@ describe("practice settings", () => {
     ]);
   });
 
-  it("is only for masters", async () => {
+  it("is only for practice admins", async () => {
     stubApi({ "GET /api/me": () => sam, "GET /api/clients": () => [], "GET /api/practice": () => practice });
     renderApp(<App />, "/settings");
-    expect(await screen.findByText("Only master users can change practice settings.")).toBeTruthy();
+    expect(await screen.findByText("Only practice admins can change practice settings.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Practice settings" })).toBeNull();
   });
 });

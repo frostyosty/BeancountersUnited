@@ -1,0 +1,64 @@
+# Deploys to Fly.io (ADR 008). Staging deploys automatically after CI passes on a push to master.
+# Production then waits for a manual approval on the `production` environment.
+#
+# GitHub setup (see ADR 008):
+#   - Environments `staging` and `production`, each with a secret FLY_API_TOKEN: a deploy token
+#     for that one app (`fly tokens create deploy -a <app>`).
+#   - `production` has required reviewers, which makes the approval step.
+# App names live only in fly.staging.toml and fly.toml.
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+
+# Deploys run one at a time, in order. A newer push waits rather than cancelling a deploy halfway.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    # Only after every CI job (including `make check`) passed on a push, not on a pull request.
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deploy exactly the commit CI tested, even if master has moved on.
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
+        with:
+          version: 0.4.119
+      - run: >-
+          flyctl deploy --config fly.staging.toml --remote-only --ha=false
+          --image-label ${{ github.event.workflow_run.head_sha }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  production:
+    needs: staging
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment hold the job here until someone approves.
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
+        with:
+          version: 0.4.119
+      - run: >-
+          flyctl deploy --config fly.toml --remote-only --ha=false
+          --image-label ${{ github.event.workflow_run.head_sha }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

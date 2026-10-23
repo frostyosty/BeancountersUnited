@@ -357,7 +357,7 @@ async fn setup() -> Setup {
 
 async fn s_master(s: &Setup, command: Command) -> String {
     let kind = command.kind();
-    match s.run_as(Role::Master, command).await {
+    match s.run_as(Role::PracticeAdmin, command).await {
         Ok(id) => id.unwrap_or_default(),
         Err(e) => panic!("{kind}: {e}"),
     }

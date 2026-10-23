@@ -19,6 +19,7 @@ import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
 import { SaveTaxPage } from "./pages/SaveTaxPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { AcceptInvitePage, InviteSignedOutPage, SignUpPage } from "./pages/SignUpPage";
 import { StatementsTab } from "./pages/StatementsTab";
 import { TbImportTab } from "./pages/TbImportTab";
 import { TrialBalanceTab } from "./pages/TrialBalanceTab";
@@ -46,6 +47,8 @@ export function App() {
         <Route path="contact" element={<ContactPage />} />
         <Route path="pricing" element={<PricingPage />} />
         <Route path="product" element={<ProductPage />} />
+          <Route path="signup" element={<SignUpPage />} />
+          <Route path="invite/:token" element={<InviteSignedOutPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
       </SiteGate>
@@ -70,6 +73,7 @@ export function App() {
           </Route>
           <Route path="settings" element={<SettingsPage />} />
           <Route path="account" element={<AccountPage />} />
+          <Route path="invite/:token" element={<AcceptInvitePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
