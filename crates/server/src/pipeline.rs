@@ -31,6 +31,7 @@ use crate::auth;
 use crate::business;
 use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
+use crate::history;
 use crate::ledger;
 use crate::merchants;
 use crate::save_tax;
@@ -96,7 +97,7 @@ pub async fn submit_via(
     }
 
     // The one access check for commands (crate::access): role, and which businesses it touches.
-    access::check_command(&mut tx, actor, &command).await?;
+    let touched = access::check_command(&mut tx, actor, &command).await?;
 
     let seq = log::next_seq(&mut tx).await?;
     // Before applying: coding a line deletes any suggestion still waiting on it, so the ones being
@@ -104,7 +105,10 @@ pub async fn submit_via(
     if let Some(v) = &via {
         ai::accept_via(&mut tx, &command, v, seq).await?;
     }
+    // Who changed what (M13): what the command touches and the tax figure, before and after.
+    let before = history::before(&mut tx, &command, &touched).await?;
     let effect = apply(&mut tx, actor, &command, seq, at.date_naive()).await?;
+    let changes = history::after(&mut tx, &command, before, effect.client_id.as_deref()).await?;
     let accepted = Accepted {
         seq,
         entity_id: effect.entity_id,
@@ -122,6 +126,7 @@ pub async fn submit_via(
             client_year_id: effect.client_year_id,
             at,
             via: via.map(|v| serde_json::to_string(&v).expect("via serialises")),
+            changes: Some(serde_json::to_string(&changes).expect("changes serialise")),
         },
     )
     .await?;

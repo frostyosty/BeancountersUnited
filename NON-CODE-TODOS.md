@@ -44,6 +44,10 @@ Development with synthetic data isn't affected.
 - [ ] M4: review the depreciation snapshots, and check the Assets tab in a browser.
 - [ ] M10: check the owner screen in a browser (upload, tax figure, gaps).
 - [ ] M11: check Save tax in a browser, including the AI consent screen.
+- [ ] M13: open the app in two browsers as two people (an owner and their accountant, say) on the same
+      business. Check each sees the other under "Here now", and the other's changes in the panel within a
+      few seconds. Click the tax figure and a TB line to see their changes, and try the filters. Check the
+      wording of the descriptions reads well to an owner.
 
 ## For the tax specialist, before M14 files anything
 The items marked **check** in `docs/domain.md`; its "Open" section has the detail.

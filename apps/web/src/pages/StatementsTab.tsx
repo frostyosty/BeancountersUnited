@@ -5,6 +5,7 @@ import type { ReportRow } from "@acct/types/ReportRow";
 import type { ReportWarning } from "@acct/types/ReportWarning";
 import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
+import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { getJson } from "../lib/api";
 import { formatDate } from "../lib/dates";
@@ -33,7 +34,7 @@ export function StatementsTab() {
 }
 
 export function Statements({ doc }: { doc: ReportDoc }) {
-  const { chart } = useYearContext();
+  const { chart, year } = useYearContext();
   const names = new Map(chart.map((a) => [a.code, a.name]));
   const [open, setOpen] = useState<string | null>(null);
   const hasPrior = doc.prior_period !== null;
@@ -96,7 +97,7 @@ export function Statements({ doc }: { doc: ReportDoc }) {
                       <td className="num">{r.style === "heading" ? "" : formatStatementDollars(r.current)}</td>
                       {hasPrior && <td className="num">{r.style === "heading" ? "" : formatStatementDollars(r.prior)}</td>}
                     </tr>
-                    {open === id && <DrillDown row={r} names={names} hasPrior={hasPrior} />}
+                    {open === id && <DrillDown row={r} names={names} hasPrior={hasPrior} yearId={year.id} />}
                   </Fragment>
                 );
               })}
@@ -153,7 +154,17 @@ function AssetScheduleView({
 }
 
 /** The accounts behind a line, in cents, plus a rounding entry so they add up to the line. */
-function DrillDown({ row, names, hasPrior }: { row: ReportRow; names: Map<string, string>; hasPrior: boolean }) {
+function DrillDown({
+  row,
+  names,
+  hasPrior,
+  yearId,
+}: {
+  row: ReportRow;
+  names: Map<string, string>;
+  hasPrior: boolean;
+  yearId: string;
+}) {
   const sum = (col: "current" | "prior") => row.accounts.reduce((s, a) => s + a[col], 0);
   const roundCurrent = (row.current ?? 0) * 100 - sum("current");
   const roundPrior = (row.prior ?? 0) * 100 - sum("prior");
@@ -180,6 +191,7 @@ function DrillDown({ row, names, hasPrior }: { row: ReportRow; names: Map<string
             )}
           </tbody>
         </table>
+        <ChangesButton figure={{ label: row.label, year: yearId, accounts: row.accounts.map((a) => a.code) }} />
       </td>
     </tr>
   );

@@ -8,9 +8,11 @@ pub mod business;
 pub mod commands;
 pub mod error;
 pub mod fixtures;
+pub mod history;
 pub mod ledger;
 pub mod merchants;
 pub mod pipeline;
+pub mod presence;
 pub mod reads;
 pub mod save_tax;
 pub mod signup;
@@ -42,6 +44,8 @@ pub struct AppState {
     /// The AI suggester (ADR 009), if the server is configured with one. `None` means Save tax
     /// shows no AI suggestions.
     pub suggester: Option<Arc<dyn acct_ai::Suggester>>,
+    /// Who's signed in now (M13), kept in memory.
+    pub presence: Arc<presence::Presence>,
 }
 
 impl AppState {
@@ -50,6 +54,7 @@ impl AppState {
         AppState {
             store,
             suggester: ai::suggester_from_env(),
+            presence: Arc::default(),
         }
     }
 }
@@ -152,6 +157,8 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             post(ai::post_ai_suggestions),
         ),
         (Method::GET, "/api/sync", get(reads::sync)),
+        (Method::GET, "/api/history", get(history::get_history)),
+        (Method::POST, "/api/presence", post(presence::post_presence)),
     ]
 }
 

@@ -17,8 +17,11 @@ export function stubApi(routes: Record<string, Handler>) {
     const url = new URL(String(input), "http://localhost");
     const method = init?.method ?? "GET";
     const key = `${method} ${url.pathname}`;
-    calls.push({ method, path: url.pathname, body: init?.body === undefined ? undefined : parseBody(String(init.body)) });
-    const handler = routes[key] ?? (key === "GET /api/sync" ? quietFeed : undefined);
+    const handler = routes[key] ?? quiet[key];
+    // Background polling a test didn't ask about stays out of `calls`.
+    if (routes[key]) {
+      calls.push({ method, path: url.pathname, body: init?.body === undefined ? undefined : parseBody(String(init.body)) });
+    }
     if (!handler) {
       throw new Error(`unexpected request: ${key}`);
     }
@@ -28,8 +31,13 @@ export function stubApi(routes: Record<string, Handler>) {
   return calls;
 }
 
-/** The sync feed when a test doesn't care about it: nothing ever changes. */
-const quietFeed: Handler = () => ({ changes: [], last_seq: 0, head_seq: 0 });
+/** What the app polls in the background, when a test doesn't care about it: nothing ever changes,
+ * nobody else is here, and there's no history. */
+const quiet: Record<string, Handler> = {
+  "GET /api/sync": () => ({ changes: [], last_seq: 0, head_seq: 0 }),
+  "POST /api/presence": () => [],
+  "GET /api/history": () => ({ entries: [], next_before: null }),
+};
 
 function parseBody(text: string): unknown {
   try {

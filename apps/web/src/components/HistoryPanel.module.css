@@ -1,0 +1,159 @@
+.panel {
+  width: 300px;
+  flex: none;
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: calc(100vh - 3rem);
+  position: sticky;
+  top: 0;
+}
+
+.collapsed {
+  width: auto;
+}
+
+.panel h2 {
+  font-size: 1rem;
+  margin: 0 0 var(--space-2);
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.hide {
+  font-size: 0.85rem;
+}
+
+.here {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.here li {
+  padding: 2px 0;
+}
+
+.dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.changes {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.figure {
+  padding: var(--space-2);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: 0.85rem;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filters label:first-child {
+  grid-column: 1 / -1;
+}
+
+.filters .check {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.filters input,
+.filters select {
+  min-width: 0;
+}
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.item p {
+  margin: 0;
+}
+
+.description {
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ai {
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.up {
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+.down {
+  font-size: 0.85rem;
+  color: var(--ok);
+}
+
+.fields {
+  font-size: 0.85rem;
+}
+
+.fields ul {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1rem;
+}
+
+.subject {
+  font-weight: 600;
+}
+
+.changesButton {
+  font-size: 0.8rem;
+  padding: 0 var(--space-1);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+@media (max-width: 800px) {
+  .panel {
+    width: auto;
+    max-height: none;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

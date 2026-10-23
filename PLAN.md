@@ -215,7 +215,7 @@ Status: not started
 Done when: staging runs over HTTPS, two owners sign up and neither can read the other's data, and a restore drill brings staging back with an identical `command_log`.
 
 ## M13 — Who changed what
-Status: not started. This is the selling point against Xero.
+Status: code complete (2026-10-24); waiting on a browser check with two people (`NON-CODE-TODOS.md`). This is the selling point against Xero. Built: migration 0008 (`command_log.changes`), recorded by the pipeline for every command: each value it changed before and after, and the business's tax to pay (with its GST and income-year parts) before and after. `crates/server/src/history.rs` describes every command kind in plain English (`history::tests` has one per kind and fails on a kind without one) and serves `GET /api/history` (filters: business, person, dates, a tax figure, or a year's accounts for the drill-down). `crates/server/src/presence.rs` serves `POST /api/presence`, kept in memory. The web app's history panel is on the left of every signed-in page, and the tax figures, TB rows and statement lines have a "Changes" button. The done check is `crates/server/tests/m13.rs` (`m13_is_done`). Commands logged before M13 show no before/after or tax effect.
 - A panel on the left of every page shows:
   - who's signed in now
   - a live feed of changes in plain English, for example "Sam marked 12 COUNTDOWN transactions as personal. Tax to pay went up $84."

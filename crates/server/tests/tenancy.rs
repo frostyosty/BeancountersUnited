@@ -374,7 +374,9 @@ const PRACTICE: [&str; 4] = [
     "/api/merchants/{entity_type}",
 ];
 /// Lists that mix businesses: B sees them, filtered to B's own.
-const LISTS: [&str; 2] = ["/api/clients", "/api/sync"];
+const LISTS: [&str; 3] = ["/api/clients", "/api/sync", "/api/history"];
+/// Who's here now: B sees only those on businesses B can see (`tests/m13.rs` covers more).
+const PRESENCE: &str = "/api/presence";
 
 #[test]
 fn every_route_has_an_access_rule() {
@@ -413,7 +415,13 @@ async fn an_owner_reaches_no_route_into_another_owners_business() {
         };
         let (status, body) = split(server.send(request(&b.cookie)).await).await;
         let text = body.to_string();
-        if PRACTICE.contains(&path) {
+        if path == PRESENCE {
+            assert_eq!(status, StatusCode::OK, "{method} {path}: {body}");
+            assert!(
+                !text.contains(&a.owner.business_id) && !text.contains(name),
+                "{method} {path} shows B something of A's: {body}"
+            );
+        } else if PRACTICE.contains(&path) {
             assert_eq!(status, StatusCode::FORBIDDEN, "{method} {path}: {body}");
         } else if LISTS.contains(&path) {
             assert_eq!(status, StatusCode::OK, "{method} {path}: {body}");

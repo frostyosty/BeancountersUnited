@@ -208,6 +208,9 @@ pub async fn logout(
 ) -> Result<Response, CommandError> {
     if let Some(token) = token_from(&headers) {
         let mut w = state.store.writer().await;
+        if let Some(s) = sessions::get(&mut w, &token_hash(&token)).await? {
+            state.presence.leave(&s.user_id);
+        }
         sessions::delete(&mut w, &token_hash(&token)).await?;
     }
     let mut response = axum::http::StatusCode::NO_CONTENT.into_response();

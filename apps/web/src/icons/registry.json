@@ -544,5 +544,35 @@
       "type": "emoji",
       "value": "🤝"
     }
+  },
+  "history": {
+    "here": {
+      "type": "emoji",
+      "value": "👥"
+    },
+    "changes": {
+      "type": "emoji",
+      "value": "🕘"
+    },
+    "figure": {
+      "type": "emoji",
+      "value": "🔎"
+    },
+    "ai": {
+      "type": "emoji",
+      "value": "🤖"
+    },
+    "up": {
+      "type": "emoji",
+      "value": "📈"
+    },
+    "down": {
+      "type": "emoji",
+      "value": "📉"
+    },
+    "empty": {
+      "type": "emoji",
+      "value": "🌱"
+    }
   }
 }

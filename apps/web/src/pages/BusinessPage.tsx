@@ -4,6 +4,7 @@ import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
+import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate } from "../lib/dates";
 import { fileToBase64 } from "../lib/files";
@@ -193,7 +194,10 @@ function TaxFigure({ tax, clientId }: { tax: TaxPosition; clientId: string }) {
   const navigate = useNavigate();
   return (
     <>
-      <p className={styles.figure}>${formatMoney(tax.total)}</p>
+      <p className={styles.figure}>
+        ${formatMoney(tax.total)}
+        <ChangesButton figure={{ label: "tax to pay", figure: "tax" }} />
+      </p>
       <p>
         The most you could owe. Anything not sorted yet is counted the safe way: money in as income, and spending as claiming nothing.
         Save tax to bring it down.
@@ -219,7 +223,12 @@ function TaxFigure({ tax, clientId }: { tax: TaxPosition; clientId: string }) {
                     <br />
                     <span className="muted">{whenCanFile(g.can_file_from, g.so_far)}</span>
                   </td>
-                  <td className="num">{g.boxes ? formatMoney(g.boxes.box15) : g.problem}</td>
+                  <td className="num">
+                    {g.boxes ? formatMoney(g.boxes.box15) : g.problem}
+                    <ChangesButton
+                      figure={{ label: `GST for ${formatDate(g.start)} to ${formatDate(g.end)}`, figure: `gst:${g.start}` }}
+                    />
+                  </td>
                 </tr>
               ))}
               {tax.income.map((y) => (
@@ -234,7 +243,12 @@ function TaxFigure({ tax, clientId }: { tax: TaxPosition; clientId: string }) {
                       {whenCanFile(y.can_file_from, y.so_far)}
                     </span>
                   </td>
-                  <td className="num">{y.income_tax !== null ? formatMoney(y.income_tax) : y.problem}</td>
+                  <td className="num">
+                    {y.income_tax !== null ? formatMoney(y.income_tax) : y.problem}
+                    <ChangesButton
+                      figure={{ label: `income tax for the year to 31 Mar ${y.income_year}`, figure: `income:${y.income_year}` }}
+                    />
+                  </td>
                 </tr>
               ))}
               {tax.income

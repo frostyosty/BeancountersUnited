@@ -20,6 +20,9 @@ pub struct LoggedCommand {
     /// How the command came about (ADR 009), as JSON, such as accepting an AI suggestion. `None`
     /// for a command the user made alone.
     pub via: Option<String>,
+    /// What the command changed (M13), as JSON: the tax figure before and after, and each value
+    /// it touched. `None` for commands logged before M13.
+    pub changes: Option<String>,
 }
 
 /// The newest `seq` in the log, or 0 if it's empty.
@@ -42,8 +45,9 @@ pub async fn next_seq(conn: &mut SqliteConnection) -> Result<i64> {
 pub async fn append(conn: &mut SqliteConnection, entry: &LoggedCommand) -> Result<()> {
     sqlx::query(
         "INSERT INTO command_log
-             (seq, id, kind, payload, result, user_id, client_id, client_year_id, at, via)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             (seq, id, kind, payload, result, user_id, client_id, client_year_id, at, via,
+              changes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(entry.seq)
     .bind(&entry.id)
@@ -55,6 +59,7 @@ pub async fn append(conn: &mut SqliteConnection, entry: &LoggedCommand) -> Resul
     .bind(&entry.client_year_id)
     .bind(entry.at)
     .bind(&entry.via)
+    .bind(&entry.changes)
     .execute(conn)
     .await?;
     Ok(())
@@ -81,4 +86,26 @@ pub async fn after(
             .fetch_all(conn)
             .await?,
     )
+}
+
+/// Up to `limit` commands before `seq`, newest first, for the history panel. `client_id` and
+/// `user_id`, when given, keep only that business's or that person's commands.
+pub async fn before(
+    conn: &mut SqliteConnection,
+    seq: i64,
+    client_id: Option<&str>,
+    user_id: Option<&str>,
+    limit: i64,
+) -> Result<Vec<LoggedCommand>> {
+    Ok(sqlx::query_as(
+        "SELECT * FROM command_log
+         WHERE seq < ? AND (?2 IS NULL OR client_id = ?2) AND (?3 IS NULL OR user_id = ?3)
+         ORDER BY seq DESC LIMIT ?4",
+    )
+    .bind(seq)
+    .bind(client_id)
+    .bind(user_id)
+    .bind(limit)
+    .fetch_all(conn)
+    .await?)
 }

@@ -201,20 +201,27 @@ pub async fn visible(conn: &mut SqliteConnection, actor: &Actor) -> Result<Visib
 }
 
 /// Checks a command against everything it touches. The pipeline calls this before applying it.
+/// Returns the clients it touches, in the order the command names them.
 pub async fn check_command(
     conn: &mut SqliteConnection,
     actor: &Actor,
     command: &Command,
-) -> Result<(), CommandError> {
+) -> Result<Vec<String>, CommandError> {
     let (need, targets) = command_targets(conn, command).await?;
     // Role first, so a refusal never depends on whether something exists.
     if need > ceiling(actor.role) {
         return Err(CommandError::Forbidden);
     }
+    let mut clients: Vec<String> = Vec::new();
     for target in &targets {
         check(conn, actor, target, need).await?;
+        if let Target::Client(c) = target
+            && !clients.contains(&c.client_id)
+        {
+            clients.push(c.client_id.clone());
+        }
     }
-    Ok(())
+    Ok(clients)
 }
 
 /// What a command touches, and how much it asks to do there. The match has no catch-all, so a
@@ -417,7 +424,8 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
             R::Practice(Need::Read)
         }
         "/api/users" if get => R::Practice(Need::Admin),
-        "/api/clients" | "/api/sync" if get => R::Listing,
+        "/api/clients" | "/api/sync" | "/api/history" if get => R::Listing,
+        "/api/presence" if post => R::Listing,
         "/api/clients/{id}"
         | "/api/clients/{id}/chart"
         | "/api/clients/{id}/asset-classes"

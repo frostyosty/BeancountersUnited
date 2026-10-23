@@ -1,4 +1,5 @@
 import type { TbLine } from "@acct/types/TbLine";
+import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatMoney, sumCents } from "../lib/money";
 import { useTrialBalance } from "../lib/queries";
@@ -42,7 +43,10 @@ export function TrialBalanceTab() {
           return (
             <tr key={a.code}>
               <td>{a.code}</td>
-              <td>{a.name}</td>
+              <td>
+                <span>{a.name}</span>
+                <ChangesButton figure={{ label: `account ${a.code} ${a.name}`, year: year.id, accounts: [a.code] }} />
+              </td>
               <td className="num">{formatMoney(o)}</td>
               <td className="num">{formatMoney(c - o)}</td>
               <td className="num">{debit(c)}</td>

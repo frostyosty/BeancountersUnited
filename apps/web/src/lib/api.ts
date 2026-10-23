@@ -5,6 +5,7 @@ import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { Me } from "@acct/types/Me";
+import type { PresentUser } from "@acct/types/PresentUser";
 import type { SignedUp } from "@acct/types/SignedUp";
 import type { SignUpRequest } from "@acct/types/SignUpRequest";
 import type { TbImportPreview } from "@acct/types/TbImportPreview";
@@ -108,4 +109,9 @@ export async function previewTbImport(yearId: string, csv: string, fetchFn: type
     return fail(res, `POST ${path}`);
   }
   return (await res.json()) as TbImportPreview;
+}
+
+/** Tells the server this browser is here, on `businessId` if any, and returns who else is (M13). */
+export function sendPresence(businessId: string | null, fetchFn: typeof fetch = fetch): Promise<PresentUser[]> {
+  return postJson<PresentUser[]>("/api/presence", businessId ? { business_id: businessId } : {}, fetchFn);
 }

@@ -226,6 +226,7 @@ async fn command_log_appends_finds_and_feeds() {
         client_year_id: None,
         at: Utc.with_ymd_and_hms(2026, 9, 23, 1, 2, 3).unwrap(),
         via: None,
+        changes: None,
     };
     log::append(&mut w, &entry(1, "a")).await.unwrap();
     log::append(&mut w, &entry(2, "b")).await.unwrap();
@@ -239,6 +240,25 @@ async fn command_log_appends_finds_and_feeds() {
         vec![entry(2, "b")]
     );
     assert_eq!(log::after(&mut w, 0, 1).await.unwrap().len(), 1);
+    // The history panel reads newest first, before a seq, optionally for one client or user.
+    let newest = log::before(&mut w, i64::MAX, None, None, 10).await.unwrap();
+    assert_eq!(newest.iter().map(|e| e.seq).collect::<Vec<_>>(), [2, 1]);
+    assert_eq!(
+        log::before(&mut w, 2, Some("c1"), None, 10).await.unwrap(),
+        vec![entry(1, "a")]
+    );
+    assert!(
+        log::before(&mut w, 9, Some("c2"), None, 10)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        log::before(&mut w, 9, None, Some("u1"), 10)
+            .await
+            .unwrap()
+            .is_empty()
+    );
     // The id is the idempotency key, so it can't be logged twice.
     assert!(is_constraint_error(
         &log::append(&mut w, &entry(3, "a")).await.unwrap_err()
