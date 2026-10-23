@@ -4,8 +4,8 @@ Online accounting for NZ small businesses and their accountants: upload bank sta
 pay, categorise transactions to bring it down, and file GST and income tax returns with IRD. The code
 name is `acct`.
 
-The online version is being built (`PLAN.md`, from M10). For now the server runs locally, or on an office
-network through the desktop apps below.
+The online version is being built (`PLAN.md`, from M10). The server is `acctd`, and everyone uses acct in a
+browser. For now it runs locally.
 
 - `CLAUDE.md`: the rules and architecture.
 - `PLAN.md`: milestones.
@@ -23,13 +23,12 @@ The server keeps its database at `data/acct.db` (set `ACCT_DB` to move it) and l
 
 ## Desktop apps
 
-Each push to `master` builds three Windows programs and publishes them as the `master-build`
-pre-release on GitHub. A `v*` tag publishes a numbered release. See `docs/decisions/006-desktop-apps.md`.
-`acct-master` retires once the hosted version is live (ADR 007).
+Each push to `master` builds one Windows program, `acct-dev.exe`, and publishes it as the
+`master-build` pre-release on GitHub. A `v*` tag publishes a numbered release.
 
-- `acct-master.exe`: run on the office server PC. The first run sets up the practice and its
-  master user; after that, it shows the address staff connect to.
-- `acct-client.exe`: run on staff PCs. Type in the master's address, then sign in with the
-  account the master user created for you.
-- `acct-dev.exe`: for development. A throwaway master loaded with the synthetic fixtures, a window
-  signed in as each role, and a simulator that checks several clients stay in sync.
+`acct-dev.exe` is for development and for trying a build on Windows without a Rust or pnpm toolchain. It
+runs a throwaway server loaded with the synthetic fixtures, opens a window signed in as each role, and has
+a simulator that checks several clients stay in sync. Everything is deleted when you close it.
+
+`acct-master` and `acct-client` were retired in M12: `acctd` is the server, and everyone else uses a
+browser. See the amendment at the end of `docs/decisions/006-desktop-apps.md`.

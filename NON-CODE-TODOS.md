@@ -71,6 +71,14 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
 - [ ] Which entity type comes after sole traders: companies, partnerships or trusts (`PLAN.md`, Open
       questions).
 
+## M12 security (`docs/security.md`): before real data goes in
+- [ ] Offshore storage: production and staging run in Fly.io's Sydney region (`fly.toml`), and backups go
+      to a Tigris bucket, so owners' records are stored outside New Zealand. That needs IRD approval or a
+      provider on IRD's approved list ([third-party providers approved to store taxpayer electronic
+      records offshore](https://www.taxtechnical.ird.govt.nz/general-articles/third-party-providers-approved-to-store-taxpayer-electronic-records-offshore)).
+      Check whether Fly.io and Tigris are on it; if not, apply to IRD, or choose a host that is. Record the
+      outcome in ADR 008 and `docs/security.md` ("Where the data lives").
+
 ## M12 tenancy (Agent 3): decisions and checks
 - [ ] Make the `austin` overseer on the hosted server, once it runs a build with M12's roles:
       `fly ssh console -a <app>`, then `acctd init` (if the database is new) and `acctd add-overseer`.
