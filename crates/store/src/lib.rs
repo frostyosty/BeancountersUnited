@@ -17,12 +17,15 @@ use sqlx::{ConnectOptions, Connection};
 use thiserror::Error;
 use tokio::sync::{Mutex, MutexGuard};
 
+pub mod ai;
 pub mod assets;
 pub mod bank;
 pub mod charts;
 pub mod clients;
+pub mod coding;
 pub mod journals;
 pub mod log;
+pub mod merchants;
 pub mod practice;
 pub mod sessions;
 pub mod templates;

@@ -1,0 +1,14 @@
+{
+  "id": "msg_synthetic_0001",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"suggestions\":[{\"ref\":1,\"category\":\"255\",\"gst\":\"standard\",\"confidence\":\"high\"},{\"ref\":2,\"category\":\"personal\",\"gst\":\"none\",\"confidence\":\"medium\"},{\"ref\":3,\"category\":\"100\",\"gst\":\"standard\",\"confidence\":\"low\"}]}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "usage": { "input_tokens": 412, "cache_read_input_tokens": 1890, "output_tokens": 96 }
+}

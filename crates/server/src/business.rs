@@ -5,13 +5,19 @@
 //! arithmetic (`acct_core::bank`); this module decides which journals to post and keeps the
 //! store's record of where they came from.
 
+use std::collections::BTreeSet;
+
 use acct_core::bank::{Coverage, Gap, HoldingAccounts, gaps, unsorted_lines};
+use acct_core::coding::CodingSettings;
 use acct_core::tax::gst::GstFrequency;
 use acct_core::tax::income_tax::IncomeYear;
 use acct_core::{Account, AccountCode, AccountType, ClientYear, Journal, JournalLine, Money};
-use acct_import::bank::{Statement, duplicate_keys, normalise_account, read_statement};
+use acct_import::bank::{
+    Statement, StatementKind, duplicate_keys, normalise_account, normalise_card, read_statement,
+};
 use acct_store::bank::{
-    self as bank_store, BankAccount, BankLine, Business, GapJournal, GstSetting, StoredStatement,
+    self as bank_store, AccountKind, BankAccount, BankLine, Business, GapJournal, GstSetting,
+    StoredStatement,
 };
 use acct_store::clients::Client;
 use acct_store::journals::{JournalKind, StoredJournal};
@@ -23,6 +29,12 @@ use serde_json::json;
 use ts_rs::TS;
 
 use crate::error::CommandError;
+use crate::save_tax;
+
+/// The practice's default coding settings for sole traders (`docs/domain.md`, "Coding settings").
+/// Each business gets a copy at setup, so changing these never reaches back.
+const DEFAULT_CODING_SETTINGS: &str =
+    include_str!("../../../fixtures/practice/sole-trader-coding-settings.json");
 
 /// The entity type M10 sets businesses up as.
 pub const SOLE_TRADER: &str = "sole_trader";
@@ -34,6 +46,8 @@ const GST: &str = "810";
 const CAPITAL: &str = "950";
 const OWNERS_EQUITY: &str = "970";
 const BANK_PARENT: &str = "600";
+/// Credit cards: 850.01, 850.02, ... (liabilities).
+const CARD_PARENT: &str = "850";
 /// The default rounding priority list for sole traders.
 const ROUNDING_PRIORITY: &[&str] = &["290", "205", "120", "960", "810"];
 
@@ -107,6 +121,15 @@ pub async fn set_up(
             }
         }
     }
+    let coding_settings: CodingSettings =
+        serde_json::from_str(DEFAULT_CODING_SETTINGS).expect("the default coding settings parse");
+    coding_settings.validate(&chart).map_err(|e| {
+        CommandError::invalid_with(
+            "master_chart_incomplete",
+            format!("The sole-trader master chart doesn't fit the default coding settings: {e}."),
+            &e,
+        )
+    })?;
     let rounding_priority: Vec<AccountCode> = ROUNDING_PRIORITY
         .iter()
         .map(|c| code(c))
@@ -147,6 +170,7 @@ pub async fn set_up(
         },
     )
     .await?;
+    acct_store::coding::set_settings(tx, &id, &coding_settings, seq).await?;
     Ok(id)
 }
 
@@ -170,11 +194,47 @@ pub async fn add_bank_account(
     name: &str,
     account_number: Option<&str>,
 ) -> Result<BankAccount, CommandError> {
-    business(tx, client_id).await?;
     let number = account_number
         .map(str::trim)
         .filter(|n| !n.is_empty())
         .map(normalise_account);
+    add_account(tx, seq, client_id, AccountKind::Bank, name, number).await
+}
+
+/// Adds a credit card, with its own liability account (850.01, 850.02, ...) in the chart.
+/// `card_number` is its last four digits or a card number, masked or not; only the masked form,
+/// `XXXX-XXXX-XXXX-1234`, is kept.
+pub async fn add_card_account(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    client_id: &str,
+    name: &str,
+    card_number: Option<&str>,
+) -> Result<BankAccount, CommandError> {
+    let number = match card_number.map(str::trim).filter(|n| !n.is_empty()) {
+        None => None,
+        Some(n) if n.len() == 4 && n.bytes().all(|b| b.is_ascii_digit()) => {
+            Some(format!("XXXX-XXXX-XXXX-{n}"))
+        }
+        Some(n) => Some(normalise_card(n).ok_or_else(|| {
+            CommandError::invalid(
+                "invalid_card_number",
+                "Give the card's last four digits, or its number as the statement shows it.",
+            )
+        })?),
+    };
+    add_account(tx, seq, client_id, AccountKind::CreditCard, name, number).await
+}
+
+async fn add_account(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    client_id: &str,
+    kind: AccountKind,
+    name: &str,
+    number: Option<String>,
+) -> Result<BankAccount, CommandError> {
+    business(tx, client_id).await?;
     let existing = bank_store::bank_accounts(tx, client_id).await?;
     if let Some(n) = &number
         && existing
@@ -187,13 +247,17 @@ pub async fn add_bank_account(
         ));
     }
     let chart = clients::chart(tx, client_id).await?;
+    let (parent, account_type) = match kind {
+        AccountKind::Bank => (BANK_PARENT, AccountType::Asset),
+        AccountKind::CreditCard => (CARD_PARENT, AccountType::Liability),
+    };
     let account_code = (1..100)
-        .map(|i| code(&format!("{BANK_PARENT}.{i:02}")))
+        .map(|i| code(&format!("{parent}.{i:02}")))
         .find(|c| chart.get(c).is_none())
         .ok_or_else(|| {
             CommandError::invalid(
                 "too_many_bank_accounts",
-                "A business can have 99 bank accounts.",
+                "A business can have 99 bank accounts and 99 cards.",
             )
         })?;
     let name = name.trim();
@@ -206,7 +270,7 @@ pub async fn add_bank_account(
     let account = Account {
         code: account_code.clone(),
         name: name.to_owned(),
-        account_type: AccountType::Asset,
+        account_type,
         active: true,
         default_gst: None,
     };
@@ -217,6 +281,7 @@ pub async fn add_bank_account(
     let bank = BankAccount {
         id: new_id(),
         client_id: client_id.to_owned(),
+        kind,
         code: account_code,
         name: name.to_owned(),
         account_number: number,
@@ -321,6 +386,17 @@ pub async fn import_statement(
                     format!("This file is for account {file}, not {ours}."),
                 ));
             }
+            if a.kind != kind_of(&statement) {
+                return Err(CommandError::invalid(
+                    "wrong_account_kind",
+                    match a.kind {
+                        AccountKind::Bank => "This is a credit card statement, so choose a card.",
+                        AccountKind::CreditCard => {
+                            "This is a bank statement, so choose a bank account."
+                        }
+                    },
+                ));
+            }
             a
         }
         None => match &statement.account {
@@ -329,16 +405,29 @@ pub async fn import_statement(
                 .find(|a| a.account_number.as_ref() == Some(number))
             {
                 Some(a) => a.clone(),
-                None => {
-                    add_bank_account(
-                        tx,
-                        seq,
-                        client_id,
-                        &format!("Account {number}"),
-                        Some(number),
-                    )
-                    .await?
-                }
+                None => match statement.kind {
+                    StatementKind::Bank => {
+                        add_bank_account(
+                            tx,
+                            seq,
+                            client_id,
+                            &format!("Account {number}"),
+                            Some(number),
+                        )
+                        .await?
+                    }
+                    StatementKind::CreditCard => {
+                        let last4 = number.rsplit('-').next().unwrap_or(number);
+                        add_card_account(
+                            tx,
+                            seq,
+                            client_id,
+                            &format!("Credit card ending {last4}"),
+                            Some(number),
+                        )
+                        .await?
+                    }
+                },
             },
             None => {
                 return Err(CommandError::invalid(
@@ -424,6 +513,7 @@ pub async fn import_statement(
     .await?;
 
     let gst_from = business.gst.map(|g| g.registered_from);
+    let mut new_line_ids = BTreeSet::new();
     for (line, occurrence) in new_lines {
         let year = ensure_year(tx, &mut year_list, seq, client_id, start, line.date).await?;
         let lines = unsorted_lines(
@@ -457,10 +547,12 @@ pub async fn import_statement(
             Some(id) => id,
             None => continue,
         };
+        let line_id = new_id();
+        new_line_ids.insert(line_id.clone());
         bank_store::insert_bank_line(
             tx,
             &BankLine {
-                id: new_id(),
+                id: line_id,
                 bank_account_id: account.id.clone(),
                 statement_id: statement_id.clone(),
                 date: line.date,
@@ -504,7 +596,16 @@ pub async fn import_statement(
         .await?
         .expect("just used");
     regenerate_gaps(tx, &mut year_list, seq, &business, &account, start).await?;
+    // The business's rules code the new lines they match (M11).
+    save_tax::apply_rules(tx, seq, client_id, Some(&new_line_ids)).await?;
     Ok(outcome)
+}
+
+fn kind_of(statement: &Statement) -> AccountKind {
+    match statement.kind {
+        StatementKind::Bank => AccountKind::Bank,
+        StatementKind::CreditCard => AccountKind::CreditCard,
+    }
 }
 
 /// Records a bank account's balance on the start date and posts the opening-balance journal.
@@ -788,7 +889,10 @@ async fn pin_sole_trader(tx: &mut SqliteConnection) -> Result<(String, String), 
     Ok((template.id, version.id))
 }
 
-async fn open_year(tx: &mut SqliteConnection, id: &str) -> Result<StoredYear, CommandError> {
+pub(crate) async fn open_year(
+    tx: &mut SqliteConnection,
+    id: &str,
+) -> Result<StoredYear, CommandError> {
     let year = years::get(tx, id)
         .await?
         .ok_or_else(|| CommandError::not_found("client-year", id))?;
@@ -802,7 +906,7 @@ async fn open_year(tx: &mut SqliteConnection, id: &str) -> Result<StoredYear, Co
 }
 
 /// Validates and posts a journal; returns its id.
-async fn post(
+pub(crate) async fn post(
     tx: &mut SqliteConnection,
     year: &StoredYear,
     journal: Journal,

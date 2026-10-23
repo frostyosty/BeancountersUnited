@@ -17,6 +17,7 @@ import { NewBusinessPage } from "./pages/NewBusinessPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
+import { SaveTaxPage } from "./pages/SaveTaxPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatementsTab } from "./pages/StatementsTab";
 import { TbImportTab } from "./pages/TbImportTab";
@@ -59,6 +60,7 @@ export function App() {
           <Route path="clients/:clientId/chart" element={<ChartPage />} />
           <Route path="businesses/new" element={<NewBusinessPage />} />
           <Route path="businesses/:clientId" element={<BusinessPage />} />
+          <Route path="businesses/:clientId/save-tax" element={<SaveTaxPage />} />
           <Route path="years/:yearId" element={<YearLayout />}>
             <Route index element={<JournalsTab />} />
             <Route path="tb" element={<TrialBalanceTab />} />

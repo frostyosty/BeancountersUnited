@@ -1,0 +1,24 @@
+ M12 (6 agents):
+  - Wave 1: ADR 008 with the Fly deploys, acctd backup with the restore drill, business-owner sign-up with access checks, docs/security.md,
+    and the desktop apps.
+  - Wave 2: two-factor sign-in, login throttling, Secure cookies and the access log. These change the same sign-in code as the sign-up     
+    work, so they wait for it.
+  - After both waves: the done check on staging, which you or Agent 1 can run.
+
+  M15 (7 agents):
+  - Wave 1: the PDF ADR, finalise with snapshots, locks, reopen and comparatives, the paragraph library and notes, the analysis reports    
+    with the GL listing, and the bank reconciliation view with a statements worked example.
+  - Wave 2: the PDF renderer, which waits for your sign-off on the ADR, and the finalise and notes screens.
+
+  M16 (7 agents):
+  - Wave 1: the Xero parsers, the MYOB AccountRight parsers, an ADR on Xero's API, and the MYOB Classic spike. The spike has to run in a   
+    session on the office machine and records only how the data is stored (hard rule 1).
+  - Wave 2: importing into the books with an account-mapping preview, the import screen, and the Classic extractor and comparison tool.    
+
+  M14 can't be one agent yet. Most of it needs IRD's build pack and test access, which you don't have yet. Once the build pack arrives, it 
+  splits into about 3 jobs:
+  - the GST and IR3 return builders in core, which need only the spec and could start soon
+  - the IRD gateway client and the myIR sign-in
+  - the Submit screen and locking filed periods
+
+  I can write that file when the build pack lands.

@@ -225,6 +225,7 @@ async fn command_log_appends_finds_and_feeds() {
         client_id: Some("c1".into()),
         client_year_id: None,
         at: Utc.with_ymd_and_hms(2026, 9, 23, 1, 2, 3).unwrap(),
+        via: None,
     };
     log::append(&mut w, &entry(1, "a")).await.unwrap();
     log::append(&mut w, &entry(2, "b")).await.unwrap();

@@ -5,7 +5,7 @@
 
 use acct_core::{
     Account, AccountCode, AccountType, Asset, Chart, ChartError, ClientYear, DepreciationSettings,
-    Journal, JournalLine, RateSource,
+    Journal, JournalLine, Money, OpeningBalance, RateSource,
 };
 use acct_store::assets::{self as asset_store, AssetClass, ClassOverride, StoredAsset};
 use acct_store::charts::MasterChart;
@@ -24,12 +24,15 @@ use acct_store::{
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
+use crate::ai;
 use crate::assets;
 use crate::auth;
 use crate::business;
-use crate::commands::{Accepted, Command, CommandEnvelope};
+use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
 use crate::ledger;
+use crate::merchants;
+use crate::save_tax;
 use crate::tb_import;
 
 /// Who is submitting a command. `user_id` is `None` only for `acctd init` on the server itself.
@@ -54,6 +57,20 @@ pub async fn submit(
     envelope: CommandEnvelope,
     at: DateTime<Utc>,
 ) -> Result<Accepted, CommandError> {
+    submit_via(store, actor, envelope, None, at).await
+}
+
+/// [`submit`], recording how the command came about (ADR 009) in `command_log.via`.
+pub async fn submit_via(
+    store: &Store,
+    actor: &Actor,
+    envelope: CommandEnvelope,
+    via: Option<Via>,
+    at: DateTime<Utc>,
+) -> Result<Accepted, CommandError> {
+    if let Some(v) = &via {
+        check_via(v)?;
+    }
     let id = uuid::Uuid::parse_str(&envelope.id)
         .map_err(|_| CommandError::Malformed(format!("{:?} isn't a UUID", envelope.id)))?
         .hyphenated()
@@ -79,6 +96,11 @@ pub async fn submit(
     }
 
     let seq = log::next_seq(&mut tx).await?;
+    // Before applying: coding a line deletes any suggestion still waiting on it, so the ones being
+    // accepted are marked first. A rejected command rolls this back with everything else.
+    if let Some(v) = &via {
+        ai::accept_via(&mut tx, &command, v, seq).await?;
+    }
     let effect = apply(&mut tx, actor, &command, seq, at.date_naive()).await?;
     let accepted = Accepted {
         seq,
@@ -96,11 +118,32 @@ pub async fn submit(
             client_id: effect.client_id,
             client_year_id: effect.client_year_id,
             at,
+            via: via.map(|v| serde_json::to_string(&v).expect("via serialises")),
         },
     )
     .await?;
     tx.commit().await?;
     Ok(accepted)
+}
+
+/// A `via` must name the model and at least one suggestion. [`ai::accept_via`] then checks, inside
+/// the transaction, that each suggestion is live and matches the coding (ADR 009, "From suggestion
+/// to command").
+fn check_via(via: &Via) -> Result<(), CommandError> {
+    match via {
+        Via::Suggestion {
+            model,
+            suggestion_ids,
+        } => {
+            if model.trim().is_empty() || suggestion_ids.is_empty() {
+                return Err(CommandError::invalid(
+                    "invalid_via",
+                    "A suggestion needs the model that made it and at least one suggestion id.",
+                ));
+            }
+            Ok(())
+        }
+    }
 }
 
 /// Validates the command against the current state, then applies it.
@@ -174,6 +217,148 @@ async fn apply(
             let client_id =
                 business::set_opening_balance(tx, seq, bank_account_id, *balance).await?;
             Ok(client_effect(&client_id))
+        }
+
+        Command::CodeBankLine { line } => {
+            let client_id =
+                save_tax::code_lines(tx, seq, today, std::slice::from_ref(line)).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::CodeBankLines { lines } => {
+            let client_id = save_tax::code_lines(tx, seq, today, lines).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::AddRule {
+            client_id,
+            description_contains,
+            min,
+            max,
+            coding,
+        } => {
+            let id =
+                save_tax::add_rule(tx, seq, client_id, description_contains, *min, *max, coding)
+                    .await?;
+            Ok(Effect {
+                entity_id: Some(id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::RemoveRule { rule_id } => {
+            let client_id = save_tax::remove_rule(tx, seq, rule_id).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::AnswerQuestion {
+            client_id,
+            income_year,
+            answer,
+        } => {
+            save_tax::answer_question(tx, seq, client_id, *income_year, answer).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::ConfirmTransfer {
+            out_line_id,
+            in_line_id,
+        } => {
+            let client_id = save_tax::confirm_transfer(tx, seq, out_line_id, in_line_id).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::ConfirmIrdPayment {
+            bank_line_id,
+            payment,
+        } => {
+            let client_id = save_tax::confirm_ird_payment(tx, seq, bank_line_id, payment).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::ResolveDuplicate {
+            bank_line_id,
+            is_duplicate,
+        } => {
+            let client_id =
+                save_tax::resolve_duplicate(tx, seq, bank_line_id, *is_duplicate).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::ConfirmSupplyInfo { bank_line_id } => {
+            let client_id = save_tax::confirm_supply_info(tx, seq, today, bank_line_id).await?;
+            Ok(client_effect(&client_id))
+        }
+
+        Command::AddCardAccount {
+            client_id,
+            name,
+            card_number,
+        } => {
+            let account =
+                business::add_card_account(tx, seq, client_id, name, card_number.as_deref())
+                    .await?;
+            Ok(Effect {
+                entity_id: Some(account.id),
+                client_id: Some(client_id.clone()),
+                client_year_id: None,
+            })
+        }
+
+        Command::SetCodingSettings {
+            client_id,
+            settings,
+        } => {
+            save_tax::set_coding_settings(tx, seq, client_id, settings).await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::SetAiSuggestions {
+            client_id,
+            enabled,
+            consent_version,
+            activity,
+            private_names,
+        } => {
+            ai::set_ai_suggestions(
+                tx,
+                seq,
+                client_id,
+                *enabled,
+                consent_version.as_deref(),
+                activity.as_deref(),
+                private_names.as_deref(),
+            )
+            .await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::AddMerchant {
+            entity_type,
+            description_contains,
+            coding,
+        } => {
+            let id =
+                merchants::add_merchant(tx, seq, entity_type, description_contains, coding).await?;
+            Ok(Effect {
+                entity_id: Some(id),
+                ..Effect::default()
+            })
+        }
+
+        Command::RemoveMerchant { merchant_id } => {
+            merchants::remove_merchant(tx, seq, merchant_id).await?;
+            Ok(Effect::default())
+        }
+
+        Command::RecordSuggestions {
+            client_id,
+            model,
+            suggestions,
+        } => {
+            ai::record_suggestions(tx, seq, client_id, model, suggestions).await?;
+            Ok(client_effect(client_id))
         }
 
         Command::Initialise {
@@ -796,33 +981,18 @@ async fn apply(
             settings,
             opening,
         } => {
-            let (class, chart, over) = client_class(tx, client_id, class_id).await?;
-            check_name(name)?;
-            let resolved = assets::resolve(&class, over.as_ref());
-            assets::check_accounts(&chart, &resolved.accounts)?;
-            let (settings, rate_source) = pick_settings(&resolved, settings.as_ref());
-            let asset = Asset {
-                cost: *cost,
-                residual: *residual,
-                acquired: *acquired,
-                settings,
-                opening: *opening,
-                disposal: None,
-            };
-            check_asset(tx, client_id, &asset).await?;
-            let id = new_id();
-            asset_store::insert_asset(
+            let id = create_asset(
                 tx,
-                &StoredAsset {
-                    id: id.clone(),
-                    client_id: client_id.clone(),
-                    class_id: class_id.clone(),
-                    name: name.trim().to_owned(),
-                    rate_source,
-                    accounts: resolved.accounts,
-                    asset,
-                    created_seq: seq,
-                    updated_seq: seq,
+                seq,
+                NewAsset {
+                    client_id,
+                    class_id,
+                    name,
+                    cost: *cost,
+                    residual: *residual,
+                    acquired: *acquired,
+                    settings: settings.as_ref(),
+                    opening: *opening,
                 },
             )
             .await?;
@@ -884,15 +1054,8 @@ async fn apply(
         }
 
         Command::DeleteAsset { asset_id } => {
-            let (stored, fixed) = asset_in_register(tx, asset_id).await?;
-            if fixed {
-                return Err(CommandError::invalid(
-                    "asset_fixed",
-                    "A finalised year holds this asset, so it can't be deleted.",
-                ));
-            }
-            asset_store::delete_asset(tx, asset_id).await?;
-            Ok(client_effect(&stored.client_id))
+            let client_id = delete_asset(tx, asset_id).await?;
+            Ok(client_effect(&client_id))
         }
 
         Command::DisposeAsset { asset_id, disposal } => {
@@ -1019,6 +1182,74 @@ async fn apply(
             Ok(client_effect(client_id))
         }
     }
+}
+
+/// What `create_asset` and an asset purchase coding (M11) add to a client's register.
+pub(crate) struct NewAsset<'a> {
+    pub client_id: &'a str,
+    pub class_id: &'a str,
+    pub name: &'a str,
+    pub cost: Money,
+    pub residual: Money,
+    pub acquired: chrono::NaiveDate,
+    pub settings: Option<&'a DepreciationSettings>,
+    pub opening: Option<OpeningBalance>,
+}
+
+/// Adds an asset to a client's register, copying the class's resolved settings and accounts onto
+/// it. Returns its id.
+pub(crate) async fn create_asset(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    new: NewAsset<'_>,
+) -> Result<String, CommandError> {
+    let (class, chart, over) = client_class(tx, new.client_id, new.class_id).await?;
+    check_name(new.name)?;
+    let resolved = assets::resolve(&class, over.as_ref());
+    assets::check_accounts(&chart, &resolved.accounts)?;
+    let (settings, rate_source) = pick_settings(&resolved, new.settings);
+    let asset = Asset {
+        cost: new.cost,
+        residual: new.residual,
+        acquired: new.acquired,
+        settings,
+        opening: new.opening,
+        disposal: None,
+    };
+    check_asset(tx, new.client_id, &asset).await?;
+    let id = new_id();
+    asset_store::insert_asset(
+        tx,
+        &StoredAsset {
+            id: id.clone(),
+            client_id: new.client_id.to_owned(),
+            class_id: new.class_id.to_owned(),
+            name: new.name.trim().to_owned(),
+            rate_source,
+            accounts: resolved.accounts,
+            asset,
+            created_seq: seq,
+            updated_seq: seq,
+        },
+    )
+    .await?;
+    Ok(id)
+}
+
+/// Removes an asset that no finalised year holds. Returns its client's id.
+pub(crate) async fn delete_asset(
+    tx: &mut SqliteConnection,
+    asset_id: &str,
+) -> Result<String, CommandError> {
+    let (stored, fixed) = asset_in_register(tx, asset_id).await?;
+    if fixed {
+        return Err(CommandError::invalid(
+            "asset_fixed",
+            "A finalised year holds this asset, so it can't be deleted.",
+        ));
+    }
+    asset_store::delete_asset(tx, asset_id).await?;
+    Ok(stored.client_id)
 }
 
 /// Asset class keys are lowercase words joined by underscores, such as `plant` or

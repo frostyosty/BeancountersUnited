@@ -50,9 +50,7 @@ pub async fn start_with(store: Arc<Store>, bind: SocketAddr) -> Result<RunningSe
         .map_err(|e| format!("Couldn't listen on {bind}: {e}. Is another acct master running?"))?;
     let addr = listener.local_addr().map_err(|e| e.to_string())?;
     let (stop, stopped) = oneshot::channel::<()>();
-    let state = AppState {
-        store: store.clone(),
-    };
+    let state = AppState::new(store.clone());
     tokio::spawn(async move {
         let shutdown = async {
             let _ = stopped.await;

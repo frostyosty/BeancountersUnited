@@ -1,0 +1,2262 @@
+{
+ "about": "Synthetic, labelled NZ-style bank lines for choosing an AI model (ADR 009). Every name is invented. Labels follow the sole-trader chart's default GST codes; a person still has to check them. `categories` are what Save tax offers a sole trader (crates/server/src/ai.rs). Amounts are signed cents: positive is money in.",
+ "categories": [
+  {
+   "key": "100",
+   "name": "Sales",
+   "direction": "in"
+  },
+  {
+   "key": "110",
+   "name": "Interest received",
+   "direction": "in"
+  },
+  {
+   "key": "120",
+   "name": "Other income",
+   "direction": "in"
+  },
+  {
+   "key": "150",
+   "name": "Purchases and materials",
+   "direction": "out"
+  },
+  {
+   "key": "200",
+   "name": "Accountancy fees",
+   "direction": "out"
+  },
+  {
+   "key": "202",
+   "name": "ACC levies",
+   "direction": "out"
+  },
+  {
+   "key": "204",
+   "name": "Advertising and marketing",
+   "direction": "out"
+  },
+  {
+   "key": "205",
+   "name": "Bank fees",
+   "direction": "out"
+  },
+  {
+   "key": "210",
+   "name": "Depreciation",
+   "direction": "out"
+  },
+  {
+   "key": "215",
+   "name": "Insurance",
+   "direction": "out"
+  },
+  {
+   "key": "220",
+   "name": "Interest paid",
+   "direction": "out"
+  },
+  {
+   "key": "225",
+   "name": "Vehicle costs",
+   "direction": "out"
+  },
+  {
+   "key": "230",
+   "name": "Rent",
+   "direction": "out"
+  },
+  {
+   "key": "235",
+   "name": "Repairs and maintenance",
+   "direction": "out"
+  },
+  {
+   "key": "240",
+   "name": "Wages",
+   "direction": "out"
+  },
+  {
+   "key": "242",
+   "name": "Subcontractors",
+   "direction": "out"
+  },
+  {
+   "key": "245",
+   "name": "Phone and internet",
+   "direction": "out"
+  },
+  {
+   "key": "250",
+   "name": "Loss (gain) on disposal of assets",
+   "direction": "out"
+  },
+  {
+   "key": "255",
+   "name": "Power and gas",
+   "direction": "out"
+  },
+  {
+   "key": "260",
+   "name": "Freight and courier",
+   "direction": "out"
+  },
+  {
+   "key": "265",
+   "name": "Stationery and office supplies",
+   "direction": "out"
+  },
+  {
+   "key": "270",
+   "name": "Software and subscriptions",
+   "direction": "out"
+  },
+  {
+   "key": "275",
+   "name": "Travel",
+   "direction": "out"
+  },
+  {
+   "key": "280",
+   "name": "Small tools and equipment (under $1,000 each)",
+   "direction": "out"
+  },
+  {
+   "key": "290",
+   "name": "General expenses",
+   "direction": "out"
+  },
+  {
+   "key": "295",
+   "name": "GST rounding",
+   "direction": "out"
+  },
+  {
+   "key": "personal",
+   "name": "Personal spending (not for the business)",
+   "direction": "out"
+  },
+  {
+   "key": "owner_funds",
+   "name": "Money the owner put in (not income)",
+   "direction": "in"
+  },
+  {
+   "key": "loan",
+   "name": "A loan received (not income)",
+   "direction": "in"
+  },
+  {
+   "key": "paye_wages",
+   "name": "Wages already taxed through PAYE (not income)",
+   "direction": "in"
+  },
+  {
+   "key": "personal_sale",
+   "name": "Sale of a personal item (not income)",
+   "direction": "in"
+  }
+ ],
+ "lines": [
+  {
+   "description": "VISA PURCHASE PAPERLEAF STATIONERS LOWER HUTT CARD 1930",
+   "amount": -9103,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 162519,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS DESIGNKIT PRO AUCKLAND",
+   "amount": -10852,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 44510,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 173953,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "LANTERN HOST WEB HOSTING AUCKLAND NZ",
+   "amount": -3833,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE SKYKIWI AIRLINES TAURANGA CARD 1582",
+   "amount": -30285,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "LITTLE LAMB KINDY",
+   "amount": -8660,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D PIKORUA CAFE",
+   "amount": -20528,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "AWA ENERGY AUCKLAND",
+   "amount": -11250,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "MOANA GAS NETWORKS ONLINE",
+   "amount": -21780,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 121896,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "LOCAL GAZETTE ADVERTISING",
+   "amount": -55005,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "TOOLSHED HARDWARE DIRECT DEBIT",
+   "amount": -44162,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "KERERU FABRICS",
+   "amount": -50647,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "GRIDLINE POWER CHRISTCHURCH",
+   "amount": -33586,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "COUNCIL DOG REGISTRATION NELSON NZ",
+   "amount": -8335,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SHOPSTALL MONTHLY PLAN PALMERSTON NTH",
+   "amount": -2014,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "WORKSHOP TEACHING FEE",
+   "amount": 28642,
+   "category": "120",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D KORERO TELECOM",
+   "amount": -7295,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "GREENBARROW GROCERS INV 6784",
+   "amount": -10683,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE LEDGERCLOUD SUBSCRIPTION NELSON CARD 5805",
+   "amount": -11892,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS ROADRUNNER COACHES LOWER HUTT",
+   "amount": -13885,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "PARCELWAY",
+   "amount": -6236,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D ROADRUNNER COACHES",
+   "amount": -40663,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "FRESHFARE SUPERMARKET NAPIER",
+   "amount": -12460,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "DISHONOUR FEE",
+   "amount": -404,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "CINEMA PARADISO INV 7435",
+   "amount": -18539,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "WIREWEAVE BROADBAND NELSON NZ",
+   "amount": -12095,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "FUNDS INTRODUCED",
+   "amount": 59944,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "COUNCIL DOG REGISTRATION HAMILTON",
+   "amount": -4990,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D DESIGNKIT PRO",
+   "amount": -3930,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "KORERO TELECOM",
+   "amount": -8971,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 57936,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "LOCAL GAZETTE ADVERTISING ONLINE",
+   "amount": -35884,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE STREAMFLIX WHANGAREI CARD 5270",
+   "amount": -12034,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE GRIDLINE POWER TAURANGA CARD 4658",
+   "amount": -15064,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "RIVERBEND FUEL PETONE",
+   "amount": -10495,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE AWA ENERGY PETONE CARD 9393",
+   "amount": -37411,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D FIXIT HANDYMAN SERVICES",
+   "amount": -38161,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "MARKET STALL FEE DIRECT DEBIT",
+   "amount": -5069,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "ACCOUNT FEE",
+   "amount": -920,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "SHOPSTALL MONTHLY PLAN HAMILTON NZ",
+   "amount": -8751,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "SKYKIWI AIRLINES ONLINE",
+   "amount": -29498,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "SOCIALREACH ADS",
+   "amount": -44726,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D TOOLSHED HARDWARE",
+   "amount": -45688,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "DEPOSIT HOLLOWAY GIFTS LTD",
+   "amount": 203854,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "CINEMA PARADISO",
+   "amount": -26656,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "GYMNASIA FITNESS",
+   "amount": -8427,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "DISHONOUR FEE",
+   "amount": -2415,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "VISA PURCHASE PARCELWAY WHANGAREI CARD 4829",
+   "amount": -6006,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "DEPOSIT AMBER & ASH BOUTIQUE",
+   "amount": 186241,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PAPERLEAF STATIONERS WELLINGTON NZ",
+   "amount": -6748,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE HILLTOP GAS STOP DUNEDIN CARD 7740",
+   "amount": -12716,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE KORERO TELECOM DUNEDIN CARD 5651",
+   "amount": -3309,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "FRESHFARE SUPERMARKET INV 3569",
+   "amount": -10585,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "WIREWEAVE BROADBAND",
+   "amount": -15000,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 224622,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "FUNDS INTRODUCED",
+   "amount": 257562,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D BRIGHTPOST COURIERS",
+   "amount": -5631,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "SWIFTKIWI FREIGHT DIRECT DEBIT",
+   "amount": -10345,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "INTEREST PAID",
+   "amount": 5932,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "KAITIAKI MUTUAL PETONE",
+   "amount": -72710,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS PIXELWELL DESIGN STUDIO TAURANGA",
+   "amount": -42130,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "TERM DEPOSIT INTEREST",
+   "amount": 180,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "LITTLE LAMB KINDY",
+   "amount": -27765,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D SOCIALREACH ADS",
+   "amount": -25335,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "TYRETOWN INV 3823",
+   "amount": -7595,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE MOANA GAS NETWORKS PORIRUA CARD 9705",
+   "amount": -7581,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "TERM DEPOSIT INTEREST",
+   "amount": 847,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "SWIFTKIWI FREIGHT PALMERSTON NTH NZ",
+   "amount": -1219,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "CRAFTFAIR SITE FEE",
+   "amount": -1009,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "HOLLOWAY GIFTS LTD INV 0496",
+   "amount": 23798,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PARCELWAY PETONE NZ",
+   "amount": -4707,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D KERERU FABRICS",
+   "amount": -22944,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "SPARKRIGHT ELECTRICAL AUCKLAND NZ",
+   "amount": -24316,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "HARAKEKE ACCOUNTING LTD NAPIER",
+   "amount": -197584,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS PIKORUA CAFE NELSON",
+   "amount": -23314,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "INKWELL OFFICE SUPPLY INV 8263",
+   "amount": -8634,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "KERERU FABRICS DUNEDIN NZ",
+   "amount": -56096,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "HARBOUR FERRIES PETONE NZ",
+   "amount": -42367,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 83353,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "COMMISSION RECEIVED",
+   "amount": 39893,
+   "category": "120",
+   "gst": "standard"
+  },
+  {
+   "description": "COASTAL CRAFT CO INV 0615",
+   "amount": 115606,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS TALLOWBY CRAFT SUPPLIES WELLINGTON",
+   "amount": -12600,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "DEPOSIT BEEHIVE GIFTS LTD",
+   "amount": 243782,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "OVERDRAFT INTEREST",
+   "amount": -25851,
+   "category": "220",
+   "gst": "exempt"
+  },
+  {
+   "description": "BRIGHTPOST COURIERS DIRECT DEBIT",
+   "amount": -8090,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "ACCOUNT FEE",
+   "amount": -1373,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "NORTHWIND HOMEWARES INV 0695",
+   "amount": 68133,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "AMBERJAR PACKAGING HAMILTON NZ",
+   "amount": -67951,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE AMBERJAR PACKAGING PALMERSTON NTH CARD 8370",
+   "amount": -19490,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D KOWHAI PETROLEUM",
+   "amount": -3595,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "SWIFTKIWI FREIGHT INV 2316",
+   "amount": -7722,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "TUATARA INSURANCE DIRECT DEBIT",
+   "amount": -35626,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "TALLOWBY CRAFT SUPPLIES INV 3267",
+   "amount": -11093,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "TALLOWBY CRAFT SUPPLIES",
+   "amount": -87072,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY DEPOSIT",
+   "amount": 197098,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 215120,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "GREENBARROW GROCERS DIRECT DEBIT",
+   "amount": -23119,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "BRIGHTPOST COURIERS TAURANGA NZ",
+   "amount": -1408,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 4333,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PIKORUA CAFE AUCKLAND NZ",
+   "amount": -2499,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D KAHAWAI FISH AND CHIPS",
+   "amount": -4204,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "LOCAL GAZETTE ADVERTISING WHANGAREI",
+   "amount": -16911,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "BANK FEE",
+   "amount": -1553,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "GYMNASIA FITNESS INV 9260",
+   "amount": -22869,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "POSTBOX NZ SHOP",
+   "amount": -6323,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "FRESHFARE SUPERMARKET",
+   "amount": -23178,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "MONTHLY ACCOUNT FEE",
+   "amount": -137,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "POS W/D STUDIO 7 LEASING",
+   "amount": -205640,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE KAITIAKI MUTUAL NAPIER CARD 9191",
+   "amount": -22459,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS LITTLE LAMB KINDY MASTERTON",
+   "amount": -3255,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "SPARKRIGHT ELECTRICAL MASTERTON",
+   "amount": -41269,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "SWAPMEET SALE OLD BIKE",
+   "amount": 20797,
+   "category": "personal_sale",
+   "gst": "none"
+  },
+  {
+   "description": "AMBERJAR PACKAGING LOWER HUTT",
+   "amount": -73783,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "CLEANSWEEP CONTRACTORS",
+   "amount": -55262,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "ACC LEVIES PAYMENT 335610",
+   "amount": -65556,
+   "category": "202",
+   "gst": "standard"
+  },
+  {
+   "description": "MARKETSPACE LISTING FEE ONLINE",
+   "amount": -24271,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "RIVERBEND FUEL CHRISTCHURCH",
+   "amount": -11290,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 121957,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "TELEWAVE MOBILE",
+   "amount": -8515,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "GRIDLINE POWER",
+   "amount": -39272,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "TERM DEPOSIT INTEREST",
+   "amount": 5216,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "POS W/D LEDGERCLOUD SUBSCRIPTION",
+   "amount": -10036,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 189539,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D AWA ENERGY",
+   "amount": -23748,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "J T CONTRACTING",
+   "amount": -96194,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "SOCIALREACH ADS",
+   "amount": -32311,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D KORERO TELECOM",
+   "amount": -7844,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY DEPOSIT",
+   "amount": 189784,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "BUSINESS LOAN ADVANCE",
+   "amount": 246909,
+   "category": "loan",
+   "gst": "none"
+  },
+  {
+   "description": "MOTORMEND AUTO SERVICE ONLINE",
+   "amount": -11503,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE MARKET STALL FEE WELLINGTON CARD 2470",
+   "amount": -3604,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE WIREWEAVE BROADBAND NELSON CARD 7873",
+   "amount": -15092,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "TYRETOWN HAMILTON NZ",
+   "amount": -8803,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "DISHONOUR FEE",
+   "amount": -1367,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "WELLSPRING CHEMIST",
+   "amount": -18144,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "FUNDS INTRODUCED",
+   "amount": 96188,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "PERSONAL LOAN DRAWDOWN",
+   "amount": 162306,
+   "category": "loan",
+   "gst": "none"
+  },
+  {
+   "description": "WAGES KAURI CAFE LTD",
+   "amount": 86468,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D RIVERBEND FUEL",
+   "amount": -13894,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY HARBOUR CITY COUNCIL",
+   "amount": 166994,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "BENCHMARK HARDWARE",
+   "amount": -59297,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL MONTHLY PLAN NELSON NZ",
+   "amount": -1560,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "KERERU FABRICS",
+   "amount": -55717,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "TOP-UP FROM PERSONAL",
+   "amount": 122068,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "DEPOSIT HOLLOWAY GIFTS LTD",
+   "amount": 134250,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE CRAFTFAIR SITE FEE PORIRUA CARD 2167",
+   "amount": -16777,
+   "category": "290",
+   "gst": "standard"
+  },
+  {
+   "description": "HARBOURVIEW PROPERTY MGMT",
+   "amount": -103657,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "SOUTHERLY INSURANCE DIRECT DEBIT",
+   "amount": -71676,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE HARBOURVIEW PROPERTY MGMT HAMILTON CARD 5966",
+   "amount": -114663,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "PIXELWELL DESIGN STUDIO LOWER HUTT",
+   "amount": -80741,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D INKWELL OFFICE SUPPLY",
+   "amount": -14702,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D WICKWORKS WHOLESALE",
+   "amount": -8307,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "KORERO TELECOM INV 4358",
+   "amount": -5173,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "BEEHIVE GIFTS LTD INV 0438",
+   "amount": 48171,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "FRESHFARE SUPERMARKET",
+   "amount": -5405,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "MONTHLY ACCOUNT FEE",
+   "amount": -2218,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "WELLSPRING CHEMIST WHANGAREI NZ",
+   "amount": -4260,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE LOCAL GAZETTE ADVERTISING LOWER HUTT CARD 5596",
+   "amount": -3992,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS J T CONTRACTING NELSON",
+   "amount": -138900,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "TYRETOWN NAPIER",
+   "amount": -5652,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "OVERDRAFT INTEREST",
+   "amount": -24656,
+   "category": "220",
+   "gst": "exempt"
+  },
+  {
+   "description": "ACC LEVIES PAYMENT 156003",
+   "amount": -13418,
+   "category": "202",
+   "gst": "standard"
+  },
+  {
+   "description": "MOTORMEND AUTO SERVICE PORIRUA",
+   "amount": -6881,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "SOUTHERLY INSURANCE",
+   "amount": -18914,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 2618,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS PIKORUA CAFE NAPIER",
+   "amount": -24774,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "PRINTSMITH FLYERS ONLINE",
+   "amount": -24624,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "TUATARA INSURANCE ONLINE",
+   "amount": -71275,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "GREENBARROW GROCERS INV 9657",
+   "amount": -27029,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "EFTPOS KERERU FABRICS PETONE",
+   "amount": -77866,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "TOP-UP FROM PERSONAL",
+   "amount": 164662,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "COMMISSION RECEIVED",
+   "amount": 25428,
+   "category": "120",
+   "gst": "standard"
+  },
+  {
+   "description": "PAPERLEAF STATIONERS HAMILTON NZ",
+   "amount": -4079,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS TALLOWBY CRAFT SUPPLIES PALMERSTON NTH",
+   "amount": -83207,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "HARBOURVIEW PROPERTY MGMT NELSON",
+   "amount": -52290,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "LOAN INTEREST CHARGED",
+   "amount": -29148,
+   "category": "220",
+   "gst": "exempt"
+  },
+  {
+   "description": "VISA PURCHASE TOTARA MOTOR LODGE DUNEDIN CARD 5715",
+   "amount": -20755,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "ROADRUNNER COACHES",
+   "amount": -2863,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "TALLOWBY CRAFT SUPPLIES",
+   "amount": -50381,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "KAITIAKI MUTUAL ONLINE",
+   "amount": -68592,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 105587,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE DESIGNKIT PRO MASTERTON CARD 7739",
+   "amount": -9944,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 48847,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PERSONAL LOAN DRAWDOWN",
+   "amount": 275105,
+   "category": "loan",
+   "gst": "none"
+  },
+  {
+   "description": "CITYCAB TAXIS MASTERTON",
+   "amount": -29050,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "HARBOUR FERRIES ONLINE",
+   "amount": -35833,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "RIVERBEND FUEL",
+   "amount": -3534,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "DRIPSTOP PLUMBING INV 8533",
+   "amount": -36544,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D GYMNASIA FITNESS",
+   "amount": -26120,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "FIXIT HANDYMAN SERVICES NELSON NZ",
+   "amount": -62965,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D WIREWEAVE BROADBAND",
+   "amount": -5586,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "MOANA GAS NETWORKS",
+   "amount": -20787,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D DESKMATE STATIONERY",
+   "amount": -14667,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE WICKWORKS WHOLESALE NAPIER CARD 4863",
+   "amount": -44318,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "PIKORUA CAFE MASTERTON NZ",
+   "amount": -10019,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "EFTPOS PIXELWELL DESIGN STUDIO DUNEDIN",
+   "amount": -116268,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS TELEWAVE MOBILE NAPIER",
+   "amount": -9716,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "WAGES KAURI CAFE LTD",
+   "amount": 113127,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "BANK FEE",
+   "amount": -579,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "MITRE MAKERS TOOLS INV 8631",
+   "amount": -67418,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS DESKMATE STATIONERY MASTERTON",
+   "amount": -8325,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "LEDGERCLOUD SUBSCRIPTION INV 3006",
+   "amount": -11625,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 43849,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "DISHONOUR FEE",
+   "amount": -2449,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "GRIDLINE POWER",
+   "amount": -29405,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "FIXIT HANDYMAN SERVICES DUNEDIN NZ",
+   "amount": -65556,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "PAPAWAI TIMBER YARD INV 8746",
+   "amount": -65795,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 225617,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D HILLTOP GAS STOP",
+   "amount": -10401,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "LOAN FROM FAMILY TRUST",
+   "amount": 377701,
+   "category": "loan",
+   "gst": "none"
+  },
+  {
+   "description": "LANTERN HOST WEB HOSTING DIRECT DEBIT",
+   "amount": -8764,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "PAPAWAI TIMBER YARD",
+   "amount": -61987,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "LEDGERCLOUD SUBSCRIPTION PALMERSTON NTH NZ",
+   "amount": -7759,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "MONTHLY ACCOUNT FEE",
+   "amount": -465,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "TOTARA MOTOR LODGE DIRECT DEBIT",
+   "amount": -28104,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "TOOLSHED HARDWARE ONLINE",
+   "amount": -76459,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "OWNER CONTRIBUTION",
+   "amount": 37382,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "DEPOSIT NORTHWIND HOMEWARES",
+   "amount": 171406,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 12756,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 220556,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "SHOPSTALL PAYOUT",
+   "amount": 203470,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "WICKWORKS WHOLESALE NELSON NZ",
+   "amount": -87769,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "STUDIO 7 LEASING CHRISTCHURCH NZ",
+   "amount": -165282,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "CITYCAB TAXIS INV 4679",
+   "amount": -11016,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "SWIFTKIWI FREIGHT INV 8631",
+   "amount": -928,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY DEPOSIT",
+   "amount": 62089,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D TYRETOWN",
+   "amount": -7487,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 240954,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "CINEMA PARADISO PORIRUA",
+   "amount": -10873,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 66007,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PAPAWAI TIMBER YARD ONLINE",
+   "amount": -18402,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "TELEWAVE MOBILE",
+   "amount": -12188,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "KAHAWAI FISH AND CHIPS",
+   "amount": -6311,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D J T CONTRACTING",
+   "amount": -21050,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 68740,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "DESKMATE STATIONERY",
+   "amount": -11873,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "FUNDS INTRODUCED",
+   "amount": 276658,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "AWA ENERGY",
+   "amount": -33711,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D WIREWEAVE BROADBAND",
+   "amount": -5656,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "SPARKRIGHT ELECTRICAL ONLINE",
+   "amount": -32089,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "TELEWAVE MOBILE AUCKLAND NZ",
+   "amount": -13112,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "ACCOUNT FEE",
+   "amount": -469,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "SHOPSTALL MONTHLY PLAN DIRECT DEBIT",
+   "amount": -11350,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "TOP-UP FROM PERSONAL",
+   "amount": 98330,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "MOANA GAS NETWORKS",
+   "amount": -13434,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE POSTBOX NZ SHOP HAMILTON CARD 8543",
+   "amount": -7430,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "LOAN INTEREST CHARGED",
+   "amount": -25549,
+   "category": "220",
+   "gst": "exempt"
+  },
+  {
+   "description": "POS W/D KAHAWAI FISH AND CHIPS",
+   "amount": -10572,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "AWA ENERGY",
+   "amount": -33757,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "BANK FEE",
+   "amount": -2402,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "MOTORMEND AUTO SERVICE INV 2491",
+   "amount": -12629,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "STUDIO 7 LEASING DIRECT DEBIT",
+   "amount": -157774,
+   "category": "230",
+   "gst": "standard"
+  },
+  {
+   "description": "SOUTHERLY INSURANCE ONLINE",
+   "amount": -90142,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "SOLD SOFA MARKETPLACE",
+   "amount": 14615,
+   "category": "personal_sale",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE RIVERBEND FUEL AUCKLAND CARD 1060",
+   "amount": -11575,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS HILLTOP GAS STOP DUNEDIN",
+   "amount": -10518,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "INKWELL OFFICE SUPPLY INV 4249",
+   "amount": -10205,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "SOCIALREACH ADS DIRECT DEBIT",
+   "amount": -45869,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS HILLTOP GAS STOP PALMERSTON NTH",
+   "amount": -5775,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "AMBERJAR PACKAGING LOWER HUTT NZ",
+   "amount": -34058,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE KORERO TELECOM DUNEDIN CARD 3992",
+   "amount": -2634,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS PAPAWAI TIMBER YARD MASTERTON",
+   "amount": -24300,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "DRIPSTOP PLUMBING ONLINE",
+   "amount": -9478,
+   "category": "235",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE WICKWORKS WHOLESALE PETONE CARD 1708",
+   "amount": -9933,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "GYMNASIA FITNESS WHANGAREI",
+   "amount": -3093,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "TUATARA INSURANCE PORIRUA NZ",
+   "amount": -141017,
+   "category": "215",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE WIREWEAVE BROADBAND AUCKLAND CARD 2898",
+   "amount": -9400,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "BRIGHTPOST COURIERS NAPIER NZ",
+   "amount": -8993,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS KOWHAI PETROLEUM PORIRUA",
+   "amount": -8040,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "MONTHLY ACCOUNT FEE",
+   "amount": -1401,
+   "category": "205",
+   "gst": "exempt"
+  },
+  {
+   "description": "CREDIT INTEREST",
+   "amount": 302,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "POSTBOX NZ SHOP HAMILTON",
+   "amount": -5514,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE INKWELL OFFICE SUPPLY PORIRUA CARD 5827",
+   "amount": -10185,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "GREENBARROW GROCERS DIRECT DEBIT",
+   "amount": -17144,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "LANTERN HOST WEB HOSTING WHANGAREI",
+   "amount": -10788,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "LANTERN HOST WEB HOSTING DIRECT DEBIT",
+   "amount": -3865,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "DESIGNKIT PRO PETONE",
+   "amount": -5241,
+   "category": "270",
+   "gst": "standard"
+  },
+  {
+   "description": "TERM DEPOSIT INTEREST",
+   "amount": 3566,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "POS W/D TOTARA TAX ADVISERS",
+   "amount": -205423,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "CREDIT INTEREST",
+   "amount": 5753,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "POSTBOX NZ SHOP INV 6293",
+   "amount": -9201,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "TELEWAVE MOBILE INV 3269",
+   "amount": -7002,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "TRANSFER FROM PERSONAL ACC",
+   "amount": 195189,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "SALE OF PERSONAL CAR",
+   "amount": 30286,
+   "category": "personal_sale",
+   "gst": "none"
+  },
+  {
+   "description": "LEDGERLY CHARTERED ACCTS PALMERSTON NTH NZ",
+   "amount": -34101,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "CLEANSWEEP CONTRACTORS HAMILTON NZ",
+   "amount": -49271,
+   "category": "242",
+   "gst": "standard"
+  },
+  {
+   "description": "KOWHAI PETROLEUM INV 7127",
+   "amount": -6065,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "TOP-UP FROM PERSONAL",
+   "amount": 135890,
+   "category": "owner_funds",
+   "gst": "none"
+  },
+  {
+   "description": "POS W/D KOWHAI PETROLEUM",
+   "amount": -10622,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE PRINTSMITH FLYERS MASTERTON CARD 9488",
+   "amount": -17319,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "SECONDHAND KAYAK SALE",
+   "amount": 52448,
+   "category": "personal_sale",
+   "gst": "none"
+  },
+  {
+   "description": "FRESHFARE SUPERMARKET WHANGAREI",
+   "amount": -10170,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "WELLSPRING CHEMIST MASTERTON",
+   "amount": -23192,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "GRIDLINE POWER",
+   "amount": -11552,
+   "category": "255",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D BRIGHTPOST COURIERS",
+   "amount": -11652,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "ACC WORK LEVY DD 120312",
+   "amount": -21081,
+   "category": "202",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS MOTORMEND AUTO SERVICE CHRISTCHURCH",
+   "amount": -5220,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "MOTORMEND AUTO SERVICE PALMERSTON NTH",
+   "amount": -5885,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 30040,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 68923,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D MARKETSPACE LISTING FEE",
+   "amount": -28400,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "HILLTOP GAS STOP",
+   "amount": -7012,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY DEPOSIT",
+   "amount": 224902,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 99069,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "SALE OF PERSONAL CAR",
+   "amount": 17556,
+   "category": "personal_sale",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE KAHAWAI FISH AND CHIPS AUCKLAND CARD 8241",
+   "amount": -28461,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "OVERDRAFT INTEREST",
+   "amount": -24012,
+   "category": "220",
+   "gst": "exempt"
+  },
+  {
+   "description": "STREAMFLIX LOWER HUTT NZ",
+   "amount": -8514,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "DEPOSIT BEEHIVE GIFTS LTD",
+   "amount": 53392,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "WICKWORKS WHOLESALE TAURANGA NZ",
+   "amount": -32716,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "STREAMFLIX AUCKLAND NZ",
+   "amount": -24485,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "COMMISSION RECEIVED",
+   "amount": 51876,
+   "category": "120",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 46851,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "GREENBARROW GROCERS ONLINE",
+   "amount": -20209,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "WELLSPRING CHEMIST DIRECT DEBIT",
+   "amount": -575,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "LEDGERLY CHARTERED ACCTS AUCKLAND",
+   "amount": -107480,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "INTEREST PAID",
+   "amount": 3183,
+   "category": "110",
+   "gst": "exempt"
+  },
+  {
+   "description": "MITRE MAKERS TOOLS INV 6983",
+   "amount": -49456,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "DEPOSIT HOLLOWAY GIFTS LTD",
+   "amount": 120744,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "HARAKEKE ACCOUNTING LTD ONLINE",
+   "amount": -185285,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "KOWHAI PETROLEUM DIRECT DEBIT",
+   "amount": -8387,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "COASTAL CRAFT CO INV 0736",
+   "amount": 42134,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SETTLEMENT MARKET SALES",
+   "amount": 249623,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "TOTARA TAX ADVISERS NELSON",
+   "amount": -77312,
+   "category": "200",
+   "gst": "standard"
+  },
+  {
+   "description": "LITTLE LAMB KINDY INV 3981",
+   "amount": -23872,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "TELEWAVE MOBILE INV 5918",
+   "amount": -13087,
+   "category": "245",
+   "gst": "standard"
+  },
+  {
+   "description": "STREAMFLIX",
+   "amount": -19880,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "VISA PURCHASE RIVERBEND FUEL NAPIER CARD 4747",
+   "amount": -12980,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS TOOLSHED HARDWARE AUCKLAND",
+   "amount": -51191,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS PRINTSMITH FLYERS AUCKLAND",
+   "amount": -22775,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "PARCELWAY INV 6239",
+   "amount": -10988,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "PAYBLOOM PAYOUT ONLINE SALES",
+   "amount": 38001,
+   "category": "100",
+   "gst": "standard"
+  },
+  {
+   "description": "KAHAWAI FISH AND CHIPS DUNEDIN",
+   "amount": -22108,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "TYRETOWN DIRECT DEBIT",
+   "amount": -3992,
+   "category": "225",
+   "gst": "standard"
+  },
+  {
+   "description": "BENCHMARK HARDWARE",
+   "amount": -27476,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "DESKMATE STATIONERY INV 9114",
+   "amount": -1367,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "MITRE MAKERS TOOLS WHANGAREI NZ",
+   "amount": -21647,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "SALARY DEPOSIT",
+   "amount": 132840,
+   "category": "paye_wages",
+   "gst": "none"
+  },
+  {
+   "description": "PARCELWAY PETONE",
+   "amount": -2349,
+   "category": "260",
+   "gst": "standard"
+  },
+  {
+   "description": "POS W/D PAPERLEAF STATIONERS",
+   "amount": -9130,
+   "category": "265",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE CINEMA PARADISO AUCKLAND CARD 3280",
+   "amount": -11609,
+   "category": "personal",
+   "gst": "none"
+  },
+  {
+   "description": "ACC LEVY INVOICE 251091",
+   "amount": -12355,
+   "category": "202",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS AMBERJAR PACKAGING AUCKLAND",
+   "amount": -19426,
+   "category": "150",
+   "gst": "standard"
+  },
+  {
+   "description": "EFTPOS SKYKIWI AIRLINES NAPIER",
+   "amount": -47666,
+   "category": "275",
+   "gst": "standard"
+  },
+  {
+   "description": "VISA PURCHASE BENCHMARK HARDWARE WELLINGTON CARD 2738",
+   "amount": -18214,
+   "category": "280",
+   "gst": "standard"
+  },
+  {
+   "description": "MARKETSPACE LISTING FEE LOWER HUTT NZ",
+   "amount": -7655,
+   "category": "204",
+   "gst": "standard"
+  },
+  {
+   "description": "CRAFT CLASS FEES",
+   "amount": 12153,
+   "category": "120",
+   "gst": "standard"
+  }
+ ]
+}

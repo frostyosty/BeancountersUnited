@@ -1,0 +1,146 @@
+.scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 40rem;
+}
+
+.scoreboard > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.scoreboard strong {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.saved {
+  color: var(--ok);
+}
+
+.card {
+  margin-top: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 40rem;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.saving {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.skip {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.lines {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.lines li {
+  display: grid;
+  grid-template-columns: 7rem 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lineDate {
+  color: var(--text-muted);
+}
+
+.lineDesc {
+  overflow-wrap: anywhere;
+}
+
+.lineAmount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.choices legend {
+  font-weight: 600;
+  padding: 0 var(--space-1);
+}
+
+.choice {
+  cursor: pointer;
+}
+
+.check {
+  display: block;
+}
+
+.rule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.suggestion {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+}
+
+.acceptAll {
+  max-width: 40rem;
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+}
+
+.acceptAll p {
+  margin-top: 0;
+}
+
+.acceptAll details {
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 30rem) {
+  .lines li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .lineDate {
+    grid-column: 1 / -1;
+  }
+}

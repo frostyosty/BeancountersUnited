@@ -1,0 +1,72 @@
+# Non-code to-dos
+
+Everything a person has to do outside the code: checks, approvals, applications and decisions. Code
+tasks live in `PLAN.md`. Tick an item (`[x]`) and add the date when it's done. Gathered 2026-10-24.
+
+## IRD business track (start now; gates M14)
+IRD's approval has its own review steps, so start early.
+- [ ] Register the organisation for gateway services in IRD's Gateway Customer Support Portal. IRD then
+      reviews business alignment, the tax compliance and integrity of the organisation and its key
+      people, and our security through the Operational Security Framework (OSF) questionnaire (aligned
+      with ISO 27001, and repeated every year).
+- [ ] Product requests: the Return service (GST and income tax), and the access services owners use to
+      authorise us with their myIR sign-in.
+- [ ] In the business alignment review, lead with getting returns filed on time with less effort; the
+      conservative starting figure errs towards overpaying.
+- [ ] Once approved: accept the gateway terms of use, get developer portal and test environment access,
+      and read the build packs. Record anything they require on screen (declaration wording, consent, IRD
+      messages) in `docs/ird.md`.
+- [ ] Customer terms and a privacy policy, including consent to file for the owner. IRD can ask for
+      evidence of that consent.
+
+## AI suggestions (ADR 009): before real owners turn them on
+Development with synthetic data isn't affected.
+- [ ] Ask our IRD account manager to confirm in writing that sending redacted bank lines to an AI
+      provider is acceptable (ADR 009, "IRD's position"). Do this as part of the business track.
+- [ ] Apply to Anthropic's sales team for zero data retention. ZDR doesn't cover the Batch API or prompt
+      caching, so decide then whether to give up those discounts. If the retention period changes, update
+      `RETENTION_DAYS` in `apps/web/src/pages/SaveTaxAi.tsx` and bump `CONSENT_WORDING` in
+      `crates/server/src/ai.rs`.
+- [ ] List Anthropic as a subprocessor in `docs/security.md` (M12) and in the OSF answers.
+- [ ] Someone with accounting knowledge checks the labels in `fixtures/ai/labelled-lines.json` (category
+      and GST code per line). Fix them in `tools/ai-labelled-lines/generate.py` and rebuild.
+- [ ] Run the bake-off with real API keys (it costs a few cents): `AI_PROVIDER=anthropic AI_API_KEY=...
+      acctd ai-eval`, then try other models with `AI_MODEL`. Choose the production model and record it in
+      ADR 009.
+
+## Hand checks a person has to sign off
+- [ ] M10's worked example, "Worked example: the synthetic sole trader" in `docs/domain.md`. Put your name
+      on its "Hand-checked by" line. M10 isn't done until this is.
+- [ ] M11's worked example, "Worked example: Save tax on the synthetic sole trader" in `docs/domain.md`,
+      the same way.
+- [ ] M0: build a fresh Codespace from `.devcontainer` and run `make setup && make check`.
+- [ ] M3: the manual browser walkthrough, from an empty client to previewed statements with comparatives.
+- [ ] M4: review the depreciation snapshots, and check the Assets tab in a browser.
+- [ ] M10: check the owner screen in a browser (upload, tax figure, gaps).
+- [ ] M11: check Save tax in a browser, including the AI consent screen.
+
+## For the tax specialist, before M14 files anything
+The items marked **check** in `docs/domain.md`; its "Open" section has the detail.
+- [ ] The $60,000 GST registration threshold behind the "you may have to register" notice.
+- [ ] The GST return's box layout, and rounding boxes 8 and 12 half away from zero to cents.
+- [ ] Rounding income tax once, to cents.
+- [ ] The 2027 rate table and the 2027 student loan threshold.
+- [ ] The taxable supply information tiers ($200 and $1,000).
+- [ ] The $5,000 residual income tax threshold for provisional tax.
+- [ ] The GST code for ACC levies, and the $1,000 low-value threshold behind "small tools and equipment".
+- [ ] The half-claim rule for entertainment.
+- [ ] Whether an IR3 filed through the gateway needs an IR10 (from M14's build pack).
+- [ ] GST over $200 without the records yet: that the expense stays GST-exclusive (section DB 2), how
+      late the claim can be made and in which box, and that GST the owner will never get the records for
+      is deductible.
+- [ ] The independent earner tax credit: the text of ss LC 14 and LC 15 (legislation.govt.nz refused our
+      fetch).
+
+## Decisions and information only you can give
+- [ ] Gain or loss on disposal: whether it gets its own statement line(s), and on which side
+      (`docs/domain.md`, Open).
+- [ ] Bank CSV layouts: export a statement from ANZ, ASB, BNZ, Westpac and Kiwibank, so the layouts can be
+      copied into synthetic samples. Note whether each bank offers OFX. Real exports never go in the repo
+      (hard rule 1); describe the columns only.
+- [ ] Which entity type comes after sole traders: companies, partnerships or trusts (`PLAN.md`, Open
+      questions).

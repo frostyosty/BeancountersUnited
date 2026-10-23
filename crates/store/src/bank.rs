@@ -89,10 +89,21 @@ pub async fn business(conn: &mut SqliteConnection, client_id: &str) -> Result<Op
     .transpose()
 }
 
+/// A bank account, or a credit card (M11).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountKind {
+    #[default]
+    Bank,
+    CreditCard,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BankAccount {
     pub id: String,
     pub client_id: String,
+    /// A bank account is an asset (600.01, ...); a credit card a liability (850.01, ...).
+    pub kind: AccountKind,
     pub code: AccountCode,
     pub name: String,
     pub account_number: Option<String>,
@@ -106,6 +117,7 @@ pub struct BankAccount {
 struct BankAccountRow {
     id: String,
     client_id: String,
+    kind: String,
     account_code: String,
     name: String,
     account_number: Option<String>,
@@ -121,6 +133,7 @@ impl TryFrom<BankAccountRow> for BankAccount {
         Ok(BankAccount {
             id: r.id,
             client_id: r.client_id,
+            kind: parse_enum(&r.kind)?,
             code: parse(&r.account_code)?,
             name: r.name,
             account_number: r.account_number,
@@ -134,12 +147,13 @@ impl TryFrom<BankAccountRow> for BankAccount {
 pub async fn insert_bank_account(conn: &mut SqliteConnection, a: &BankAccount) -> Result<()> {
     sqlx::query(
         "INSERT INTO bank_accounts
-             (id, client_id, account_code, name, account_number, opening_date, opening_balance,
-              opening_journal_id, created_seq)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             (id, client_id, kind, account_code, name, account_number, opening_date,
+              opening_balance, opening_journal_id, created_seq)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&a.id)
     .bind(&a.client_id)
+    .bind(enum_text(&a.kind))
     .bind(a.code.as_str())
     .bind(&a.name)
     .bind(&a.account_number)
@@ -164,6 +178,15 @@ pub async fn bank_accounts(
     .fetch_all(conn)
     .await?;
     rows.into_iter().map(BankAccount::try_from).collect()
+}
+
+/// One imported line.
+pub async fn bank_line(conn: &mut SqliteConnection, id: &str) -> Result<Option<BankLine>> {
+    let row: Option<BankLineRow> = sqlx::query_as("SELECT * FROM bank_lines WHERE id = ?")
+        .bind(id)
+        .fetch_optional(conn)
+        .await?;
+    Ok(row.map(BankLine::from))
 }
 
 pub async fn bank_account(conn: &mut SqliteConnection, id: &str) -> Result<Option<BankAccount>> {

@@ -28,20 +28,8 @@ Principles:
   and asset schedule from the same data.
 
 ## Business track (start now; runs alongside the milestones)
-IRD's approval gates M14 and has its own review steps, so start early. None of this is code.
-- Register the organisation for gateway services in IRD's Gateway Customer Support Portal. IRD then reviews
-  business alignment, the tax compliance and integrity of the organisation and its key people, and our
-  security through the Operational Security Framework questionnaire (aligned with ISO 27001, and repeated
-  every year).
-- Product requests: the Return service (GST and income tax), and the access services owners use to
-  authorise us with their myIR sign-in.
-- Once approved: accept the gateway terms of use, get developer portal and test environment access, and
-  read the build packs. Record anything they require on screen (declaration wording, consent, IRD
-  messages) in `docs/ird.md`.
-- Customer terms and a privacy policy, including consent to file for the owner. IRD can ask for evidence
-  of that consent.
-- In the business alignment review, lead with getting returns filed on time with less effort; the
-  conservative starting figure errs towards overpaying.
+IRD's approval gates M14 and has its own review steps, so start early. None of this is code. The steps are
+in `NON-CODE-TODOS.md`, with the other checks and approvals only a person can do.
 
 ## M0 — Repo and dev environment
 Status: done, except for one check: a Codespace built fresh from `.devcontainer`. CI is green on `master`.

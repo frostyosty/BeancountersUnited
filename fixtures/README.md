@@ -9,8 +9,15 @@ and figures are made up.
 - `practice/sole-trader-*.json`: the same set for sole traders (`docs/domain.md`, "Sole-trader chart
   and template"), plus `sole-trader-rounding-priority.json`, the default rounding priority list a new
   sole-trader client starts with, and `sole-trader-coding-settings.json`, the accounts Save tax codings
-  post to by default ("Coding settings"). The asset class rates are placeholders (1 basis point,
+  post to by default ("Coding settings"), and `sole-trader-merchants.json`, a practice merchant list
+  (ADR 009's layer 3) for the invented merchants in `bank-statements/`, each a description pattern
+  and the coding it suggests. The asset class rates are placeholders (1 basis point,
   marked `rate_placeholder`) until M11 sets them from IRD's rates.
+- `ai/labelled-lines.json`: ADR 009's bake-off set, 350 NZ-style bank lines with invented merchant
+  names, each labelled with the category and GST code Save tax should pick, plus the categories a
+  sole trader is offered. `acctd ai-eval` runs a provider over it. The labels follow the chart's
+  default GST codes, and a person still has to check them. `tools/ai-labelled-lines/generate.py`
+  rebuilds it.
 - `clients/example-widgets.json`: one company over two years. Its chart is a copy of the master
   chart. `rounding_priority` is its rounding priority list, and `retained_earnings` is its
   designated equity account for rollover.

@@ -1,5 +1,6 @@
 //! The acct HTTP API: routes, auth, the command pipeline and the sync feed.
 
+pub mod ai;
 pub mod assets;
 pub mod auth;
 pub mod business;
@@ -7,8 +8,10 @@ pub mod commands;
 pub mod error;
 pub mod fixtures;
 pub mod ledger;
+pub mod merchants;
 pub mod pipeline;
 pub mod reads;
+pub mod save_tax;
 pub mod tax;
 pub mod tb_import;
 #[cfg(feature = "embed-web")]
@@ -25,13 +28,26 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::auth::CurrentUser;
-use crate::commands::{Accepted, CommandEnvelope};
+use crate::commands::{Accepted, CommandRequest};
 use crate::error::CommandError;
 
 /// What every handler shares.
 #[derive(Clone)]
 pub struct AppState {
     pub store: Arc<Store>,
+    /// The AI suggester (ADR 009), if the server is configured with one. `None` means Save tax
+    /// shows no AI suggestions.
+    pub suggester: Option<Arc<dyn acct_ai::Suggester>>,
+}
+
+impl AppState {
+    /// A state with the suggester the environment configures, if any.
+    pub fn new(store: Arc<Store>) -> AppState {
+        AppState {
+            store,
+            suggester: ai::suggester_from_env(),
+        }
+    }
 }
 
 /// Response body of `GET /api/health`.
@@ -74,6 +90,20 @@ pub fn app(state: AppState) -> Router {
         .route("/api/years/{id}/assets", get(assets::year_assets))
         .route("/api/businesses/{id}", get(tax::get_business))
         .route("/api/businesses/{id}/tax", get(tax::get_tax))
+        .route("/api/businesses/{id}/save-tax", get(save_tax::get_save_tax))
+        .route(
+            "/api/businesses/{id}/coding-settings",
+            get(save_tax::get_coding_settings),
+        )
+        .route("/api/businesses/{id}/rules", get(save_tax::get_rules))
+        .route(
+            "/api/merchants/{entity_type}",
+            get(merchants::get_merchants),
+        )
+        .route(
+            "/api/businesses/{id}/ai-suggestions",
+            get(ai::get_ai_suggestions).post(ai::post_ai_suggestions),
+        )
         .route("/api/sync", get(reads::sync));
     #[cfg(feature = "embed-web")]
     let router = router.fallback(web::serve);
@@ -103,10 +133,16 @@ async fn health() -> Json<Health> {
 async fn submit_command(
     State(state): State<AppState>,
     user: CurrentUser,
-    body: Result<Json<CommandEnvelope>, JsonRejection>,
+    body: Result<Json<CommandRequest>, JsonRejection>,
 ) -> Result<Json<Accepted>, CommandError> {
-    let Json(envelope) = body.map_err(|e| CommandError::Malformed(e.body_text()))?;
-    let accepted =
-        pipeline::submit(&state.store, &user.actor(), envelope, chrono::Utc::now()).await?;
+    let Json(request) = body.map_err(|e| CommandError::Malformed(e.body_text()))?;
+    let accepted = pipeline::submit_via(
+        &state.store,
+        &user.actor(),
+        request.envelope,
+        request.via,
+        chrono::Utc::now(),
+    )
+    .await?;
     Ok(Json(accepted))
 }

@@ -1,5 +1,6 @@
 //! The commands clients submit to `POST /api/commands`, and what they get back.
 
+use acct_core::coding::{Coding, CodingSettings};
 use acct_core::{
     Account, AccountCode, AssetAccounts, DepreciationSettings, Disposal, GstCode, JournalLine,
     Mapping, Money, OpeningBalance, TbLine, Template,
@@ -9,6 +10,7 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::ai::SuggestedCoding;
 use crate::business::GstSetup;
 use crate::pipeline::Actor;
 
@@ -20,6 +22,77 @@ pub struct CommandEnvelope {
     pub id: String,
     #[serde(flatten)]
     pub command: Command,
+}
+
+/// The body of `POST /api/commands`: a command, plus how it came about when it isn't the user's
+/// own doing alone (ADR 009), which is stored in `command_log.via`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct CommandRequest {
+    #[serde(flatten)]
+    pub envelope: CommandEnvelope,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub via: Option<Via>,
+}
+
+/// ADR 009's attribution. The signed-in user is still the actor; `via` says what they accepted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export)]
+pub enum Via {
+    /// The user accepted AI suggestions as they were. If they edited a pre-fill first, the change
+    /// is theirs alone and carries no `via`.
+    Suggestion {
+        /// The model that made the suggestions, such as `claude-haiku-5-5`.
+        model: String,
+        suggestion_ids: Vec<String>,
+    },
+}
+
+/// One line to code, in `code_bank_line` or `code_bank_lines`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LineCoding {
+    pub bank_line_id: String,
+    pub coding: Coding,
+    /// The owner holds the supplier's taxable supply information (lines over $200). `true` records
+    /// today as the date they confirmed; absent or `false` leaves any earlier confirmation alone.
+    #[serde(default)]
+    #[ts(optional)]
+    pub supply_info_confirmed: Option<bool>,
+    /// For an asset purchase: the asset class. Needed only when more than one class uses the
+    /// coding's cost account.
+    #[serde(default)]
+    #[ts(optional)]
+    pub asset_class_id: Option<String>,
+}
+
+/// An answer to one of Save tax's questions, for one income year.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "question", rename_all = "snake_case")]
+#[ts(export)]
+pub enum Answer {
+    /// "Is this business your only income?"
+    OnlyIncome { yes: bool },
+    /// The income from outside the business, and the tax (PAYE, RWT) already deducted from it.
+    /// Implies the business isn't the only income.
+    OtherIncome { income: Money, tax_deducted: Money },
+    /// "Do you have a student loan?"
+    StudentLoan { yes: bool },
+    /// The independent earner tax credit: whole months of the year the owner is eligible, 0 to 12.
+    Ietc { months: u8 },
+}
+
+/// What a payment to or from IRD was.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export)]
+pub enum IrdPayment {
+    /// GST: paid to IRD, or a refund from IRD.
+    Gst,
+    /// Income tax paid for an income year (named by the year it ends in), a credit against it.
+    IncomeTax { income_year: i32 },
 }
 
 /// Every change to practice or client data (CLAUDE.md hard rule 6).
@@ -255,6 +328,105 @@ pub enum Command {
         bank_account_id: String,
         balance: Money,
     },
+    /// Codes one bank line (Save tax): reverses its live journal and posts the coding's, in one
+    /// command. Posted journals never change. An asset purchase also adds the asset to the
+    /// register. Recoding one line of a confirmed transfer undoes the pair; the other line goes
+    /// back to unsorted.
+    CodeBankLine {
+        #[serde(flatten)]
+        line: LineCoding,
+    },
+    /// Codes several lines at once ("accept all"). All or nothing.
+    CodeBankLines { lines: Vec<LineCoding> },
+    /// Adds a rule, such as "always treat COUNTDOWN as personal", and codes every unsorted line it
+    /// matches. Later uploads are coded by it too. Lines coded by hand are left alone.
+    AddRule {
+        client_id: String,
+        description_contains: String,
+        #[ts(optional)]
+        min: Option<Money>,
+        #[ts(optional)]
+        max: Option<Money>,
+        coding: Coding,
+    },
+    /// Removes a rule. Lines it already coded stay as they are.
+    RemoveRule { rule_id: String },
+    /// Answers a Save tax question for an income year.
+    AnswerQuestion {
+        client_id: String,
+        income_year: i32,
+        answer: Answer,
+    },
+    /// Confirms two lines are a transfer between the owner's own accounts: one journal moves the
+    /// money between the two accounts, and both lines' old journals are reversed.
+    ConfirmTransfer {
+        out_line_id: String,
+        in_line_id: String,
+    },
+    /// Says what a payment to or from IRD was. Income tax paid is a credit for its year.
+    ConfirmIrdPayment {
+        bank_line_id: String,
+        payment: IrdPayment,
+    },
+    /// Answers whether a line flagged as a possible duplicate is one. A duplicate posts nothing.
+    ResolveDuplicate {
+        bank_line_id: String,
+        is_duplicate: bool,
+    },
+    /// The owner holds the supplier's taxable supply information for a line, so GST over $200 can
+    /// be claimed. Recodes the line if it's already coded.
+    ConfirmSupplyInfo { bank_line_id: String },
+    /// Adds a credit card to a business, with its own liability account (850.01, ...).
+    /// `card_number` is the card's last four digits or its number as a statement shows it; only
+    /// the masked form, `XXXX-XXXX-XXXX-1234`, is kept.
+    AddCardAccount {
+        client_id: String,
+        name: String,
+        #[ts(optional)]
+        card_number: Option<String>,
+    },
+    /// Changes a business's coding settings. It changes no figures, so it's allowed in finalised
+    /// years; it applies only to lines coded afterwards.
+    SetCodingSettings {
+        client_id: String,
+        settings: CodingSettings,
+    },
+    /// Turns AI category suggestions on or off for a business (ADR 009). Off by default.
+    /// Turning them on needs `consent_version`, from `GET /api/businesses/{id}/ai-suggestions`,
+    /// once the owner has agreed to the wording; turning them off stops all requests and deletes
+    /// the suggestions still waiting. Until M12 adds the owner role, staff and the practice owner
+    /// do this on the owner's behalf. `activity` (the owner's phrase for what the business does)
+    /// and `private_names` (names to strip from what's sent, besides the business's own), when
+    /// absent, keep what's stored.
+    SetAiSuggestions {
+        client_id: String,
+        enabled: bool,
+        #[ts(optional)]
+        consent_version: Option<String>,
+        #[ts(optional)]
+        activity: Option<String>,
+        #[ts(optional)]
+        private_names: Option<Vec<String>>,
+    },
+    /// Adds an entry to an entity type's merchant list (ADR 009's layer 3), such as "Z ENERGY is
+    /// vehicle costs", in the master chart's codes. Save tax suggests it after the business's
+    /// rules and history. It never changes a coded line. Use synthetic or consented data only.
+    /// Practice owner only.
+    AddMerchant {
+        entity_type: String,
+        description_contains: String,
+        coding: Coding,
+    },
+    /// Takes an entry off the merchant list. Practice owner only.
+    RemoveMerchant { merchant_id: String },
+    /// Stores AI suggestions for unsorted lines as pre-fills. It changes no figures. The server
+    /// submits it from `POST /api/businesses/{id}/ai-suggestions`.
+    RecordSuggestions {
+        client_id: String,
+        /// The model that made them, such as `claude-haiku-5-5`.
+        model: String,
+        suggestions: Vec<SuggestedCoding>,
+    },
 }
 
 impl Command {
@@ -295,6 +467,21 @@ impl Command {
             Command::AddBankAccount { .. } => "add_bank_account",
             Command::ImportStatement { .. } => "import_statement",
             Command::SetOpeningBalance { .. } => "set_opening_balance",
+            Command::CodeBankLine { .. } => "code_bank_line",
+            Command::CodeBankLines { .. } => "code_bank_lines",
+            Command::AddRule { .. } => "add_rule",
+            Command::RemoveRule { .. } => "remove_rule",
+            Command::AnswerQuestion { .. } => "answer_question",
+            Command::ConfirmTransfer { .. } => "confirm_transfer",
+            Command::ConfirmIrdPayment { .. } => "confirm_ird_payment",
+            Command::ResolveDuplicate { .. } => "resolve_duplicate",
+            Command::ConfirmSupplyInfo { .. } => "confirm_supply_info",
+            Command::AddCardAccount { .. } => "add_card_account",
+            Command::SetCodingSettings { .. } => "set_coding_settings",
+            Command::SetAiSuggestions { .. } => "set_ai_suggestions",
+            Command::RecordSuggestions { .. } => "record_suggestions",
+            Command::AddMerchant { .. } => "add_merchant",
+            Command::RemoveMerchant { .. } => "remove_merchant",
         }
     }
 
@@ -325,7 +512,9 @@ impl Command {
             | Command::CreateMapping { .. }
             | Command::ReviseMapping { .. }
             | Command::CreateAssetClass { .. }
-            | Command::UpdateAssetClass { .. } => role == Role::Master,
+            | Command::UpdateAssetClass { .. }
+            | Command::AddMerchant { .. }
+            | Command::RemoveMerchant { .. } => role == Role::Master,
             Command::CreateClient { .. }
             | Command::AddAccount { .. }
             | Command::RenameAccount { .. }
@@ -347,7 +536,20 @@ impl Command {
             | Command::SetUpBusiness { .. }
             | Command::AddBankAccount { .. }
             | Command::ImportStatement { .. }
-            | Command::SetOpeningBalance { .. } => matches!(role, Role::Master | Role::Staff),
+            | Command::SetOpeningBalance { .. }
+            | Command::CodeBankLine { .. }
+            | Command::CodeBankLines { .. }
+            | Command::AddRule { .. }
+            | Command::RemoveRule { .. }
+            | Command::AnswerQuestion { .. }
+            | Command::ConfirmTransfer { .. }
+            | Command::ConfirmIrdPayment { .. }
+            | Command::ResolveDuplicate { .. }
+            | Command::ConfirmSupplyInfo { .. }
+            | Command::AddCardAccount { .. }
+            | Command::SetCodingSettings { .. }
+            | Command::SetAiSuggestions { .. }
+            | Command::RecordSuggestions { .. } => matches!(role, Role::Master | Role::Staff),
         }
     }
 }

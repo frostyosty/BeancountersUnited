@@ -1,0 +1,21 @@
+[package]
+name = "acct-ai"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# ADR 009: AI category suggestions. The `Suggester` trait, the only way to build what leaves the
+# server (`redact`), the two HTTP adapters and a fake. Tests never touch the network.
+
+[dependencies]
+acct-core.workspace = true
+reqwest = { workspace = true, features = ["rustls"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

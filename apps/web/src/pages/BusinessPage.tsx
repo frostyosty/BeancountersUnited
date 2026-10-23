@@ -2,7 +2,7 @@ import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type FormEvent, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate } from "../lib/dates";
@@ -15,7 +15,7 @@ import styles from "./BusinessPage.module.css";
 
 /**
  * The owner's screen (PLAN.md M10): upload bank statements, see the tax to pay if submitted, and
- * submit to IRD. Save tax arrives in M11 and Submit in M14, so both show but are switched off.
+ * submit to IRD. Save tax (M11) opens its own screen; Submit arrives in M14, so it shows but is switched off.
  */
 export function BusinessPage() {
   const { clientId = "" } = useParams();
@@ -51,7 +51,7 @@ export function BusinessPage() {
             <Icon name="business.tax" fallback="💰" /> Tax to pay if submitted
           </h2>
           <ErrorMessage error={tax.error} />
-          {tax.data ? <TaxFigure tax={tax.data} /> : !tax.error && <p className="muted">Working it out…</p>}
+          {tax.data ? <TaxFigure tax={tax.data} clientId={clientId} /> : !tax.error && <p className="muted">Working it out…</p>}
         </section>
 
         <section className={styles.area} aria-labelledby="submit-heading">
@@ -136,12 +136,16 @@ function Upload({ clientId }: { clientId: string }) {
   );
 }
 
-function TaxFigure({ tax }: { tax: TaxPosition }) {
+function TaxFigure({ tax, clientId }: { tax: TaxPosition; clientId: string }) {
+  const navigate = useNavigate();
   return (
     <>
       <p className={styles.figure}>${formatMoney(tax.total)}</p>
-      <p>Counts every deposit as income and claims nothing. Save tax to bring it down.</p>
-      <button type="button" disabled title="Coming soon">
+      <p>
+        The most you could owe. Anything not sorted yet is counted the safe way: money in as income, and spending as claiming nothing.
+        Save tax to bring it down.
+      </p>
+      <button type="button" className="primary" onClick={() => void navigate(`/businesses/${clientId}/save-tax`)}>
         <Icon name="business.save" fallback="✂️" /> Save tax
       </button>
       {tax.notices.map((n) => (
@@ -173,7 +177,7 @@ function TaxFigure({ tax }: { tax: TaxPosition }) {
                     <br />
                     <span className="muted">
                       On ${formatMoney(y.taxable_income)} of income
-                      {y.basis === "top_rate_flat" ? ", at 39% until you tell us it's your only income" : ""}.{" "}
+                      {y.basis === "top_rate_flat" ? ", at 39% until you tell us about your other income" : ""}.{" "}
                       {whenCanFile(y.can_file_from, y.so_far)}
                     </span>
                   </td>
@@ -187,7 +191,11 @@ function TaxFigure({ tax }: { tax: TaxPosition }) {
                     <td>
                       Student loan, year to 31 Mar {y.income_year}
                       <br />
-                      <span className="muted">12% of all of it until you tell us whether you have one.</span>
+                      <span className="muted">
+                        {y.student_loan_basis === "all_income"
+                          ? "12% of all of it until you tell us whether you have one."
+                          : "12% of your income over the repayment threshold."}
+                      </span>
                     </td>
                     <td className="num">{formatMoney(y.student_loan ?? 0)}</td>
                   </tr>

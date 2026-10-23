@@ -1,0 +1,10 @@
+[
+  { "description_contains": "GRIDLINE POWER", "coding": { "direction": "out", "kind": "expense", "account": "255", "gst": "standard" } },
+  { "description_contains": "TELEWAVE", "coding": { "direction": "out", "kind": "expense", "account": "245", "gst": "standard" } },
+  { "description_contains": "BRIGHTPOST COURIERS", "coding": { "direction": "out", "kind": "expense", "account": "260", "gst": "standard" } },
+  { "description_contains": "LANTERN HOST", "coding": { "direction": "out", "kind": "expense", "account": "270", "gst": "standard" } },
+  { "description_contains": "PAPERLEAF STATIONERS", "coding": { "direction": "out", "kind": "expense", "account": "265", "gst": "standard" } },
+  { "description_contains": "FARO INSURANCE", "coding": { "direction": "out", "kind": "expense", "account": "215", "gst": "standard" } },
+  { "description_contains": "KAURI GAS & GO", "coding": { "direction": "out", "kind": "expense", "account": "225", "gst": "standard" } },
+  { "description_contains": "GREENBARROW GROCERS", "coding": { "direction": "out", "kind": "personal" } }
+]

@@ -1,0 +1,17 @@
+{
+  "id": "chatcmpl-synthetic-0001",
+  "object": "chat.completion",
+  "model": "synthetic-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"suggestions\":[{\"ref\":1,\"category\":\"255\",\"gst\":\"standard\",\"confidence\":\"high\"},{\"ref\":2,\"category\":\"personal\",\"gst\":\"none\",\"confidence\":\"medium\"}]}",
+        "refusal": null
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 2302, "completion_tokens": 71 }
+}

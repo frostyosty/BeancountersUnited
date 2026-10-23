@@ -52,6 +52,7 @@ impl Server {
             _dir: dir,
             state: AppState {
                 store: Arc::new(store),
+                suggester: None,
             },
         };
         let boss = server.login("boss").await;

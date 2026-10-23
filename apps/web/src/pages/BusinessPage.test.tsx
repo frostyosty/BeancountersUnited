@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 describe("business screen", () => {
-  it("shows the three areas, with Save tax and Submit switched off", async () => {
+  it("shows the three areas, with Submit switched off", async () => {
     stubApi({
       "GET /api/me": () => sam,
       "GET /api/businesses/b1": () => business,
@@ -87,8 +87,9 @@ describe("business screen", () => {
     });
     renderApp(<App />, "/businesses/b1");
     expect(await screen.findByText("$2,506.32")).toBeTruthy();
-    expect(screen.getByText(/Counts every deposit as income and claims nothing/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: /Save tax/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Anything not sorted yet is counted the safe way/)).toBeTruthy();
+    expect(screen.getByText(/until you tell us whether you have one/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Save tax/ }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole("button", { name: "Submit" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/No statement from 1 Aug 2025 to 28 Aug 2025/)).toBeTruthy();
     expect(screen.getByText(/Maybe a payment to or from IRD/)).toBeTruthy();

@@ -98,7 +98,9 @@ apps/desktop     Tauri apps (master, client, dev), their shared crate and local 
 packages/types   generated TS types (never hand-edited)
 fixtures/        synthetic data only
 docs/            domain.md (glossary and worked examples), decisions/ (ADRs)
-tools/           local-only utilities: icon-studio (icons for the web app), and M16's extractor
+tools/           local-only utilities: icon-studio (icons for the web app), ai-labelled-lines (rebuilds
+                 ADR 009's labelled set in fixtures/ai/), and M16's extractor
+NON-CODE-TODOS.md  everything a person has to do outside the code: checks, approvals, the business track
 ```
 
 ## Commands
@@ -123,6 +125,7 @@ tools/           local-only utilities: icon-studio (icons for the web app), and 
 ## Working conventions
 - Work directly on `master`; don't create branches. Commit each finished task there. The user saves and pushes with `zz_quicksave.txt` (stage all, commit, pull --rebase, push), so leave the tree in a state that is safe to commit as a whole.
 - Propose a plan before changing more than about 5 files or any public type.
+- When work leaves something only a person can do (a check, an approval, an application, a decision), add it to `NON-CODE-TODOS.md`, and tick it off there when it's done.
 - Snapshots: `cargo insta review` is interactive, so don't use it. Read each pending `.snap.new` against its `.snap`. Run `cargo insta accept` only when you can explain every change, and say in the commit message why each one changed.
 - When you add a dependency, explain why in the commit message.
 - For accounting presentation questions (signs, grouping, wording, conventions), ask, then record the answer in `docs/domain.md`. Don't guess.

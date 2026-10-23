@@ -1,10 +1,12 @@
 import type { Accepted } from "@acct/types/Accepted";
+import type { AiSuggestRun } from "@acct/types/AiSuggestRun";
 import type { ApiError } from "@acct/types/ApiError";
 import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { Me } from "@acct/types/Me";
 import type { TbImportPreview } from "@acct/types/TbImportPreview";
+import type { Via } from "@acct/types/Via";
 import { newId } from "./id";
 
 /** A non-2xx response, carrying the server's structured error when it sent one. */
@@ -78,11 +80,17 @@ export async function logout(fetchFn: typeof fetch = fetch): Promise<void> {
  * Rejects with an `ApiRequestError` whose `code` and `details` say what was wrong.
  */
 export function submitCommand(
-  command: Command,
+  command: Command & { via?: Via },
   id: string = newId(),
   fetchFn: typeof fetch = fetch,
 ): Promise<Accepted> {
   return postJson<Accepted>("/api/commands", { id, ...command }, fetchFn);
+}
+
+/** Asks the AI service for suggestions for a business's unsorted lines (ADR 009). They come back as
+ * pre-fills on the Save tax cards; nothing is applied until the owner accepts one. */
+export function requestAiSuggestions(clientId: string, fetchFn: typeof fetch = fetch): Promise<AiSuggestRun> {
+  return postJson<AiSuggestRun>(`/api/businesses/${clientId}/ai-suggestions`, {}, fetchFn);
 }
 
 /** Checks a TB CSV against a year without changing anything. */

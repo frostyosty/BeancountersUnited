@@ -17,6 +17,9 @@ pub struct LoggedCommand {
     pub client_id: Option<String>,
     pub client_year_id: Option<String>,
     pub at: DateTime<Utc>,
+    /// How the command came about (ADR 009), as JSON, such as accepting an AI suggestion. `None`
+    /// for a command the user made alone.
+    pub via: Option<String>,
 }
 
 /// The newest `seq` in the log, or 0 if it's empty.
@@ -39,8 +42,8 @@ pub async fn next_seq(conn: &mut SqliteConnection) -> Result<i64> {
 pub async fn append(conn: &mut SqliteConnection, entry: &LoggedCommand) -> Result<()> {
     sqlx::query(
         "INSERT INTO command_log
-             (seq, id, kind, payload, result, user_id, client_id, client_year_id, at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             (seq, id, kind, payload, result, user_id, client_id, client_year_id, at, via)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(entry.seq)
     .bind(&entry.id)
@@ -51,6 +54,7 @@ pub async fn append(conn: &mut SqliteConnection, entry: &LoggedCommand) -> Resul
     .bind(&entry.client_id)
     .bind(&entry.client_year_id)
     .bind(entry.at)
+    .bind(&entry.via)
     .execute(conn)
     .await?;
     Ok(())

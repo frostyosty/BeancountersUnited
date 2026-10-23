@@ -10,11 +10,12 @@ use std::cmp::Reverse;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use ts_rs::TS;
 
 use crate::chart::{AccountCode, AccountType, Chart, GstCode};
 use crate::ledger::JournalLine;
 use crate::money::{Money, div_round_half_away, money_from_i128};
-use crate::tax::gst::{gst_in_inclusive, gst_rate_bp};
+use crate::tax::gst::{GstTotals, gst_in_inclusive, gst_rate_bp};
 
 /// Basis points in 100%.
 const BP: u32 = 10_000;
@@ -24,8 +25,9 @@ const BP: u32 = 10_000;
 pub const SUPPLY_INFO_THRESHOLD: Money = Money::from_cents(20_000);
 
 /// Money in or money out, as the bank shows it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export)]
 pub enum Direction {
     In,
     Out,
@@ -43,8 +45,9 @@ impl Direction {
 }
 
 /// What a deposit is.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export)]
 pub enum DepositCoding {
     /// Business income to an income account, GST-inclusive. `gst` is `standard`, `zero` or
     /// `exempt`; `none` isn't allowed on income.
@@ -64,8 +67,9 @@ pub enum DepositCoding {
 }
 
 /// What a withdrawal is.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export)]
 pub enum WithdrawalCoding {
     /// A business expense, to an expense account.
     Expense { account: AccountCode, gst: GstCode },
@@ -90,8 +94,9 @@ pub enum WithdrawalCoding {
 }
 
 /// What a bank line is coded as. Its direction must match the line's.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "direction", rename_all = "snake_case")]
+#[ts(export)]
 pub enum Coding {
     In(DepositCoding),
     Out(WithdrawalCoding),
@@ -107,8 +112,9 @@ impl Coding {
 }
 
 /// How the GST on a partly private line is worked out.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export)]
 pub enum PartPrivateGst {
     /// The GST inside the business share.
     #[default]
@@ -121,7 +127,8 @@ pub enum PartPrivateGst {
 /// partly private GST is worked out. The practice's defaults are in
 /// `fixtures/practice/sole-trader-coding-settings.json`; accountants can change them per
 /// business, and a change applies only to lines coded after it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct CodingSettings {
     /// GST collected and paid (810 in the sole-trader chart). Liability or asset.
     pub gst: AccountCode,
@@ -394,11 +401,143 @@ fn not_self(bank: &AccountCode, other: &AccountCode) -> Result<(), CodingError> 
     Ok(())
 }
 
+/// What one bank line adds to its GST period's totals, as the return needs them: GST-inclusive
+/// and positive. `coding` is `None` for a line not yet sorted, which counts as
+/// [`crate::bank::unsorted_lines`] posts it: money in is a standard-rated sale, and money out
+/// claims nothing.
+///
+/// - Nothing counts before the owner registered, or on a date with no GST rate.
+/// - Income: standard and zero-rated income are sales (zero-rated also in `zero_rated`); exempt
+///   income isn't in the return.
+/// - Spending: only a `standard` code counts, and only once the GST is claimed, so up to
+///   [`SUPPLY_INFO_THRESHOLD`] or once the owner confirms the supply information. A partly
+///   private line counts its business share.
+/// - Every other coding (transfers, loans, refunds, drawings, IRD payments) is outside the return.
+pub fn gst_totals(
+    line: &BankLine<'_>,
+    coding: Option<&Coding>,
+    supply_info_confirmed: Option<NaiveDate>,
+    gst_registered_from: Option<NaiveDate>,
+) -> GstTotals {
+    let mut totals = GstTotals::default();
+    let registered = gst_registered_from.is_some_and(|from| line.date >= from);
+    if !registered || gst_rate_bp(line.date).is_none() {
+        return totals;
+    }
+    let spent = -line.amount;
+    let claimed = spent <= SUPPLY_INFO_THRESHOLD || supply_info_confirmed.is_some();
+    match coding {
+        None if line.amount > Money::ZERO => totals.sales = line.amount,
+        None => {}
+        Some(Coding::In(DepositCoding::Income { gst, .. })) if line.amount > Money::ZERO => {
+            match gst {
+                GstCode::Standard => totals.sales = line.amount,
+                GstCode::Zero => {
+                    totals.sales = line.amount;
+                    totals.zero_rated = line.amount;
+                }
+                GstCode::Exempt | GstCode::None => {}
+            }
+        }
+        Some(Coding::Out(
+            WithdrawalCoding::Expense {
+                gst: GstCode::Standard,
+                ..
+            }
+            | WithdrawalCoding::AssetPurchase {
+                gst: GstCode::Standard,
+                ..
+            },
+        )) if spent > Money::ZERO && claimed => totals.purchases = spent,
+        Some(Coding::Out(WithdrawalCoding::PartPrivate {
+            gst: GstCode::Standard,
+            business_bp,
+            ..
+        })) if spent > Money::ZERO && claimed => {
+            totals.purchases = business_share(spent, *business_bp).unwrap_or(Money::ZERO);
+        }
+        Some(_) => {}
+    }
+    totals
+}
+
+/// What journal lines add to taxable income: the credits less the debits on income and expense
+/// accounts. Accounts not in the chart are left out.
+pub fn taxable_income_of(lines: &[JournalLine], chart: &Chart) -> Money {
+    -lines
+        .iter()
+        .filter(|l| {
+            chart.get(&l.account).is_some_and(|a| {
+                matches!(a.account_type, AccountType::Income | AccountType::Expense)
+            })
+        })
+        .map(|l| l.amount)
+        .sum::<Money>()
+}
+
+/// Layer 2 of ADR 009, the business's own history: the coding of earlier lines with the same
+/// description (ignoring case and runs of spaces) and direction, if every one of them was coded
+/// the same way. `None` if there are none, or they disagree.
+pub fn from_history<'a>(
+    history: impl IntoIterator<Item = (&'a str, &'a Coding)>,
+    description: &str,
+    direction: Direction,
+) -> Option<&'a Coding> {
+    let wanted = normalise(description);
+    let mut found: Option<&Coding> = None;
+    for (d, coding) in history {
+        if coding.direction() != direction || normalise(d) != wanted {
+            continue;
+        }
+        match found {
+            None => found = Some(coding),
+            Some(f) if f == coding => {}
+            Some(_) => return None,
+        }
+    }
+    found
+}
+
+/// Layer 3 of ADR 009: an entry in the practice's merchant list, such as "Z ENERGY is vehicle
+/// costs". The practice maintains one list per entity type, from synthetic or consented data
+/// only. Its account codes are the master chart's.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Merchant {
+    /// Breaks ties between equally long patterns: the smallest id wins.
+    pub id: String,
+    pub description_contains: String,
+    pub coding: Coding,
+}
+
+/// The merchant entry for a line: one whose pattern the description contains (ignoring case and
+/// runs of spaces) and whose coding is the line's direction. The longest pattern wins, then the
+/// smallest id, so the answer never depends on the list's order.
+pub fn from_merchants<'a>(
+    merchants: &'a [Merchant],
+    description: &str,
+    amount: Money,
+) -> Option<&'a Merchant> {
+    let direction = Direction::of(amount)?;
+    let description = normalise(description);
+    merchants
+        .iter()
+        .filter(|m| m.coding.direction() == direction)
+        .filter_map(|m| {
+            let pattern = normalise(&m.description_contains);
+            (!pattern.is_empty() && description.contains(&pattern))
+                .then(|| (pattern.chars().count(), m))
+        })
+        .max_by_key(|(len, m)| (*len, Reverse(m.id.as_str())))
+        .map(|(_, m)| m)
+}
+
 /// A business's rule, such as "always treat COUNTDOWN as personal". It matches a line when:
 /// - the line's description contains `description_contains`, ignoring case and runs of spaces;
 /// - the size of the amount is within `min` and `max`, both included, where given;
 /// - the line's direction is the coding's.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Rule {
     /// Breaks ties between equally specific rules: the smallest id wins.
     pub id: String,
@@ -1112,6 +1251,160 @@ mod tests {
             rule("a", "X", Some("5.00"), Some("5.00"), personal()).validate(),
             Ok(())
         );
+    }
+
+    fn totals_of(amount: &str, coding: Option<&Coding>, confirmed: bool) -> GstTotals {
+        let bank = code("600.01");
+        let line = BankLine {
+            bank: &bank,
+            date: d("2025-09-01"),
+            amount: m(amount),
+        };
+        gst_totals(
+            &line,
+            coding,
+            confirmed.then(|| d("2025-09-02")),
+            Some(d(REGISTERED)),
+        )
+    }
+
+    fn sales(s: &str) -> GstTotals {
+        GstTotals {
+            sales: m(s),
+            ..GstTotals::default()
+        }
+    }
+
+    fn purchases(s: &str) -> GstTotals {
+        GstTotals {
+            purchases: m(s),
+            ..GstTotals::default()
+        }
+    }
+
+    #[test]
+    fn gst_totals_follow_the_coding() {
+        let none = GstTotals::default();
+        let income = |gst| {
+            Coding::In(DepositCoding::Income {
+                account: code("100"),
+                gst,
+            })
+        };
+        // Not yet sorted: money in is a sale, money out claims nothing.
+        assert_eq!(totals_of("115.00", None, false), sales("115.00"));
+        assert_eq!(totals_of("-115.00", None, false), none);
+        assert_eq!(
+            totals_of("115.00", Some(&income(GstCode::Standard)), false),
+            sales("115.00")
+        );
+        assert_eq!(
+            totals_of("115.00", Some(&income(GstCode::Zero)), false),
+            GstTotals {
+                sales: m("115.00"),
+                zero_rated: m("115.00"),
+                ..GstTotals::default()
+            }
+        );
+        assert_eq!(
+            totals_of("115.00", Some(&income(GstCode::Exempt)), false),
+            none
+        );
+        assert_eq!(
+            totals_of("115.00", Some(&Coding::In(DepositCoding::GstRefund)), false),
+            none
+        );
+        // Spending counts once the GST is claimed.
+        let rent = expense("230", GstCode::Standard);
+        assert_eq!(
+            totals_of("-200.00", Some(&rent), false),
+            purchases("200.00")
+        );
+        assert_eq!(totals_of("-200.01", Some(&rent), false), none);
+        assert_eq!(totals_of("-200.01", Some(&rent), true), purchases("200.01"));
+        assert_eq!(
+            totals_of("-50.00", Some(&expense("205", GstCode::Exempt)), false),
+            none
+        );
+        // The worked example's Telewave line: half of 39.99 is 20.00.
+        assert_eq!(
+            totals_of("-39.99", Some(&part_private("245", 5_000)), false),
+            purchases("20.00")
+        );
+        assert_eq!(totals_of("-39.99", Some(&personal()), false), none);
+        // Before registering, nothing counts.
+        let bank = code("600.01");
+        let early = BankLine {
+            bank: &bank,
+            date: d("2025-07-31"),
+            amount: m("115.00"),
+        };
+        assert_eq!(gst_totals(&early, None, None, Some(d(REGISTERED))), none);
+        assert_eq!(gst_totals(&early, None, None, None), none);
+    }
+
+    #[test]
+    fn taxable_income_is_the_profit_and_loss_part() {
+        let lines = post("-100.00", &part_private("245", 3_333), false).unwrap();
+        let lines: Vec<JournalLine> = lines
+            .into_iter()
+            .map(|(a, amount)| JournalLine {
+                account: code(&a),
+                amount,
+            })
+            .collect();
+        // Only the 28.98 expense: the GST and drawings aren't income or expenses.
+        assert_eq!(taxable_income_of(&lines, &chart()), m("-28.98"));
+    }
+
+    #[test]
+    fn history_suggests_only_when_it_agrees() {
+        let fuel = expense("225", GstCode::Standard);
+        let cafe = personal();
+        let history = [
+            ("Z ENERGY  PETONE", &fuel),
+            ("PIKORUA CAFE", &cafe),
+            ("z energy petone", &fuel),
+        ];
+        assert_eq!(
+            from_history(history, "Z ENERGY PETONE", Direction::Out),
+            Some(&fuel)
+        );
+        assert_eq!(
+            from_history(history, "Z ENERGY PETONE", Direction::In),
+            None
+        );
+        assert_eq!(from_history(history, "NEW PLACE", Direction::Out), None);
+        let disagree = [("PIKORUA CAFE", &cafe), ("PIKORUA CAFE", &fuel)];
+        assert_eq!(from_history(disagree, "PIKORUA CAFE", Direction::Out), None);
+    }
+
+    #[test]
+    fn the_longest_merchant_pattern_wins() {
+        let merchant = |id: &str, text: &str, coding: Coding| Merchant {
+            id: id.into(),
+            description_contains: text.into(),
+            coding,
+        };
+        let fuel = expense("225", GstCode::Standard);
+        let power = expense("255", GstCode::Standard);
+        let list = [
+            merchant("b", "GAS", power.clone()),
+            merchant("a", "kauri  gas & go", fuel.clone()),
+            merchant("c", "SALE", Coding::In(DepositCoding::OwnerFunds)),
+            merchant("d", "GAS", personal()),
+        ];
+        let found = |d: &str, cents: i64| {
+            from_merchants(&list, d, Money::from_cents(cents)).map(|m| m.id.as_str())
+        };
+        assert_eq!(found("KAURI GAS & GO PETONE", -5_000), Some("a"));
+        // Same length: the smallest id.
+        assert_eq!(found("GRIDLINE GAS", -5_000), Some("b"));
+        // The coding's direction must be the line's.
+        assert_eq!(found("GARAGE SALE", -5_000), None);
+        assert_eq!(found("GARAGE SALE", 5_000), Some("c"));
+        assert_eq!(found("GRIDLINE GAS", 0), None);
+        assert_eq!(found("NEW PLACE", -5_000), None);
     }
 
     fn any_gst() -> impl Strategy<Value = GstCode> {

@@ -3,8 +3,8 @@
 Status: accepted (2026-10-23).
 - The layered, provider-agnostic design.
 - Development starts on Claude Haiku 5.5, and the bake-off below chooses the production model.
-- The consent wording is accepted as drafted. [N] is filled in once Anthropic's retention period is
-  confirmed.
+- The consent wording is accepted as drafted, with Anthropic's retention period of 30 days filled in
+  (2026-10-24).
 - IRD must confirm in writing before real owners use it.
 ADR 008 is reserved for M12's hosting decision.
 
@@ -156,7 +156,7 @@ The consent text says so. A later rule could drop descriptions that look like a 
   > categories. It never sees your name, your business's name, your bank account numbers or your IRD
   > number, and we strip those out of descriptions too. A description can still name someone you paid.
   > The service runs overseas. It doesn't use your data to train its models, and deletes it within
-  > [N] days. Nothing changes until you accept a suggestion. You can turn this off at any time.
+  > 30 days. Nothing changes until you accept a suggestion. You can turn this off at any time.
 
 ### Retention
 - **At the provider.**
@@ -164,7 +164,7 @@ The consent text says so. A later rule could drop descriptions that look like a 
     ([API and data retention](https://platform.claude.com/docs/en/manage-claude/api-and-data-retention)).
   - Its standard commercial retention period applies
     ([commercial data retention policy](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)).
-    Confirm the number of days before the consent wording is final.
+    It's 30 days (confirmed 2026-10-24), and the consent wording says so.
   - Zero data retention is available per organisation through Anthropic's sales team. Apply before
     launch. ZDR doesn't cover the Batch API or prompt caching, so if we get ZDR we may have to give up
     those two discounts. The trade-off is decided then.

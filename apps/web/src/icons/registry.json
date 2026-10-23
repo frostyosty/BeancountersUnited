@@ -457,6 +457,78 @@
     "detected": {
       "type": "emoji",
       "value": "🔎"
+    },
+    "save_saved": {
+      "type": "emoji",
+      "value": "🎉"
+    },
+    "save_saving": {
+      "type": "emoji",
+      "value": "💸"
+    },
+    "save_question": {
+      "type": "emoji",
+      "value": "❓"
+    },
+    "save_transfer": {
+      "type": "emoji",
+      "value": "🔁"
+    },
+    "save_ird": {
+      "type": "emoji",
+      "value": "🏛️"
+    },
+    "save_duplicate": {
+      "type": "emoji",
+      "value": "👯"
+    },
+    "save_gap": {
+      "type": "emoji",
+      "value": "📭"
+    },
+    "save_supply": {
+      "type": "emoji",
+      "value": "🧾"
+    },
+    "save_categorise": {
+      "type": "emoji",
+      "value": "🏷️"
+    },
+    "save_suggest": {
+      "type": "emoji",
+      "value": "💡"
+    },
+    "save_accept_all": {
+      "type": "emoji",
+      "value": "✨"
+    },
+    "save_rule": {
+      "type": "emoji",
+      "value": "📌"
+    },
+    "save_ok": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "save_skip": {
+      "type": "emoji",
+      "value": "⏭️"
+    },
+    "save_done": {
+      "type": "emoji",
+      "value": "🥳"
+    },
+    "save_ai": {
+      "type": "emoji",
+      "value": "🤖"
+    },
+    "save_ai_ask": {
+      "type": "emoji",
+      "value": "✨"
+    },
+    "save_ai_off": {
+      "type": "emoji",
+      "value": "🚫"
     }
   }
 }
