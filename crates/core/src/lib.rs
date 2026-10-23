@@ -5,6 +5,7 @@
 
 pub mod bank;
 pub mod chart;
+pub mod coding;
 pub mod depreciation;
 pub mod ledger;
 pub mod mapping;

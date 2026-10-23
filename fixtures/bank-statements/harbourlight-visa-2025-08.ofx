@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?OFX OFXHEADER="200" VERSION="220" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
+      <DTSERVER>20250901000000</DTSERVER>
+      <LANGUAGE>ENG</LANGUAGE>
+      <FI><ORG>Harbourlight Bank (SYNTHETIC)</ORG><FID>0099</FID></FI>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <CREDITCARDMSGSRSV1>
+    <CCSTMTTRNRS>
+      <TRNUID>0</TRNUID>
+      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
+      <CCSTMTRS>
+        <CURDEF>NZD</CURDEF>
+        <CCACCTFROM>
+          <ACCTID>XXXXXXXXXXXX4417</ACCTID>
+        </CCACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART>20250801</DTSTART>
+          <DTEND>20250831</DTEND>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250802</DTPOSTED>
+            <TRNAMT>-48.90</TRNAMT>
+            <FITID>HLV20250802001</FITID>
+            <NAME>WAXWING SUPPLIES LTD</NAME>
+            <MEMO>AUCKLAND</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250806</DTPOSTED>
+            <TRNAMT>-129.00</TRNAMT>
+            <FITID>HLV20250806001</FITID>
+            <NAME>GLIMMER WICK CO</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>312.40</TRNAMT>
+            <FITID>HLV20250811001</FITID>
+            <NAME>PAYMENT RECEIVED</NAME>
+            <MEMO>THANK YOU</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>-23.75</TRNAMT>
+            <FITID>HLV20250814001</FITID>
+            <NAME>CLOUDFORGE HOSTING</NAME>
+            <MEMO>USD 14.20</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>FEE</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>-0.59</TRNAMT>
+            <FITID>HLV20250814002</FITID>
+            <NAME>INTL TRANSACTION FEE</NAME>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>-64.00</TRNAMT>
+            <FITID>HLV20250820001</FITID>
+            <NAME>KAURI PETROL</NAME>
+            <MEMO>NELSON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250827</DTPOSTED>
+            <TRNAMT>18.50</TRNAMT>
+            <FITID>HLV20250827001</FITID>
+            <NAME>GLIMMER WICK CO</NAME>
+            <MEMO>REFUND</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250830</DTPOSTED>
+            <TRNAMT>-7.20</TRNAMT>
+            <FITID>HLV20250830001</FITID>
+            <NAME>PIKORUA CAFE</NAME>
+            <MEMO>WELLINGTON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250830</DTPOSTED>
+            <TRNAMT>-7.20</TRNAMT>
+            <FITID>HLV20250830002</FITID>
+            <NAME>PIKORUA CAFE</NAME>
+            <MEMO>WELLINGTON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>INT</TRNTYPE>
+            <DTPOSTED>20250831</DTPOSTED>
+            <TRNAMT>-2.95</TRNAMT>
+            <FITID>HLV20250831001</FITID>
+            <NAME>PURCHASE INTEREST</NAME>
+          </STMTTRN>
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>-265.09</BALAMT>
+          <DTASOF>20250831</DTASOF>
+        </LEDGERBAL>
+      </CCSTMTRS>
+    </CCSTMTTRNRS>
+  </CREDITCARDMSGSRSV1>
+</OFX>

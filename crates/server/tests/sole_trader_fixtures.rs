@@ -21,6 +21,8 @@ const ASSET_CLASSES: &str =
     include_str!("../../../fixtures/practice/sole-trader-asset-classes.json");
 const ROUNDING_PRIORITY: &str =
     include_str!("../../../fixtures/practice/sole-trader-rounding-priority.json");
+const CODING_SETTINGS: &str =
+    include_str!("../../../fixtures/practice/sole-trader-coding-settings.json");
 
 #[derive(Deserialize)]
 struct AssetClass {
@@ -195,6 +197,25 @@ fn rounding_priority_and_asset_classes_fit_the_chart() {
     }
 }
 
+/// The default coding settings name accounts in the chart, of the right types, and each of the
+/// accounts added for coding has its own line.
+#[test]
+fn coding_settings_fit_the_chart() {
+    let d = defaults();
+    let settings: acct_core::coding::CodingSettings =
+        serde_json::from_str(CODING_SETTINGS).unwrap();
+    settings.validate(&d.chart).unwrap();
+    for (c, line) in [
+        ("615", "gst_to_claim"),
+        ("812", "gst_refunds"),
+        ("952", "wages_paid_in"),
+        ("954", "personal_sales"),
+        ("962", "income_tax_paid"),
+    ] {
+        assert_eq!(d.mapping.line_for(&code(c)), Some(&key(line)), "{c}");
+    }
+}
+
 /// A balanced TB touching every account builds a ReportDoc that foots, with drawings in brackets.
 #[test]
 fn builds_a_report() {
@@ -205,7 +226,8 @@ fn builds_a_report() {
         .iter()
         .map(|a| a.code.clone())
         .chain(CLIENT_ADDED.map(|(c, _)| code(c)))
-        .filter(|c| *c != code("970"));
+        // Drawings are posted below as a debit, whatever the alternation would give them.
+        .filter(|c| *c != code("970") && *c != code("960"));
     for (i, c) in codes.enumerate() {
         let i = i64::try_from(i).unwrap();
         // Odd cents so rounding has work to do; debits and credits alternate.

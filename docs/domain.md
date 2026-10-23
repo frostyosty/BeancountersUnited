@@ -386,6 +386,21 @@ list is under "Open".
   - Over $1,000, that information must also name the owner.
 
   The tiers come from secondary summaries (**check**).
+- **Over $200, not yet confirmed (decided 2026-10-23).** The expense is still GST-exclusive. The GST
+  waits in 615 *GST to claim, records not yet held*, an asset, and isn't in box 11 until confirmed.
+  Confirming moves it from 615 to 810. The GST figure then falls, and income tax doesn't change.
+  - Why not put the whole amount in the expense: GST the owner is entitled to claim is still input tax,
+    and section DB 2 of the Income Tax Act 2007 denies an income tax deduction for input tax. Lacking
+    the paperwork delays the claim; it doesn't turn the GST into a cost. Deducting it would put the
+    income tax figure below what IRD would ask for, which breaks the conservative rule. It would also
+    give the owner both benefits once they confirm (a deduction in one year, input tax in a later
+    period), unless the expense was changed back, possibly in a filed or finalised year.
+  - When the owner confirms after the line's GST return has been filed, the claim goes in the return
+    being prepared when they confirm, not the filed one (**check**: how late a claim can be made, and
+    in which box; M14).
+  - If the owner says they'll never get the information, the GST in 615 becomes part of the expense.
+    That's a real cost, so it's deductible (**check**).
+  - The accountant's finalise pre-check (M15) lists any balance left in 615.
 - **Income tax treatment.** For a registered owner, income and expenses are GST-exclusive. GST collected,
   GST paid to IRD and GST refunds are never income or expenses. A GST refund deposit counts as income in
   M10 only because nothing is sorted yet; M11 marks it.
@@ -438,6 +453,51 @@ list is under "Open".
   | Next year's provisional tax | Out | After filing, a notice when residual income tax is over $5,000 (**check**; backlog: provisional tax) |
   | Late filing penalties and interest | Out | Later, with M14's due dates |
   | Donations, Working for Families, KiwiSaver, child support | Out | Not part of the IR3 figure |
+
+- **Answers and credits (M11, decided 2026-10-23).** The owner's answers are kept per income year
+  (`YearAnswers` in `acct_core::tax::income_tax`); a year with nothing answered costs the most.
+  - *Other income.* Once the owner says the business isn't their only income and enters the other income
+    and the PAYE/RWT deducted from it, the bands run on business plus other income, and the deducted tax
+    is a credit. Until both are entered, the business income stays at 39% flat.
+  - *When the figure rises.* If less tax was deducted from the other income than that income's own tax
+    (untaxed rental income, say), the figure goes above the conservative one. That's right, because IRD
+    would ask for it, so the figure isn't capped (owner's call, 2026-10-23). This is the one answer that
+    can raise the figure; its Save tax card shows a negative saving.
+  - *Student loan with other income.* 12% of the business income's share of total income over the
+    threshold: (total − threshold, if positive) − (other income − threshold, if positive). The other
+    income's share is taken to have had repayments deducted at source (**check**).
+  - *Income tax already paid* (provisional or terminal, confirmed by the owner) is a credit.
+  - *Credits come off income tax only*, and a year's income tax never goes below nil: **the figure never
+    shows a refund** (owner's call, 2026-10-23). The student loan is added after.
+- **Independent earner tax credit (IETC).** From 31 July 2024, so for every year we hold rates for:
+
+  | | Amount |
+  |---|---|
+  | Income from | $24,000.00 (inclusive) |
+  | Full credit | $520 a year ($10 a week), up to $66,000 |
+  | Abatement | 13c for each complete dollar of income over $66,000 |
+  | Income to | $70,000 (fully abated there) |
+  | Part years | Whole months only: a month with any Working for Families, income-tested benefit, NZ Super, Veteran's Pension or an overseas equivalent doesn't count |
+
+  - Income means total income before tax (business plus other), with no losses brought forward.
+  - We compute ($520 − abatement) × eligible months ÷ 12, rounded once half away from zero to cents.
+    That order follows the Taxation (Budget Measures) Act 2024's transitional formula for 2024–25
+    ("(credit − full year abatement) × days ÷ 365", s LC 14); the "complete dollar" wording is from the same
+    Act (**check** both against the current s LC 13 and IRD's test cases).
+  - It's given only once total income is known (the "only income" question answered and any other
+    income entered) and the owner has said how many months they're eligible.
+  - The $24,000 start is a cliff: $23,999.99 gets nothing and $24,000.00 gets $520, so a cent more
+    income can mean less tax. That's the law, and the only place the figure isn't monotonic in income.
+  - Sources: IRD, [Independent earner tax credit
+    (IETC)](https://www.ird.govt.nz/income-tax/income-tax-for-individuals/individual-tax-credits/independent-earner-tax-credit-ietc)
+    (updated 31 Mar 2025, read 2026-10-23); the Taxation (Budget Measures) Act 2024, inserting ss LC 14
+    and LC 15 into the Income Tax Act 2007, as quoted in search results (legislation.govt.nz refused our
+    fetch, so **check** the text).
+- **Where it's computed.** `acct_core::tax::position` takes in-memory inputs (each GST period's totals,
+  each income year's taxable income, the answers) and returns every return and the total.
+  `position::saving` prices one change (an answer, a period's totals, a year's income, or a recoding's
+  moves) as the fall in the total, which is how Save tax sorts its cards. The server only loads the
+  inputs.
 
 - **Part years.** Bands are annual and never prorated for a sole trader: a business that starts in August
   still files the whole income year. The figure covers the lines uploaded so far and doesn't project to
@@ -496,21 +556,26 @@ list is under "Open".
   | 295 | GST rounding | expense | none | System journals only |
   | 600.01, 600.02, … | One per bank account, in the order added | asset | | |
   | 610 | Accounts receivable | asset | | Unused until invoice basis |
+  | 615 | GST to claim, records not yet held | asset | | Added 2026-10-23 (see "GST"). Its own line under current assets |
   | 700, 705 | Tools and equipment: cost, accumulated depreciation | asset | | |
   | 710, 715 | Vehicles: cost, accumulated depreciation | asset | | |
   | 720, 725 | Computers and office equipment: cost, accumulated depreciation | asset | | |
   | 730, 735 | Furniture and fittings: cost, accumulated depreciation | asset | | |
   | 800 | Accounts payable | liability | | Unused until invoice basis |
   | 810 | GST payable | liability | | |
+  | 812 | GST refunds received | liability | | Added 2026-10-23; its own line for now (see "Coding settings") |
   | 850.01, … | One per credit card (M11) | liability | | |
   | 900 | Loans | liability | | |
   | 950 | Owner's capital | equity | | Money put in during the year, and the first year's opening balances |
+  | 952 | Wages paid in (already taxed) | equity | | Added 2026-10-23: wages taxed through PAYE, paid into a business account |
+  | 954 | Personal items sold | equity | | Added 2026-10-23 |
   | 960 | Drawings | equity | | Confirmed personal |
+  | 962 | Income tax paid | equity | | Added 2026-10-23; shows in brackets, like drawings |
   | 965 | Money out, not yet sorted | equity | | Holding account |
   | 970 | Owner's equity | equity | | The designated equity account |
 
-- **Rollover.** P&L accounts close to 970, and so do 950, 960 and 965. Each year's equity section then
-  starts from one opening figure.
+- **Rollover.** P&L accounts close to 970, and so do 950, 952, 954, 960, 962 and 965. Each year's
+  equity section then starts from one opening figure.
 - **Template** (our wording):
   - **P&L.** Income: sales, interest received, other income, then income not yet sorted, and total
     income. Purchases and materials, then gross profit. One expense line per expense account (225's
@@ -536,6 +601,27 @@ list is under "Open".
   - GST rounding (295) and loss (gain) on disposal (250) each have their own expense line. Where 295
     shows is the practice's choice, through the mapping.
 - **Rounding priority default:** 290, 205, 120, 960, 810.
+- **Coding settings (decided 2026-10-23).** When the owner codes a bank line, these postings use the
+  business's coding settings, not fixed codes. The practice defaults are in
+  `fixtures/practice/sole-trader-coding-settings.json`. Accountants can change them per business, and a
+  change applies only to lines coded afterwards:
+
+  | Coded as | Posts to (default) |
+  |---|---|
+  | GST on income and on confirmed or up-to-$200 spending | 810 GST payable |
+  | GST over $200, not yet confirmed | 615 GST to claim, records not yet held |
+  | A GST refund | 812 GST refunds received |
+  | Money the owner put in | 950 Owner's capital |
+  | Wages already taxed through PAYE | 952 Wages paid in (already taxed) |
+  | The sale of a personal item | 954 Personal items sold |
+  | Personal spending, and the private share of a line | 960 Drawings |
+  | Income tax paid to IRD | 962 Income tax paid |
+  | A loan received | 900 Loans |
+
+  - Each new account has its own statement line, so nothing is netted away. Accountants can regroup
+    them through the mapping.
+  - **Partly private GST** is also a setting. The default is the GST inside the business share; the
+    alternative is the line's GST times the business share. The two can differ by a cent.
 - **Asset purchases** go to the cost account of the class the owner picks. The default classes, all DV:
   tools and equipment, vehicles, computers and office equipment, furniture and fittings. M11 copies each
   rate from IRD's rate for a typical asset of the class, records the source, and never sets it higher.
@@ -565,11 +651,27 @@ list is under "Open".
   - the text columns, and the order they're joined in
   - the date format and encoding
   - where the account number is
-- **OFX** 1.x in SGML (unclosed tags) and 2.x in XML.
-- **QIF.** The `!Type:Bank` section, with day-first dates (dd/mm/yyyy, d/m/yy). A file whose dates only
-  make sense month first is refused.
-- **Credit cards and foreign currency.** NZD credit cards come in M11, where they start saving tax.
-  Foreign-currency accounts are out (multi-currency is out of scope), and refused with a message.
+- **OFX** 1.x in SGML (unclosed tags) and 2.x in XML: a bank statement (`BANKMSGSRSV1`) or a credit card
+  statement (`CREDITCARDMSGSRSV1`), one per file.
+- **QIF.** One `!Type:Bank` or `!Type:CCard` section, with day-first dates (dd/mm/yyyy, d/m/yy). A file
+  whose dates only make sense month first is refused. A card file is read as `qif-ccard-1`.
+- **Statement kind.** Every statement is `bank` or `credit_card`, decided by the file (OFX message set,
+  QIF section, or the CSV layout). A file holding both is refused.
+- **Credit cards (added 2026-10-23, M11).** NZD cards only.
+  - **Signs, from the card's point of view,** the same as a bank account: positive is money in. A
+    purchase, fee or interest charge is negative (money out); a payment to the card or a refund is
+    positive (money in); a balance owed is negative, because the card is a liability. OFX and QIF
+    already sign cards this way and are read as is. A CSV that writes amounts the way the bill does
+    (charges unsigned, credits marked `CR`) is flipped by its parser, so every statement reaches the
+    server signed the same way.
+  - **Card numbers are never kept whole.** The card's identity is its last four digits, as
+    `XXXX-XXXX-XXXX-1234`, whatever mask the file used; a full card number in a file is masked on
+    reading. Two cards with the same last four digits would look the same, so the owner says which
+    card a file is for when that happens. Descriptions are kept as written (card fragments in them
+    tell transactions apart).
+  - Each card gets its own liability account (PLAN.md M11); that's the server's job, not the parser's.
+- **Foreign currency.** Foreign-currency accounts are out (multi-currency is out of scope), and refused
+  with a message. A foreign purchase on an NZD card is fine: the line is in NZD.
 - **Versions.** Each parser has an id and a version, such as `kowhai-csv-1`, and the right one is found by
   inspecting the file.
   - When a bank changes its layout, we add a version and keep the old one, so old files still read.
@@ -577,6 +679,7 @@ list is under "Open".
     export OFX. Nothing is stored.
 - **Duplicates.** The key is account, posting date, amount, normalised description, and an occurrence
   count.
+  - The account is the bank account number, or for a card the masked card number.
   - The normalised description is the text fields joined in the parser's order with single spaces: OFX
     `NAME` then `MEMO`; QIF `P` then `M`; CSV per parser. It's uppercased, with runs of spaces collapsed
     and the ends trimmed.
@@ -698,6 +801,169 @@ Withdrawals: Harbourlight 1,637.78 + Kowhai 597.69 + Rimu 150.00 = 2,385.47.
 
 Hand-checked by: (nobody yet).
 
+## Worked example: Save tax on the synthetic sole trader (worked 2026-10-23; a person still has to check it)
+This is M11's "Done when" check. It starts from the M10 example above (same business, same statements,
+same 37 journals) and codes every line as `fixtures/clients/marsh-hollow-coding.json` says. Claude worked
+it by hand and cross-checked it with a separate script, independently of `acct-core`. It counts as
+hand-checked only once a person has gone through it.
+
+**Setup** beyond the M10 example:
+- The owner answers "This business is my only income": yes. "Do you have a student loan?": no.
+- One rule: description contains `GREENBARROW GROCERS`, money out → personal. It codes both grocery lines.
+- The 22 August transfer pair is confirmed.
+- The owner confirms they hold the taxable supply information for the 312.00 Waxwing purchase, and not for
+  the 215.00 Faro insurance premium.
+- The Kowhai gap (1 to 9 September, +380.00) stays as M10 posted it: income in 140, with 49.57 GST. A gap
+  is a missing-statement card, which coding doesn't answer.
+- No line fits an asset purchase. The only tool-like purchase, Woodmill Hardware at 120.00, is under the
+  $1,000 low-value threshold, so it's an expense (280). An asset purchase needs a synthetic line of its own
+  in a later statement fixture.
+
+**How each kind of coding posts** (`acct_core::coding::coded_lines`). GST is
+amount × 1500 ÷ 11500, rounded half away from zero to cents, and only for standard codes.
+- Income, standard: debit the bank, credit 810 with the GST, credit the account with the rest.
+- Income, exempt (Rimu interest): debit the bank, credit 110 with the whole amount. Exempt income isn't
+  in box 5.
+- Not income: debit the bank, credit 812 *GST refunds received* for a GST refund, 950 for money the
+  owner put in.
+- Expense, standard, up to $200: debit the account with the amount less GST, debit 810 with the GST.
+- Expense, standard, over $200: the same once the taxable supply information is confirmed. Until then
+  the expense is still the amount less GST, and the GST waits in 615 instead of 810 (see "GST").
+- Partly private: the business share is amount × percentage, rounded half away from zero. GST is
+  claimed on that share only, and the rest is debited to 960.
+- Personal: debit 960. 965 to 960 moves equity to equity, so it saves nothing.
+- A confirmed transfer pair: one journal, debit 600.02 500.00, credit 600.01 500.00. The other line's
+  journal is reversed, with nothing reposted.
+
+**Every line's coding** (33 lines; occurrence is 1 unless shown):
+
+| Date | Bank | Description | Amount | Coding | GST | To the account |
+|---|---|---|---|---|---|---|
+| 4 Aug | 600.01 | Waxwing Supplies | −86.40 | 150 standard | 11.27 | 75.13 |
+| 6 Aug | 600.01 | Amber & Ash, inv 0388 | 412.50 | 100 standard | 53.80 | 358.70 |
+| 8 Aug | 600.01 | Lantern Host web | −24.99 | 270 standard | 3.26 | 21.73 |
+| 12 Aug | 600.01 | Greenbarrow Grocers | −143.20 | personal (rule) | | 960 143.20 |
+| 15 Aug | 600.01 | Paybloom payout | 287.00 | 100 standard | 37.43 | 249.57 |
+| 18 Aug | 600.01 | Gridline Power | −61.35 | 255, 25% business | 2.00 | 13.34; 960 46.01 |
+| 22 Aug | 600.01 | Transfer to 600.02 | −500.00 | transfer pair | | 600.02 500.00 |
+| 29 Aug | 600.01 | Pikorua Cafe (occurrences 1 and 2) | −6.50 each | personal | | 960 6.50 each |
+| 30 Aug | 600.01 | Brightpost Couriers | −38.00 | 260 standard | 4.96 | 33.04 |
+| 31 Aug | 600.01 | Beehive Gifts, inv 0391 | 190.00 | 100 standard | 24.78 | 165.22 |
+| 2 Sep | 600.01 | Waxwing Supplies | −312.00 | 150 standard, confirmed | 40.70 | 271.30 |
+| 5 Sep | 600.01 | Amber & Ash, inv 0402 | 640.00 | 100 standard | 83.48 | 556.52 |
+| 9 Sep | 600.01 | Lantern Host web | −24.99 | 270 standard | 3.26 | 21.73 |
+| 15 Sep | 600.01 | Greenbarrow Grocers | −130.75 | personal (rule) | | 960 130.75 |
+| 19 Sep | 600.01 | Paybloom payout | 355.40 | 100 standard | 46.36 | 309.04 |
+| 23 Sep | 600.01 | Gridline Power | −58.10 | 255, 25% business | 1.90 | 12.63; 960 43.57 |
+| 26 Sep | 600.01 | ATM withdrawal | −200.00 | personal | | 960 200.00 |
+| 30 Sep | 600.01 | Sunday market stall fee | −45.00 | 230 standard | 5.87 | 39.13 |
+| 5 Aug | 600.02 | Woodmill Hardware | −120.00 | 280 standard | 15.65 | 104.35 |
+| 12 Aug | 600.02 | Holloway Gifts, inv 0412 | 725.00 | 100 standard | 94.57 | 630.43 |
+| 19 Aug | 600.02 | Telewave Mobile | −39.99 | 245, 50% business | 2.61 | 17.39; 960 19.99 |
+| 22 Aug | 600.02 | Transfer from 600.01 | 500.00 | transfer pair | | (in the pair's journal) |
+| 28 Aug | 600.02 | Faro Insurance premium | −215.00 | 215 standard, not confirmed | 28.04, to 615 | 186.96 |
+| 12 Sep | 600.02 | Paperleaf Stationers | −75.50 | 265 standard | 9.85 | 65.65 |
+| 16 Sep | 600.02 | Holloway Gifts, inv 0431 | 410.00 | 100 standard | 53.48 | 356.52 |
+| 22 Sep | 600.02 | Kauri Gas & Go | −48.20 | personal | | 960 48.20 |
+| 25 Sep | 600.02 | IRD GST refund | 163.42 | not income: GST refund | | 812 163.42 |
+| 29 Sep | 600.02 | Brightpost Couriers | −99.00 | 260 standard | 12.91 | 86.09 |
+| 29 Aug | 600.03 | Rimu interest | 1.84 | 110 exempt | | 1.84 |
+| 3 Sep | 600.03 | Top-up from personal | 300.00 | not income: owner's money | | 950 300.00 |
+| 18 Sep | 600.03 | Online transfer out | −150.00 | personal | | 960 150.00 |
+| 30 Sep | 600.03 | Rimu interest | 1.92 | 110 exempt | | 1.92 |
+
+The business shares round as: 61.35 × 25% = 15.3375 → 15.34; 58.10 × 25% = 14.525 → 14.53;
+39.99 × 50% = 19.995 → 20.00 (half away from zero), so the private part is 19.99.
+
+**GST, 1 August to 30 September 2025:**
+- Box 5: 3,399.90. That's the standard-rated sales, 412.50 + 287.00 + 190.00 + 640.00 + 355.40 + 725.00
+  + 410.00 = 3,019.90, plus the gap's 380.00. The transfer, the refund, the owner's top-up and the exempt
+  interest are no longer in it.
+- Boxes 6, 9 and 13: 0. Box 7: 3,399.90.
+- Boxes 8 and 10: 3,399.90 × 3 ÷ 23 = 443.465… → 443.47.
+- Box 11: 875.75. That's the standard expenses up to $200, 86.40 + 24.99 + 38.00 + 24.99 + 45.00 +
+  120.00 + 75.50 + 99.00 = 513.88; the confirmed 312.00; and the business shares 15.34 + 14.53 + 20.00 =
+  49.87. The unconfirmed 215.00 isn't in it; its 28.04 of GST waits in 615.
+- Boxes 12 and 14: 875.75 × 3 ÷ 23 = 114.228… → 114.23.
+- **Box 15: 443.47 − 114.23 = 329.24 to pay.**
+- The ledger: output GST splits 393.90 + the gap's 49.57 = 443.47; input splits 11.27 + 3.26 + 4.96 +
+  40.70 + 3.26 + 2.00 + 1.90 + 5.87 + 15.65 + 2.61 + 9.85 + 12.91 = 114.24; net 329.23. The 0.01 against
+  box 15 clears to 295 when the return is filed (M14). 810 shows 329.23 credit.
+- The 163.42 refund is in 812, not 810, and isn't in any return box, so box 15 doesn't change. A refund
+  for a business registered on 1 August doesn't fit (see the M10 example). Its own line on the balance
+  sheet makes it easy for an accountant to spot and ask about.
+
+**Income tax, 2026 income year so far:**
+- Income: 100 2,626.00 + 110 3.76 + 140 330.43 (the gap) = 2,960.19.
+- Expenses: 150 346.43 + 215 186.96 + 230 39.13 + 245 17.39 + 255 25.97 + 260 119.13 + 265 65.65 +
+  270 43.46 + 280 104.35 = 948.47.
+- Taxable income: 2,960.19 − 948.47 = 2,011.72.
+- Income tax at 10.5% (the first band): 211.2306 → 211.23. Student loan: none. No IETC (income is under
+  $24,000).
+- **Tax to pay if submitted: 329.24 + 211.23 = 540.47.**
+
+**The saving at each step**, in this order. Each figure is the whole position recomputed; the savings
+depend on order, because of the bands and the cents rounding of boxes 8 and 12 and the income tax.
+
+| Step | GST box 15 | Taxable income | Income tax | Student loan | Tax to pay | Saving |
+|---|---|---|---|---|---|---|
+| M10 position | 569.62 | 3,797.45 | 1,481.01 (39%) | 455.69 | 2,506.32 | |
+| 1. Only income: yes | 569.62 | 3,797.45 | 398.73 | 0.00 | 968.35 | 1,537.97 |
+| 2. Student loan: no | 569.62 | 3,797.45 | 398.73 | 0.00 | 968.35 | 0.00 (card hidden) |
+| 3. Confirm the transfer pair | 504.40 | 3,362.67 | 353.08 | 0.00 | 857.48 | 110.87 |
+| 4. IRD GST refund: not income | 483.09 | 3,220.57 | 338.16 | 0.00 | 821.25 | 36.23 |
+| 5. Owner's top-up: not income | 443.96 | 2,959.70 | 310.77 | 0.00 | 754.73 | 66.52 |
+| 6. Interest: exempt income | 443.47 | 2,960.19 | 310.82 | 0.00 | 754.29 | 0.44 |
+| 7. Sales from 140 to 100 | 443.47 | 2,960.19 | 310.82 | 0.00 | 754.29 | 0.00 (card hidden) |
+| 8. Standard expenses up to $200 | 376.44 | 2,513.34 | 263.90 | 0.00 | 640.34 | 113.95 |
+| 9. Waxwing 312.00, confirmed | 335.75 | 2,242.04 | 235.41 | 0.00 | 571.16 | 69.18 |
+| 10. Faro 215.00, not confirmed | 335.75 | 2,055.08 | 215.78 | 0.00 | 551.53 | 19.63 |
+| 11. Partly private (3 lines) | 329.24 | 2,011.72 | 211.23 | 0.00 | 540.47 | 11.06 |
+| 12. Personal (rule and by hand) | 329.24 | 2,011.72 | 211.23 | 0.00 | 540.47 | 0.00 (cards hidden) |
+
+- In total, 2,506.32 → 540.47, a saving of 1,965.85; after the answers alone, coding saves 427.88.
+- Step 6 is small because two things move against each other: taking GST off the interest saves
+  0.49 of GST, but puts 0.49 back into income, which costs 0.05 of tax.
+- Steps 2, 7 and 12 save nothing here, so Save tax hides those cards. The fixture still codes the lines,
+  so 965 ends at nil and every line is sorted.
+- Step 10 lowers only income tax, by the GST-exclusive 186.96 at 10.5%. Confirming the supply information
+  later moves the 28.04 from 615 to 810: box 11 becomes 1,090.75, box 12 142.27 and box 15 301.20, a
+  further saving of 28.04 of GST, and income tax doesn't change.
+
+**Ledger at 30 September 2025** (`expected.tb` in the fixture):
+
+| Account | Debit | Credit |
+|---|---|---|
+| 100 Sales | | 2,626.00 |
+| 110 Interest received | | 3.76 |
+| 140 Money in, not yet sorted (the gap) | | 330.43 |
+| 150 Purchases and materials | 346.43 | |
+| 215 Insurance | 186.96 | |
+| 230 Rent | 39.13 | |
+| 245 Phone and internet | 17.39 | |
+| 255 Power and gas | 25.97 | |
+| 260 Freight and courier | 119.13 | |
+| 265 Stationery and office supplies | 65.65 | |
+| 270 Software and subscriptions | 43.46 | |
+| 280 Small tools and equipment | 104.35 | |
+| 600.01 Harbourlight cheque | 2,247.12 | |
+| 600.02 Kowhai business | 2,830.73 | |
+| 600.03 Rimu savings | 1,153.76 | |
+| 615 GST to claim, records not yet held | 28.04 | |
+| 810 GST payable | | 329.23 |
+| 812 GST refunds received | | 163.42 |
+| 950 Owner's capital | | 4,550.00 |
+| 960 Drawings | 794.72 | |
+| Total | 8,002.84 | 8,002.84 |
+
+- The bank balances are the M10 example's, because coding moves nothing in or out of the bank.
+- 950: the opening balances 4,250.00 plus the top-up 300.00.
+- 960: personal 143.20 + 6.50 + 6.50 + 130.75 + 200.00 + 48.20 + 150.00 = 685.15, plus the private parts
+  46.01 + 43.57 + 19.99 = 109.57.
+- 965 is nil.
+
+Hand-checked by: (nobody yet).
+
 ## Open
 - **Gain or loss on disposal: where it's presented** (M4, and now sole traders too). The fixture's
   gain/loss account, 250, maps into general expenses as a placeholder, so a gain would show as a negative
@@ -717,3 +983,6 @@ Hand-checked by: (nobody yet).
   7. The GST code for ACC levies, and the $1,000 low-value threshold behind "small tools and equipment".
   8. The half-claim rule for entertainment.
   9. Whether an IR3 filed through the gateway needs an IR10 (from M14's build pack).
+  10. GST over $200 without the records yet: that the expense stays GST-exclusive (section DB 2), how
+      late the claim can be made and in which box, and that GST the owner will never get the records for
+      is deductible.

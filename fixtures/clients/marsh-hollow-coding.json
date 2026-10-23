@@ -1,0 +1,582 @@
+{
+  "_about": "Synthetic (hard rule 1). How the sole trader in fixtures/bank-statements/ codes every line in M11's Save tax. docs/domain.md, 'Worked example: Save tax on the synthetic sole trader', works the figures; a person still has to check it. Amounts are integer cents; in keys and expected, money in is positive, and in expected.tb debits are positive.",
+  "business": {
+    "name": "Marsh Hollow Candles",
+    "entity_type": "sole_trader",
+    "start_date": "2025-08-01",
+    "gst": {
+      "registered_from": "2025-08-01",
+      "frequency": "two_monthly_odd",
+      "basis": "payments"
+    },
+    "bank_accounts": [
+      {
+        "code": "600.01",
+        "name": "Harbourlight cheque",
+        "number": "99-1001-0000123-00"
+      },
+      {
+        "code": "600.02",
+        "name": "Kowhai business",
+        "number": "99-5501-0000456-00"
+      },
+      {
+        "code": "600.03",
+        "name": "Rimu savings",
+        "number": "99-7702-0000789-00"
+      }
+    ],
+    "opening_balances_entered": [
+      {
+        "account": "99-7702-0000789-00",
+        "amount": 100000
+      }
+    ]
+  },
+  "statements": [
+    "harbourlight-cheque-2025-08.ofx",
+    "harbourlight-cheque-2025-08-28_09-30.qif",
+    "kowhai-business-2025-08.csv",
+    "kowhai-business-2025-09-10_09-30.csv",
+    "rimu-savings-2025-08-29_09-30.csv"
+  ],
+  "answers": {
+    "only_income": true,
+    "student_loan": false
+  },
+  "rules": [
+    {
+      "id": "rule-greenbarrow",
+      "description_contains": "GREENBARROW GROCERS",
+      "min": null,
+      "max": null,
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    }
+  ],
+  "transfers": [
+    {
+      "out": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-22",
+        "amount": -50000,
+        "description": "TRANSFER TO 99-5501-0000456-00 OWN ACCOUNT",
+        "occurrence": 1
+      },
+      "in": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-08-22",
+        "amount": 50000,
+        "description": "TRANSFER FROM 99-1001-0000123-00",
+        "occurrence": 1
+      }
+    }
+  ],
+  "lines": [
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-04",
+        "amount": -8640,
+        "description": "WAXWING SUPPLIES LTD EFTPOS AUCKLAND",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "150",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-06",
+        "amount": 41250,
+        "description": "AMBER & ASH BOUTIQUE INV 0388",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-08",
+        "amount": -2499,
+        "description": "LANTERN HOST WEB HOSTING MONTHLY",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "270",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-12",
+        "amount": -14320,
+        "description": "GREENBARROW GROCERS EFTPOS WELLINGTON",
+        "occurrence": 1
+      },
+      "rule": "rule-greenbarrow"
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-15",
+        "amount": 28700,
+        "description": "PAYBLOOM PAYOUT ONLINE SALES",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-18",
+        "amount": -6135,
+        "description": "GRIDLINE POWER DIRECT DEBIT",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "part_private",
+        "account": "255",
+        "gst": "standard",
+        "business_bp": 2500
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-29",
+        "amount": -650,
+        "description": "PIKORUA CAFE EFTPOS WELLINGTON",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-29",
+        "amount": -650,
+        "description": "PIKORUA CAFE EFTPOS WELLINGTON",
+        "occurrence": 2
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-30",
+        "amount": -3800,
+        "description": "BRIGHTPOST COURIERS ONLINE",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "260",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-08-31",
+        "amount": 19000,
+        "description": "BEEHIVE GIFTS LTD INV 0391",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-02",
+        "amount": -31200,
+        "description": "WAXWING SUPPLIES LTD EFTPOS AUCKLAND",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "150",
+        "gst": "standard"
+      },
+      "supply_info_confirmed": true
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-05",
+        "amount": 64000,
+        "description": "AMBER & ASH BOUTIQUE INV 0402",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-09",
+        "amount": -2499,
+        "description": "LANTERN HOST WEB HOSTING MONTHLY",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "270",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-15",
+        "amount": -13075,
+        "description": "GREENBARROW GROCERS EFTPOS WELLINGTON",
+        "occurrence": 1
+      },
+      "rule": "rule-greenbarrow"
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-19",
+        "amount": 35540,
+        "description": "PAYBLOOM PAYOUT ONLINE SALES",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-23",
+        "amount": -5810,
+        "description": "GRIDLINE POWER DIRECT DEBIT",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "part_private",
+        "account": "255",
+        "gst": "standard",
+        "business_bp": 2500
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-26",
+        "amount": -20000,
+        "description": "ATM WITHDRAWAL KAURI ST CASH",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    },
+    {
+      "key": {
+        "account": "99-1001-0000123-00",
+        "date": "2025-09-30",
+        "amount": -4500,
+        "description": "SUNDAY MARKET STALL FEE CARD PAYMENT",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "230",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-08-05",
+        "amount": -12000,
+        "description": "WOODMILL HARDWARE",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "280",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-08-12",
+        "amount": 72500,
+        "description": "HOLLOWAY GIFTS LTD INV 0412",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-08-19",
+        "amount": -3999,
+        "description": "TELEWAVE MOBILE",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "part_private",
+        "account": "245",
+        "gst": "standard",
+        "business_bp": 5000
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-08-28",
+        "amount": -21500,
+        "description": "FARO INSURANCE, PREMIUM",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "215",
+        "gst": "standard"
+      },
+      "supply_info_confirmed": false
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-09-12",
+        "amount": -7550,
+        "description": "PAPERLEAF STATIONERS",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "265",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-09-16",
+        "amount": 41000,
+        "description": "HOLLOWAY GIFTS LTD INV 0431",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "100",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-09-22",
+        "amount": -4820,
+        "description": "KAURI GAS & GO",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-09-25",
+        "amount": 16342,
+        "description": "IRD GST REFUND",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "gst_refund"
+      }
+    },
+    {
+      "key": {
+        "account": "99-5501-0000456-00",
+        "date": "2025-09-29",
+        "amount": -9900,
+        "description": "BRIGHTPOST COURIERS",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "expense",
+        "account": "260",
+        "gst": "standard"
+      }
+    },
+    {
+      "key": {
+        "account": "99-7702-0000789-00",
+        "date": "2025-08-29",
+        "amount": 184,
+        "description": "RIMU SAVINGS SOCIETY INTEREST",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "110",
+        "gst": "exempt"
+      }
+    },
+    {
+      "key": {
+        "account": "99-7702-0000789-00",
+        "date": "2025-09-03",
+        "amount": 30000,
+        "description": "Q MARSH TOP-UP, FROM PERSONAL",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "owner_funds"
+      }
+    },
+    {
+      "key": {
+        "account": "99-7702-0000789-00",
+        "date": "2025-09-18",
+        "amount": -15000,
+        "description": "Q MARSH ONLINE TRANSFER OUT",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "out",
+        "kind": "personal"
+      }
+    },
+    {
+      "key": {
+        "account": "99-7702-0000789-00",
+        "date": "2025-09-30",
+        "amount": 192,
+        "description": "RIMU SAVINGS SOCIETY INTEREST",
+        "occurrence": 1
+      },
+      "coding": {
+        "direction": "in",
+        "kind": "income",
+        "account": "110",
+        "gst": "exempt"
+      }
+    }
+  ],
+  "expected": {
+    "before": {
+      "gst_box15": 56962,
+      "income_tax": 148101,
+      "student_loan": 45569,
+      "total": 250632
+    },
+    "after_answers": {
+      "total": 96835
+    },
+    "tb": {
+      "100": -262600,
+      "110": -376,
+      "140": -33043,
+      "150": 34643,
+      "215": 18696,
+      "230": 3913,
+      "245": 1739,
+      "255": 2597,
+      "260": 11913,
+      "265": 6565,
+      "270": 4346,
+      "280": 10435,
+      "600.01": 224712,
+      "600.02": 283073,
+      "600.03": 115376,
+      "615": 2804,
+      "810": -32923,
+      "812": -16342,
+      "950": -455000,
+      "960": 79472
+    },
+    "gst": {
+      "period": [
+        "2025-08-01",
+        "2025-09-30"
+      ],
+      "box5": 339990,
+      "box6": 0,
+      "box7": 339990,
+      "box8": 44347,
+      "box9": 0,
+      "box10": 44347,
+      "box11": 87575,
+      "box12": 11423,
+      "box13": 0,
+      "box14": 11423,
+      "box15": 32924
+    },
+    "income_tax": {
+      "year": 2026,
+      "taxable_income": 201172,
+      "income_tax": 21123,
+      "student_loan": 0
+    },
+    "total": 54047
+  }
+}

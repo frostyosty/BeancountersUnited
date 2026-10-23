@@ -1,21 +1,34 @@
-//! QIF: the `!Type:Bank` section, with day-first dates (`dd/mm/yyyy`, `d/m/yy`, `d/m'yy`).
+//! QIF: one `!Type:Bank` or `!Type:CCard` section, with day-first dates (`dd/mm/yyyy`, `d/m/yy`,
+//! `d/m'yy`). A file with a `!Type:CCard` section is found as `qif-ccard-1`, any other as
+//! `qif-bank-1`; both read the same way.
 //!
 //! A file whose dates only make sense month first (such as `08/29/2025`) is refused whole rather
 //! than guessed at. The description is `P` then `M`. QIF has no balances, but many banks start
 //! with an `Opening Balance` entry whose category is the account itself in brackets; that entry
 //! becomes the opening balance, not a line. The account number comes from the `!Account` header's
-//! name, or the opening entry's category, where either holds one.
+//! name, or the opening entry's category, where either holds one; for a card, it's the card
+//! number there, masked to its last four digits.
+//!
+//! Card amounts are signed from the card's point of view, as Quicken writes them: a charge is
+//! negative and a payment positive, and an opening balance owed is negative. Nothing is flipped.
 
 use chrono::NaiveDate;
 
-use super::text::{find_account, normalise_description, parse_amount};
-use super::{Balance, ParserInfo, Problem, Statement, StatementLine};
+use super::text::{find_account, find_card, normalise_description, parse_amount};
+use super::{Balance, ParserInfo, Problem, Statement, StatementKind, StatementLine};
 
 pub const BANK: ParserInfo = ParserInfo {
     id: "qif-bank-1",
     family: "qif-bank",
     version: 1,
     label: "QIF (bank account)",
+};
+
+pub const CCARD: ParserInfo = ParserInfo {
+    id: "qif-ccard-1",
+    family: "qif-ccard",
+    version: 1,
+    label: "QIF (credit card)",
 };
 
 /// The first non-blank line is a QIF header such as `!Type:Bank` or `!Account`.
@@ -27,11 +40,20 @@ pub fn detect(text: &str) -> bool {
     })
 }
 
+/// A QIF file with a `!Type:CCard` section.
+pub fn detect_ccard(text: &str) -> bool {
+    detect(text)
+        && text
+            .lines()
+            .any(|l| l.trim().eq_ignore_ascii_case("!type:ccard"))
+}
+
 #[derive(PartialEq)]
 enum Section {
     None,
     Account,
-    Bank,
+    /// A `!Type:Bank` or `!Type:CCard` section.
+    Transactions,
     Ignored,
 }
 
@@ -54,7 +76,7 @@ impl Record {
 pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut problems = Vec::new();
     let mut section = Section::None;
-    let mut bank_sections = 0;
+    let mut sections: Vec<StatementKind> = Vec::new();
     let mut account_names = Vec::new();
     let mut records = Vec::new();
     let mut current = Record::default();
@@ -76,10 +98,13 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
             } else if let Some(kind) = lower.strip_prefix("type:") {
                 match kind.trim() {
                     "bank" => {
-                        bank_sections += 1;
-                        Section::Bank
+                        sections.push(StatementKind::Bank);
+                        Section::Transactions
                     }
-                    "ccard" => return Err(vec![Problem::CreditCard]),
+                    "ccard" => {
+                        sections.push(StatementKind::CreditCard);
+                        Section::Transactions
+                    }
                     _ => {
                         problems.push(Problem::UnsupportedSection {
                             row,
@@ -106,7 +131,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                     account_names.push(value.to_owned());
                 }
             }
-            Section::Bank => {
+            Section::Transactions => {
                 if code == "^" {
                     let record = std::mem::take(&mut current);
                     if !record.is_empty() {
@@ -131,17 +156,22 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
             Section::None | Section::Ignored => {}
         }
     }
-    if section == Section::Bank && !current.is_empty() {
+    if section == Section::Transactions && !current.is_empty() {
         records.push(current);
     }
-    if bank_sections == 0 {
+    if sections.is_empty() {
         problems.push(Problem::Missing {
-            field: "!Type:Bank".to_owned(),
+            field: "!Type:Bank or !Type:CCard".to_owned(),
         });
     }
-    if bank_sections > 1 {
+    if sections.len() > 1 {
         problems.push(Problem::SeveralStatements);
     }
+    let kind = sections.first().copied().unwrap_or(StatementKind::Bank);
+    let find_number = |text: &str| match kind {
+        StatementKind::Bank => find_account(text),
+        StatementKind::CreditCard => find_card(text),
+    };
 
     // Dates first, all together, so a month-first file is refused as a whole.
     let mut dates = Vec::with_capacity(records.len());
@@ -174,7 +204,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     }
 
     let mut opening = None;
-    let mut account = account_names.iter().find_map(|n| find_account(n));
+    let mut account = account_names.iter().find_map(|n| find_number(n));
     let mut lines = Vec::with_capacity(records.len());
     for (index, (r, date)) in records.iter().zip(dates).enumerate() {
         let amount = match &r.amount {
@@ -207,7 +237,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         if is_opening {
             opening = Some(Balance { date, amount });
             if account.is_none() {
-                account = r.category.as_deref().and_then(find_account);
+                account = r.category.as_deref().and_then(find_number);
             }
             continue;
         }
@@ -229,6 +259,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     }
     Ok(Statement {
         parser: String::new(),
+        kind,
         account,
         period_start: opening.map(|o| o.date),
         period_end: None,
@@ -355,11 +386,28 @@ mod tests {
     }
 
     #[test]
+    fn card_sections_are_read_with_the_card_masked() {
+        let qif = "!Account\nNTest Visa 9999 0000 0000 4417\nTCCard\n^\n!Type:CCard\n\
+                   D01/08/2025\nT-20.00\nPOpening Balance\nL[Test Visa]\n^\n\
+                   D02/08/2025\nT-5.00\nPShop\n^\nD03/08/2025\nT25.00\nPPayment\n^\n";
+        assert!(detect_ccard(qif));
+        let s = parse(qif).unwrap();
+        assert_eq!(s.kind, StatementKind::CreditCard);
+        assert_eq!(s.account.as_deref(), Some("XXXX-XXXX-XXXX-4417"));
+        assert_eq!(s.opening.unwrap().amount, Money::from_cents(-2000));
+        assert_eq!(s.lines[0].amount, Money::from_cents(-500), "a charge");
+        assert_eq!(s.lines[1].amount, Money::from_cents(2500), "a payment");
+        assert!(!detect_ccard("!Type:Bank\nD01/08/2025\n^\n"));
+    }
+
+    #[test]
+    fn a_bank_and_a_card_section_are_refused() {
+        let qif = "!Type:Bank\nD01/08/2025\nT1\n^\n!Type:CCard\nD01/08/2025\nT1\n^\n";
+        assert_eq!(parse(qif).unwrap_err(), vec![Problem::SeveralStatements]);
+    }
+
+    #[test]
     fn other_sections_are_refused() {
-        assert_eq!(
-            parse("!Type:CCard\nD01/08/2025\n").unwrap_err(),
-            vec![Problem::CreditCard]
-        );
         let problems = parse("!Type:Invst\nD01/08/2025\n^\n").unwrap_err();
         assert!(matches!(
             problems[0],

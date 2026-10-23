@@ -138,6 +138,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         })
     };
     Ok(Statement {
+        kind: super::StatementKind::Bank,
         parser: String::new(),
         account,
         period_start: period.map(|p| p.0),

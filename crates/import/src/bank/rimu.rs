@@ -107,6 +107,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         return Err(problems);
     }
     Ok(Statement {
+        kind: super::StatementKind::Bank,
         parser: String::new(),
         account,
         period_start: None,

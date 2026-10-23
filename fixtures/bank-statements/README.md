@@ -1,9 +1,11 @@
 # Synthetic bank statements
 
-Sample statement files for the M10 parsers in `crates/import` (`PLAN.md`, M10). Synthetic only
-(CLAUDE.md hard rule 1): the people, businesses, merchants, banks and account numbers are invented, and
-the two CSV layouts are made up rather than copied from any real bank's export. The `99-` bank code is
-unassigned. Where a real bank would put a card number, the files use no digits at all.
+Sample statement files for the parsers in `crates/import`: bank accounts from M10, and NZD credit cards
+from M11 (see "Credit cards" below). Synthetic only (CLAUDE.md hard rule 1): the people, businesses,
+merchants, banks, card issuers and account numbers are invented, and the three CSV layouts are made up
+rather than copied from any real bank's export. The `99-` bank code is unassigned. In the bank files,
+where a real bank would put a card number, there are no digits at all; the card files name each card
+only by an invented last four digits behind a mask.
 
 ## The fictional business
 
@@ -97,3 +99,61 @@ QIF, 12 transactions, 29 Aug to 30 Sep. It follows the OFX for the same account 
 
 Importing the QIF after the OFX adds 8 transactions, not 12. Importing the Kowhai September file after
 the August file adds 5 and raises a gap from 1 Sep to 9 Sep.
+
+## Credit cards (M11)
+
+The same fictional owner has two NZD credit cards. Card files are read as statements of kind
+`credit_card`, and every amount is signed **from the card's point of view**, like a bank account: a
+purchase, fee or interest is negative (money out), a payment to the card or a refund is positive (money
+in), and a balance owed is negative. The rules are in `docs/domain.md`, "Bank statement formats".
+
+| Card | Masked number | Files |
+|---|---|---|
+| Harbourlight Bank Visa | XXXX-XXXX-XXXX-4417 | OFX and QIF |
+| Pohutukawa Card Services card | XXXX-XXXX-XXXX-8802 | CSV layout C, one file |
+
+The tests are in `crates/import/src/bank/card_fixtures.rs`.
+
+### `harbourlight-visa-2025-08.ofx`
+OFX 2.2 in XML form, a `CREDITCARDMSGSRSV1` statement, 10 transactions, 1 to 31 August.
+- `ACCTID` is the issuer's mask `XXXXXXXXXXXX4417`, read as `XXXX-XXXX-XXXX-4417`.
+- Purchases, a 312.40 payment, a 18.50 refund, a USD purchase already converted to NZD (the memo holds
+  the USD amount) with its overseas fee, and purchase interest.
+- 30 Aug has **two identical purchases** (PIKORUA CAFE, -7.20, different `FITID`s). Both must survive.
+- Only a closing balance: `LEDGERBAL` -265.09 at 31 Aug (owed). The derived opening balance is -312.40,
+  which the 11 Aug payment clears. Balance check skipped.
+
+### `harbourlight-visa-2025-08-29_09-30.qif`
+QIF `!Type:CCard`, 9 transactions, 30 Aug to 28 Sep. It follows the OFX for the same card and
+**overlaps it by 3 lines**, 30 to 31 Aug, written in different case and spacing.
+- The card is named only in the `!Account` header (`Harbourlight Visa XXXX-XXXX-XXXX-4417`, type
+  `CCard`) and the opening entry's category.
+- `Opening Balance` entry dated 29 Aug, -247.74: the OFX's closing balance less its last three lines.
+- Derived closing balance -403.04 at 30 Sep. Charges are negative and the 265.09 payment positive, as
+  Quicken writes card files.
+
+### `pohutukawa-card-2025-08-15_09-14.csv` (CSV layout C)
+- 7 transactions, 15 Aug to 14 Sep.
+- Preamble (issuer, cardholder, `Card number` masked by the issuer, statement period, opening 120.00,
+  closing 1087.55, credit limit), a blank line, then the header
+  `Processed,Transaction date,Details,Amount`, rows, and an `End of statement` trailer.
+- Written the way the bill reads: amounts unsigned for charges, `CR` after credits (a refund and a
+  payment), and balances positive when owed. The parser flips all of it, so the opening balance is
+  -120.00 and the closing -1087.55, and opening + lines = closing holds.
+- The posting date is `Processed`; `Transaction date` is a day or so earlier and isn't used.
+- One quoted description contains a comma (`"KAURI PETROL, NELSON"`).
+
+### What the card files test
+
+| Case | Where |
+|---|---|
+| Detection: OFX card message set, QIF `CCard` section, CSV layout C | all three |
+| Sign convention: purchases out, payments and refunds in, owed balances negative | all three |
+| Flipping a bill-style CSV (`CR` credits) to card signs | the CSV |
+| Card numbers masked to the last four digits | all three |
+| Balance check passes, fails (wrong sign) or is skipped | passes for the CSV, skipped for the OFX and the QIF |
+| Two identical purchases on the same day both survive | the OFX, 30 Aug |
+| Overlap across formats dedupes | the QIF after the OFX adds 6, not 9 |
+
+Expected after importing all three: 16 distinct transactions on XXXX-XXXX-XXXX-4417 (derived balance
+-403.04 at 30 Sep) and 7 on XXXX-XXXX-XXXX-8802 (-1087.55 at 14 Sep).

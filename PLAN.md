@@ -285,7 +285,12 @@ Done when: a synthetic Xero export imports to a TB that matches the export's tot
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
 - **Hosting (M12).** Suggested: keep the Rust server and SQLite, and run it on a small always-on host in an Australian or New Zealand region, with a persistent disk and continuous backups. Expect a small monthly cost; free tiers don't fit. yes using fly.io
-- **AI provider (M11).** Decided in M11's ADR.
+- **AI provider (M11).** Decided in ADR 009 (accepted 2026-10-23).
+  - The provider is swappable. Suggestions come first from rules, the business's own history and a practice merchant list, and only then from a model.
+  - Development starts on Claude Haiku 5.5, and a bake-off on a labelled set chooses the production model.
+  - Suggestions are off by default and opt-in per business.
+  - IRD must confirm before real owners use it.
+  - An MCP server for outside AI agents isn't planned.
 - **Which entity types come after sole traders:** companies, partnerships or trusts? Whatever is most prudent.
 - ~~Does anyone need to edit away from the office network?~~ Yes, answered by going online (ADR 007).
 

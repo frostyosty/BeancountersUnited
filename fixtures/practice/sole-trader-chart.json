@@ -195,6 +195,12 @@
     "active": true
   },
   {
+    "code": "615",
+    "name": "GST to claim, records not yet held",
+    "account_type": "asset",
+    "active": true
+  },
+  {
     "code": "700",
     "name": "Tools and equipment at cost",
     "account_type": "asset",
@@ -255,6 +261,12 @@
     "active": true
   },
   {
+    "code": "812",
+    "name": "GST refunds received",
+    "account_type": "liability",
+    "active": true
+  },
+  {
     "code": "900",
     "name": "Loans",
     "account_type": "liability",
@@ -267,8 +279,26 @@
     "active": true
   },
   {
+    "code": "952",
+    "name": "Wages paid in (already taxed)",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "954",
+    "name": "Personal items sold",
+    "account_type": "equity",
+    "active": true
+  },
+  {
     "code": "960",
     "name": "Drawings",
+    "account_type": "equity",
+    "active": true
+  },
+  {
+    "code": "962",
+    "name": "Income tax paid",
     "account_type": "equity",
     "active": true
   },

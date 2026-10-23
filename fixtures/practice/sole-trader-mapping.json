@@ -142,6 +142,16 @@
     },
     {
       "from": "610",
+      "to": "614",
+      "line": "receivables"
+    },
+    {
+      "from": "615",
+      "to": "619",
+      "line": "gst_to_claim"
+    },
+    {
+      "from": "620",
       "to": "699",
       "line": "receivables"
     },
@@ -172,6 +182,16 @@
     },
     {
       "from": "810",
+      "to": "811",
+      "line": "gst"
+    },
+    {
+      "from": "812",
+      "to": "814",
+      "line": "gst_refunds"
+    },
+    {
+      "from": "815",
       "to": "849",
       "line": "gst"
     },
@@ -187,13 +207,33 @@
     },
     {
       "from": "950",
+      "to": "951",
+      "line": "capital"
+    },
+    {
+      "from": "952",
+      "to": "953",
+      "line": "wages_paid_in"
+    },
+    {
+      "from": "954",
+      "to": "955",
+      "line": "personal_sales"
+    },
+    {
+      "from": "956",
       "to": "959",
       "line": "capital"
     },
     {
       "from": "960",
-      "to": "964",
+      "to": "961",
       "line": "drawings"
+    },
+    {
+      "from": "962",
+      "to": "964",
+      "line": "income_tax_paid"
     },
     {
       "from": "965",

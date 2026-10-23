@@ -249,6 +249,12 @@
                   "key": "receivables",
                   "label": "Accounts receivable",
                   "presentation": "debit_positive"
+                },
+                {
+                  "kind": "line",
+                  "key": "gst_to_claim",
+                  "label": "GST to claim, records not yet held",
+                  "presentation": "debit_positive"
                 }
               ],
               "total_label": "Total current assets",
@@ -318,6 +324,12 @@
                 },
                 {
                   "kind": "line",
+                  "key": "gst_refunds",
+                  "label": "GST refunds received",
+                  "presentation": "credit_positive"
+                },
+                {
+                  "kind": "line",
                   "key": "credit_cards",
                   "label": "Credit cards",
                   "presentation": "credit_positive"
@@ -376,6 +388,18 @@
               "presentation": "credit_positive"
             },
             {
+              "kind": "line",
+              "key": "wages_paid_in",
+              "label": "Wages paid in (already taxed)",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "personal_sales",
+              "label": "Personal items sold",
+              "presentation": "credit_positive"
+            },
+            {
               "kind": "link",
               "key": "profit_for_year",
               "label": "Net profit for the year",
@@ -386,6 +410,12 @@
               "kind": "line",
               "key": "drawings",
               "label": "Drawings",
+              "presentation": "credit_positive"
+            },
+            {
+              "kind": "line",
+              "key": "income_tax_paid",
+              "label": "Income tax paid",
               "presentation": "credit_positive"
             },
             {

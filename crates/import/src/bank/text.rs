@@ -92,6 +92,56 @@ pub fn find_account(text: &str) -> Option<String> {
         .find(|a| a.len() == 18 && a.as_bytes()[2] == b'-')
 }
 
+/// A card number, masked to its last four digits as `XXXX-XXXX-XXXX-1234`, so a full card
+/// number is never kept and the same card matches across formats whatever mask the file used.
+///
+/// Accepts 12 to 19 digits or mask characters (`X`, `*`, `•`), with `-` or spaces between them,
+/// ending in four digits: `XXXXXXXXXXXX1234`, `**** **** **** 1234`, or a full number. A
+/// separated number that is laid out like a NZ bank account (`99-1001-0000123-00`) isn't a card.
+pub fn normalise_card(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    let is_mask = |c: char| matches!(c, 'X' | 'x' | '*' | '•');
+    let compact: Vec<char> = trimmed.chars().filter(|&c| c != '-' && c != ' ').collect();
+    let ok = (12..=19).contains(&compact.len())
+        && compact.iter().all(|&c| c.is_ascii_digit() || is_mask(c))
+        && compact[compact.len() - 4..]
+            .iter()
+            .all(char::is_ascii_digit);
+    if !ok {
+        return None;
+    }
+    let masked = compact.iter().any(|&c| is_mask(c));
+    let separated = trimmed.contains(['-', ' ']);
+    if !masked && separated && looks_like_nz_account(trimmed) {
+        return None;
+    }
+    let last4: String = compact[compact.len() - 4..].iter().collect();
+    Some(format!("XXXX-XXXX-XXXX-{last4}"))
+}
+
+/// Four groups of digits with a NZ bank account's widths: 2, 4, 7 or 8, and 2 or 3.
+fn looks_like_nz_account(s: &str) -> bool {
+    let parts: Vec<&str> = s.split(['-', ' ']).filter(|p| !p.is_empty()).collect();
+    let widths: Vec<usize> = parts.iter().map(|p| p.len()).collect();
+    matches!(widths.as_slice(), [2, 4, 7 | 8, 2 | 3])
+}
+
+/// The first thing in `text` that looks like a card number, masked (see [`normalise_card`]).
+pub fn find_card(text: &str) -> Option<String> {
+    let in_number = |c: char| c.is_ascii_digit() || matches!(c, 'X' | 'x' | '*' | '•' | '-' | ' ');
+    let mut rest = text;
+    while !rest.is_empty() {
+        let start = rest.find(in_number)?;
+        rest = &rest[start..];
+        let end = rest.find(|c: char| !in_number(c)).unwrap_or(rest.len());
+        if let Some(card) = normalise_card(&rest[..end]) {
+            return Some(card);
+        }
+        rest = &rest[end..];
+    }
+    None
+}
+
 /// An amount as a bank file writes it: `-86.40`, `+412.50`, `1,883.56`. Zeros beyond two
 /// decimal places are dropped (`-86.4000`); any other third decimal is an error, never rounded.
 pub fn parse_amount(raw: &str) -> Result<Money, String> {
@@ -188,6 +238,43 @@ mod tests {
         );
         assert_eq!(find_account("Cheque account"), None);
         assert_eq!(find_account("Call 0800-123-456"), None);
+    }
+
+    #[test]
+    fn card_numbers_are_masked() {
+        for raw in [
+            "XXXXXXXXXXXX4417",
+            "XXXX XXXX XXXX 4417",
+            "xxxx-xxxx-xxxx-4417",
+            "**** **** **** 4417",
+            "9999000000004417",
+            "9999 0000 0000 4417",
+            "9999-000000-04417",
+        ] {
+            assert_eq!(
+                normalise_card(raw).as_deref(),
+                Some("XXXX-XXXX-XXXX-4417"),
+                "{raw}"
+            );
+        }
+        for raw in [
+            "99-1001-0000123-00",
+            "99 1001 0000123 000",
+            "4417",
+            "XXXX XXXX XXXX XXXX",
+        ] {
+            assert_eq!(normalise_card(raw), None, "{raw}");
+        }
+    }
+
+    #[test]
+    fn finds_a_card_in_a_name() {
+        assert_eq!(
+            find_card("Harbourlight Visa XXXX-XXXX-XXXX-4417").as_deref(),
+            Some("XXXX-XXXX-XXXX-4417")
+        );
+        assert_eq!(find_card("Visa ending 4417"), None);
+        assert_eq!(find_card("Cheque 99-1001-0000123-00"), None);
     }
 
     #[test]

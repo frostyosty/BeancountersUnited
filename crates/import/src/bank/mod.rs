@@ -1,16 +1,24 @@
-//! Bank statement files: OFX, QIF and one versioned parser per bank CSV layout.
+//! Bank and NZD credit card statement files: OFX, QIF and one versioned parser per CSV layout.
 //!
 //! The rules are in `docs/domain.md` under "Bank statement formats". [`read_statement`] takes the
-//! file's bytes, picks the parser by inspecting them, and returns one [`Statement`]: the account
-//! number, the lines, and the balances the file states. Nothing here knows the client, the chart
+//! file's bytes, picks the parser by inspecting them, and returns one [`Statement`]: whether it's
+//! a bank account or a credit card, the account or masked card number, the lines, and the
+//! balances the file states.
+//!
+//! Every amount and balance is signed from the account's own point of view, for cards too:
+//! positive is money in. A card purchase, fee or interest charge is negative; a payment to the
+//! card or a refund is positive; and a balance owed on the card is negative. Nothing here knows the client, the chart
 //! or today's date; the server checks the lines against those.
 //!
 //! Duplicate detection keys on account, posting date, amount, normalised description and an
 //! occurrence count within that key ([`duplicate_keys`]), so two identical purchases on the same
 //! day both survive while an overlapping statement adds nothing.
 
+#[cfg(test)]
+mod card_fixtures;
 mod kowhai;
 mod ofx;
+mod pohutukawa;
 mod qif;
 mod rimu;
 mod text;
@@ -22,7 +30,7 @@ use acct_core::Money;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-pub use text::{normalise_account, normalise_description};
+pub use text::{find_card, normalise_account, normalise_card, normalise_description};
 
 /// A parser we have: its id (which includes the version), the layout family and version, and
 /// how the owner would recognise the file.
@@ -56,6 +64,11 @@ const PARSERS: &[Parser] = &[
         parse: ofx::parse,
     },
     Parser {
+        info: qif::CCARD,
+        detect: qif::detect_ccard,
+        parse: qif::parse,
+    },
+    Parser {
         info: qif::BANK,
         detect: qif::detect,
         parse: qif::parse,
@@ -69,6 +82,11 @@ const PARSERS: &[Parser] = &[
         info: rimu::V1,
         detect: rimu::detect,
         parse: rimu::parse,
+    },
+    Parser {
+        info: pohutukawa::V1,
+        detect: pohutukawa::detect,
+        parse: pohutukawa::parse,
     },
 ];
 
@@ -92,14 +110,25 @@ pub struct StatementLine {
     pub row: u32,
     /// The bank's posting date.
     pub date: NaiveDate,
-    /// Signed as the bank shows it: positive is money in.
+    /// Signed from the account's point of view: positive is money in. On a card, a purchase is
+    /// negative and a payment to the card is positive, whatever sign the file used.
     pub amount: Money,
     /// The text fields joined in the parser's order, uppercased, spaces collapsed, ends trimmed.
     pub description: String,
     /// The bank's own id for the line (OFX `FITID`), where the file has one.
     pub bank_id: Option<String>,
-    /// The running balance after this line, where the file has one.
+    /// The running balance after this line, where the file has one. Signed like `amount`, so a
+    /// balance owed on a card is negative.
     pub balance: Option<Money>,
+}
+
+/// What kind of account a statement is for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StatementKind {
+    Bank,
+    /// An NZD credit card. Its balance is a liability, so it's normally negative.
+    CreditCard,
 }
 
 /// What one file holds.
@@ -107,9 +136,12 @@ pub struct StatementLine {
 pub struct Statement {
     /// The parser's id, such as `kowhai-csv-1`.
     pub parser: String,
-    /// The account number in `BB-bbbb-AAAAAAA-SS` form where it's a NZ account number (see
-    /// [`normalise_account`]). `None` only for a QIF file that doesn't name it; the owner then
-    /// says which account the file is for.
+    pub kind: StatementKind,
+    /// For a bank account, the account number in `BB-bbbb-AAAAAAA-SS` form where it's a NZ
+    /// account number (see [`normalise_account`]). For a card, the masked card number
+    /// `XXXX-XXXX-XXXX-1234` (see [`normalise_card`]); a full card number is never kept. `None`
+    /// only for a QIF file that doesn't name it; the owner then says which account the file is
+    /// for.
     pub account: Option<String>,
     /// The first and last days the file says it covers, where it says so.
     pub period_start: Option<NaiveDate>,
@@ -251,13 +283,11 @@ pub enum Problem {
     },
     /// The file holds more than one statement (several accounts, or a QIF with several sections).
     SeveralStatements,
-    /// Credit card statements are read from M11.
-    CreditCard,
     /// Only NZD accounts are read; multi-currency is out of scope.
     ForeignCurrency {
         currency: String,
     },
-    /// A QIF section other than `!Type:Bank`, such as `!Type:Invst`.
+    /// A QIF section other than `!Type:Bank` or `!Type:CCard`, such as `!Type:Invst`.
     UnsupportedSection {
         row: u32,
         section: String,
@@ -365,6 +395,7 @@ mod tests {
     fn balance_check_skips_without_both_ends() {
         let mut s = Statement {
             parser: String::new(),
+            kind: StatementKind::Bank,
             account: None,
             period_start: None,
             period_end: None,

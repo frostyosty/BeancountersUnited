@@ -1,15 +1,20 @@
 //! OFX: 1.x in SGML (leaf tags left unclosed) and 2.x in XML.
 //!
 //! Both are read by one tokenizer that treats `<TAG>text` as a value and `<TAG>` followed by
-//! another tag as an aggregate opening, so closing tags are optional. Only a bank statement
-//! (`STMTRS`) for one NZD account is read; a credit card statement (`CCSTMTRS`) is refused until
-//! M11. The description is `NAME` then `MEMO`. OFX has no opening balance; `LEDGERBAL` gives the
-//! closing balance.
+//! another tag as an aggregate opening, so closing tags are optional. One statement for one NZD
+//! account is read: a bank statement (`STMTRS` in `BANKMSGSRSV1`, account in `BANKACCTFROM`) or a
+//! credit card statement (`CCSTMTRS` in `CREDITCARDMSGSRSV1`, card in `CCACCTFROM`). A card's
+//! `ACCTID` is masked to its last four digits (see [`normalise_card`]). The description is `NAME`
+//! then `MEMO`. OFX has no opening balance; `LEDGERBAL` gives the closing balance.
+//!
+//! OFX already signs card amounts from the account holder's point of view (a purchase is a
+//! negative `TRNAMT`, a payment a positive one, and an amount owed a negative `BALAMT`), which is
+//! our convention, so nothing is flipped.
 
 use chrono::NaiveDate;
 
-use super::text::{normalise_account, normalise_description, parse_amount};
-use super::{Balance, ParserInfo, Problem, Statement, StatementLine};
+use super::text::{normalise_account, normalise_card, normalise_description, parse_amount};
+use super::{Balance, ParserInfo, Problem, Statement, StatementKind, StatementLine};
 
 pub const SGML: ParserInfo = ParserInfo {
     id: "ofx-sgml-1",
@@ -135,6 +140,7 @@ struct Txn {
 pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut problems = Vec::new();
     let mut statements = 0;
+    let mut kind = StatementKind::Bank;
     let mut account = None;
     let mut currency = None;
     let mut period_start = None;
@@ -162,9 +168,15 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     for token in tokens(text) {
         match token {
             Token::Open { tag, row } => match tag.as_str() {
-                "STMTRS" => statements += 1,
-                "CCSTMTRS" => return Err(vec![Problem::CreditCard]),
-                "BANKACCTFROM" => in_acct = true,
+                "STMTRS" => {
+                    statements += 1;
+                    kind = StatementKind::Bank;
+                }
+                "CCSTMTRS" => {
+                    statements += 1;
+                    kind = StatementKind::CreditCard;
+                }
+                "BANKACCTFROM" | "CCACCTFROM" => in_acct = true,
                 "LEDGERBAL" => in_ledgerbal = true,
                 "PAYEE" => in_payee = true,
                 "STMTTRN" => {
@@ -176,7 +188,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 _ => {}
             },
             Token::Close { tag } => match tag.as_str() {
-                "BANKACCTFROM" => in_acct = false,
+                "BANKACCTFROM" | "CCACCTFROM" => in_acct = false,
                 "LEDGERBAL" => in_ledgerbal = false,
                 "PAYEE" => in_payee = false,
                 "STMTTRN" => {
@@ -202,7 +214,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 }
                 match tag.as_str() {
                     "CURDEF" => currency = Some(value),
-                    "ACCTID" if in_acct => account = Some(normalise_account(&value)),
+                    "ACCTID" if in_acct => account = Some(value),
                     "DTSTART" => period_start = date_value(&value, row, &mut problems),
                     "DTEND" => period_end = date_value(&value, row, &mut problems),
                     "BALAMT" if in_ledgerbal => match parse_amount(&value) {
@@ -240,12 +252,20 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     if !problems.is_empty() {
         return Err(problems);
     }
+    // Some card files put a bank-style account id in `ACCTID`; anything card-like is masked.
+    let account = account.map(|raw| match kind {
+        StatementKind::CreditCard => {
+            normalise_card(&raw).unwrap_or_else(|| normalise_account(&raw))
+        }
+        StatementKind::Bank => normalise_account(&raw),
+    });
     let closing = match (closing_amount, closing_date.or(period_end)) {
         (Some(amount), Some(date)) => Some(Balance { date, amount }),
         _ => None,
     };
     Ok(Statement {
         parser: String::new(),
+        kind,
         account,
         period_start,
         period_end,
@@ -343,10 +363,41 @@ mod tests {
         assert_eq!(s.closing.unwrap().amount, Money::from_cents(10_000));
     }
 
+    const CARD_FILE: &str = "OFXHEADER:100\n\n<OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS>
+<CURDEF>NZD
+<CCACCTFROM><ACCTID>9999 0000 0000 4417</CCACCTFROM>
+<BANKTRANLIST><DTSTART>20250801<DTEND>20250831
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20250802<TRNAMT>-48.90<FITID>C1<NAME>Shop</STMTTRN>
+<STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20250811<TRNAMT>48.90<FITID>C2<NAME>Payment</STMTTRN>
+</BANKTRANLIST><LEDGERBAL><BALAMT>-12.00<DTASOF>20250831</LEDGERBAL>
+</CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>
+";
+
     #[test]
-    fn credit_cards_and_foreign_currency_are_refused() {
-        let cc = "OFXHEADER:100\n<OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS><CURDEF>NZD";
-        assert_eq!(parse(cc).unwrap_err(), vec![Problem::CreditCard]);
+    fn reads_a_card_statement_and_masks_the_card() {
+        assert!(detect_sgml(CARD_FILE));
+        let s = parse(CARD_FILE).unwrap();
+        assert_eq!(s.kind, StatementKind::CreditCard);
+        assert_eq!(s.account.as_deref(), Some("XXXX-XXXX-XXXX-4417"));
+        assert_eq!(s.lines[0].amount, Money::from_cents(-4890), "a purchase");
+        assert_eq!(s.lines[1].amount, Money::from_cents(4890), "a payment");
+        assert_eq!(s.closing.unwrap().amount, Money::from_cents(-1200), "owed");
+        assert_eq!(parse(XML_FILE).unwrap().kind, StatementKind::Bank);
+    }
+
+    #[test]
+    fn a_bank_and_a_card_statement_in_one_file_are_refused() {
+        let both = XML_FILE.replace(
+            "</BANKMSGSRSV1>",
+            "</BANKMSGSRSV1><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS>
+             <CCACCTFROM><ACCTID>XXXXXXXXXXXX4417</ACCTID></CCACCTFROM>
+             </CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1>",
+        );
+        assert_eq!(parse(&both).unwrap_err(), vec![Problem::SeveralStatements]);
+    }
+
+    #[test]
+    fn foreign_currency_is_refused() {
         let usd = XML_FILE.replace("<CURDEF>NZD", "<CURDEF>USD");
         assert!(
             parse(&usd)

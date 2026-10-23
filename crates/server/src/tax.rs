@@ -1,16 +1,16 @@
 //! The owner's screen: "Tax to pay if submitted", its breakdown by return, and each bank
 //! account's statements, gaps and reconciliation.
 //!
-//! Every amount comes from core, reading the ledger (`docs/domain.md`, "GST" and "Income tax for
-//! sole traders"). Nothing here is stored: it's worked out afresh on each read.
+//! This module loads the ledger totals; core's `tax::position` works out every amount
+//! (`docs/domain.md`, "GST" and "Income tax for sole traders"). Nothing here is stored: it's
+//! worked out afresh on each read.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use acct_core::bank::{LineFacts, looks_like_ird, transfer_pairs};
-use acct_core::tax::gst::{GstPeriod, GstTotals, gst_period, gst_return};
-use acct_core::tax::income_tax::{
-    IncomeTaxBasis, IncomeYear, OwnerAnswers, StudentLoanBasis, income_tax_figure,
-};
+use acct_core::tax::gst::{GstPeriod, GstTotals, gst_period};
+use acct_core::tax::income_tax::{IncomeTaxBasis, IncomeYear, StudentLoanBasis, YearAnswers};
+use acct_core::tax::{self, position::TaxInputs};
 use acct_core::{AccountType, Money};
 use acct_store::bank::{self as bank_store, BankAccount};
 use acct_store::journals::StoredJournal;
@@ -99,7 +99,7 @@ pub struct TaxPosition {
     pub notices: Vec<TaxNotice>,
 }
 
-/// Sums the amounts in `journals` on accounts of the given types, over dates in `[from, to]`.
+/// Sums the amounts in `journals` on the given accounts, over dates in `[from, to]`.
 fn movement(
     journals: &[StoredJournal],
     accounts: &BTreeSet<acct_core::AccountCode>,
@@ -115,11 +115,12 @@ fn movement(
         .sum()
 }
 
-pub async fn position(
+/// The ledger totals core's tax engine works from: each GST period with an uploaded line, and
+/// each income year with one. The answers are left empty for the caller to fill.
+pub async fn tax_inputs(
     conn: &mut SqliteConnection,
     client_id: &str,
-    today: NaiveDate,
-) -> Result<TaxPosition, CommandError> {
+) -> Result<TaxInputs, CommandError> {
     let business = business::business(conn, client_id).await?;
     let chart = clients::chart(conn, client_id).await?;
     let of_type = |t: AccountType| -> BTreeSet<_> {
@@ -133,9 +134,8 @@ pub async fn position(
     let income_accounts = of_type(AccountType::Income);
     let mut pl_accounts = income_accounts.clone();
     pl_accounts.extend(of_type(AccountType::Expense));
-    let gst_account: BTreeSet<_> = [business.holding.gst.clone()].into();
     let mut income_and_gst = income_accounts.clone();
-    income_and_gst.extend(gst_account.iter().cloned());
+    income_and_gst.insert(business.holding.gst.clone());
 
     let year_list = years::for_client(conn, client_id).await?;
     let mut all: Vec<StoredJournal> = Vec::new();
@@ -143,10 +143,9 @@ pub async fn position(
         all.extend(journals::for_year(conn, &y.id).await?);
     }
     let lines = bank_store::bank_lines(conn, client_id).await?;
-    let mut notices = Vec::new();
+    let mut inputs = TaxInputs::default();
 
     // GST: every period from registration that has an uploaded line.
-    let mut gst_views = Vec::new();
     if let Some(gst) = business.gst {
         let periods: BTreeSet<GstPeriod> = lines
             .iter()
@@ -160,7 +159,51 @@ pub async fn position(
                 sales,
                 ..GstTotals::default()
             };
-            let (boxes, problem) = match gst_return(period, &totals) {
+            inputs.gst.insert(period, totals);
+        }
+    }
+
+    // Income tax: each client-year with lines is one income year (31 March balance date).
+    for y in &year_list {
+        if lines.iter().any(|l| y.year.contains(l.date)) {
+            let taxable = -movement(&all, &pl_accounts, y.year.start(), y.year.end());
+            inputs
+                .taxable_income
+                .insert(IncomeYear::containing(y.year.end()), taxable);
+        }
+    }
+    Ok(inputs)
+}
+
+/// "Tax to pay if submitted" with nothing answered yet.
+pub async fn position(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    today: NaiveDate,
+) -> Result<TaxPosition, CommandError> {
+    position_with(conn, client_id, today, &BTreeMap::new()).await
+}
+
+/// "Tax to pay if submitted" given the owner's answers, worked out by core.
+pub async fn position_with(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    today: NaiveDate,
+    answers: &BTreeMap<IncomeYear, YearAnswers>,
+) -> Result<TaxPosition, CommandError> {
+    let business = business::business(conn, client_id).await?;
+    let inputs = TaxInputs {
+        answers: answers.clone(),
+        ..tax_inputs(conn, client_id).await?
+    };
+    let computed = tax::position::position(&inputs);
+    let mut notices = Vec::new();
+
+    let gst = computed
+        .gst
+        .iter()
+        .map(|g| {
+            let (boxes, problem) = match &g.result {
                 Ok(r) => (
                     Some(GstBoxes {
                         box5: r.box5,
@@ -179,17 +222,20 @@ pub async fn position(
                 ),
                 Err(e) => (None, Some(e.to_string())),
             };
-            gst_views.push(GstReturnView {
-                start: period.start,
-                end: period.end,
-                so_far: period.end >= today,
-                can_file_from: period.end + Days::new(1),
+            GstReturnView {
+                start: g.period.start,
+                end: g.period.end,
+                so_far: g.period.end >= today,
+                can_file_from: g.period.end + Days::new(1),
                 boxes,
                 problem,
-            });
-        }
-    } else {
+            }
+        })
+        .collect();
+
+    if business.gst.is_none() {
         // An unregistered owner sees no GST, but is told if deposits suggest they should be.
+        let lines = bank_store::bank_lines(conn, client_id).await?;
         let deposits: Vec<_> = lines.iter().filter(|l| l.amount > Money::ZERO).collect();
         let over = deposits.iter().any(|first| {
             let until = first.date + Days::new(364);
@@ -210,43 +256,28 @@ pub async fn position(
         }
     }
 
-    // Income tax: each client-year with lines is one income year (31 March balance date).
-    let mut income_views = Vec::new();
-    for y in &year_list {
-        let has_lines = lines.iter().any(|l| y.year.contains(l.date));
-        if !has_lines {
-            continue;
-        }
-        let income_year = IncomeYear::containing(y.year.end());
-        let taxable = -movement(&all, &pl_accounts, y.year.start(), y.year.end());
-        let view = match income_tax_figure(income_year, taxable, &OwnerAnswers::default()) {
-            Ok(f) => IncomeYearView {
-                income_year: income_year.0,
-                so_far: y.year.end() >= today,
-                can_file_from: y.year.end() + Days::new(1),
-                taxable_income: taxable,
-                basis: Some(f.basis),
-                income_tax: Some(f.income_tax),
-                student_loan_basis: Some(f.student_loan_basis),
-                student_loan: Some(f.student_loan),
-                problem: None,
-            },
-            Err(e) => IncomeYearView {
-                income_year: income_year.0,
-                so_far: y.year.end() >= today,
-                can_file_from: y.year.end() + Days::new(1),
-                taxable_income: taxable,
-                basis: None,
-                income_tax: None,
-                student_loan_basis: None,
-                student_loan: None,
-                problem: Some(e.to_string()),
-            },
-        };
-        income_views.push(view);
-    }
+    let income = computed
+        .income
+        .iter()
+        .map(|i| {
+            let end = i.year.end();
+            let figure = i.result.as_ref().ok();
+            IncomeYearView {
+                income_year: i.year.0,
+                so_far: end >= today,
+                can_file_from: end + Days::new(1),
+                taxable_income: i.taxable_income,
+                basis: figure.map(|f| f.basis),
+                income_tax: figure.map(|f| f.income_tax),
+                student_loan_basis: figure.map(|f| f.student_loan_basis),
+                student_loan: figure.map(|f| f.student_loan),
+                problem: i.result.as_ref().err().map(ToString::to_string),
+            }
+        })
+        .collect();
 
     // Gaps without an amount leave the figure incomplete.
+    let year_list = years::for_client(conn, client_id).await?;
     let start = year_list
         .first()
         .map_or(business.start_date, |y| y.year.start());
@@ -268,19 +299,10 @@ pub async fn position(
         }
     }
 
-    let total = gst_views
-        .iter()
-        .filter_map(|g| g.boxes.map(|b| b.box15))
-        .chain(
-            income_views
-                .iter()
-                .map(|i| i.income_tax.unwrap_or_default() + i.student_loan.unwrap_or_default()),
-        )
-        .sum();
     Ok(TaxPosition {
-        total,
-        gst: gst_views,
-        income: income_views,
+        total: computed.total,
+        gst,
+        income,
         notices,
     })
 }

@@ -1,0 +1,12 @@
+{
+  "gst": "810",
+  "unclaimed_gst": "615",
+  "gst_refund": "812",
+  "capital": "950",
+  "paye_wages": "952",
+  "personal_sale": "954",
+  "drawings": "960",
+  "income_tax": "962",
+  "loans": "900",
+  "part_private_gst": "business_share"
+}
