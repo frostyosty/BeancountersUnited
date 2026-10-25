@@ -213,6 +213,63 @@ acctd restore-check ./backup-2026-10-24.db
 A production copy is real client data. Download it only to an encrypted office machine, never to a
 Codespace or into this repo (hard rule 1).
 
+### Starting over: a new bucket and an empty database
+
+Use this when the bucket and the database no longer agree (for example Litestream errors about
+generations or versions) and the data can go. **It deletes the database.** A person decides, and on
+production the data is real, so snapshot the volume first.
+
+1. Snapshot the volume as a fallback, then stop the machine:
+
+   ```sh
+   fly volumes snapshots create <vol-id> -a <app>
+   fly machine stop <machine-id> -a <app>
+   ```
+
+2. Wipe the database. A stopped machine can't take `ssh console`, so start it with a harmless
+   entrypoint. Fly appends the image's `fly-entrypoint` as an extra argument, so a bare
+   `--entrypoint "sleep 3600"` fails (`sleep: invalid time interval`) and crash-loops. Wrap it in `sh -c`:
+
+   ```sh
+   fly machine update <machine-id> -a <app> --entrypoint "sh -c 'sleep 3600'" -y
+   fly machine start <machine-id> -a <app>
+   fly ssh console -a <app> -C "sh -c 'rm -rf /data/acct.db /data/acct.db-wal /data/acct.db-shm /data/.acct.db-litestream'"
+   ```
+
+   The `.acct.db-litestream` directory is Litestream's local state. Leave it and it can clash with the
+   new bucket.
+3. Put the real entrypoint back. `--entrypoint ""` is ignored, so name the script (it ignores its
+   arguments):
+
+   ```sh
+   fly machine update <machine-id> -a <app> --entrypoint "fly-entrypoint" -y
+   ```
+
+   Don't start it yet if the bucket is also changing.
+4. Replace the bucket. Fly allows **one Tigris project per app**, and `fly storage create` won't
+   overwrite secrets that already exist, so destroy the old project and unset the old secrets first:
+
+   ```sh
+   fly storage destroy <old-bucket> -y
+   fly secrets unset BUCKET_NAME AWS_ENDPOINT_URL_S3 AWS_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY -a <app> --stage
+   fly storage create -a <app> -n <app>-backup -y
+   ```
+
+   `storage create` prints the new keys, and then lists the secrets it did *not* set. Set those with
+   `fly secrets set` without pasting the keys anywhere (chat, tickets, commits). Treat any key that
+   was shown or pasted as compromised and replace it.
+   **In Git Bash, `> NUL` writes a real file named `NUL`** (with the keys in it) into the working
+   directory. Use `> /dev/null`, or delete the file straight away. In PowerShell, `> $null` is fine.
+5. Start the machine and read the logs. The expected sequence is `no matching backups found`, then
+   `replicating to ... bucket=<new bucket>`, then `snapshot complete`, and the health check passing:
+
+   ```sh
+   fly machine start <machine-id> -a <app>
+   fly logs -a <app> --no-tail
+   ```
+
+   `NoSuchBucket` in the logs means the secrets still name a bucket that no longer exists.
+
 ## How often
 
 - Run the restore drill on staging before M12 is called done, and then every quarter and after any change

@@ -11,6 +11,8 @@ Change practice settings to just settings and have different tabs in there e.g. 
 
 Unlike other similar products we want full AI stuff but minimal instances of "Ask AI " overt kind of thing, be creative, change it to "Ask Experts (1 daily question remaining)" kind of thing.
 
+
+
 ### On comp
 
 
