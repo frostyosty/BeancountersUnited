@@ -2,12 +2,12 @@
 //! pipeline (CLAUDE.md hard rule 6). `make db-reset` and the `acct-dev` desktop app use it.
 //!
 //! It sets the server up as `acctd init` would and adds one user per role, all with
-//! `DEV_PASSWORD`. Then the company defaults and client, and the sole-trader defaults with the
-//! starter paragraph library and a small sole-trader client whose year has its notes picked.
+//! `DEV_PASSWORD`. Then the company starter set and client, and the sole-trader starter set with
+//! the starter paragraph library and a small sole-trader client whose year has its notes picked.
 //! For development only: never point it at a real practice's database.
 
 use acct_core::notes::Paragraph;
-use acct_core::{Account, AccountCode, AssetAccounts, DepreciationSettings, Journal, Money};
+use acct_core::{AccountCode, Journal, Money};
 use acct_store::Store;
 use acct_store::users::Role;
 use chrono::NaiveDate;
@@ -15,17 +15,9 @@ use serde::Deserialize;
 
 use crate::commands::{Command, CommandEnvelope};
 use crate::pipeline::{Actor, submit};
+use crate::starter::StarterSet;
 
-const CHART: &str = include_str!("../../../fixtures/practice/company-chart.json");
-const TEMPLATE: &str = include_str!("../../../fixtures/practice/company-template.json");
-const MAPPING: &str = include_str!("../../../fixtures/practice/company-mapping.json");
 const CLIENT: &str = include_str!("../../../fixtures/clients/example-widgets.json");
-const ASSET_CLASSES: &str = include_str!("../../../fixtures/practice/company-asset-classes.json");
-const SOLE_CHART: &str = include_str!("../../../fixtures/practice/sole-trader-chart.json");
-const SOLE_TEMPLATE: &str = include_str!("../../../fixtures/practice/sole-trader-template.json");
-const SOLE_MAPPING: &str = include_str!("../../../fixtures/practice/sole-trader-mapping.json");
-const SOLE_ASSET_CLASSES: &str =
-    include_str!("../../../fixtures/practice/sole-trader-asset-classes.json");
 const SOLE_PRIORITY: &str =
     include_str!("../../../fixtures/practice/sole-trader-rounding-priority.json");
 const PARAGRAPHS: &str = include_str!("../../../fixtures/practice/paragraphs.json");
@@ -68,14 +60,6 @@ struct Client {
     rounding_priority: Vec<AccountCode>,
     assets: Vec<FixtureAsset>,
     years: Vec<Year>,
-}
-
-#[derive(Deserialize)]
-struct AssetClass {
-    key: String,
-    name: String,
-    settings: DepreciationSettings,
-    accounts: AssetAccounts,
 }
 
 #[derive(Deserialize)]
@@ -154,43 +138,19 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
             .await?;
     }
 
-    let accounts: Vec<Account> = serde_json::from_str(CHART)?;
     loader
-        .create(Command::CreateMasterChart {
-            entity_type: "company".into(),
-            name: "Company".into(),
-            accounts,
+        .create(Command::InstallStarterSet {
+            set: StarterSet::Company,
         })
         .await?;
-    let template_id = loader
-        .create(Command::CreateTemplate {
-            entity_type: "company".into(),
-            name: "Company (standard)".into(),
-            body: serde_json::from_str(TEMPLATE)?,
-        })
-        .await?;
-    loader
-        .create(Command::CreateMapping {
-            template_id,
-            name: "Company (standard)".into(),
-            body: serde_json::from_str(MAPPING)?,
-        })
-        .await?;
-
-    let classes: Vec<AssetClass> = serde_json::from_str(ASSET_CLASSES)?;
-    let mut class_ids = Vec::new();
-    for class in classes {
-        let id = loader
-            .create(Command::CreateAssetClass {
-                entity_type: "company".into(),
-                key: class.key.clone(),
-                name: class.name,
-                settings: class.settings,
-                accounts: class.accounts,
-            })
-            .await?;
-        class_ids.push((class.key, id));
-    }
+    let class_ids: Vec<(String, String)> = {
+        let mut conn = store.reader().await?;
+        acct_store::assets::classes_for_entity_type(&mut conn, "company")
+            .await?
+            .into_iter()
+            .map(|c| (c.key, c.id))
+            .collect()
+    };
 
     let client: Client = serde_json::from_str(CLIENT)?;
     let client_id = loader
@@ -263,40 +223,11 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
 /// The sole-trader defaults, the starter paragraph library, and [`SOLE_TRADER_NAME`] with one
 /// open year whose notes are picked. Its books are empty, so its statements show only the notes.
 async fn load_sole_trader(loader: &Loader<'_>) -> Result<(), BoxError> {
-    let accounts: Vec<Account> = serde_json::from_str(SOLE_CHART)?;
     loader
-        .create(Command::CreateMasterChart {
-            entity_type: "sole_trader".into(),
-            name: "Sole trader".into(),
-            accounts,
+        .create(Command::InstallStarterSet {
+            set: StarterSet::SoleTrader,
         })
         .await?;
-    let template_id = loader
-        .create(Command::CreateTemplate {
-            entity_type: "sole_trader".into(),
-            name: "Sole trader (standard)".into(),
-            body: serde_json::from_str(SOLE_TEMPLATE)?,
-        })
-        .await?;
-    loader
-        .create(Command::CreateMapping {
-            template_id,
-            name: "Sole trader (standard)".into(),
-            body: serde_json::from_str(SOLE_MAPPING)?,
-        })
-        .await?;
-    let classes: Vec<AssetClass> = serde_json::from_str(SOLE_ASSET_CLASSES)?;
-    for class in classes {
-        loader
-            .create(Command::CreateAssetClass {
-                entity_type: "sole_trader".into(),
-                key: class.key,
-                name: class.name,
-                settings: class.settings,
-                accounts: class.accounts,
-            })
-            .await?;
-    }
 
     let paragraphs: Vec<Paragraph> = serde_json::from_str(PARAGRAPHS)?;
     let mut ids = Vec::new();

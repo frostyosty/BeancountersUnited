@@ -1,16 +1,19 @@
 import type { AssetClassView } from "@acct/types/AssetClassView";
 import type { MasterChartView } from "@acct/types/MasterChartView";
+import type { PracticeView } from "@acct/types/PracticeView";
 import type { Role } from "@acct/types/Role";
 import type { UserView } from "@acct/types/UserView";
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { AssetAccountFields, DepreciationFields, NO_ACCOUNTS } from "../components/DepreciationFields";
 import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft, toDraft, toSettings } from "../lib/depreciation";
+import { entityLabel, STARTER_SETS } from "../lib/entityTypes";
 import { Icon } from "../lib/icons";
 import { keys, useAssetClasses, usePractice, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import styles from "./SettingsPage.module.css";
 
 /** Practice settings: practice admins only (the server checks too). */
 export function SettingsPage() {
@@ -43,46 +46,158 @@ function Defaults() {
         Practice: <strong>{p.name}</strong>
       </p>
       <h2>Defaults</h2>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Entity type</th>
-            <th>Master chart</th>
-            <th>Templates</th>
-            <th>Mappings</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.master_charts.map((c) => (
-            <tr key={c.id}>
-              <td>{c.entity_type}</td>
-              <td>
-                {c.name} ({c.accounts.length} accounts)
-              </td>
-              <td>
-                {p.templates
-                  .filter((t) => t.entity_type === c.entity_type)
-                  .map((t) => `${t.name} v${t.latest_version}`)
-                  .join(", ")}
-              </td>
-              <td>
-                {p.mappings
-                  .filter((m) => m.entity_type === c.entity_type)
-                  .map((m) => `${m.name} v${m.latest_version}`)
-                  .join(", ")}
-              </td>
+      {p.master_charts.length === 0 ? (
+        <p className="muted">
+          <Icon name="defaults.none_yet" fallback="🌱" /> No defaults yet, so no clients can be set up. Install a starter
+          set below, or make your own chart.
+        </p>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Entity type</th>
+              <th>Master chart</th>
+              <th>Templates</th>
+              <th>Mappings</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="muted">Editing master charts, templates and mappings comes later; changes never reach existing clients.</p>
+          </thead>
+          <tbody>
+            {p.master_charts.map((c) => (
+              <tr key={c.id}>
+                <td>{entityLabel(c.entity_type)}</td>
+                <td>
+                  <Link to={`/settings/charts/${c.entity_type}`}>
+                    <Icon name="defaults.chart" fallback="🗂️" /> {c.name}
+                  </Link>{" "}
+                  <span className="muted">({c.accounts.length} accounts)</span>
+                </td>
+                <td>
+                  {p.templates
+                    .filter((t) => t.entity_type === c.entity_type)
+                    .map((t) => `${t.name} v${t.latest_version}`)
+                    .join(", ") || <span className="muted">none yet</span>}
+                </td>
+                <td>
+                  {p.mappings
+                    .filter((m) => m.entity_type === c.entity_type)
+                    .map((m) => `${m.name} v${m.latest_version}`)
+                    .join(", ") || <span className="muted">none yet</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="muted">
+        Open a master chart to edit its accounts. Editing templates and mappings comes later. Changing a default never
+        alters existing clients.
+      </p>
       <p>
         <Link to="/settings/paragraphs">
           <Icon name="notes.library" fallback="📚" /> Paragraph library
         </Link>{" "}
         <span className="muted">(accounting policies and notes)</span>
       </p>
+      <StarterSets practice={p} />
+      <NewMasterChart practice={p} />
     </>
+  );
+}
+
+/** The starter sets not installed yet. Each sets up an entity type's defaults in one command. */
+function StarterSets({ practice }: { practice: PracticeView }) {
+  const install = useCommand([keys.practice, keys.assetClasses]);
+  const taken = new Set([...practice.master_charts, ...practice.templates].map((d) => d.entity_type));
+  const available = STARTER_SETS.filter((s) => !taken.has(s.set));
+  if (available.length === 0) {
+    return null;
+  }
+  return (
+    <section className="card">
+      <h2>
+        <Icon name="defaults.starter" fallback="📦" /> Starter sets
+      </h2>
+      <p className="muted">
+        Ready-made defaults for an entity type: a master chart, a statement template and mapping, and asset classes. Edit
+        them afterwards to suit the practice.
+      </p>
+      <ErrorMessage error={install.error} />
+      {available.map((s) => (
+        <div key={s.set} className={styles.starter}>
+          <div>
+            <strong>{s.title}</strong>
+            <p className="muted">{s.description}</p>
+          </div>
+          <button
+            type="button"
+            className="primary"
+            aria-label={`Install the ${s.title.toLowerCase()} starter set`}
+            disabled={install.isPending}
+            onClick={() => install.mutate({ kind: "install_starter_set", payload: { set: s.set } })}
+          >
+            <Icon name="defaults.install" fallback="✨" /> Install
+          </button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** Makes a master chart for an entity type that has none: empty, or a copy of another. */
+function NewMasterChart({ practice }: { practice: PracticeView }) {
+  const create = useCommand([keys.practice]);
+  const navigate = useNavigate();
+  const [entityType, setEntityType] = useState("");
+  const [name, setName] = useState("");
+  const [from, setFrom] = useState("");
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const type = entityType.trim().toLowerCase().replace(/\s+/g, "_");
+    const accounts = practice.master_charts.find((c) => c.entity_type === from)?.accounts ?? [];
+    create.mutate(
+      { kind: "create_master_chart", payload: { entity_type: type, name: name.trim(), accounts } },
+      { onSuccess: () => void navigate(`/settings/charts/${type}`) },
+    );
+  };
+
+  return (
+    <form onSubmit={submit} className="card form">
+      <h2>
+        <Icon name="defaults.new_chart" fallback="🆕" /> Make your own chart
+      </h2>
+      <div className="row">
+        <label className="field">
+          <span>New chart's entity type</span>
+          <input value={entityType} onChange={(e) => setEntityType(e.target.value)} placeholder="e.g. trust" required />
+        </label>
+        <label className="field">
+          <span>Chart name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} required />
+        </label>
+        <label className="field">
+          <span>Start from</span>
+          <select value={from} onChange={(e) => setFrom(e.target.value)}>
+            <option value="">An empty chart</option>
+            {practice.master_charts.map((c) => (
+              <option key={c.id} value={c.entity_type}>
+                A copy of {c.name} ({c.accounts.length} accounts)
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="muted">
+        Each entity type has one master chart. Clients of a new entity type also need a statement template and mapping
+        before their first year can be added; those can't be made here yet.
+      </p>
+      <ErrorMessage error={create.error} />
+      <div>
+        <button type="submit" className="primary" disabled={create.isPending}>
+          Make chart
+        </button>
+      </div>
+    </form>
   );
 }
 

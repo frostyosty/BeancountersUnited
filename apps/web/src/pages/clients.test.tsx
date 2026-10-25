@@ -3,7 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import { practice, sam, val, widgets } from "../test/data";
+import { boss, practice, sam, val, widgets } from "../test/data";
 import { jsonResponse, renderApp, stubApi } from "../test/render";
 
 afterEach(() => {
@@ -44,6 +44,29 @@ describe("clients", () => {
       retained_earnings: "810",
       rounding_priority: [],
     });
+  });
+
+  it("points a practice admin at the starter sets when there are no master charts", async () => {
+    const empty = { ...practice, master_charts: [], templates: [], mappings: [] };
+    stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => empty,
+      "GET /api/clients": () => [],
+    });
+    renderApp(<App />);
+    const link = await screen.findByRole("link", { name: "Install a starter set in Practice settings" });
+    expect(link.getAttribute("href")).toBe("/settings");
+  });
+
+  it("tells staff to ask a practice admin when there are no master charts", async () => {
+    stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/practice": () => ({ ...practice, master_charts: [] }),
+      "GET /api/clients": () => [],
+    });
+    renderApp(<App />);
+    expect(await screen.findByText(/Ask a practice admin to set one up\./)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /starter set/ })).toBeNull();
   });
 
   it("shows the server's rejection", async () => {

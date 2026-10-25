@@ -21,6 +21,7 @@ pub mod reconcile;
 pub mod reports;
 pub mod save_tax;
 pub mod signup;
+pub mod starter;
 pub mod tax;
 pub mod tb_import;
 #[cfg(feature = "embed-web")]

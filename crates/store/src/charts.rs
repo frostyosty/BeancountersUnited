@@ -63,20 +63,51 @@ pub async fn insert(conn: &mut SqliteConnection, chart: &MasterChart) -> Result<
     .execute(&mut *conn)
     .await?;
     for a in chart.chart.accounts() {
-        sqlx::query(
-            "INSERT INTO master_chart_accounts
-                 (chart_id, code, name, account_type, active, default_gst)
-             VALUES (?, ?, ?, ?, ?, ?)",
-        )
-        .bind(&chart.id)
-        .bind(a.code.as_str())
-        .bind(&a.name)
-        .bind(enum_text(&a.account_type))
-        .bind(a.active)
-        .bind(a.default_gst.as_ref().map(enum_text))
-        .execute(&mut *conn)
-        .await?;
+        insert_account(conn, &chart.id, a).await?;
     }
+    Ok(())
+}
+
+/// Adds an account to a master chart. Client charts already copied from it don't change.
+pub async fn insert_account(
+    conn: &mut SqliteConnection,
+    chart_id: &str,
+    a: &Account,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO master_chart_accounts
+             (chart_id, code, name, account_type, active, default_gst)
+         VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(chart_id)
+    .bind(a.code.as_str())
+    .bind(&a.name)
+    .bind(enum_text(&a.account_type))
+    .bind(a.active)
+    .bind(a.default_gst.as_ref().map(enum_text))
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+/// Updates a master chart account's name, active flag and default GST code. Codes and account
+/// types never change, and client charts already copied from it don't either.
+pub async fn update_account(
+    conn: &mut SqliteConnection,
+    chart_id: &str,
+    a: &Account,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE master_chart_accounts SET name = ?, active = ?, default_gst = ?
+         WHERE chart_id = ? AND code = ?",
+    )
+    .bind(&a.name)
+    .bind(a.active)
+    .bind(a.default_gst.as_ref().map(enum_text))
+    .bind(chart_id)
+    .bind(a.code.as_str())
+    .execute(&mut *conn)
+    .await?;
     Ok(())
 }
 

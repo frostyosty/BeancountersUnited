@@ -1,0 +1,17 @@
+.starter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.starter > div {
+  flex: 1 1 16rem;
+}
+
+.starter p {
+  margin: var(--space-1) 0 0;
+}

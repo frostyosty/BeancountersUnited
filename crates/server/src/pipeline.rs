@@ -38,6 +38,7 @@ use crate::merchants;
 use crate::paragraphs;
 use crate::save_tax;
 use crate::signup;
+use crate::starter;
 use crate::tb_import;
 
 /// Who is submitting a command. `user_id` is `None` only for the server itself (`acctd init`, the
@@ -615,6 +616,87 @@ async fn apply(
             )
             .await?;
             Ok(created(id))
+        }
+
+        Command::InstallStarterSet { set } => {
+            starter::check_free(tx, *set).await?;
+            let contents = set.contents();
+            let chart_id = apply_part(tx, actor, &contents.chart_command(*set), seq, today).await?;
+            let template_id =
+                apply_part(tx, actor, &contents.template_command(*set), seq, today).await?;
+            let mapping = contents.mapping_command(*set, template_id);
+            apply_part(tx, actor, &mapping, seq, today).await?;
+            for class in contents.class_commands(*set) {
+                apply_part(tx, actor, &class, seq, today).await?;
+            }
+            Ok(created(chart_id))
+        }
+
+        Command::AddMasterAccount {
+            entity_type,
+            account,
+        } => {
+            let master = master_chart(tx, entity_type).await?;
+            let account = Account {
+                name: account.name.trim().to_owned(),
+                ..account.clone()
+            };
+            master
+                .chart
+                .with_account(account.clone())
+                .map_err(chart_error)?;
+            charts::insert_account(tx, &master.id, &account).await?;
+            Ok(no_effect())
+        }
+
+        Command::RenameMasterAccount {
+            entity_type,
+            code,
+            name,
+        } => {
+            let master = master_chart(tx, entity_type).await?;
+            let edited = master
+                .chart
+                .renamed(code, name.trim())
+                .map_err(chart_error)?;
+            let account = edited.get(code).expect("just renamed");
+            charts::update_account(tx, &master.id, account).await?;
+            Ok(no_effect())
+        }
+
+        Command::SetMasterAccountGst {
+            entity_type,
+            code,
+            default_gst,
+        } => {
+            let master = master_chart(tx, entity_type).await?;
+            let edited = master
+                .chart
+                .with_default_gst(code, *default_gst)
+                .map_err(chart_error)?;
+            check_master_edit(&master, &edited)?;
+            let account = edited.get(code).expect("just edited");
+            charts::update_account(tx, &master.id, account).await?;
+            Ok(no_effect())
+        }
+
+        Command::SetMasterAccountActive {
+            entity_type,
+            code,
+            active,
+        } => {
+            let master = master_chart(tx, entity_type).await?;
+            let edited = master
+                .chart
+                .with_active(code, *active)
+                .map_err(chart_error)?;
+            if !*active {
+                check_master_account_unused(tx, entity_type, code).await?;
+                check_master_edit(&master, &edited)?;
+            }
+            let account = edited.get(code).expect("just edited");
+            charts::update_account(tx, &master.id, account).await?;
+            Ok(no_effect())
         }
 
         Command::CreateTemplate {
@@ -1708,6 +1790,76 @@ async fn pin_latest(
     Ok((template.id, version.id))
 }
 
+/// One part of a command made of others (a starter set), applied as it would be on its own. They
+/// all create something; returns its id.
+async fn apply_part(
+    tx: &mut SqliteConnection,
+    actor: &Actor,
+    command: &Command,
+    seq: i64,
+    today: chrono::NaiveDate,
+) -> Result<String, CommandError> {
+    let effect = Box::pin(apply(tx, actor, command, seq, today)).await?;
+    Ok(effect
+        .entity_id
+        .expect("a starter set's parts each create something"))
+}
+
+/// An entity type's master chart; not found if it has none.
+async fn master_chart(
+    tx: &mut SqliteConnection,
+    entity_type: &str,
+) -> Result<MasterChart, CommandError> {
+    charts::for_entity_type(tx, entity_type)
+        .await?
+        .ok_or_else(|| CommandError::not_found("master chart", entity_type))
+}
+
+/// A master chart account can't be made inactive while the practice's asset classes or merchant
+/// list for that entity type use it: new clients would get defaults pointing at it.
+async fn check_master_account_unused(
+    tx: &mut SqliteConnection,
+    entity_type: &str,
+    code: &AccountCode,
+) -> Result<(), CommandError> {
+    let mut uses: Vec<Value> = asset_store::classes_for_entity_type(tx, entity_type)
+        .await?
+        .iter()
+        .filter(|c| {
+            let a = &c.accounts;
+            [&a.cost, &a.accumulated, &a.expense, &a.gain_loss].contains(&code)
+        })
+        .map(|c| json!({ "asset_class": c.name }))
+        .collect();
+    uses.extend(
+        merchants::using_account(tx, entity_type, code)
+            .await?
+            .iter()
+            .map(|m| json!({ "merchant": m.description_contains })),
+    );
+    if uses.is_empty() {
+        return Ok(());
+    }
+    Err(CommandError::invalid_with(
+        "account_in_use",
+        format!(
+            "{code} is used by the practice's asset classes or merchant list, so it stays active."
+        ),
+        uses,
+    ))
+}
+
+/// An edit mustn't stop the sole-trader master chart from setting up businesses. A chart that
+/// already couldn't is left to be fixed one edit at a time.
+fn check_master_edit(master: &MasterChart, edited: &Chart) -> Result<(), CommandError> {
+    if master.entity_type == business::SOLE_TRADER
+        && business::check_master_chart(&master.chart).is_ok()
+    {
+        business::check_master_chart(edited)?;
+    }
+    Ok(())
+}
+
 /// A client's chart; not found if the client doesn't exist.
 async fn client_chart(tx: &mut SqliteConnection, client_id: &str) -> Result<Chart, CommandError> {
     clients::get(tx, client_id)
@@ -1868,7 +2020,12 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::ChangeOwnPassword { .. }
         | C::ResetPassword { .. }
         | C::SetUserActive { .. } => Lock::Allowed(USERS),
-        C::CreateMasterChart { .. }
+        C::InstallStarterSet { .. }
+        | C::CreateMasterChart { .. }
+        | C::AddMasterAccount { .. }
+        | C::RenameMasterAccount { .. }
+        | C::SetMasterAccountActive { .. }
+        | C::SetMasterAccountGst { .. }
         | C::CreateTemplate { .. }
         | C::ReviseTemplate { .. }
         | C::CreateMapping { .. }

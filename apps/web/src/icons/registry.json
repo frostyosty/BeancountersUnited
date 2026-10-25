@@ -650,5 +650,31 @@
       "type": "emoji",
       "value": "🧩"
     }
+  },
+  "defaults": {
+    "starter": {
+      "type": "emoji",
+      "value": "📦"
+    },
+    "install": {
+      "type": "emoji",
+      "value": "✨"
+    },
+    "chart": {
+      "type": "emoji",
+      "value": "🗂️"
+    },
+    "new_chart": {
+      "type": "emoji",
+      "value": "🆕"
+    },
+    "add_account": {
+      "type": "emoji",
+      "value": "➕"
+    },
+    "none_yet": {
+      "type": "emoji",
+      "value": "🌱"
+    }
   }
 }

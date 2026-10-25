@@ -332,6 +332,19 @@ async fn observe(
                 account_facts(conn, c, code, &mut facts).await?;
             }
         }
+        C::AddMasterAccount {
+            entity_type,
+            account,
+        } => master_account_facts(conn, entity_type, &account.code, &mut facts).await?,
+        C::RenameMasterAccount {
+            entity_type, code, ..
+        }
+        | C::SetMasterAccountActive {
+            entity_type, code, ..
+        }
+        | C::SetMasterAccountGst {
+            entity_type, code, ..
+        } => master_account_facts(conn, entity_type, code, &mut facts).await?,
         C::SetRoundingPriority { .. } => {
             if let Some(c) = client_id.map(str::to_owned)
                 && let Some(client) = clients::get(conn, &c).await?
@@ -433,6 +446,7 @@ async fn observe(
         | C::CreateUser { .. }
         | C::ChangeOwnPassword { .. }
         | C::ResetPassword { .. }
+        | C::InstallStarterSet { .. }
         | C::CreateMasterChart { .. }
         | C::CreateTemplate { .. }
         | C::ReviseTemplate { .. }
@@ -636,6 +650,35 @@ async fn account_facts(
     let chart = clients::chart(conn, client_id).await?;
     if let Some(a) = chart.get(code) {
         let subject = format!("account {code}");
+        out.push(fact(&subject, "name", a.name.clone()));
+        out.push(fact(
+            &subject,
+            "status",
+            if a.active { "active" } else { "inactive" }.into(),
+        ));
+        out.push(fact(
+            &subject,
+            "default GST",
+            a.default_gst.map_or("none set".into(), gst_label),
+        ));
+    }
+    Ok(())
+}
+
+async fn master_account_facts(
+    conn: &mut SqliteConnection,
+    entity_type: &str,
+    code: &AccountCode,
+    out: &mut Vec<Fact>,
+) -> Result<(), CommandError> {
+    let Some(master) = acct_store::charts::for_entity_type(conn, entity_type).await? else {
+        return Ok(());
+    };
+    if let Some(a) = master.chart.get(code) {
+        let subject = format!(
+            "{} master chart account {code}",
+            entity_type.replace('_', " ")
+        );
         out.push(fact(&subject, "name", a.name.clone()));
         out.push(fact(
             &subject,
@@ -923,6 +966,58 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
             entity_type.replace('_', " "),
             plural(accounts.len(), "account", "accounts")
         ),
+        C::InstallStarterSet { set } => format!(
+            "installed the {} starter set: a master chart, statement template, mapping and asset \
+             classes",
+            set.name().to_lowercase()
+        ),
+        C::AddMasterAccount {
+            entity_type,
+            account,
+        } => format!(
+            "added account {} {} to the {} master chart",
+            account.code,
+            account.name,
+            entity_type.replace('_', " ")
+        ),
+        C::RenameMasterAccount {
+            entity_type,
+            code,
+            name,
+        } => {
+            let chart = entity_type.replace('_', " ");
+            match field(changes, "name") {
+                Some(FieldChange {
+                    before: Some(old), ..
+                }) => format!(
+                    "renamed account {code} in the {chart} master chart from “{old}” to “{name}”"
+                ),
+                _ => format!("renamed account {code} in the {chart} master chart to “{name}”"),
+            }
+        }
+        C::SetMasterAccountActive {
+            entity_type,
+            code,
+            active,
+        } => format!(
+            "made account {code} in the {} master chart {}",
+            entity_type.replace('_', " "),
+            if *active { "active" } else { "inactive" }
+        ),
+        C::SetMasterAccountGst {
+            entity_type,
+            code,
+            default_gst,
+        } => {
+            let chart = entity_type.replace('_', " ");
+            match default_gst {
+                Some(g) => format!(
+                    "set account {code}'s default GST in the {chart} master chart to {}",
+                    gst_label(*g)
+                ),
+                None => format!("cleared account {code}'s default GST in the {chart} master chart"),
+            }
+        }
         C::CreateTemplate { name, .. } => format!("created the statement template “{name}”"),
         C::ReviseTemplate { .. } => "revised a statement template".into(),
         C::CreateMapping { name, .. } => format!("created the mapping “{name}”"),

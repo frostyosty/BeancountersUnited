@@ -244,7 +244,12 @@ async fn command_targets(
             (Need::Admin, vec![Target::User(role)])
         }
 
-        C::CreateMasterChart { .. }
+        C::InstallStarterSet { .. }
+        | C::CreateMasterChart { .. }
+        | C::AddMasterAccount { .. }
+        | C::RenameMasterAccount { .. }
+        | C::SetMasterAccountActive { .. }
+        | C::SetMasterAccountGst { .. }
         | C::CreateTemplate { .. }
         | C::ReviseTemplate { .. }
         | C::CreateMapping { .. }

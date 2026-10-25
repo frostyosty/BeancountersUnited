@@ -13,6 +13,7 @@ use ts_rs::TS;
 
 use crate::ai::SuggestedCoding;
 use crate::business::GstSetup;
+use crate::starter::StarterSet;
 
 /// The request body: `{ id, kind, payload }`. `id` is a UUID the client makes with `newId()`, and
 /// is the idempotency key.
@@ -128,11 +129,43 @@ pub enum Command {
     /// Makes a user active or inactive; making one inactive ends their sessions. Practice admin only.
     /// Nobody can make themselves inactive, and the last active practice admin stays active.
     SetUserActive { user_id: String, active: bool },
+    /// Installs a starter set (`crate::starter`): the master chart, statement template, mapping
+    /// and asset classes for its entity type, all at once. Refused if that entity type already has
+    /// any of them. Practice admin only.
+    InstallStarterSet { set: StarterSet },
     /// Sets up the practice master chart for an entity type. Practice admin only.
     CreateMasterChart {
         entity_type: String,
         name: String,
         accounts: Vec<Account>,
+    },
+    /// Adds an account to an entity type's master chart. Its code must be new to the chart.
+    /// Existing clients' charts don't change; new clients get it. Practice admin only.
+    AddMasterAccount {
+        entity_type: String,
+        account: Account,
+    },
+    /// Renames an account in a master chart. Existing clients' charts don't change. Practice admin
+    /// only.
+    RenameMasterAccount {
+        entity_type: String,
+        code: AccountCode,
+        name: String,
+    },
+    /// Makes a master chart account active or inactive, so new clients get it that way. Refused
+    /// while a practice asset class or merchant entry uses it, or while setting up a business
+    /// needs it. Existing clients' charts don't change. Practice admin only.
+    SetMasterAccountActive {
+        entity_type: String,
+        code: AccountCode,
+        active: bool,
+    },
+    /// Sets or clears a master chart account's default GST code (income and expense accounts
+    /// only). Existing clients' charts don't change. Practice admin only.
+    SetMasterAccountGst {
+        entity_type: String,
+        code: AccountCode,
+        default_gst: Option<GstCode>,
     },
     /// Creates a statement template with its first version. Practice admin only.
     CreateTemplate {
@@ -513,7 +546,12 @@ impl Command {
             Command::ChangeOwnPassword { .. } => "change_own_password",
             Command::ResetPassword { .. } => "reset_password",
             Command::SetUserActive { .. } => "set_user_active",
+            Command::InstallStarterSet { .. } => "install_starter_set",
             Command::CreateMasterChart { .. } => "create_master_chart",
+            Command::AddMasterAccount { .. } => "add_master_account",
+            Command::RenameMasterAccount { .. } => "rename_master_account",
+            Command::SetMasterAccountActive { .. } => "set_master_account_active",
+            Command::SetMasterAccountGst { .. } => "set_master_account_gst",
             Command::CreateTemplate { .. } => "create_template",
             Command::ReviseTemplate { .. } => "revise_template",
             Command::CreateMapping { .. } => "create_mapping",

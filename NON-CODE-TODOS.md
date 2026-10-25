@@ -88,6 +88,9 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       (hard rule 1); describe the columns only.
 - [ ] Which entity type comes after sole traders: companies, partnerships or trusts (`PLAN.md`, Open
       questions).
+- [ ] Whether to ship starter sets for trusts or partnerships too (only company and sole trader exist,
+      2026-10-26). Each needs its own chart, template and mapping wording, and the presentation answers
+      recorded in `docs/domain.md` first.
 
 ## M12 security (`docs/security.md`): before real data goes in
 - [ ] Offshore storage: production and staging run in Fly.io's Sydney region (`fly.toml`), and backups go

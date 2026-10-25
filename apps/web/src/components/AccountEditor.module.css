@@ -1,0 +1,31 @@
+.toggle {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.inactive td {
+  color: var(--text-muted);
+}
+
+.linkButton {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.linkButton:hover {
+  text-decoration: underline dotted;
+}
+
+.tag {
+  margin-left: var(--space-2);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.inline {
+  display: flex;
+  gap: var(--space-1);
+}

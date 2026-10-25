@@ -97,6 +97,28 @@ pub async fn add_merchant(
     Ok(id)
 }
 
+/// The live entries on an entity type's list that code to `code`.
+pub async fn using_account(
+    tx: &mut SqliteConnection,
+    entity_type: &str,
+    code: &AccountCode,
+) -> Result<Vec<Merchant>, CommandError> {
+    Ok(store::live(tx, entity_type)
+        .await?
+        .into_iter()
+        .filter(|m| coded_account(&m.coding) == Some(code))
+        .collect())
+}
+
+/// The account a merchant entry codes to, if it names one.
+fn coded_account(coding: &Coding) -> Option<&AccountCode> {
+    match coding {
+        Coding::In(DepositCoding::Income { account, .. })
+        | Coding::Out(WithdrawalCoding::Expense { account, .. }) => Some(account),
+        _ => None,
+    }
+}
+
 /// `remove_merchant`.
 pub async fn remove_merchant(
     tx: &mut SqliteConnection,

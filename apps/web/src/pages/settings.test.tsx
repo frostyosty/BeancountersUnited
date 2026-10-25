@@ -60,11 +60,107 @@ describe("practice settings", () => {
     ]);
   });
 
+  it("installs a starter set for an entity type that has no defaults", async () => {
+    const calls = stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => practice,
+      "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
+      "POST /api/commands": () => ({ seq: 1, entity_id: "mc2" }),
+    });
+    renderApp(<App />, "/settings");
+    const user = userEvent.setup();
+    // The company defaults are there already, so only the sole-trader set is offered.
+    await user.click(await screen.findByRole("button", { name: "Install the sole trader starter set" }));
+    expect(screen.queryByRole("button", { name: "Install the company starter set" })).toBeNull();
+    await vi.waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({ kind: "install_starter_set", payload: { set: "sole_trader" } });
+    // Each master chart opens its editor.
+    expect(screen.getByRole("link", { name: "Company chart" }).getAttribute("href")).toBe("/settings/charts/company");
+  });
+
+  it("makes a master chart as a copy of another, then opens it", async () => {
+    const calls = stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => practice,
+      "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
+      "POST /api/commands": () => ({ seq: 1, entity_id: "mc2" }),
+    });
+    renderApp(<App />, "/settings");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("New chart's entity type"), " Look Through Company ");
+    await user.type(screen.getByLabelText("Chart name"), "LTC");
+    await user.selectOptions(screen.getByLabelText("Start from"), "company");
+    await user.click(screen.getByRole("button", { name: "Make chart" }));
+    await vi.waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({
+      kind: "create_master_chart",
+      payload: { entity_type: "look_through_company", name: "LTC", accounts: practice.master_charts[0]!.accounts },
+    });
+    // The new chart isn't in the stubbed practice, so its page says so.
+    expect(await screen.findByText("There's no look through company master chart.")).toBeTruthy();
+  });
+
+  it("says there are no defaults yet", async () => {
+    stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => ({ ...practice, master_charts: [], templates: [], mappings: [] }),
+      "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
+    });
+    renderApp(<App />, "/settings");
+    expect(await screen.findByText(/No defaults yet/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Install the company starter set" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Install the sole trader starter set" })).toBeTruthy();
+  });
+
   it("is only for practice admins", async () => {
     stubApi({ "GET /api/me": () => sam, "GET /api/clients": () => [], "GET /api/practice": () => practice });
     renderApp(<App />, "/settings");
     expect(await screen.findByText("Only practice admins can change practice settings.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Practice settings" })).toBeNull();
+  });
+});
+
+describe("master chart", () => {
+  it("renames, deactivates and adds accounts by command, for new clients only", async () => {
+    const calls = stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => practice,
+      "POST /api/commands": () => ({ seq: 1, entity_id: null }),
+    });
+    renderApp(<App />, "/settings/charts/company");
+    const user = userEvent.setup();
+    expect(await screen.findByRole("heading", { name: "Company chart master chart" })).toBeTruthy();
+    expect(screen.getByText(/Changing it never alters a client already set up/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Sales" }));
+    const input = screen.getByLabelText("New name for 100");
+    await user.clear(input);
+    await user.type(input, "Revenue{Enter}");
+    await user.click(screen.getByLabelText("820 active"));
+    await user.selectOptions(screen.getByLabelText("100 default GST"), "standard");
+    await user.type(screen.getByLabelText("Code"), "236");
+    await user.type(screen.getByLabelText("Name"), "Cleaning");
+    await user.click(screen.getByRole("button", { name: "Add account" }));
+
+    await vi.waitFor(() => expect(posts(calls)).toHaveLength(4));
+    expect(posts(calls)).toMatchObject([
+      { kind: "rename_master_account", payload: { entity_type: "company", code: "100", name: "Revenue" } },
+      { kind: "set_master_account_active", payload: { entity_type: "company", code: "820", active: true } },
+      { kind: "set_master_account_gst", payload: { entity_type: "company", code: "100", default_gst: "standard" } },
+      {
+        kind: "add_master_account",
+        payload: { entity_type: "company", account: { code: "236", name: "Cleaning", account_type: "expense", active: true } },
+      },
+    ]);
+  });
+
+  it("is only for practice admins", async () => {
+    stubApi({ "GET /api/me": () => sam, "GET /api/clients": () => [], "GET /api/practice": () => practice });
+    renderApp(<App />, "/settings/charts/company");
+    expect(await screen.findByText("Only practice admins can change practice settings.")).toBeTruthy();
   });
 });
 

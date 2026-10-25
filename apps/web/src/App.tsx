@@ -19,6 +19,7 @@ import { JournalsTab } from "./pages/JournalsTab";
 import { NewBusinessPage } from "./pages/NewBusinessPage";
 import { NotesTab } from "./pages/NotesTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { MasterChartPage } from "./pages/MasterChartPage";
 import { ParagraphLibraryPage } from "./pages/ParagraphLibraryPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
@@ -84,6 +85,7 @@ export function App() {
           </Route>
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/paragraphs" element={<ParagraphLibraryPage />} />
+          <Route path="settings/charts/:entityType" element={<MasterChartPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="invite/:token" element={<AcceptInvitePage />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -482,6 +482,20 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "reset_password" => json!({ "user_id": v.owner.user_id, "new_password": PASSWORD }),
         "set_user_active" => json!({ "user_id": v.owner.user_id, "active": false }),
         "create_master_chart" => json!({ "entity_type": "company", "name": "X", "accounts": [] }),
+        "install_starter_set" => json!({ "set": "company" }),
+        "add_master_account" => json!({
+            "entity_type": "sole_trader",
+            "account": { "code": "999", "name": "X", "account_type": "expense", "active": true },
+        }),
+        "rename_master_account" => {
+            json!({ "entity_type": "sole_trader", "code": "100", "name": "X" })
+        }
+        "set_master_account_active" => {
+            json!({ "entity_type": "sole_trader", "code": "100", "active": false })
+        }
+        "set_master_account_gst" => {
+            json!({ "entity_type": "sole_trader", "code": "100", "default_gst": null })
+        }
         "create_template" => {
             json!({ "entity_type": "sole_trader", "name": "X", "body": template })
         }

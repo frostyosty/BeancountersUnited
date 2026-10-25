@@ -238,6 +238,14 @@ Accounting depreciation only; tax depreciation is out of scope.
 - The master user builds master charts and templates. The practice ships premade charts in the familiar
   NZ style (similar code ranges and groupings to common small-business charts), written in our own
   words and not copied from any vendor (hard rule 3). Staff can reorganise a client's own chart.
+- **Starter sets** (added 2026-10-26): `install_starter_set` puts the shipped company or sole-trader
+  defaults (master chart, statement template, mapping and asset classes, from `fixtures/practice/`) onto
+  an entity type that has none of them yet. It's refused if any are there, since defaults never reach
+  back. A practice admin can also make a master chart for another entity type, empty or as a copy.
+- **Editing a master chart**: a practice admin adds accounts, renames them, sets their default GST code
+  and makes them active or inactive, as staff do for a client's chart. Edits reach clients set up
+  afterwards, never ones already copied. A master account stays active while a practice asset class or
+  merchant entry uses it, or while setting up a business needs it.
 
 ### How the M10 answers were reached (2026-10-19)
 The owner asked for the M10 questions to be answered as conservatively as possible at the start, and as

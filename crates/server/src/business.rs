@@ -11,7 +11,9 @@ use acct_core::bank::{Coverage, Gap, HoldingAccounts, gaps, unsorted_lines};
 use acct_core::coding::CodingSettings;
 use acct_core::tax::gst::GstFrequency;
 use acct_core::tax::income_tax::IncomeYear;
-use acct_core::{Account, AccountCode, AccountType, ClientYear, Journal, JournalLine, Money};
+use acct_core::{
+    Account, AccountCode, AccountType, Chart, ClientYear, Journal, JournalLine, Money,
+};
 use acct_import::bank::{
     Statement, StatementKind, duplicate_keys, normalise_account, normalise_card, read_statement,
 };
@@ -106,32 +108,7 @@ pub async fn set_up(
             )
         })?;
     let chart = master.chart;
-    for (c, want) in [
-        (MONEY_IN, AccountType::Income),
-        (MONEY_OUT, AccountType::Equity),
-        (GST, AccountType::Liability),
-        (CAPITAL, AccountType::Equity),
-        (OWNERS_EQUITY, AccountType::Equity),
-    ] {
-        match chart.get(&code(c)) {
-            Some(a) if a.account_type == want && a.active => {}
-            _ => {
-                return Err(CommandError::invalid(
-                    "master_chart_incomplete",
-                    format!("The sole-trader master chart needs an active {want:?} account {c}."),
-                ));
-            }
-        }
-    }
-    let coding_settings: CodingSettings =
-        serde_json::from_str(DEFAULT_CODING_SETTINGS).expect("the default coding settings parse");
-    coding_settings.validate(&chart).map_err(|e| {
-        CommandError::invalid_with(
-            "master_chart_incomplete",
-            format!("The sole-trader master chart doesn't fit the default coding settings: {e}."),
-            &e,
-        )
-    })?;
+    let coding_settings = check_master_chart(&chart)?;
     let rounding_priority: Vec<AccountCode> =
         serde_json::from_str::<Vec<AccountCode>>(ROUNDING_PRIORITY)
             .expect("the default rounding priority list parses")
@@ -175,6 +152,39 @@ pub async fn set_up(
     .await?;
     acct_store::coding::set_settings(tx, &id, &coding_settings, seq).await?;
     Ok(id)
+}
+
+/// Whether a sole-trader master chart can set up a business: it has the fixed accounts
+/// (`docs/domain.md`, "Sole-trader chart and template"), active and of the right types, and fits
+/// the default coding settings, which it returns.
+pub fn check_master_chart(chart: &Chart) -> Result<CodingSettings, CommandError> {
+    for (c, want) in [
+        (MONEY_IN, AccountType::Income),
+        (MONEY_OUT, AccountType::Equity),
+        (GST, AccountType::Liability),
+        (CAPITAL, AccountType::Equity),
+        (OWNERS_EQUITY, AccountType::Equity),
+    ] {
+        match chart.get(&code(c)) {
+            Some(a) if a.account_type == want && a.active => {}
+            _ => {
+                return Err(CommandError::invalid(
+                    "master_chart_incomplete",
+                    format!("The sole-trader master chart needs an active {want:?} account {c}."),
+                ));
+            }
+        }
+    }
+    let coding_settings: CodingSettings =
+        serde_json::from_str(DEFAULT_CODING_SETTINGS).expect("the default coding settings parse");
+    coding_settings.validate(chart).map_err(|e| {
+        CommandError::invalid_with(
+            "master_chart_incomplete",
+            format!("The sole-trader master chart doesn't fit the default coding settings: {e}."),
+            &e,
+        )
+    })?;
+    Ok(coding_settings)
 }
 
 pub async fn business(

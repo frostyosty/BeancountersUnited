@@ -47,6 +47,7 @@ export function ClientsPage() {
 }
 
 function NewClientForm() {
+  const me = useCurrentUser();
   const practice = usePractice();
   const create = useCommand([keys.clients]);
   const navigate = useNavigate();
@@ -74,7 +75,16 @@ function NewClientForm() {
   };
 
   if (practice.isSuccess && charts.length === 0) {
-    return <p className="muted">There are no master charts yet, so clients can't be created.</p>;
+    return (
+      <p className="muted">
+        <Icon name="defaults.none_yet" fallback="🌱" /> There are no master charts yet, so clients can't be created.{" "}
+        {can(me, "practice_admin") ? (
+          <Link to="/settings">Install a starter set in Practice settings</Link>
+        ) : (
+          "Ask a practice admin to set one up."
+        )}
+      </p>
+    );
   }
   return (
     <form onSubmit={submit} className="card form">

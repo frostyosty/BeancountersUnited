@@ -176,6 +176,39 @@ fn samples() -> Vec<Sample> {
             "Sam set up the sole trader master chart “Sole trader” with 1 account.",
         ),
         s(
+            "install_starter_set",
+            json!({ "set": "sole_trader" }),
+            "Sam installed the sole trader starter set: a master chart, statement template, \
+             mapping and asset classes.",
+        ),
+        s(
+            "add_master_account",
+            json!({ "entity_type": "sole_trader", "account": { "code": "299", "name": "Koha",
+                    "account_type": "expense", "active": true } }),
+            "Sam added account 299 Koha to the sole trader master chart.",
+        ),
+        s(
+            "rename_master_account",
+            json!({ "entity_type": "company", "code": "200", "name": "Advertising" }),
+            "Sam renamed account 200 in the company master chart from “Ads” to “Advertising”.",
+        )
+        .changed(changes(vec![change(
+            "company master chart account 200",
+            "name",
+            Some("Ads"),
+            Some("Advertising"),
+        )])),
+        s(
+            "set_master_account_active",
+            json!({ "entity_type": "company", "code": "200", "active": false }),
+            "Sam made account 200 in the company master chart inactive.",
+        ),
+        s(
+            "set_master_account_gst",
+            json!({ "entity_type": "sole_trader", "code": "110", "default_gst": null }),
+            "Sam cleared account 110's default GST in the sole trader master chart.",
+        ),
+        s(
             "create_template",
             json!({ "entity_type": "sole_trader", "name": "Standard", "body": template }),
             "Sam created the statement template “Standard”.",

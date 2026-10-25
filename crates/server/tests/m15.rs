@@ -610,6 +610,20 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         "create_master_chart" => {
             Allowed(json!({ "entity_type": "company", "name": "X", "accounts": [] }))
         }
+        "install_starter_set" => Allowed(json!({ "set": "company" })),
+        "add_master_account" => Allowed(json!({
+            "entity_type": "sole_trader",
+            "account": { "code": "998", "name": "X", "account_type": "expense", "active": true },
+        })),
+        "rename_master_account" => {
+            Allowed(json!({ "entity_type": "sole_trader", "code": "290", "name": "X" }))
+        }
+        "set_master_account_active" => {
+            Allowed(json!({ "entity_type": "sole_trader", "code": "275", "active": false }))
+        }
+        "set_master_account_gst" => Allowed(json!({
+            "entity_type": "sole_trader", "code": "290", "default_gst": null,
+        })),
         "create_template" => {
             Allowed(json!({ "entity_type": "sole_trader", "name": "X", "body": template }))
         }

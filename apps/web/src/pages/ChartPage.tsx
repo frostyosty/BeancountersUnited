@@ -1,27 +1,25 @@
 import type { Account } from "@acct/types/Account";
-import type { AccountType } from "@acct/types/AccountType";
 import type { ClientDetail } from "@acct/types/ClientDetail";
-import type { GstCode } from "@acct/types/GstCode";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
+import { AccountTable, AddAccountForm, type ChartCommands } from "../components/AccountEditor";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { keys, useChart, useClient } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import styles from "./ChartPage.module.css";
 
-const TYPES: AccountType[] = ["income", "expense", "asset", "liability", "equity"];
-
-/** Default GST codes, in the order the picker shows them. */
-const GST_CODES: { code: GstCode; label: string }[] = [
-  { code: "standard", label: "Standard" },
-  { code: "zero", label: "Zero-rated" },
-  { code: "exempt", label: "Exempt" },
-  { code: "none", label: "No GST" },
-];
-
-/** Only income and expense accounts have a default GST code. */
-const hasGst = (type: AccountType) => type === "income" || type === "expense";
+/** The commands that edit one client's chart. */
+function clientCommands(clientId: string): ChartCommands {
+  const client_id = clientId;
+  return {
+    rename: (code, name) => ({ kind: "rename_account", payload: { client_id, code, name } }),
+    setGst: (code, default_gst) => ({ kind: "set_account_gst", payload: { client_id, code, default_gst } }),
+    setActive: (code, active) => ({ kind: "set_account_active", payload: { client_id, code, active } }),
+    add: (account) => ({ kind: "add_account", payload: { client_id, account } }),
+    invalidates: [keys.chart(clientId)],
+  };
+}
 
 export function ChartPage() {
   const { clientId = "" } = useParams();
@@ -36,6 +34,8 @@ export function ChartPage() {
   if (!client.data || !chart.data) {
     return <p className="muted">Loading…</p>;
   }
+  const commands = clientCommands(clientId);
+  const retained = client.data.retained_earnings;
   return (
     <>
       <p className="crumbs">
@@ -44,193 +44,19 @@ export function ChartPage() {
       <h1>Chart of accounts</h1>
       <div className={styles.layout}>
         <section>
-          <AccountTable client={client.data} accounts={chart.data} editable={editable} />
-          {editable && <AddAccountForm clientId={clientId} />}
+          <AccountTable
+            accounts={chart.data}
+            editable={editable}
+            commands={commands}
+            tag={(a) => (a.code === retained ? "retained earnings" : null)}
+          />
+          {editable && <AddAccountForm commands={commands} />}
         </section>
         <section>
           <RoundingPriority client={client.data} accounts={chart.data} editable={editable} />
         </section>
       </div>
     </>
-  );
-}
-
-function AccountTable({ client, accounts, editable }: { client: ClientDetail; accounts: Account[]; editable: boolean }) {
-  const [editing, setEditing] = useState<string | null>(null);
-  const [showInactive, setShowInactive] = useState(true);
-  const command = useCommand([keys.chart(client.id)]);
-  const shown = showInactive ? accounts : accounts.filter((a) => a.active);
-
-  return (
-    <>
-      <label className={styles.toggle}>
-        <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Show
-        inactive accounts
-      </label>
-      <ErrorMessage error={command.error} />
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Default GST</th>
-            <th>Active</th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((a) => (
-            <tr key={a.code} className={a.active ? undefined : styles.inactive}>
-              <td>{a.code}</td>
-              <td>
-                {editing === a.code ? (
-                  <RenameForm
-                    account={a}
-                    onDone={(name) => {
-                      if (name === null || name === a.name) {
-                        setEditing(null);
-                        return;
-                      }
-                      command.mutate(
-                        { kind: "rename_account", payload: { client_id: client.id, code: a.code, name } },
-                        { onSuccess: () => setEditing(null) },
-                      );
-                    }}
-                  />
-                ) : editable ? (
-                  <button type="button" className={styles.linkButton} onClick={() => setEditing(a.code)} title="Rename">
-                    {a.name}
-                  </button>
-                ) : (
-                  a.name
-                )}
-                {a.code === client.retained_earnings && <span className={styles.tag}>retained earnings</span>}
-              </td>
-              <td>{a.account_type}</td>
-              <td>
-                {hasGst(a.account_type) && (
-                  <select
-                    aria-label={`${a.code} default GST`}
-                    value={a.default_gst ?? ""}
-                    disabled={!editable || command.isPending}
-                    onChange={(e) =>
-                      command.mutate({
-                        kind: "set_account_gst",
-                        payload: {
-                          client_id: client.id,
-                          code: a.code,
-                          default_gst: e.target.value === "" ? null : (e.target.value as GstCode),
-                        },
-                      })
-                    }
-                  >
-                    <option value="">Not set</option>
-                    {GST_CODES.map((g) => (
-                      <option key={g.code} value={g.code}>
-                        {g.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </td>
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`${a.code} active`}
-                  checked={a.active}
-                  disabled={!editable || command.isPending}
-                  onChange={(e) =>
-                    command.mutate({
-                      kind: "set_account_active",
-                      payload: { client_id: client.id, code: a.code, active: e.target.checked },
-                    })
-                  }
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
-}
-
-function RenameForm({ account, onDone }: { account: Account; onDone: (name: string | null) => void }) {
-  const [name, setName] = useState(account.name);
-  return (
-    <form
-      className={styles.inline}
-      onSubmit={(e) => {
-        e.preventDefault();
-        onDone(name.trim());
-      }}
-    >
-      <input
-        aria-label={`New name for ${account.code}`}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === "Escape" && onDone(null)}
-        autoFocus
-      />
-      <button type="submit">Save</button>
-      <button type="button" onClick={() => onDone(null)}>
-        Cancel
-      </button>
-    </form>
-  );
-}
-
-function AddAccountForm({ clientId }: { clientId: string }) {
-  const add = useCommand([keys.chart(clientId)]);
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [type, setType] = useState<AccountType>("expense");
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    add.mutate(
-      {
-        kind: "add_account",
-        payload: { client_id: clientId, account: { code: code.trim(), name: name.trim(), account_type: type, active: true } },
-      },
-      {
-        onSuccess: () => {
-          setCode("");
-          setName("");
-        },
-      },
-    );
-  };
-
-  return (
-    <form onSubmit={submit} className="card form">
-      <h2>Add an account</h2>
-      <div className="row">
-        <label className="field">
-          <span>Code</span>
-          <input value={code} onChange={(e) => setCode(e.target.value)} required size={8} />
-        </label>
-        <label className="field">
-          <span>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="field">
-          <span>Type</span>
-          <select value={type} onChange={(e) => setType(e.target.value as AccountType)}>
-            {TYPES.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <p className="muted">An account's code and type can't change once it's added, so check them.</p>
-      <ErrorMessage error={add.error} />
-      <div>
-        <button type="submit" className="primary" disabled={add.isPending}>
-          Add account
-        </button>
-      </div>
-    </form>
   );
 }
 
