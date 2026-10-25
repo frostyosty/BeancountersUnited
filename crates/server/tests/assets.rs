@@ -373,16 +373,14 @@ async fn disposal_posts_its_journal_and_reinstating_undoes_it() {
 
 #[tokio::test]
 async fn a_finalised_year_fixes_cost_and_keeps_its_charges() {
-    let (server, _, sam, f) = fixture().await;
-    // Finalising arrives in M5; set FY2025's status directly, as m2_done does.
-    {
-        let mut w = server.state.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&f.year_ids[0])
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    let (server, boss, sam, f) = fixture().await;
+    server
+        .ok(
+            &boss,
+            "finalise_year",
+            json!({ "client_year_id": f.year_ids[0], "accept_uncategorised": true }),
+        )
+        .await;
     let plant = |cost: i64, rate_bp: i64| {
         json!({
             "asset_id": f.asset_ids[0],

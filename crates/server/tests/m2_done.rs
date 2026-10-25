@@ -52,15 +52,15 @@ async fn m2_is_done() {
     let val = server.login("val").await;
     let f = server.load_fixture(&boss, &sam).await;
 
-    // M1's snapshot treats FY2025 as finalised; finalising arrives in M5, so set it here.
-    {
-        let mut w = server.state.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&f.year_ids[0])
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    // M1's snapshot treats FY2025 as finalised. Finalise it for real, so its snapshot exists
+    // for FY2026's comparatives.
+    server
+        .ok(
+            &boss,
+            "finalise_year",
+            json!({ "client_year_id": f.year_ids[0], "accept_uncategorised": true }),
+        )
+        .await;
     let body = server
         .get_bytes(&format!("/api/years/{}/report", f.year_ids[1]), &val)
         .await;

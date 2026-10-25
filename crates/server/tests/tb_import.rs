@@ -169,15 +169,14 @@ async fn imported_books_give_the_same_statements_as_journals() {
         .await;
     assert_eq!(client["years"][1]["books_source"], "tb_import");
 
-    // As in the M1 snapshots, FY2025 is treated as finalised (no finalise command until M5).
-    {
-        let mut w = ctx.server.state.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&ctx.years[0])
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    // As in the M1 snapshots, FY2025 is finalised, through the command so its snapshot exists.
+    ctx.server
+        .ok(
+            &ctx.cookie,
+            "finalise_year",
+            json!({ "client_year_id": ctx.years[0], "accept_uncategorised": true }),
+        )
+        .await;
     for (year, snap) in [FY2025, FY2026].iter().enumerate() {
         let doc = ctx
             .server

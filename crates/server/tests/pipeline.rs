@@ -104,6 +104,29 @@ impl Harness {
         }
     }
 
+    /// Finalises a year as a practice admin. A person signs a year off, so this first adds one.
+    async fn finalise(&self, year_id: &str) {
+        let user_id = self
+            .ok(Command::CreateUser {
+                username: "finaliser".into(),
+                display_name: "Fin Aliser".into(),
+                password: "a long enough password".into(),
+                role: Role::PracticeAdmin,
+            })
+            .await;
+        let admin = Actor {
+            user_id: Some(user_id),
+            role: Role::PracticeAdmin,
+        };
+        let command = Command::FinaliseYear {
+            client_year_id: year_id.into(),
+            accept_uncategorised: Some(true),
+        };
+        if let Err(e) = self.run_as(&admin, command).await {
+            panic!("finalise_year: {:?}", e.body());
+        }
+    }
+
     /// Row counts in every table a command can write, to show a rejection left nothing.
     async fn counts(&self) -> Vec<i64> {
         let mut r = self.store.reader().await.unwrap();
@@ -454,15 +477,7 @@ async fn finalised_years_reject_journals() {
         ))
         .await
         .unwrap();
-    // There's no finalise command until M5, so this test sets the status directly.
-    {
-        let mut w = h.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&year_id)
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    h.finalise(&year_id).await;
     h.rejects(
         &master(),
         journal_on(
@@ -884,14 +899,7 @@ async fn accounts_in_use_stay_active() {
     // Once FY2025 is finalised, sales (P&L) have no balance in an open year, but the bank
     // balance rolls into FY2026.
     let y2 = create_year(&h, &client_id, "2025-04-01", "2026-03-31").await;
-    {
-        let mut w = h.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&y1)
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    h.finalise(&y1).await;
     let err = h
         .rejects(&master(), set_active("600", false), "account_in_use")
         .await;

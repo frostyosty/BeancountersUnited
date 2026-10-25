@@ -68,7 +68,8 @@ opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
 
-# Full debug info for every dependency (Tauri's especially) filled a Codespace's 32 GB disk.
-# Line tables keep backtraces readable; our own crates keep full debug info.
-[profile.dev.package."*"]
+# Full debug info filled disks: a Codespace's 32 GB with Tauri's dependencies, then 60 GB of a
+# Windows target/ with every test binary carrying its own. Line tables keep panics and backtraces
+# readable (file and line); stepping through variables in a debugger needs this raised locally.
+[profile.dev]
 debug = "line-tables-only"

@@ -367,11 +367,13 @@ const PUBLIC: [&str; 4] = ["/api/health", "/api/login", "/api/logout", "/api/sig
 /// About the signed-in user only, or checked per command (`/api/commands`, covered below).
 const OWN: [&str; 2] = ["/api/me", "/api/commands"];
 /// The practice's own data. No business owner sees it.
-const PRACTICE: [&str; 4] = [
+const PRACTICE: [&str; 6] = [
     "/api/practice",
     "/api/users",
     "/api/asset-classes",
     "/api/merchants/{entity_type}",
+    "/api/paragraph-library/{entity_type}",
+    "/api/paragraphs/{id}/push-preview",
 ];
 /// Lists that mix businesses: B sees them, filtered to B's own.
 const LISTS: [&str; 3] = ["/api/clients", "/api/sync", "/api/history"];
@@ -568,6 +570,19 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "accept_invite" => json!({ "token": v.invite_token }),
         "finalise_year" => json!({ "client_year_id": v.year_id }),
         "reopen_year" => json!({ "client_year_id": v.year_id, "reason": "X" }),
+        "add_paragraph" => json!({
+            "entity_type": "sole_trader",
+            "paragraph": { "key": "x", "placement": "note", "title": "X", "body": "X" },
+        }),
+        "revise_paragraph" => json!({
+            "paragraph_id": new_id(), "placement": "note", "title": "X", "body": "X",
+        }),
+        "push_paragraph" => json!({ "paragraph_id": new_id() }),
+        "remove_paragraph" => json!({ "paragraph_id": new_id() }),
+        "pick_notes" => json!({ "client_year_id": v.year_id, "paragraph_ids": [] }),
+        "edit_note" => json!({
+            "client_year_id": v.year_id, "paragraph_id": new_id(), "title": "X", "body": "X",
+        }),
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })
 }

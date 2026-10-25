@@ -1,4 +1,4 @@
-.PHONY: setup dev test check types types-check db-reset web icons desktop desktop-check
+.PHONY: setup dev test check types types-check db-reset web icons desktop desktop-check clean-cache
 
 TYPES_DIR := packages/types/src
 DESKTOP := -p acct-desktop -p acct-dev
@@ -54,3 +54,8 @@ desktop-check: web
 	cargo clippy $(DESKTOP) --all-targets -- -D warnings
 	cargo test $(DESKTOP)
 	cargo test -p acct-server --features embed-web --lib web
+
+# Frees the Rust build cache (target/). Safe, but only while nothing is compiling: the next
+# build starts from scratch.
+clean-cache:
+	cargo clean

@@ -113,6 +113,7 @@ NON-CODE-TODOS.md  everything a person has to do outside the code: checks, appro
 - `make db-reset`: wipe the dev database and load fixtures through the command pipeline.
 - `make desktop-check`: clippy and tests for the desktop apps (needs `scripts/desktop-deps.sh` on Linux). `make check` skips them.
 - `make desktop`: release builds of the desktop apps for this OS.
+- `make clean-cache`: `cargo clean`, to free the Rust build cache when the disk runs low. Only while nothing is compiling.
 - `make icons`: Icon Studio on :8081, for making and swapping the web app's icon images (see Icons and emoji below).
 
 ## Icons and emoji 🎨

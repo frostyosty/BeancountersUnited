@@ -30,16 +30,15 @@ async fn the_fixture_reports_match_the_m1_snapshots_byte_for_byte() {
         .await;
     assert_eq!(live["comparatives"], "unfinalised");
 
-    // M1's snapshots show FY2026 with FY2025 finalised. There's no finalise command until M5,
-    // so mark it finalised directly; FY2025's snapshot TB would equal its live TB anyway.
-    {
-        let mut w = server.state.store.writer().await;
-        acct_store::sqlx::query("UPDATE client_years SET status = 'finalised' WHERE id = ?")
-            .bind(&f.year_ids[0])
-            .execute(&mut *w)
-            .await
-            .unwrap();
-    }
+    // M1's snapshots show FY2026 with FY2025 finalised. Finalise it with the command, so its
+    // snapshot exists; the snapshot TB equals FY2025's live TB.
+    server
+        .ok(
+            &boss,
+            "finalise_year",
+            json!({ "client_year_id": f.year_ids[0], "accept_uncategorised": true }),
+        )
+        .await;
 
     // Viewers can read reports too.
     let val = server.login("val").await;
