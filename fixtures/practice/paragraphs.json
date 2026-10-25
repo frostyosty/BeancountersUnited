@@ -1,0 +1,50 @@
+[
+  {
+    "key": "basis_of_preparation",
+    "placement": "policy",
+    "title": "Basis of preparation",
+    "body": "These are special purpose financial statements for {business_name}, a business owned by one person. They cover the period from {period_start} to {balance_date}, and were prepared for the owner and to support the owner's income tax return. They are not general purpose financial statements.\n\nAmounts are measured at historical cost."
+  },
+  {
+    "key": "gst_registered",
+    "placement": "policy",
+    "title": "Goods and services tax (GST)",
+    "body": "{business_name} is registered for GST. Income and expenses are shown excluding GST. GST owed to or by Inland Revenue at {balance_date} is included in the Statement of Financial Position."
+  },
+  {
+    "key": "gst_not_registered",
+    "placement": "policy",
+    "title": "Goods and services tax (GST)",
+    "body": "{business_name} is not registered for GST, so all amounts include GST."
+  },
+  {
+    "key": "depreciation",
+    "placement": "policy",
+    "title": "Depreciation",
+    "body": "Fixed assets are shown at cost less accumulated depreciation. Depreciation is charged at these rates:\n{depreciation_methods}"
+  },
+  {
+    "key": "going_concern",
+    "placement": "policy",
+    "title": "Going concern",
+    "body": "These financial statements have been prepared on the basis that {business_name} will keep trading for the foreseeable future."
+  },
+  {
+    "key": "changes_in_policies",
+    "placement": "policy",
+    "title": "Changes in accounting policies",
+    "body": "The accounting policies above are the same as those used for the previous period."
+  },
+  {
+    "key": "income_tax",
+    "placement": "note",
+    "title": "Income tax",
+    "body": "{business_name} is not taxed separately from its owner. Income tax on its profit is the owner's, so no income tax expense is shown. Income tax paid from the business's accounts is shown in owner's equity."
+  },
+  {
+    "key": "owners_equity",
+    "placement": "note",
+    "title": "Owner's equity",
+    "body": "Owner's equity is the owner's investment in {business_name}. Capital introduced is money and assets the owner put into the business during the period. Drawings are money and goods the owner took out for personal use.\n\nMoney out, not yet sorted, is spending from the business's accounts that hasn't yet been identified as a business expense. It is treated as the owner's until it is."
+  }
+]

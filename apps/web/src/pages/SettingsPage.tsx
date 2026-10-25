@@ -3,10 +3,12 @@ import type { MasterChartView } from "@acct/types/MasterChartView";
 import type { Role } from "@acct/types/Role";
 import type { UserView } from "@acct/types/UserView";
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { AssetAccountFields, DepreciationFields, NO_ACCOUNTS } from "../components/DepreciationFields";
 import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft, toDraft, toSettings } from "../lib/depreciation";
+import { Icon } from "../lib/icons";
 import { keys, useAssetClasses, usePractice, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 
@@ -74,6 +76,12 @@ function Defaults() {
         </tbody>
       </table>
       <p className="muted">Editing master charts, templates and mappings comes later; changes never reach existing clients.</p>
+      <p>
+        <Link to="/settings/paragraphs">
+          <Icon name="notes.library" fallback="📚" /> Paragraph library
+        </Link>{" "}
+        <span className="muted">(accounting policies and notes)</span>
+      </p>
     </>
   );
 }

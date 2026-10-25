@@ -117,3 +117,13 @@ pub async fn set_books_source(
         .await?;
     Ok(())
 }
+
+/// Finalises or reopens a year. The command pipeline checks the rules first.
+pub async fn set_status(conn: &mut SqliteConnection, id: &str, status: YearStatus) -> Result<()> {
+    sqlx::query("UPDATE client_years SET status = ? WHERE id = ?")
+        .bind(enum_text(&status))
+        .bind(id)
+        .execute(conn)
+        .await?;
+    Ok(())
+}

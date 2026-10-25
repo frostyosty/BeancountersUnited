@@ -164,6 +164,11 @@ drill-down, although they still count in the totals, so this needs the practice'
   the full end date instead, such as "30 Sep 2026 $".
 - When the prior year isn't finalised, a notice above the statements says so, and the prior column
   heading carries an asterisk with a footnote.
+- **Part years (decided 2026-10-25).** A period that isn't exactly 12 months, such as a business's
+  first year from its start date to 31 March, is headed "For the period ended …", not "For the year
+  ended …". A full year keeps "year ended".
+- **First years (confirmed 2026-10-25).** With no prior year there's no comparative column at all: it
+  stays blank, and no synthetic prior year is invented.
 - Drill-down shows each account's real balance in cents. The difference between the line's whole
   dollars and those balances shows as a separate rounding entry, so the drill-down adds up to the line.
 
@@ -600,7 +605,10 @@ list is under "Open".
   - 810 is called "GST payable".
   - GST rounding (295) and loss (gain) on disposal (250) each have their own expense line. Where 295
     shows is the practice's choice, through the mapping.
-- **Rounding priority default:** 290, 205, 120, 960, 810.
+- **Rounding priority default:** 290, 205, 245, 225, 120, 960, 810. Phone and internet (245) and
+  vehicle costs (225) were added on 2026-10-25 (owner's call), because most sole traders have one of
+  them, so the expenses section rarely falls back to its largest line. Businesses set up before then
+  keep the list they copied.
 - **Coding settings (decided 2026-10-23).** When the owner codes a bank line, these postings use the
   business's coding settings, not fixed codes. The practice defaults are in
   `fixtures/practice/sole-trader-coding-settings.json`. Accountants can change them per business, and a
@@ -628,6 +636,53 @@ list is under "Open".
 - **Not lined up with the IR3 in M10.** That waits on the IR10 question above.
 - **Entertainment** has no category yet. IRD's half-claim rule is backlog (**check**), so until it's
   built, entertainment can only be marked personal.
+
+### Accounting policies and notes (decided 2026-10-25)
+The practice keeps a paragraph library per entity type, in our own words (hard rule 3). Each
+client-year picks paragraphs and keeps its own copies, which staff can edit; the notes the statements
+show are those copies with the client's fields filled in. Asked and answered on 2026-10-25.
+
+- **Layout.** The notes follow the statements under the heading "Notes to the financial statements".
+  - Note 1 is "Statement of accounting policies". Every paragraph placed as a *policy* goes inside it,
+    under its own title as a sub-heading, in the order the year picked them.
+  - Every paragraph placed as a *note* is a numbered note of its own (2, 3, …), in picked order. With no
+    policies picked, the first note is 1.
+  - The text is plain: no emoji or formatting. A blank line in a paragraph starts a new paragraph of
+    text; a single line break stays a line break, which is how lists such as the depreciation rates
+    show.
+- **Fields.** `{business_name}` (the client's name), `{period_start}` and `{balance_date}` (the year's
+  first and last days, written "1 April 2025" and "31 March 2026"), and `{depreciation_methods}` (one
+  line per asset class held in the year, in the register's order, each listing its distinct methods:
+  "Tools and equipment: 25% diminishing value", "Vehicles: 10.75% straight line; 30% diminishing
+  value", "Fitout: straight line over 5 years", "Art: not depreciated"). `{{` and `}}` write a literal
+  brace.
+  - A field the notes don't know, or a stray brace, is refused when a paragraph or copy is saved.
+  - A field with nothing to fill it, such as the depreciation policy in a year with no assets, fails
+    the year's report with `notes_failed`, naming the paragraph and field. A note never goes out with a
+    gap. The fix is to unpick that paragraph or edit the year's copy.
+- **Starter set for sole traders** (`fixtures/practice/paragraphs.json`; formal wording chosen over a
+  plainer alternative):
+  - Policies: basis of preparation (special purpose statements for the owner and the owner's income
+    tax return, at historical cost); GST, in two versions, registered and not registered, of which a
+    year picks one; depreciation, with the rates; going concern; changes in accounting policies.
+  - Notes: income tax (the tax is the owner's, so there's no income tax expense, and tax paid from the
+    business shows in owner's equity); owner's equity (capital introduced, drawings, and money out not
+    yet sorted).
+  - The two extras, changes in accounting policies and owner's equity, were drafted after the others
+    and still need the practice to read them (`NON-CODE-TODOS.md`).
+- **Defaults never reach back.**
+  - Revising a library paragraph writes a new version; no year's copy changes.
+  - `push_paragraph` brings the latest version onto open years, after its preview
+    (`GET /api/paragraphs/{id}/push-preview`). It never touches a finalised year.
+  - A copy staff have edited is kept as it is: the preview lists it as "kept: edited for this client",
+    so staff can update it by hand. (Chosen over overwriting edited copies.)
+  - A new year starts with copies of its neighbouring year's notes, edits included.
+  - `remove_paragraph` takes a paragraph out of the library. Years that picked it keep their copies
+    (and their reports keep the note); a year may keep or reorder such a copy, but once dropped it
+    can't be picked again. A removed paragraph can't be revised or pushed. Its key is free to add
+    again as a new paragraph, but a year can't hold the old copy and the new paragraph together.
+- **Finalised years.** Picking or editing notes in a finalised year is refused. The notes are part of
+  the ReportDoc, so the snapshot holds exactly the wording that was signed.
 
 ### Bank statement formats (decided 2026-10-19)
 - **Order.**
@@ -961,6 +1016,102 @@ depend on order, because of the bands and the cents rounding of boxes 8 and 12 a
 - 960: personal 143.20 + 6.50 + 6.50 + 130.75 + 200.00 + 48.20 + 150.00 = 685.15, plus the private parts
   46.01 + 43.57 + 19.99 = 109.57.
 - 965 is nil.
+
+Hand-checked by: (nobody yet).
+
+## Worked example: the sole trader's statements (worked 2026-10-25; a person still has to check it)
+This is M15's check that the P&L and balance sheet are right for a sole trader. It starts from the
+ledger the Save tax example above ends with (`expected.tb` in `fixtures/clients/marsh-hollow-coding.json`)
+and lays it out with the sole-trader template and mapping (`fixtures/practice/sole-trader-*`). Claude worked
+it by hand and cross-checked it with a separate script that doesn't use `acct-core`. The golden test is
+`crates/core/tests/sole_trader_statements.rs`, which snapshots the ReportDoc JSON and asserts the figures
+below. It counts as hand-checked only once a person has gone through it.
+
+**Setup.**
+- The year is the business's first: 1 August 2025 (the start date) to 31 March 2026. The ledger only
+  holds August and September, because that's all the statements cover, so these are the statements as
+  they stand at 30 September, not a full year. It isn't 12 months, so it's headed "For the period
+  ended 31 March 2026" ("Part years").
+- There's no prior year, so there's no comparative column: the ReportDoc says `comparatives: none`, and
+  every prior amount is blank, not nil ("Statement amounts and columns").
+- The rounding priority list is the practice default: 290, 205, 245, 225, 120, 960, 810.
+- Lines with no balance are left out ("Nil lines", still provisional): other income, every fixed asset
+  line, accounts payable, credit cards, loans, opening equity, and money out not yet sorted (965 is nil
+  once every line is coded). So are the fixed assets and non-current liabilities groups, whose lines
+  are all left out.
+
+**Statement of Financial Performance.** Each line is its exact amount rounded half away from zero; each
+total is its own exact amount rounded.
+
+| Line | Accounts | Exact | Rounded | Shown |
+|---|---|---|---|---|
+| Sales | 100 | 2,626.00 | 2,626 | 2,626 |
+| Interest received | 110 | 3.76 | 4 | 4 |
+| Income not yet sorted | 140 (the Kowhai gap) | 330.43 | 330 | 330 |
+| **Total income** | | 2,960.19 | | **2,960** |
+| Purchases and materials (cost of sales) | 150 | 346.43 | 346 | 346 |
+| **Gross profit** | | 2,613.76 | | **2,614** |
+| Insurance | 215 | 186.96 | 187 | 187 |
+| Rent | 230 | 39.13 | 39 | 39 |
+| Phone and internet | 245 | 17.39 | 17 | 18 |
+| Power and gas | 255 | 25.97 | 26 | 26 |
+| Freight and courier | 260 | 119.13 | 119 | 119 |
+| Stationery and office supplies | 265 | 65.65 | 66 | 66 |
+| Software and subscriptions | 270 | 43.46 | 43 | 43 |
+| Small tools and equipment | 280 | 104.35 | 104 | 104 |
+| **Total expenses** | | 602.04 | | **602** |
+| **Net profit for the year** | | 2,011.72 | | **2,012** |
+
+- Income: 2,626 + 4 + 330 = 2,960, which is 2,960.19 rounded, so nothing to absorb.
+- Gross profit: 2,960 − 346 = 2,614, which is 2,613.76 rounded.
+- Expenses: the rounded lines add to 601, but 602.04 rounds to 602, so $1 has to go on one line.
+  290 and 205 are nil, and 245 is next on the list with a balance, so phone and internet takes it and
+  shows 18. Its drill-down shows 17.39 plus a rounding entry of $1, and there's no warning. (Before 245
+  and 225 joined the default list on 2026-10-25, nothing on it mapped into expenses, so the largest
+  line, insurance, took the $1 with a `rounding_fallback` warning.)
+- Net profit is protected first: 2,011.72 rounds to 2,012, and 2,614 − 602 = 2,012, so it holds with no
+  change.
+
+**Statement of Financial Position.**
+
+| Line | Accounts | Exact | Rounded | Shown |
+|---|---|---|---|---|
+| Bank accounts | 600.01 2,247.12 + 600.02 2,830.73 + 600.03 1,153.76 | 6,231.61 | 6,232 | 6,232 |
+| GST to claim, records not yet held | 615 | 28.04 | 28 | 28 |
+| **Total current assets** | | 6,259.65 | | **6,260** |
+| **Total assets** (`protect: 2`) | | 6,259.65 | | **6,260** |
+| GST payable | 810 | 329.23 | 329 | 330 |
+| GST refunds received | 812 | 163.42 | 163 | 163 |
+| **Total current liabilities** | | 492.65 | | **493** |
+| **Total liabilities** | | 492.65 | | **493** |
+| **Net assets** | | 5,767.00 | | **5,767** |
+| Capital introduced | 950 | 4,550.00 | 4,550 | 4,550 |
+| Net profit for the year | the P&L's figure as shown | 2,011.72 | | 2,012 |
+| Drawings | 960 | (794.72) | (795) | (795) |
+| **Closing equity** (`protect: 3`) | | 5,767.00 | | **5,767** |
+
+- Current assets: 6,232 + 28 = 6,260, which is 6,259.65 rounded.
+- Current liabilities: the rounded lines add to 492, but 492.65 rounds to 493. 810 is on the priority
+  list (fifth) and maps into this section with a balance, so GST payable takes the $1 and shows 330. No
+  warning.
+- Net assets: 6,260 − 493 = 5,767, which is 5,767.00 exactly.
+- Closing equity: 4,550 + 2,012 − 795 = 5,767, and 4,550.00 + 2,011.72 − 794.72 = 5,767.00. The profit in
+  equity is the P&L's 2,012 as shown (rule 7). Equity's lines add up with no adjustment: the two roundings
+  (profit up 0.28, drawings down 0.28) cancel.
+- The balance sheet balances: net assets 5,767 = closing equity 5,767, so the template's check passes.
+- Drawings show in brackets, as decided for the sole-trader template. The 794.72 is the personal lines
+  685.15 plus the private shares 109.57 (see the Save tax example).
+
+**What an accountant would ask about**, all visible on the statements:
+- Income not yet sorted, 330: the Kowhai gap from 1 to 9 September, still counted as income until its
+  statement arrives.
+- GST to claim, records not yet held, 28: the Faro premium's GST, waiting on the supply information.
+- GST refunds received, 163: the refund that doesn't fit a business registered on 1 August.
+- The ledger's GST payable, 329.23, is 0.01 under box 15's 329.24; it clears to 295 when the return is
+  filed (M14), and then shows as its own expense line.
+
+**Cross-check.** The script recomputes every line and total from `expected.tb` with its own rounding
+code, independently of `acct-core`. It gives the same figures and the same two absorbing lines.
 
 Hand-checked by: (nobody yet).
 

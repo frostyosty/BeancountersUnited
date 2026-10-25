@@ -15,6 +15,8 @@ import type { LineCoding } from "./LineCoding";
 import type { Mapping } from "./Mapping";
 import type { Money } from "./Money";
 import type { OpeningBalance } from "./OpeningBalance";
+import type { Paragraph } from "./Paragraph";
+import type { Placement } from "./Placement";
 import type { Role } from "./Role";
 import type { SuggestedCoding } from "./SuggestedCoding";
 import type { TbLine } from "./TbLine";
@@ -37,4 +39,4 @@ asset_class_id?: string, } } | { "kind": "code_bank_lines", "payload": { lines: 
 /**
  * The model that made them, such as `claude-haiku-5-5`.
  */
-model: string, suggestions: Array<SuggestedCoding>, } } | { "kind": "sign_up", "payload": { email: string, display_name: string, password: string, business_name: string, start_date: string, gst?: GstSetup, } } | { "kind": "create_invite", "payload": { client_id: string, email: string, token: string, } } | { "kind": "accept_invite", "payload": { token: string, } };
+model: string, suggestions: Array<SuggestedCoding>, } } | { "kind": "sign_up", "payload": { email: string, display_name: string, password: string, business_name: string, start_date: string, gst?: GstSetup, } } | { "kind": "create_invite", "payload": { client_id: string, email: string, token: string, } } | { "kind": "accept_invite", "payload": { token: string, } } | { "kind": "finalise_year", "payload": { client_year_id: string, accept_uncategorised?: boolean, } } | { "kind": "reopen_year", "payload": { client_year_id: string, reason: string, } } | { "kind": "add_paragraph", "payload": { entity_type: string, paragraph: Paragraph, } } | { "kind": "revise_paragraph", "payload": { paragraph_id: string, placement: Placement, title: string, body: string, } } | { "kind": "pick_notes", "payload": { client_year_id: string, paragraph_ids: Array<string>, } } | { "kind": "edit_note", "payload": { client_year_id: string, paragraph_id: string, title: string, body: string, } } | { "kind": "push_paragraph", "payload": { paragraph_id: string, } } | { "kind": "remove_paragraph", "payload": { paragraph_id: string, } };

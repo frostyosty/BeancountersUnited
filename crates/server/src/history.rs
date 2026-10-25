@@ -20,7 +20,7 @@ use acct_store::coding::{LineState, LineStateKind};
 use acct_store::log::LoggedCommand;
 use acct_store::{
     SqliteConnection, ai as ai_store, assets as asset_store, bank, clients, coding, journals, log,
-    users,
+    users, years,
 };
 use axum::Json;
 use axum::extract::rejection::QueryRejection;
@@ -419,6 +419,16 @@ async fn observe(
                 facts.push(fact("AI suggestions", "AI suggestions", on_off(on).into()));
             }
         }
+        C::FinaliseYear { client_year_id, .. } | C::ReopenYear { client_year_id, .. } => {
+            if let Some(y) = years::get(conn, client_year_id).await? {
+                let status = match y.status {
+                    acct_store::years::YearStatus::Open => "open",
+                    acct_store::years::YearStatus::Finalised => "finalised",
+                };
+                let subject = format!("the year ending {}", day(y.year.end()));
+                facts.push(fact(&subject, "status", status.into()));
+            }
+        }
         C::Initialise { .. }
         | C::CreateUser { .. }
         | C::ChangeOwnPassword { .. }
@@ -444,7 +454,33 @@ async fn observe(
         | C::RecordSuggestions { .. }
         | C::SignUp { .. }
         | C::CreateInvite { .. }
-        | C::AcceptInvite { .. } => {}
+        | C::AcceptInvite { .. }
+        | C::AddParagraph { .. }
+        | C::ReviseParagraph { .. }
+        | C::PushParagraph { .. }
+        | C::RemoveParagraph { .. } => {}
+        C::PickNotes { client_year_id, .. } => {
+            let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
+            let titles: Vec<&str> = notes.iter().map(|n| n.paragraph.title.trim()).collect();
+            let value = if titles.is_empty() {
+                "none".to_owned()
+            } else {
+                titles.join(", ")
+            };
+            facts.push(fact("this year's notes", "notes", value));
+        }
+        C::EditNote {
+            client_year_id,
+            paragraph_id,
+            ..
+        } => {
+            let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
+            if let Some(n) = notes.iter().find(|n| &n.paragraph_id == paragraph_id) {
+                let subject = format!("the note “{}”", n.paragraph.key);
+                facts.push(fact(&subject, "title", n.paragraph.title.clone()));
+                facts.push(fact(&subject, "wording", n.paragraph.body.clone()));
+            }
+        }
     }
     Ok(facts)
 }
@@ -1106,6 +1142,40 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
         C::SignUp { business_name, .. } => format!("signed up with the business {business_name}"),
         C::CreateInvite { email, .. } => format!("invited {email} to be the business's accountant"),
         C::AcceptInvite { .. } => "accepted an invite to work on this business".into(),
+        C::FinaliseYear {
+            accept_uncategorised,
+            ..
+        } => {
+            let year = named("a year");
+            if *accept_uncategorised == Some(true) {
+                format!("finalised {year}, accepting any unsorted bank lines as they are")
+            } else {
+                format!("finalised {year}")
+            }
+        }
+        C::ReopenYear { reason, .. } => {
+            format!("reopened {}, because “{}”", named("a year"), reason.trim())
+        }
+        C::AddParagraph {
+            entity_type,
+            paragraph,
+        } => format!(
+            "added “{}” to the {} paragraph library",
+            paragraph.title.trim(),
+            entity_type.replace('_', " ")
+        ),
+        C::ReviseParagraph { title, .. } => {
+            format!("revised the library paragraph “{}”", title.trim())
+        }
+        C::PickNotes { paragraph_ids, .. } => format!(
+            "chose this year's notes ({})",
+            plural(paragraph_ids.len(), "paragraph", "paragraphs")
+        ),
+        C::EditNote { title, .. } => format!("edited this year's note “{}”", title.trim()),
+        C::PushParagraph { .. } => {
+            "pushed a library paragraph's latest wording onto open years".into()
+        }
+        C::RemoveParagraph { .. } => "removed a paragraph from the library".into(),
     }
 }
 

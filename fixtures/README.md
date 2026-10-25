@@ -13,6 +13,11 @@ and figures are made up.
   (ADR 009's layer 3) for the invented merchants in `bank-statements/`, each a description pattern
   and the coding it suggests. The asset class rates are placeholders (1 basis point,
   marked `rate_placeholder`) until M11 sets them from IRD's rates.
+- `practice/paragraphs.json`: the sole-trader starter set for the paragraph library (M15), in our own
+  wording, as `acct_core::notes::Paragraph`s. `docs/domain.md`, "Accounting policies and notes",
+  explains the placements and fields.
+- `presentation/amounts.json`: how statements show whole-dollar amounts, as test vectors (ADR 010).
+  `crates/pdf`'s tests check the PDF against them; the web preview's tests should too.
 - `ai/labelled-lines.json`: ADR 009's bake-off set, 350 NZ-style bank lines with invented merchant
   names, each labelled with the category and GST code Save tax should pick, plus the categories a
   sole trader is offered. `acctd ai-eval` runs a provider over it. The labels follow the chart's
@@ -40,4 +45,7 @@ and figures are made up.
 Amounts are integer cents, debits positive. `acct-core`'s fixture tests read these files at compile
 time and snapshot the resulting ReportDocs. `make db-reset` loads them into the dev database through
 the command pipeline (`acct-load-fixtures`), with dev users `admin`, `staff` and `viewer`, password
-`fixture-password`.
+`fixture-password`. It loads the company defaults and client, then the sole-trader defaults, the
+paragraph library, and an invented sole trader, Tui Street Joinery, with one open year (FY2026, no
+books yet) whose notes are picked, so the Notes tab and the notes in its statements have something
+to show.

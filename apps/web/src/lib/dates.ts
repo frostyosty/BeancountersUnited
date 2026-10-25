@@ -37,3 +37,16 @@ export function formatDate(iso: string): string {
   const d = parse(iso);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
+
+/** Whether `start` to `end` is exactly 12 months, such as 1 Apr 2025 to 31 Mar 2026. */
+export function isFullYear(start: string, end: string): boolean {
+  return nextYear(addDays(start, -1)).end === end;
+}
+
+/**
+ * "Year ended 31 Mar 2026", or "Period ended 31 Mar 2026" when the period isn't exactly 12 months,
+ * such as a business's first year (`docs/domain.md`, "Part years").
+ */
+export function periodEndedLabel(start: string, end: string): string {
+  return `${isFullYear(start, end) ? "Year" : "Period"} ended ${formatDate(end)}`;
+}

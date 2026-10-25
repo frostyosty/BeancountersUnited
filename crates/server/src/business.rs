@@ -48,8 +48,10 @@ const OWNERS_EQUITY: &str = "970";
 const BANK_PARENT: &str = "600";
 /// Credit cards: 850.01, 850.02, ... (liabilities).
 const CARD_PARENT: &str = "850";
-/// The default rounding priority list for sole traders.
-const ROUNDING_PRIORITY: &[&str] = &["290", "205", "120", "960", "810"];
+/// The default rounding priority list for sole traders (`docs/domain.md`, "Rounding priority
+/// default"). Each business gets a copy at setup, so changing it never reaches back.
+const ROUNDING_PRIORITY: &str =
+    include_str!("../../../fixtures/practice/sole-trader-rounding-priority.json");
 
 /// The GST accounting basis. M10 supports payments only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -130,11 +132,12 @@ pub async fn set_up(
             &e,
         )
     })?;
-    let rounding_priority: Vec<AccountCode> = ROUNDING_PRIORITY
-        .iter()
-        .map(|c| code(c))
-        .filter(|c| chart.get(c).is_some())
-        .collect();
+    let rounding_priority: Vec<AccountCode> =
+        serde_json::from_str::<Vec<AccountCode>>(ROUNDING_PRIORITY)
+            .expect("the default rounding priority list parses")
+            .into_iter()
+            .filter(|c| chart.get(c).is_some())
+            .collect();
     let id = new_id();
     clients::insert(
         tx,
@@ -914,6 +917,7 @@ pub(crate) async fn post(
     reverses_journal_id: Option<String>,
     seq: i64,
 ) -> Result<String, CommandError> {
+    crate::finalise::ensure_open(tx, &year.id).await?;
     let chart = clients::chart(tx, &year.client_id).await?;
     journal.validate(&chart, &year.year).map_err(|errors| {
         CommandError::invalid_with("invalid_journal", "The journal has problems.", errors)

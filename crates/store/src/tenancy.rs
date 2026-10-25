@@ -62,6 +62,18 @@ pub async fn has_owner(conn: &mut SqliteConnection, client_id: &str) -> Result<b
     Ok(n > 0)
 }
 
+/// Whether a practice user has accepted this client's invite, so the practice now prepares its
+/// accounts.
+pub async fn has_accountant(conn: &mut SqliteConnection, client_id: &str) -> Result<bool> {
+    let (n,): (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM client_access WHERE client_id = ? AND access = 'accountant'",
+    )
+    .bind(client_id)
+    .fetch_one(conn)
+    .await?;
+    Ok(n > 0)
+}
+
 /// The clients `user_id` has a row for, by id.
 pub async fn clients_for_user(conn: &mut SqliteConnection, user_id: &str) -> Result<Vec<String>> {
     let rows: Vec<(String,)> =

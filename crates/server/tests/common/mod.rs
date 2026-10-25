@@ -75,6 +75,25 @@ impl Server {
         server
     }
 
+    /// Closes the database and opens it again from disk, as a server restart would. Sessions are
+    /// in the database, so cookies from before still work.
+    pub async fn restart(self) -> Server {
+        let Server { _dir, state } = self;
+        let path = _dir.path().join("acct.db");
+        let store = Arc::try_unwrap(state.store)
+            .unwrap_or_else(|_| panic!("something still holds the store"));
+        store.close().await.unwrap();
+        let store = Store::open(&path).await.unwrap();
+        Server {
+            _dir,
+            state: AppState {
+                store: Arc::new(store),
+                suggester: None,
+                presence: Arc::default(),
+            },
+        }
+    }
+
     pub fn app(&self) -> Router {
         app(self.state.clone())
     }
@@ -128,7 +147,9 @@ pub async fn split(response: Response<Body>) -> (StatusCode, Value) {
     let body = if bytes.is_empty() {
         Value::Null
     } else {
-        serde_json::from_slice(&bytes).unwrap()
+        // Not every route answers in JSON (the statements PDF doesn't).
+        serde_json::from_slice(&bytes)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
     };
     (status, body)
 }

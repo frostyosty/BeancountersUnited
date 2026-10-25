@@ -3,13 +3,17 @@
 //! This crate does no IO and reads no clock, randomness or environment, so the same inputs
 //! always give byte-identical outputs.
 
+pub mod analysis;
 pub mod bank;
 pub mod chart;
 pub mod coding;
 pub mod depreciation;
+pub mod finalise;
+pub mod gl;
 pub mod ledger;
 pub mod mapping;
 pub mod money;
+pub mod notes;
 pub mod reportdoc;
 pub mod tax;
 pub mod template;

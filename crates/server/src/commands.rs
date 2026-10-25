@@ -1,6 +1,7 @@
 //! The commands clients submit to `POST /api/commands`, and what they get back.
 
 use acct_core::coding::{Coding, CodingSettings};
+use acct_core::notes::{Paragraph, Placement};
 use acct_core::{
     Account, AccountCode, AssetAccounts, DepreciationSettings, Disposal, GstCode, JournalLine,
     Mapping, Money, OpeningBalance, TbLine, Template,
@@ -448,6 +449,59 @@ pub enum Command {
     },
     /// A practice user accepts an invite, which lets them see and work on that business.
     AcceptInvite { token: String },
+    /// Finalises a year (M15): checks it's ready, stores the snapshot (the TB, the pinned template
+    /// and mapping versions, the ReportDoc and its SHA-256), and locks the year. Practice admin
+    /// only, signed in. `accept_uncategorised` says the accountant accepts any bank lines still
+    /// unsorted as they are; it's kept in the log with the command.
+    FinaliseYear {
+        client_year_id: String,
+        #[serde(default)]
+        #[ts(optional)]
+        accept_uncategorised: Option<bool>,
+    },
+    /// Reopens a finalised year so its numbers can change again. Practice admin only, with a
+    /// reason, which is kept in the log. The year's snapshots stay on record. A later finalised
+    /// year has to be reopened first.
+    ReopenYear {
+        client_year_id: String,
+        reason: String,
+    },
+    /// Adds a paragraph to an entity type's library (M15), in our own wording (hard rule 3), with
+    /// fields such as `{business_name}`. Practice admin only.
+    AddParagraph {
+        entity_type: String,
+        paragraph: Paragraph,
+    },
+    /// Writes a new version of a library paragraph. Its key stays. No year's copy changes until
+    /// `push_paragraph`. Practice admin only.
+    ReviseParagraph {
+        paragraph_id: String,
+        placement: Placement,
+        title: String,
+        body: String,
+    },
+    /// Sets which library paragraphs an open year's notes use, in order. Paragraphs it already
+    /// has keep their copies (and any edits); new ones are copied at the latest version; ones
+    /// left off are dropped.
+    PickNotes {
+        client_year_id: String,
+        paragraph_ids: Vec<String>,
+    },
+    /// Edits an open year's copy of a paragraph. The library is unchanged, and later pushes skip
+    /// this copy.
+    EditNote {
+        client_year_id: String,
+        paragraph_id: String,
+        title: String,
+        body: String,
+    },
+    /// Pushes a library paragraph's latest version onto every open year's unedited copy of it.
+    /// Preview it with `GET /api/paragraphs/{id}/push-preview`. Finalised years and edited copies
+    /// are left alone. Practice admin only.
+    PushParagraph { paragraph_id: String },
+    /// Takes a paragraph out of the library. Years that picked it keep their copies, but no year
+    /// can newly pick it. Its key can be added again. Practice admin only.
+    RemoveParagraph { paragraph_id: String },
 }
 
 impl Command {
@@ -506,6 +560,14 @@ impl Command {
             Command::SignUp { .. } => "sign_up",
             Command::CreateInvite { .. } => "create_invite",
             Command::AcceptInvite { .. } => "accept_invite",
+            Command::FinaliseYear { .. } => "finalise_year",
+            Command::ReopenYear { .. } => "reopen_year",
+            Command::AddParagraph { .. } => "add_paragraph",
+            Command::ReviseParagraph { .. } => "revise_paragraph",
+            Command::PickNotes { .. } => "pick_notes",
+            Command::EditNote { .. } => "edit_note",
+            Command::PushParagraph { .. } => "push_paragraph",
+            Command::RemoveParagraph { .. } => "remove_paragraph",
         }
     }
 

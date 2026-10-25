@@ -1,0 +1,23 @@
+---
+source: crates/core/src/notes.rs
+expression: text
+---
+1. Statement of accounting policies
+  Basis of preparation
+    These are special purpose financial statements for Marsh Hollow Carpentry, a business owned by one person. They cover the period from 1 April 2025 to 31 March 2026, and were prepared for the owner and to support the owner's income tax return. They are not general purpose financial statements.
+    Amounts are measured at historical cost.
+  Goods and services tax (GST)
+    Marsh Hollow Carpentry is registered for GST. Income and expenses are shown excluding GST. GST owed to or by Inland Revenue at 31 March 2026 is included in the Statement of Financial Position.
+  Depreciation
+    Fixed assets are shown at cost less accumulated depreciation. Depreciation is charged at these rates:
+    Tools and equipment: 25% diminishing value
+    Vehicles: 30% diminishing value
+  Going concern
+    These financial statements have been prepared on the basis that Marsh Hollow Carpentry will keep trading for the foreseeable future.
+  Changes in accounting policies
+    The accounting policies above are the same as those used for the previous period.
+2. Income tax
+    Marsh Hollow Carpentry is not taxed separately from its owner. Income tax on its profit is the owner's, so no income tax expense is shown. Income tax paid from the business's accounts is shown in owner's equity.
+3. Owner's equity
+    Owner's equity is the owner's investment in Marsh Hollow Carpentry. Capital introduced is money and assets the owner put into the business during the period. Drawings are money and goods the owner took out for personal use.
+    Money out, not yet sorted, is spending from the business's accounts that hasn't yet been identified as a business expense. It is treated as the owner's until it is.

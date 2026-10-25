@@ -106,3 +106,32 @@
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+.note h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.note h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 0.95rem;
+}
+
+.noteText {
+  white-space: pre-line;
+  margin: 0 0 var(--space-2);
+}
+
+.toolbar {
+  margin: 0 0 var(--space-3);
+}
+
+.pdf {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-raised);
+  color: var(--text);
+  text-decoration: none;
+}

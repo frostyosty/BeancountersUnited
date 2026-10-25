@@ -1,0 +1,30 @@
+.card {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  max-width: 48rem;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.meta {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* The wording as written, fields and blank lines included. */
+.body {
+  white-space: pre-wrap;
+}
+
+.confirm {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}

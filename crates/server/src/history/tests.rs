@@ -500,6 +500,62 @@ fn samples() -> Vec<Sample> {
             json!({ "token": "ab" }),
             "Sam accepted an invite to work on this business.",
         ),
+        s(
+            "finalise_year",
+            json!({ "client_year_id": "y1", "accept_uncategorised": true }),
+            "Bo finalised the year ending 31 Mar 2026, accepting any unsorted bank lines as they are.",
+        )
+        .by(Some("u-bo"))
+        .changed(changes(vec![change(
+            "the year ending 31 Mar 2026",
+            "status",
+            Some("open"),
+            Some("finalised"),
+        )])),
+        s(
+            "reopen_year",
+            json!({ "client_year_id": "y1", "reason": "Client found a missing invoice" }),
+            "Bo reopened a year, because “Client found a missing invoice”.",
+        )
+        .by(Some("u-bo")),
+        s(
+            "add_paragraph",
+            json!({ "entity_type": "sole_trader",
+                    "paragraph": { "key": "going_concern", "placement": "policy",
+                                   "title": "Going concern", "body": "For {business_name}." } }),
+            "Bo added “Going concern” to the sole trader paragraph library.",
+        )
+        .by(Some("u-bo")),
+        s(
+            "revise_paragraph",
+            json!({ "paragraph_id": "p1", "placement": "policy", "title": "Going concern",
+                    "body": "Revised." }),
+            "Bo revised the library paragraph “Going concern”.",
+        )
+        .by(Some("u-bo")),
+        s(
+            "pick_notes",
+            json!({ "client_year_id": "y1", "paragraph_ids": ["p1", "p2"] }),
+            "Sam chose this year's notes (2 paragraphs).",
+        ),
+        s(
+            "edit_note",
+            json!({ "client_year_id": "y1", "paragraph_id": "p1", "title": "Going concern",
+                    "body": "Edited." }),
+            "Sam edited this year's note “Going concern”.",
+        ),
+        s(
+            "push_paragraph",
+            json!({ "paragraph_id": "p1" }),
+            "Bo pushed a library paragraph's latest wording onto open years.",
+        )
+        .by(Some("u-bo")),
+        s(
+            "remove_paragraph",
+            json!({ "paragraph_id": "p1" }),
+            "Bo removed a paragraph from the library.",
+        )
+        .by(Some("u-bo")),
     ]
 }
 

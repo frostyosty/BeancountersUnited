@@ -1,0 +1,16 @@
+{
+  "description": "How statements show whole-dollar amounts (docs/domain.md, Statement amounts and columns). Shared by the web preview and the PDF renderer (ADR 010). null means no amount at all.",
+  "dollars": [
+    { "dollars": 1234, "text": "1,234" },
+    { "dollars": -1234, "text": "(1,234)" },
+    { "dollars": 0, "text": "–" },
+    { "dollars": null, "text": "" },
+    { "dollars": 7, "text": "7" },
+    { "dollars": -7, "text": "(7)" },
+    { "dollars": 999, "text": "999" },
+    { "dollars": 1000, "text": "1,000" },
+    { "dollars": -100000, "text": "(100,000)" },
+    { "dollars": 1234567, "text": "1,234,567" },
+    { "dollars": -9876543210, "text": "(9,876,543,210)" }
+  ]
+}

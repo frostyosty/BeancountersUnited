@@ -6,17 +6,23 @@ import { ContactPage } from "./pages/ContactPage";
 import { AboutPage } from "./pages/AboutPage";
 import { AccountantsPage } from "./pages/AccountantsPage";
 import { AccountPage } from "./pages/AccountPage";
+import { AnalysisTab } from "./pages/AnalysisTab";
 import { AssetsTab } from "./pages/AssetsTab";
 import { BusinessPage } from "./pages/BusinessPage";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
+import { FinaliseTab } from "./pages/FinaliseTab";
+import { GlTab } from "./pages/GlTab";
 import { HomePage } from "./pages/HomePage";
 import { JournalsTab } from "./pages/JournalsTab";
 import { NewBusinessPage } from "./pages/NewBusinessPage";
+import { NotesTab } from "./pages/NotesTab";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ParagraphLibraryPage } from "./pages/ParagraphLibraryPage";
 import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
+import { ReconcileTab } from "./pages/ReconcileTab";
 import { SaveTaxPage } from "./pages/SaveTaxPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AcceptInvitePage, InviteSignedOutPage, SignUpPage } from "./pages/SignUpPage";
@@ -70,8 +76,14 @@ export function App() {
             <Route path="import" element={<TbImportTab />} />
             <Route path="assets" element={<AssetsTab />} />
             <Route path="statements" element={<StatementsTab />} />
+            <Route path="notes" element={<NotesTab />} />
+            <Route path="reconcile" element={<ReconcileTab />} />
+            <Route path="gl" element={<GlTab />} />
+            <Route path="analysis" element={<AnalysisTab />} />
+            <Route path="finalise" element={<FinaliseTab />} />
           </Route>
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/paragraphs" element={<ParagraphLibraryPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="invite/:token" element={<AcceptInvitePage />} />
           <Route path="*" element={<NotFoundPage />} />

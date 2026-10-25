@@ -31,9 +31,11 @@ use crate::auth;
 use crate::business;
 use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
+use crate::finalise;
 use crate::history;
 use crate::ledger;
 use crate::merchants;
+use crate::paragraphs;
 use crate::save_tax;
 use crate::signup;
 use crate::tb_import;
@@ -49,10 +51,10 @@ pub struct Actor {
 
 /// What an applied command touched, for its response and the sync feed.
 #[derive(Default)]
-struct Effect {
-    entity_id: Option<String>,
-    client_id: Option<String>,
-    client_year_id: Option<String>,
+pub(crate) struct Effect {
+    pub(crate) entity_id: Option<String>,
+    pub(crate) client_id: Option<String>,
+    pub(crate) client_year_id: Option<String>,
 }
 
 /// Runs one command through the pipeline. `at` is when it was received, in UTC.
@@ -421,6 +423,69 @@ async fn apply(
             })
         }
 
+        Command::FinaliseYear {
+            client_year_id,
+            accept_uncategorised,
+        } => {
+            // A person signs the year off, so the server itself can't.
+            let by = actor.user_id.as_deref().ok_or(CommandError::Forbidden)?;
+            let snapshot_id = finalise::finalise(
+                tx,
+                seq,
+                by,
+                client_year_id,
+                accept_uncategorised.unwrap_or(false),
+            )
+            .await?;
+            let year = years::get(tx, client_year_id)
+                .await?
+                .ok_or_else(|| CommandError::not_found("client-year", client_year_id))?;
+            Ok(Effect {
+                entity_id: Some(snapshot_id),
+                client_id: Some(year.client_id),
+                client_year_id: Some(year.id),
+            })
+        }
+
+        Command::ReopenYear {
+            client_year_id,
+            reason,
+        } => {
+            let year = finalise::reopen(tx, client_year_id, reason).await?;
+            Ok(Effect {
+                entity_id: None,
+                client_id: Some(year.client_id),
+                client_year_id: Some(year.id),
+            })
+        }
+
+        Command::AddParagraph {
+            entity_type,
+            paragraph,
+        } => paragraphs::add(tx, seq, entity_type, paragraph).await,
+        Command::ReviseParagraph {
+            paragraph_id,
+            placement,
+            title,
+            body,
+        } => paragraphs::revise(tx, seq, paragraph_id, *placement, title, body).await,
+        Command::PickNotes {
+            client_year_id,
+            paragraph_ids,
+        } => paragraphs::pick(tx, seq, client_year_id, paragraph_ids).await,
+        Command::EditNote {
+            client_year_id,
+            paragraph_id,
+            title,
+            body,
+        } => paragraphs::edit(tx, seq, client_year_id, paragraph_id, title, body).await,
+        Command::PushParagraph { paragraph_id } => {
+            paragraphs::push(tx, actor, seq, paragraph_id).await
+        }
+        Command::RemoveParagraph { paragraph_id } => {
+            paragraphs::remove(tx, seq, paragraph_id).await
+        }
+
         Command::Initialise {
             practice_name,
             username,
@@ -773,6 +838,17 @@ async fn apply(
                     if last.year.end().succ_opt() == Some(year.start()) {
                         Some(last)
                     } else if year.end().succ_opt() == Some(first.year.start()) {
+                        // A year before a finalised one would give it opening balances.
+                        if first.status == YearStatus::Finalised {
+                            return Err(CommandError::invalid(
+                                "year_finalised",
+                                format!(
+                                    "The year ending {} is finalised, so no year can be added \
+                                     before it.",
+                                    first.year.end()
+                                ),
+                            ));
+                        }
                         Some(first)
                     } else {
                         return Err(CommandError::invalid_with(
@@ -827,6 +903,9 @@ async fn apply(
                 },
             )
             .await?;
+            if let Some(n) = neighbour {
+                paragraphs::carry_forward(tx, seq, &n.id, &id).await?;
+            }
             Ok(Effect {
                 entity_id: Some(id.clone()),
                 client_id: Some(client_id.clone()),
@@ -1095,6 +1174,9 @@ async fn apply(
                      and brought-forward balance can't change.",
                 ));
             }
+            if a.acquired != *acquired {
+                finalise::ensure_register_open(tx, &stored.client_id, *acquired).await?;
+            }
             let (class, _, over) = client_class(tx, &stored.client_id, &stored.class_id).await?;
             let resolved = assets::resolve(&class, over.as_ref());
             let (settings, rate_source) = pick_settings(&resolved, settings.as_ref());
@@ -1273,6 +1355,7 @@ pub(crate) async fn create_asset(
 ) -> Result<String, CommandError> {
     let (class, chart, over) = client_class(tx, new.client_id, new.class_id).await?;
     check_name(new.name)?;
+    finalise::ensure_register_open(tx, new.client_id, new.acquired).await?;
     let resolved = assets::resolve(&class, over.as_ref());
     assets::check_accounts(&chart, &resolved.accounts)?;
     let (settings, rate_source) = pick_settings(&resolved, new.settings);
@@ -1625,7 +1708,6 @@ async fn pin_latest(
     Ok((template.id, version.id))
 }
 
-/// A year that exists and isn't finalised.
 /// A client's chart; not found if the client doesn't exist.
 async fn client_chart(tx: &mut SqliteConnection, client_id: &str) -> Result<Chart, CommandError> {
     clients::get(tx, client_id)
@@ -1688,6 +1770,7 @@ fn check_rounding_priority(
     }
 }
 
+/// A year that exists and isn't finalised.
 async fn open_year(tx: &mut SqliteConnection, id: &str) -> Result<StoredYear, CommandError> {
     let year = years::get(tx, id)
         .await?
@@ -1709,6 +1792,7 @@ async fn post(
     reverses_journal_id: Option<String>,
     seq: i64,
 ) -> Result<Effect, CommandError> {
+    finalise::ensure_open(tx, &year.id).await?;
     let chart = clients::chart(tx, &year.client_id).await?;
     journal.validate(&chart, &year.year).map_err(|errors| {
         CommandError::invalid_with("invalid_journal", "The journal has problems.", errors)
@@ -1731,4 +1815,108 @@ async fn post(
         client_id: Some(year.client_id.clone()),
         client_year_id: Some(year.id.clone()),
     })
+}
+
+/// How a command stands against a finalised year (M15's lock audit).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lock {
+    /// It can change a year's amounts or dates, so it's refused when that year is finalised. Its
+    /// arm checks (`open_year`, `year_containing`, `business::open_year`, the asset register's
+    /// "held in a finalised year" rule, `finalise::ensure_register_open`), and
+    /// `finalise::ensure_open` refuses any journal it would post there regardless.
+    Enforced,
+    /// It changes no finalised year's numbers, so it's allowed. The reason says why.
+    Allowed(&'static str),
+}
+
+/// Every command, and whether it's refused against a finalised year. The match has no catch-all,
+/// so a new command doesn't compile until it's audited here, and `tests/m15.rs` submits each
+/// `Enforced` one against a finalised year.
+pub fn lock_rule(command: &Command) -> Lock {
+    use Command as C;
+    const USERS: &str = "users and passwords, not client data";
+    const DEFAULTS: &str = "practice defaults: years pin template and mapping versions, finalised \
+                            years keep their stored depreciation charges, and a finalised year's \
+                            statements are its snapshot, never rebuilt";
+    const NEW_CLIENT: &str = "a new client has no finalised years";
+    const NO_FIGURES: &str = "changes no figures";
+    match command {
+        C::PostJournal { .. }
+        | C::ImportTb { .. }
+        | C::ReverseJournal { .. }
+        | C::RunDepreciation { .. }
+        | C::CreateAsset { .. }
+        | C::UpdateAsset { .. }
+        | C::DeleteAsset { .. }
+        | C::DisposeAsset { .. }
+        | C::ReinstateAsset { .. }
+        | C::ImportStatement { .. }
+        | C::SetOpeningBalance { .. }
+        | C::CodeBankLine { .. }
+        | C::CodeBankLines { .. }
+        | C::ConfirmTransfer { .. }
+        | C::ConfirmIrdPayment { .. }
+        | C::ResolveDuplicate { .. }
+        | C::ConfirmSupplyInfo { .. }
+        // Adding a year before a finalised one would give it opening balances.
+        | C::CreateClientYear { .. }
+        // A finalised year is finalised once; reopen it first.
+        | C::FinaliseYear { .. } => Lock::Enforced,
+
+        C::Initialise { .. }
+        | C::CreateUser { .. }
+        | C::ChangeOwnPassword { .. }
+        | C::ResetPassword { .. }
+        | C::SetUserActive { .. } => Lock::Allowed(USERS),
+        C::CreateMasterChart { .. }
+        | C::CreateTemplate { .. }
+        | C::ReviseTemplate { .. }
+        | C::CreateMapping { .. }
+        | C::ReviseMapping { .. }
+        | C::CreateAssetClass { .. }
+        | C::UpdateAssetClass { .. }
+        | C::AddMerchant { .. }
+        | C::RemoveMerchant { .. } => Lock::Allowed(DEFAULTS),
+        C::CreateClient { .. } | C::SetUpBusiness { .. } | C::SignUp { .. } => {
+            Lock::Allowed(NEW_CLIENT)
+        }
+        C::AddAccount { .. } | C::AddBankAccount { .. } | C::AddCardAccount { .. } => {
+            Lock::Allowed("a new account has no balance in any year")
+        }
+        C::RenameAccount { .. } | C::SetAccountGst { .. } | C::SetAccountActive { .. } => {
+            Lock::Allowed(
+                "changes an account's name, default GST code or whether new journals can use it, \
+                 not any balance; a finalised year's statements are its snapshot",
+            )
+        }
+        C::SetRoundingPriority { .. } => Lock::Allowed(
+            "presentation only: a finalised year's statements are its snapshot, and comparatives \
+             are presented the current year's way",
+        ),
+        C::SetClientAssetClass { .. } | C::ApplyAssetClassDefaults { .. } => Lock::Allowed(
+            "changes assets' settings for open years only: finalised years keep their stored \
+             charges and journals",
+        ),
+        C::AddRule { .. } => {
+            Lock::Allowed("codes unsorted lines in open years only; others are left as they are")
+        }
+        C::RemoveRule { .. } => Lock::Allowed("lines the rule coded stay as they are"),
+        C::AnswerQuestion { .. } => Lock::Allowed(
+            "Save tax's answers feed the tax engine, not the ledger or the statements",
+        ),
+        C::SetCodingSettings { .. } => {
+            Lock::Allowed("changes no figures; applies only to lines coded afterwards")
+        }
+        C::SetAiSuggestions { .. } | C::RecordSuggestions { .. } => Lock::Allowed(NO_FIGURES),
+        C::CreateInvite { .. } | C::AcceptInvite { .. } => {
+            Lock::Allowed("who can see the business, not its figures")
+        }
+        C::ReopenYear { .. } => Lock::Allowed("it's how a finalised year is unlocked"),
+        // A finalised year's notes are part of what was signed.
+        C::PickNotes { .. } | C::EditNote { .. } => Lock::Enforced,
+        C::AddParagraph { .. } | C::ReviseParagraph { .. } | C::RemoveParagraph { .. } => {
+            Lock::Allowed(DEFAULTS)
+        }
+        C::PushParagraph { .. } => Lock::Allowed("updates copies in open years only"),
+    }
 }

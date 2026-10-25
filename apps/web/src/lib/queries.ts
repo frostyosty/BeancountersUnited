@@ -5,10 +5,12 @@ import type { ClientClassView } from "@acct/types/ClientClassView";
 import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { ClientSummary } from "@acct/types/ClientSummary";
 import type { JournalView } from "@acct/types/JournalView";
+import type { LibraryParagraph } from "@acct/types/LibraryParagraph";
 import type { PracticeView } from "@acct/types/PracticeView";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import type { UserView } from "@acct/types/UserView";
 import type { YearAssets } from "@acct/types/YearAssets";
+import type { YearNoteView } from "@acct/types/YearNoteView";
 import type { YearSummary } from "@acct/types/YearSummary";
 import type { YearTrialBalance } from "@acct/types/YearTrialBalance";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +34,12 @@ export const keys = {
   tb: (yearId: string) => ["year", yearId, "tb"] as const,
   report: (yearId: string) => ["year", yearId, "report"] as const,
   assets: (yearId: string) => ["year", yearId, "assets"] as const,
+  /** A year's own copies of library paragraphs (M15). */
+  notes: (yearId: string) => ["year", yearId, "notes"] as const,
+  /** The practice paragraph library: everything, one entity type's, and a push preview. */
+  paragraphs: ["paragraph-library"] as const,
+  paragraphLibrary: (entityType: string) => ["paragraph-library", entityType] as const,
+  pushPreview: (paragraphId: string) => ["paragraph-library", "push", paragraphId] as const,
   /** Practice asset classes; with a client id, as that client sees them. */
   assetClasses: ["asset-classes"] as const,
   clientAssetClasses: (clientId: string) => ["asset-classes", clientId] as const,
@@ -93,4 +101,16 @@ export function useBusiness(clientId: string) {
 
 export function useTax(clientId: string) {
   return useQuery({ queryKey: keys.tax(clientId), queryFn: () => getJson<TaxPosition>(`/api/businesses/${clientId}/tax`) });
+}
+
+export function useYearNotes(yearId: string) {
+  return useQuery({ queryKey: keys.notes(yearId), queryFn: () => getJson<YearNoteView[]>(`/api/years/${yearId}/notes`) });
+}
+
+export function useParagraphLibrary(entityType: string) {
+  return useQuery({
+    queryKey: keys.paragraphLibrary(entityType),
+    queryFn: () => getJson<LibraryParagraph[]>(`/api/paragraph-library/${entityType}`),
+    enabled: entityType !== "",
+  });
 }

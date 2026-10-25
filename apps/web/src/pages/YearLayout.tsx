@@ -3,7 +3,8 @@ import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { YearSummary } from "@acct/types/YearSummary";
 import { Link, NavLink, Outlet, useOutletContext, useParams } from "react-router";
 import { ErrorMessage } from "../components/ErrorMessage";
-import { formatDate } from "../lib/dates";
+import { Icon } from "../lib/icons";
+import { formatDate, periodEndedLabel } from "../lib/dates";
 import { useChart, useClient, useYear } from "../lib/queries";
 import styles from "./YearLayout.module.css";
 
@@ -36,7 +37,7 @@ export function YearLayout() {
         <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>{client.data.name}</Link> /
       </p>
       <h1>
-        Year ended {formatDate(y.end)}{" "}
+        {periodEndedLabel(y.start, y.end)}{" "}
         <span className={y.status === "finalised" ? styles.finalised : styles.open}>{y.status}</span>
       </h1>
       <p className="muted">
@@ -51,6 +52,21 @@ export function YearLayout() {
         <NavLink to="import">Import TB</NavLink>
         <NavLink to="assets">Assets</NavLink>
         <NavLink to="statements">Statements</NavLink>
+        <NavLink to="notes">
+          <Icon name="year.notes" fallback="📝" /> Notes
+        </NavLink>
+        <NavLink to="reconcile">
+          <Icon name="year.reconcile" fallback="🏦" /> Reconcile
+        </NavLink>
+        <NavLink to="gl">
+          <Icon name="year.gl" fallback="📖" /> General ledger
+        </NavLink>
+        <NavLink to="analysis">
+          <Icon name="year.analysis" fallback="📊" /> Analysis
+        </NavLink>
+        <NavLink to="finalise">
+          <Icon name="year.finalise" fallback="🔏" /> Finalise
+        </NavLink>
       </nav>
       <Outlet context={context} />
     </>

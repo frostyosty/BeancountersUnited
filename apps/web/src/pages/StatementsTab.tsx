@@ -1,5 +1,6 @@
 import type { AssetSchedule } from "@acct/types/AssetSchedule";
 import type { Period } from "@acct/types/Period";
+import type { ReportNote } from "@acct/types/ReportNote";
 import type { ReportDoc } from "@acct/types/ReportDoc";
 import type { ReportRow } from "@acct/types/ReportRow";
 import type { ReportWarning } from "@acct/types/ReportWarning";
@@ -8,7 +9,7 @@ import { Fragment, useState } from "react";
 import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { getJson } from "../lib/api";
-import { formatDate } from "../lib/dates";
+import { formatDate, isFullYear } from "../lib/dates";
 import { formatStatementCents, formatStatementDollars } from "../lib/money";
 import { keys } from "../lib/queries";
 import styles from "./StatementsTab.module.css";
@@ -44,6 +45,12 @@ export function Statements({ doc }: { doc: ReportDoc }) {
 
   return (
     <div className={styles.doc}>
+      <p className={styles.toolbar}>
+        <a className={styles.pdf} href={`/api/years/${year.id}/report.pdf`} target="_blank" rel="noopener">
+          Download PDF
+        </a>
+        {year.status !== "finalised" && <span className="muted"> A draft until the year is finalised.</span>}
+      </p>
       {unfinalised && (
         <p className={styles.notice} role="status">
           The prior year isn't finalised, so the comparatives may still change.
@@ -59,7 +66,10 @@ export function Statements({ doc }: { doc: ReportDoc }) {
       {doc.statements.map((s) => (
         <section key={s.key} className={styles.statement}>
           <h2>{s.title}</h2>
-          <p className={styles.period}>For the year ended {formatDate(doc.current_period.end)}</p>
+          <p className={styles.period}>
+            For the {isFullYear(doc.current_period.start, doc.current_period.end) ? "year" : "period"} ended{" "}
+            {formatDate(doc.current_period.end)}
+          </p>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -109,6 +119,7 @@ export function Statements({ doc }: { doc: ReportDoc }) {
       {doc.asset_schedule && (
         <AssetScheduleView schedule={doc.asset_schedule} currentHead={currentHead} priorHead={hasPrior ? priorHead : null} />
       )}
+      {doc.notes.length > 0 && <NotesView notes={doc.notes} />}
     </div>
   );
 }
@@ -149,6 +160,35 @@ function AssetScheduleView({
           </tbody>
         ))}
       </table>
+    </section>
+  );
+}
+
+/**
+ * The notes after the statements, as the ReportDoc has them filled in (`docs/domain.md`,
+ * "Accounting policies and notes"). Plain text: a line break inside a paragraph stays one.
+ */
+function NotesView({ notes }: { notes: ReportNote[] }) {
+  return (
+    <section className={styles.statement} aria-label="Notes to the financial statements">
+      <h2>Notes to the financial statements</h2>
+      {notes.map((n) => (
+        <section key={n.key} className={styles.note} aria-label={`${n.number}. ${n.title}`}>
+          <h3>
+            {n.number}. {n.title}
+          </h3>
+          {n.sections.map((s) => (
+            <Fragment key={s.key}>
+              {s.title !== null && <h4>{s.title}</h4>}
+              {s.text.map((t, i) => (
+                <p key={i} className={styles.noteText}>
+                  {t}
+                </p>
+              ))}
+            </Fragment>
+          ))}
+        </section>
+      ))}
     </section>
   );
 }

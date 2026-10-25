@@ -6,12 +6,13 @@ members = [
     "crates/server",
     "crates/import",
     "crates/ai",
+    "crates/pdf",
     "apps/desktop/shell",
     "apps/desktop/dev",
 ]
 # Plain `cargo build`, `test` and `clippy` skip the desktop apps: they need the system webview
 # libraries (see ADR 006). `make desktop` and `make desktop-check` build and check them.
-default-members = ["crates/core", "crates/store", "crates/server", "crates/import", "crates/ai"]
+default-members = ["crates/core", "crates/store", "crates/server", "crates/import", "crates/ai", "crates/pdf"]
 
 [workspace.package]
 version = "0.1.0"
@@ -23,6 +24,7 @@ acct-core = { path = "crates/core" }
 acct-store = { path = "crates/store" }
 acct-import = { path = "crates/import" }
 acct-ai = { path = "crates/ai" }
+acct-pdf = { path = "crates/pdf" }
 acct-server = { path = "crates/server" }
 acct-desktop = { path = "apps/desktop/shell" }
 
@@ -32,6 +34,8 @@ csv = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4"
 insta = "1"
+# Only in acct-pdf's tests, to read back the PDFs it writes (ADR 010).
+lopdf = "=0.46.0"
 proptest = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "cookies", "query"] }
 rpassword = "7"
@@ -48,6 +52,10 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# The PDF renderer (ADR 010). Pinned exactly: upgrading may change PDF bytes, so it's its own commit.
+typst = "=0.15.1"
+typst-layout = "=0.15.1"
+typst-pdf = "=0.15.1"
 ts-rs = { version = "12", features = ["no-serde-warnings"] }
 uuid = { version = "1", features = ["v7"] }
 

@@ -716,6 +716,7 @@ expression: "serde_json::to_string_pretty(&built.docs[0]).unwrap()"
       }
     ]
   },
+  "notes": [],
   "warnings": [
     {
       "code": "rounding_fallback",

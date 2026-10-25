@@ -252,7 +252,13 @@ async fn command_targets(
         | C::CreateAssetClass { .. }
         | C::UpdateAssetClass { .. }
         | C::AddMerchant { .. }
-        | C::RemoveMerchant { .. } => (Need::Admin, vec![Target::Practice]),
+        | C::RemoveMerchant { .. }
+        | C::AddParagraph { .. }
+        | C::ReviseParagraph { .. }
+        | C::RemoveParagraph { .. } => (Need::Admin, vec![Target::Practice]),
+        // Pushes only onto clients the admin can see (`paragraphs::push_plan` filters with
+        // `visible`).
+        C::PushParagraph { .. } => (Need::Admin, vec![Target::Practice]),
 
         C::CreateClient { .. } | C::SetUpBusiness { .. } => {
             (Need::Accounting, vec![Target::Practice])
@@ -271,10 +277,16 @@ async fn command_targets(
 
         C::PostJournal { client_year_id, .. }
         | C::ImportTb { client_year_id, .. }
-        | C::RunDepreciation { client_year_id } => (
+        | C::RunDepreciation { client_year_id }
+        | C::PickNotes { client_year_id, .. }
+        | C::EditNote { client_year_id, .. } => (
             Need::Accounting,
             vec![year_target(conn, client_year_id).await?],
         ),
+        // Signing a year off, or reopening it, is the practice admin's (CLAUDE.md, Roles).
+        C::FinaliseYear { client_year_id, .. } | C::ReopenYear { client_year_id, .. } => {
+            (Need::Admin, vec![year_target(conn, client_year_id).await?])
+        }
         C::ReverseJournal { journal_id, .. } => {
             let target = match journals::get(conn, journal_id).await? {
                 Some(j) => via_year(conn, &j.client_year_id, ("journal", journal_id)).await?,
@@ -420,9 +432,15 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         "/api/login" | "/api/logout" | "/api/signup" if post => R::Public,
         "/api/me" if get => R::SignedIn,
         "/api/commands" if post => R::SignedIn,
-        "/api/practice" | "/api/asset-classes" | "/api/merchants/{entity_type}" if get => {
+        "/api/practice"
+        | "/api/asset-classes"
+        | "/api/merchants/{entity_type}"
+        | "/api/paragraph-library/{entity_type}"
+            if get =>
+        {
             R::Practice(Need::Read)
         }
+        "/api/paragraphs/{id}/push-preview" if get => R::Practice(Need::Admin),
         "/api/users" if get => R::Practice(Need::Admin),
         "/api/clients" | "/api/sync" | "/api/history" if get => R::Listing,
         "/api/presence" if post => R::Listing,
@@ -445,7 +463,14 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         | "/api/years/{id}/journals"
         | "/api/years/{id}/tb"
         | "/api/years/{id}/report"
+        | "/api/years/{id}/reconciliation"
+        | "/api/years/{id}/gl"
+        | "/api/years/{id}/analysis"
         | "/api/years/{id}/assets"
+        | "/api/years/{id}/snapshot"
+        | "/api/years/{id}/finalise-check"
+        | "/api/years/{id}/report.pdf"
+        | "/api/years/{id}/notes"
             if get =>
         {
             R::Year(Need::Read)

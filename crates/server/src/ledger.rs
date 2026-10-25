@@ -70,9 +70,12 @@ pub async fn balances_to(
 }
 
 /// Builds a year's statements through its pinned template and mapping, with the prior year's
-/// closing balances as comparatives.
+/// closing balances as comparatives (CLAUDE.md, Comparatives): its snapshot TB if it's finalised,
+/// else its live TB, marked unfinalised. Either way they're presented through this year's mapping
+/// and template, so a layout change reclassifies them too.
 ///
-/// Until finalisation exists (M5), comparatives always come from the prior year's live balances.
+/// A finalised year's own signed statements are its snapshot (`crate::finalise::signed_report`);
+/// this always builds afresh.
 pub async fn report(
     conn: &mut SqliteConnection,
     client_year_id: &str,
@@ -87,14 +90,15 @@ pub async fn report(
         )
         .await;
     };
-    build(conn, &client, current, Some(prior)).await
+    let prior_tb = crate::finalise::comparative_tb(conn, &prior.year, &prior.closing).await?;
+    build(conn, &client, current, Some((&prior.year, &prior_tb))).await
 }
 
 async fn build(
     conn: &mut SqliteConnection,
     client: &Client,
     current: &YearBalances,
-    prior: Option<&YearBalances>,
+    prior: Option<(&StoredYear, &TrialBalance)>,
 ) -> Result<ReportDoc, CommandError> {
     let template = templates::template_version(conn, &current.year.template_version_id)
         .await?
@@ -111,10 +115,10 @@ async fn build(
         mapping: &mapping.body,
         year: &current.year.year,
         tb: &current.closing,
-        prior: prior.map(|p| acct_core::Prior {
-            year: &p.year.year,
-            tb: &p.closing,
-            finalised: p.year.status == YearStatus::Finalised,
+        prior: prior.map(|(year, tb)| acct_core::Prior {
+            year: &year.year,
+            tb,
+            finalised: year.status == YearStatus::Finalised,
         }),
         rounding_priority: &client.rounding_priority,
     };
@@ -137,5 +141,6 @@ async fn build(
         .year_index(&current.year.id)
         .expect("the year belongs to the client");
     doc.asset_schedule = register.schedule(i);
+    doc.notes = crate::paragraphs::report_notes(conn, client, &current.year, &register).await?;
     Ok(doc)
 }

@@ -7,13 +7,18 @@ pub mod auth;
 pub mod business;
 pub mod commands;
 pub mod error;
+pub mod finalise;
 pub mod fixtures;
 pub mod history;
 pub mod ledger;
 pub mod merchants;
+pub mod paragraphs;
+pub mod pdf;
 pub mod pipeline;
 pub mod presence;
 pub mod reads;
+pub mod reconcile;
+pub mod reports;
 pub mod save_tax;
 pub mod signup;
 pub mod tax;
@@ -104,6 +109,32 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             get(reads::get_report),
         ),
         (
+            Method::GET,
+            "/api/years/{id}/reconciliation",
+            get(reconcile::get_reconciliation),
+        ),
+        (Method::GET, "/api/years/{id}/gl", get(reports::get_gl)),
+        (
+            Method::GET,
+            "/api/years/{id}/analysis",
+            get(reports::get_analysis),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/snapshot",
+            get(finalise::get_snapshot),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/finalise-check",
+            get(finalise::get_finalise_check),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/report.pdf",
+            get(pdf::get_report_pdf),
+        ),
+        (
             Method::POST,
             "/api/years/{id}/tb-import/preview",
             post(tb_import::preview),
@@ -145,6 +176,21 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::GET,
             "/api/merchants/{entity_type}",
             get(merchants::get_merchants),
+        ),
+        (
+            Method::GET,
+            "/api/paragraph-library/{entity_type}",
+            get(paragraphs::get_library),
+        ),
+        (
+            Method::GET,
+            "/api/paragraphs/{id}/push-preview",
+            get(paragraphs::push_preview),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/notes",
+            get(paragraphs::get_year_notes),
         ),
         (
             Method::GET,

@@ -161,7 +161,9 @@ fn rounding_priority_and_asset_classes_fit_the_chart() {
     let d = defaults();
     assert_eq!(
         d.priority,
-        ["290", "205", "120", "960", "810"].map(code).to_vec()
+        ["290", "205", "245", "225", "120", "960", "810"]
+            .map(code)
+            .to_vec()
     );
     for c in &d.priority {
         assert!(d.chart.get(c).is_some(), "{c} isn't in the chart");

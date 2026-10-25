@@ -39,6 +39,20 @@ Development with synthetic data isn't affected.
       on its "Hand-checked by" line. M10 isn't done until this is.
 - [ ] M11's worked example, "Worked example: Save tax on the synthetic sole trader" in `docs/domain.md`,
       the same way.
+- [ ] M15's worked example, "Worked example: the sole trader's statements" in `docs/domain.md`, the same
+      way.
+- [ ] M15: check the Reconcile tab in a browser on the synthetic sole trader (two accounts agree, Rimu
+      can't be checked, and the gap journal is listed).
+- [ ] M15: read the sole-trader starter paragraphs in `fixtures/practice/paragraphs.json` (the filled-in
+      text is in `crates/core/src/snapshots/acct_core__notes__tests__the_starter_set_fills_in.snap`).
+      "Changes in accounting policies" and "Owner's equity" were drafted without being shown to you first.
+- [ ] M15: check the notes screens in a browser after `make db-reset`: Tui Street Joinery's FY2026 Notes
+      tab (add, reorder, edit, drop), its Statements tab showing the notes, and Practice settings ›
+      Paragraph library (revise a paragraph, preview and push it, remove one).
+- [ ] M15: open the statements PDF (Statements tab › Download PDF, or `/api/years/{id}/report.pdf`) for the
+      fixture company's FY2026 and the sole trader, draft and finalised. Check each statement, the asset
+      schedule and the notes by eye: amounts line up, brackets and dashes, "(continued)" and the column
+      headings on a run-on page, "Page n of m", and "Draft" on every page of a draft only.
 - [ ] M0: build a fresh Codespace from `.devcontainer` and run `make setup && make check`.
 - [ ] M3: the manual browser walkthrough, from an empty client to previewed statements with comparatives.
 - [ ] M4: review the depreciation snapshots, and check the Assets tab in a browser.

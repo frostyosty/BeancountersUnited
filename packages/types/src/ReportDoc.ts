@@ -2,6 +2,7 @@
 import type { AssetSchedule } from "./AssetSchedule";
 import type { Comparatives } from "./Comparatives";
 import type { Period } from "./Period";
+import type { ReportNote } from "./ReportNote";
 import type { ReportStatement } from "./ReportStatement";
 import type { ReportWarning } from "./ReportWarning";
 
@@ -13,4 +14,11 @@ export type ReportDoc = { template: string, current_period: Period, prior_period
  * The fixed asset schedule, when the client has an asset register. Built separately by
  * [`crate::depreciation::build_asset_schedule`] and attached by the caller.
  */
-asset_schedule?: AssetSchedule, warnings: Array<ReportWarning>, };
+asset_schedule?: AssetSchedule, 
+/**
+ * The accounting policies and notes, after the statements, filled in from the year's copies
+ * of library paragraphs by [`crate::notes::build_notes`] and attached by the caller. Part of
+ * the snapshot, so it holds exactly the wording that was signed. Empty when the year has
+ * picked none; absent in ReportDocs stored before M15.
+ */
+notes: Array<ReportNote>, warnings: Array<ReportWarning>, };

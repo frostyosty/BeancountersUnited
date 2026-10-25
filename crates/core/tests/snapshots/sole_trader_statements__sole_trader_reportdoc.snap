@@ -1,0 +1,523 @@
+---
+source: crates/core/tests/sole_trader_statements.rs
+expression: "serde_json::to_string_pretty(&build()).unwrap()"
+---
+{
+  "template": "Sole trader (standard)",
+  "current_period": {
+    "start": "2025-08-01",
+    "end": "2026-03-31"
+  },
+  "prior_period": null,
+  "comparatives": "none",
+  "statements": [
+    {
+      "key": "performance",
+      "title": "Statement of Financial Performance",
+      "rows": [
+        {
+          "key": "income",
+          "style": "heading",
+          "depth": 0,
+          "label": "Income",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "sales",
+          "style": "line",
+          "depth": 1,
+          "label": "Sales",
+          "current": 2626,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "100",
+              "current": 262600,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "interest_income",
+          "style": "line",
+          "depth": 1,
+          "label": "Interest received",
+          "current": 4,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "110",
+              "current": 376,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "unsorted_income",
+          "style": "line",
+          "depth": 1,
+          "label": "Income not yet sorted",
+          "current": 330,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "140",
+              "current": 33043,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "income",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total income",
+          "current": 2960,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "cost_of_sales",
+          "style": "heading",
+          "depth": 0,
+          "label": "Cost of sales",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "purchases",
+          "style": "line",
+          "depth": 1,
+          "label": "Purchases and materials",
+          "current": 346,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "150",
+              "current": 34643,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "gross_profit",
+          "style": "total",
+          "depth": 0,
+          "label": "Gross profit",
+          "current": 2614,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "expenses",
+          "style": "heading",
+          "depth": 0,
+          "label": "Expenses",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "insurance",
+          "style": "line",
+          "depth": 1,
+          "label": "Insurance",
+          "current": 187,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "215",
+              "current": 18696,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "rent",
+          "style": "line",
+          "depth": 1,
+          "label": "Rent",
+          "current": 39,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "230",
+              "current": 3913,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "phone_internet",
+          "style": "line",
+          "depth": 1,
+          "label": "Phone and internet",
+          "current": 18,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "245",
+              "current": 1739,
+              "prior": 0
+            }
+          ],
+          "rounding": {
+            "current": 1,
+            "prior": 0
+          }
+        },
+        {
+          "key": "power_gas",
+          "style": "line",
+          "depth": 1,
+          "label": "Power and gas",
+          "current": 26,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "255",
+              "current": 2597,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "freight",
+          "style": "line",
+          "depth": 1,
+          "label": "Freight and courier",
+          "current": 119,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "260",
+              "current": 11913,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "stationery",
+          "style": "line",
+          "depth": 1,
+          "label": "Stationery and office supplies",
+          "current": 66,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "265",
+              "current": 6565,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "software",
+          "style": "line",
+          "depth": 1,
+          "label": "Software and subscriptions",
+          "current": 43,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "270",
+              "current": 4346,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "small_tools",
+          "style": "line",
+          "depth": 1,
+          "label": "Small tools and equipment",
+          "current": 104,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "280",
+              "current": 10435,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "expenses",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total expenses",
+          "current": 602,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "net_profit",
+          "style": "total",
+          "depth": 0,
+          "label": "Net profit for the year",
+          "current": 2012,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        }
+      ]
+    },
+    {
+      "key": "position",
+      "title": "Statement of Financial Position",
+      "rows": [
+        {
+          "key": "assets",
+          "style": "heading",
+          "depth": 0,
+          "label": "Assets",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "current_assets",
+          "style": "heading",
+          "depth": 1,
+          "label": "Current assets",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "bank",
+          "style": "line",
+          "depth": 2,
+          "label": "Bank accounts",
+          "current": 6232,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "600.01",
+              "current": 224712,
+              "prior": 0
+            },
+            {
+              "code": "600.02",
+              "current": 283073,
+              "prior": 0
+            },
+            {
+              "code": "600.03",
+              "current": 115376,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "gst_to_claim",
+          "style": "line",
+          "depth": 2,
+          "label": "GST to claim, records not yet held",
+          "current": 28,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "615",
+              "current": 2804,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "current_assets",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total current assets",
+          "current": 6260,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "assets",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total assets",
+          "current": 6260,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "liabilities",
+          "style": "heading",
+          "depth": 0,
+          "label": "Liabilities",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "current_liabilities",
+          "style": "heading",
+          "depth": 1,
+          "label": "Current liabilities",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "gst",
+          "style": "line",
+          "depth": 2,
+          "label": "GST payable",
+          "current": 330,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "810",
+              "current": 32923,
+              "prior": 0
+            }
+          ],
+          "rounding": {
+            "current": 1,
+            "prior": 0
+          }
+        },
+        {
+          "key": "gst_refunds",
+          "style": "line",
+          "depth": 2,
+          "label": "GST refunds received",
+          "current": 163,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "812",
+              "current": 16342,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "current_liabilities",
+          "style": "group_total",
+          "depth": 1,
+          "label": "Total current liabilities",
+          "current": 493,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "liabilities",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Total liabilities",
+          "current": 493,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "net_assets",
+          "style": "total",
+          "depth": 0,
+          "label": "Net assets",
+          "current": 5767,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "equity",
+          "style": "heading",
+          "depth": 0,
+          "label": "Owner's equity",
+          "current": null,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "capital",
+          "style": "line",
+          "depth": 1,
+          "label": "Capital introduced",
+          "current": 4550,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "950",
+              "current": 455000,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "profit_for_year",
+          "style": "link",
+          "depth": 1,
+          "label": "Net profit for the year",
+          "current": 2012,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        },
+        {
+          "key": "drawings",
+          "style": "line",
+          "depth": 1,
+          "label": "Drawings",
+          "current": -795,
+          "prior": null,
+          "accounts": [
+            {
+              "code": "960",
+              "current": -79472,
+              "prior": 0
+            }
+          ],
+          "rounding": null
+        },
+        {
+          "key": "equity",
+          "style": "group_total",
+          "depth": 0,
+          "label": "Closing equity",
+          "current": 5767,
+          "prior": null,
+          "accounts": [],
+          "rounding": null
+        }
+      ]
+    }
+  ],
+  "notes": [],
+  "warnings": []
+}

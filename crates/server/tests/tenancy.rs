@@ -566,6 +566,8 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
             "client_id": biz, "email": "mallory@example.nz", "token": token(),
         }),
         "accept_invite" => json!({ "token": v.invite_token }),
+        "finalise_year" => json!({ "client_year_id": v.year_id }),
+        "reopen_year" => json!({ "client_year_id": v.year_id, "reason": "X" }),
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })
 }

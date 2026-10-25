@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatDate, nextYear, previousYear } from "./dates";
+import { addDays, formatDate, isFullYear, nextYear, periodEndedLabel, previousYear } from "./dates";
 
 describe("dates", () => {
   it("adds days across months and leap years", () => {
@@ -17,5 +17,16 @@ describe("dates", () => {
   it("formats for display", () => {
     expect(formatDate("2026-03-31")).toBe("31 Mar 2026");
     expect(formatDate("2026-09-01")).toBe("1 Sep 2026");
+  });
+});
+
+describe("period labels", () => {
+  it("says year for 12 months and period for anything else", () => {
+    expect(isFullYear("2025-04-01", "2026-03-31")).toBe(true);
+    expect(isFullYear("2023-03-01", "2024-02-29")).toBe(true);
+    expect(isFullYear("2025-08-01", "2026-03-31")).toBe(false);
+    expect(isFullYear("2025-04-01", "2026-06-30")).toBe(false);
+    expect(periodEndedLabel("2025-04-01", "2026-03-31")).toBe("Year ended 31 Mar 2026");
+    expect(periodEndedLabel("2025-08-01", "2026-03-31")).toBe("Period ended 31 Mar 2026");
   });
 });

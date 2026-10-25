@@ -47,6 +47,18 @@ describe("statements", () => {
     );
   });
 
+  it("heads a part year as a period", async () => {
+    const full = structuredClone(doc);
+    stubApi(routes(() => full));
+    renderApp(<App />, "/years/y1/statements");
+    expect((await screen.findAllByText(/^For the year ended 31 Mar 2026$/)).length).toBe(full.statements.length);
+    cleanup();
+    const part: ReportDoc = { ...doc, current_period: { start: "2025-08-01", end: "2026-03-31" } };
+    stubApi(routes(() => part));
+    renderApp(<App />, "/years/y1/statements");
+    expect((await screen.findAllByText(/^For the period ended 31 Mar 2026$/)).length).toBe(part.statements.length);
+  });
+
   it("drills down to accounts in cents with a rounding entry that makes them add up", async () => {
     stubApi(routes(() => doc));
     renderApp(<App />, "/years/y1/statements");
@@ -106,5 +118,15 @@ describe("headings", () => {
     // The total block: book value agrees with the balance sheet, depreciation with the P&L.
     expect(rows).toContain("Book value at the end of the year31,89715,725");
     expect(rows).toContain("Depreciation for the year7,2852,775");
+  });
+});
+
+describe("statements PDF", () => {
+  it("links to the year's PDF, a draft until the year is finalised", async () => {
+    stubApi(routes(() => doc));
+    renderApp(<App />, "/years/y1/statements");
+    const link = await screen.findByRole("link", { name: "Download PDF" });
+    expect(link.getAttribute("href")).toBe("/api/years/y1/report.pdf");
+    expect(screen.getByText(/A draft until the year is finalised/)).toBeTruthy();
   });
 });

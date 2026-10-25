@@ -16,6 +16,7 @@ embed-web = ["dep:rust-embed"]
 acct-ai.workspace = true
 acct-core.workspace = true
 acct-import.workspace = true
+acct-pdf.workspace = true
 acct-store.workspace = true
 argon2.workspace = true
 axum.workspace = true

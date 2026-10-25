@@ -25,6 +25,7 @@ use crate::depreciation::AssetSchedule;
 use crate::ledger::{ClientYear, TrialBalance};
 use crate::mapping::{Mapping, MappingError};
 use crate::money::Money;
+use crate::notes::ReportNote;
 use crate::template::{LineKey, Node, Presentation, Template, TemplateError};
 
 /// The built statements. Holds no ids, timestamps or hash maps, so its JSON is byte-stable.
@@ -41,6 +42,12 @@ pub struct ReportDoc {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub asset_schedule: Option<AssetSchedule>,
+    /// The accounting policies and notes, after the statements, filled in from the year's copies
+    /// of library paragraphs by [`crate::notes::build_notes`] and attached by the caller. Part of
+    /// the snapshot, so it holds exactly the wording that was signed. Empty when the year has
+    /// picked none; absent in ReportDocs stored before M15.
+    #[serde(default)]
+    pub notes: Vec<ReportNote>,
     pub warnings: Vec<ReportWarning>,
 }
 
@@ -277,6 +284,7 @@ pub fn build_report(input: &ReportInput<'_>) -> Result<ReportDoc, Vec<BuildError
         },
         statements,
         asset_schedule: None,
+        notes: Vec::new(),
         warnings,
     })
 }

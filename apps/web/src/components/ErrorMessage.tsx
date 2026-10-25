@@ -32,6 +32,17 @@ function describe(detail: unknown): string {
         return `Mapping range ${String(d.from)}–${String(d.to)} points at a line the template doesn't have (${String(d.line)}).`;
       case "reversed_range":
         return `Mapping range ${String(d.from)}–${String(d.to)} runs backwards.`;
+      // A paragraph's problems (acct_core::notes::NoteError). `paragraph` is its key.
+      case "unknown_field":
+        return `“${String(d.paragraph)}” uses {${String(d.field)}}, which isn't a field we can fill in.`;
+      case "empty_field":
+        return `“${String(d.paragraph)}” uses {${String(d.field)}}, but there's nothing to fill it with for this year.`;
+      case "stray_brace":
+        return `“${String(d.paragraph)}” has a brace that isn't part of a field. Write {{ or }} for a brace on its own.`;
+      case "empty_title":
+        return `“${String(d.paragraph)}” needs a title.`;
+      case "empty_body":
+        return `“${String(d.paragraph)}” needs some wording.`;
     }
     const code = typeof d.code === "string" ? d.code.replace(/_/g, " ") : "problem";
     const account = typeof d.account === "string" ? ` ${d.account}` : "";

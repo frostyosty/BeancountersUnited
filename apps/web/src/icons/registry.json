@@ -574,5 +574,81 @@
       "type": "emoji",
       "value": "🌱"
     }
+  },
+  "year": {
+    "reconcile": {
+      "type": "emoji",
+      "value": "🏦"
+    },
+    "gl": {
+      "type": "emoji",
+      "value": "📖"
+    },
+    "analysis": {
+      "type": "emoji",
+      "value": "📊"
+    },
+    "notes": {
+      "type": "emoji",
+      "value": "📝"
+    },
+    "finalise": {
+      "type": "emoji",
+      "value": "🔏"
+    },
+    "finalise_passed": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "finalise_failed": {
+      "type": "emoji",
+      "value": "⚠️"
+    },
+    "finalise_skipped": {
+      "type": "emoji",
+      "value": "➖"
+    },
+    "finalise_done": {
+      "type": "emoji",
+      "value": "🔒"
+    },
+    "finalise_reopen": {
+      "type": "emoji",
+      "value": "🔓"
+    }
+  },
+  "notes": {
+    "library": {
+      "type": "emoji",
+      "value": "📚"
+    },
+    "add": {
+      "type": "emoji",
+      "value": "➕"
+    },
+    "edit": {
+      "type": "emoji",
+      "value": "✏️"
+    },
+    "push": {
+      "type": "emoji",
+      "value": "📤"
+    },
+    "remove": {
+      "type": "emoji",
+      "value": "🗑️"
+    },
+    "up": {
+      "type": "emoji",
+      "value": "⬆️"
+    },
+    "down": {
+      "type": "emoji",
+      "value": "⬇️"
+    },
+    "fields": {
+      "type": "emoji",
+      "value": "🧩"
+    }
   }
 }
