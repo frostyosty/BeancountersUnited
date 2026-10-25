@@ -89,7 +89,6 @@ pub async fn get_mapping(conn: &mut SqliteConnection, id: &str) -> Result<Option
         .await?)
 }
 
-/// Writes the next version of a template and returns its number (1 for the first).
 /// The mappings onto templates for an entity type, oldest first.
 pub async fn mappings_for_entity_type(
     conn: &mut SqliteConnection,
@@ -102,6 +101,19 @@ pub async fn mappings_for_entity_type(
     .bind(entity_type)
     .fetch_all(conn)
     .await?)
+}
+
+/// The mappings onto one template, oldest first.
+pub async fn mappings_for_template(
+    conn: &mut SqliteConnection,
+    template_id: &str,
+) -> Result<Vec<MappingInfo>> {
+    Ok(
+        sqlx::query_as("SELECT * FROM mappings WHERE template_id = ? ORDER BY created_seq, id")
+            .bind(template_id)
+            .fetch_all(conn)
+            .await?,
+    )
 }
 
 /// Which versions table a query runs against. Each SQL statement below is a fixed string.

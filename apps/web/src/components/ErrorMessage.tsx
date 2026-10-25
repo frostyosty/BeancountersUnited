@@ -12,7 +12,7 @@ export function ErrorMessage({ error }: { error: Error | null }) {
       {details.length > 0 && (
         <ul>
           {details.map((d, i) => (
-            <li key={i}>{describe(d)}</li>
+            <li key={i}>{describeDetail(d)}</li>
           ))}
         </ul>
       )}
@@ -20,7 +20,8 @@ export function ErrorMessage({ error }: { error: Error | null }) {
   );
 }
 
-function describe(detail: unknown): string {
+/** One of the server's details in words: a mapping or paragraph problem, or a plain message. */
+export function describeDetail(detail: unknown): string {
   if (detail && typeof detail === "object") {
     const d = detail as Record<string, unknown>;
     switch (d.code) {
@@ -43,6 +44,9 @@ function describe(detail: unknown): string {
         return `“${String(d.paragraph)}” needs a title.`;
       case "empty_body":
         return `“${String(d.paragraph)}” needs some wording.`;
+    }
+    if (typeof d.message === "string") {
+      return d.message;
     }
     const code = typeof d.code === "string" ? d.code.replace(/_/g, " ") : "problem";
     const account = typeof d.account === "string" ? ` ${d.account}` : "";

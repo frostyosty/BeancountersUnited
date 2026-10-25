@@ -342,6 +342,8 @@ fn collect_line_ids(v: &Value, out: &mut Vec<String>) {
 fn param(path: &str, name: &str, v: &Victim) -> String {
     match name {
         "id" if path.starts_with("/api/years/") => v.year_id.clone(),
+        "id" if path.starts_with("/api/templates/") => v.template_id.clone(),
+        "id" if path.starts_with("/api/mappings/") => v.mapping_id.clone(),
         "id" => v.owner.business_id.clone(),
         "class_id" => v.class_id.clone(),
         "entity_type" => "sole_trader".to_owned(),
@@ -367,8 +369,11 @@ const PUBLIC: [&str; 4] = ["/api/health", "/api/login", "/api/logout", "/api/sig
 /// About the signed-in user only, or checked per command (`/api/commands`, covered below).
 const OWN: [&str; 2] = ["/api/me", "/api/commands"];
 /// The practice's own data. No business owner sees it.
-const PRACTICE: [&str; 6] = [
+const PRACTICE: [&str; 9] = [
     "/api/practice",
+    "/api/templates/{id}",
+    "/api/mappings/{id}",
+    "/api/mappings/check",
     "/api/users",
     "/api/asset-classes",
     "/api/merchants/{entity_type}",
@@ -539,6 +544,7 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "import_tb" => json!({ "client_year_id": v.year_id, "rows": [] }),
         "reverse_journal" => json!({ "journal_id": v.journal_id }),
         "run_depreciation" => json!({ "client_year_id": v.year_id }),
+        "move_year_layout" => json!({ "client_year_id": v.year_id }),
         "set_client_asset_class" => json!({ "client_id": biz, "class_id": v.class_id }),
         "apply_asset_class_defaults" => json!({ "client_id": biz, "class_id": v.class_id }),
         "create_asset" => json!({

@@ -173,9 +173,17 @@ pub enum Command {
         name: String,
         body: Template,
     },
-    /// Writes a new version of a template. Years already pinned to an older version keep it.
+    /// Writes a new version of a template. Years already pinned to an older version keep it until
+    /// `move_year_layout`. Every mapping onto the template must still fit the new version: those
+    /// that wouldn't are revised in the same command, through `mappings`, or it's refused.
     /// Practice admin only.
-    ReviseTemplate { template_id: String, body: Template },
+    ReviseTemplate {
+        template_id: String,
+        body: Template,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        mappings: Option<Vec<MappingRevision>>,
+    },
     /// Creates a mapping onto a template, with its first version. Practice admin only.
     CreateMapping {
         template_id: String,
@@ -184,6 +192,17 @@ pub enum Command {
     },
     /// Writes a new version of a mapping. Practice admin only.
     ReviseMapping { mapping_id: String, body: Mapping },
+    /// Moves an open year onto the latest version of a mapping and of its template: by default the
+    /// mapping the year already uses, or `mapping_id`, another for its entity type. Preview it with
+    /// `GET /api/years/{id}/layout`. Refused if the year's statements couldn't be built that way, or
+    /// if it's already on those versions. Comparatives follow, as they're presented through the
+    /// year's own layout.
+    MoveYearLayout {
+        client_year_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        mapping_id: Option<String>,
+    },
     /// Creates a client whose chart is a copy of the master chart for its entity type.
     CreateClient {
         name: String,
@@ -556,6 +575,7 @@ impl Command {
             Command::ReviseTemplate { .. } => "revise_template",
             Command::CreateMapping { .. } => "create_mapping",
             Command::ReviseMapping { .. } => "revise_mapping",
+            Command::MoveYearLayout { .. } => "move_year_layout",
             Command::CreateClient { .. } => "create_client",
             Command::AddAccount { .. } => "add_account",
             Command::RenameAccount { .. } => "rename_account",
@@ -620,6 +640,14 @@ impl Command {
         }
         payload
     }
+}
+
+/// A mapping's new version, revised along with its template in `revise_template`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MappingRevision {
+    pub mapping_id: String,
+    pub body: Mapping,
 }
 
 /// The response to an accepted command, returned again for a resubmitted `id`.

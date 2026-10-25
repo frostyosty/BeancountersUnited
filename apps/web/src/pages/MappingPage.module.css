@@ -1,0 +1,24 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 28rem);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.layout :global(.card) {
+  margin-top: 0;
+}
+
+.inactive td {
+  color: var(--text-muted);
+}
+
+.unmapped {
+  color: var(--danger, inherit);
+}

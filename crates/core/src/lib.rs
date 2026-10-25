@@ -10,6 +10,7 @@ pub mod coding;
 pub mod depreciation;
 pub mod finalise;
 pub mod gl;
+pub mod layout;
 pub mod ledger;
 pub mod mapping;
 pub mod money;
@@ -25,6 +26,7 @@ pub use depreciation::{
     ScheduleBlock, ScheduleClass, ScheduleRow, ScheduleRowKey, ScheduleRowStyle, SlBasis,
     YearJournals, asset_years, build_asset_schedule, reconcile, year_journals,
 };
+pub use layout::{RowChange, RowSummary, row_changes};
 pub use ledger::{
     ClientYear, ClientYearError, Journal, JournalError, JournalLine, RolloverError, TbLine,
     TrialBalance, rollover,

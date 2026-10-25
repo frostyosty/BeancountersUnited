@@ -432,6 +432,13 @@ async fn observe(
                 facts.push(fact("AI suggestions", "AI suggestions", on_off(on).into()));
             }
         }
+        C::MoveYearLayout { client_year_id, .. } => {
+            if let Some(y) = years::get(conn, client_year_id).await? {
+                let subject = format!("the year ending {}", day(y.year.end()));
+                let label = crate::layouts::label(conn, &y).await?;
+                facts.push(fact(&subject, "layout", label));
+            }
+        }
         C::FinaliseYear { client_year_id, .. } | C::ReopenYear { client_year_id, .. } => {
             if let Some(y) = years::get(conn, client_year_id).await? {
                 let status = match y.status {
@@ -1019,7 +1026,23 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
             }
         }
         C::CreateTemplate { name, .. } => format!("created the statement template “{name}”"),
-        C::ReviseTemplate { .. } => "revised a statement template".into(),
+        C::ReviseTemplate { mappings, .. } => match mappings.as_deref() {
+            Some(m) if !m.is_empty() => format!(
+                "revised a statement template, and {} onto it",
+                plural(m.len(), "mapping", "mappings")
+            ),
+            _ => "revised a statement template".into(),
+        },
+        C::MoveYearLayout { .. } => match (subject(changes), field(changes, "layout")) {
+            (
+                Some(year),
+                Some(FieldChange {
+                    after: Some(layout),
+                    ..
+                }),
+            ) => format!("moved {year} onto {layout}"),
+            _ => "moved a year onto a newer statement layout".into(),
+        },
         C::CreateMapping { name, .. } => format!("created the mapping “{name}”"),
         C::ReviseMapping { .. } => "revised a mapping".into(),
         C::CreateClient {

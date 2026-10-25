@@ -6,10 +6,13 @@ import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { ClientSummary } from "@acct/types/ClientSummary";
 import type { JournalView } from "@acct/types/JournalView";
 import type { LibraryParagraph } from "@acct/types/LibraryParagraph";
+import type { MappingDetail } from "@acct/types/MappingDetail";
 import type { PracticeView } from "@acct/types/PracticeView";
 import type { TaxPosition } from "@acct/types/TaxPosition";
+import type { TemplateDetail } from "@acct/types/TemplateDetail";
 import type { UserView } from "@acct/types/UserView";
 import type { YearAssets } from "@acct/types/YearAssets";
+import type { YearLayoutView } from "@acct/types/YearLayoutView";
 import type { YearNoteView } from "@acct/types/YearNoteView";
 import type { YearSummary } from "@acct/types/YearSummary";
 import type { YearTrialBalance } from "@acct/types/YearTrialBalance";
@@ -34,6 +37,8 @@ export const keys = {
   tb: (yearId: string) => ["year", yearId, "tb"] as const,
   report: (yearId: string) => ["year", yearId, "report"] as const,
   assets: (yearId: string) => ["year", yearId, "assets"] as const,
+  /** Which template and mapping versions a year uses, and what moving it would change. */
+  layout: (yearId: string, mappingId: string | null) => ["year", yearId, "layout", mappingId ?? ""] as const,
   /** A year's own copies of library paragraphs (M15). */
   notes: (yearId: string) => ["year", yearId, "notes"] as const,
   /** The practice paragraph library: everything, one entity type's, and a push preview. */
@@ -43,6 +48,10 @@ export const keys = {
   /** Practice asset classes; with a client id, as that client sees them. */
   assetClasses: ["asset-classes"] as const,
   clientAssetClasses: (clientId: string) => ["asset-classes", clientId] as const,
+  /** Statement templates and mappings: one's latest version. Saving either changes both. */
+  layouts: ["layouts"] as const,
+  template: (id: string) => ["layouts", "template", id] as const,
+  mapping: (id: string) => ["layouts", "mapping", id] as const,
   /** A business (M10): its settings and bank accounts, and its tax figure. */
   business: (clientId: string) => ["business", clientId] as const,
   tax: (clientId: string) => ["business", clientId, "tax"] as const,
@@ -112,5 +121,22 @@ export function useParagraphLibrary(entityType: string) {
     queryKey: keys.paragraphLibrary(entityType),
     queryFn: () => getJson<LibraryParagraph[]>(`/api/paragraph-library/${entityType}`),
     enabled: entityType !== "",
+  });
+}
+
+export function useTemplate(id: string) {
+  return useQuery({ queryKey: keys.template(id), queryFn: () => getJson<TemplateDetail>(`/api/templates/${id}`) });
+}
+
+export function useMapping(id: string) {
+  return useQuery({ queryKey: keys.mapping(id), queryFn: () => getJson<MappingDetail>(`/api/mappings/${id}`) });
+}
+
+/** The move preview for a year: onto the latest versions of `mappingId`, or of its own mapping. */
+export function useYearLayout(yearId: string, mappingId: string | null) {
+  const query = mappingId ? `?mapping_id=${encodeURIComponent(mappingId)}` : "";
+  return useQuery({
+    queryKey: keys.layout(yearId, mappingId),
+    queryFn: () => getJson<YearLayoutView>(`/api/years/${yearId}/layout${query}`),
   });
 }

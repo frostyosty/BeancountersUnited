@@ -246,6 +246,17 @@ Accounting depreciation only; tax depreciation is out of scope.
   and makes them active or inactive, as staff do for a client's chart. Edits reach clients set up
   afterwards, never ones already copied. A master account stays active while a practice asset class or
   merchant entry uses it, or while setting up a business needs it.
+- **Editing templates and mappings** (added 2026-10-26): a practice admin edits a template's
+  statements, rows (groups, lines, totals, links), signs, rounding protection and checks, and a
+  mapping's code ranges. Each save is a new version. The latest version of every mapping always fits
+  the latest version of its template: a template revision that would leave a mapping pointing at a
+  removed line is refused unless it revises that mapping in the same command. A new entity type sets
+  up its first template and mapping as copies of another type's, or blank.
+- **Moving a year onto a newer layout**: years keep the template and mapping versions they were set up
+  with. `move_year_layout` moves one open year onto the latest versions of its mapping (or another
+  mapping for its entity type) and that mapping's template, after a preview of every statement row it
+  changes. It's refused if the statements wouldn't build that way. Its comparatives follow, since
+  they're always presented through the year's own layout. Finalised years never move.
 
 ### How the M10 answers were reached (2026-10-19)
 The owner asked for the M10 questions to be answered as conservatively as possible at the start, and as

@@ -4,6 +4,8 @@ import type { ApiError } from "@acct/types/ApiError";
 import type { Command } from "@acct/types/Command";
 import type { Health } from "@acct/types/Health";
 import type { LoginRequest } from "@acct/types/LoginRequest";
+import type { MappingCheck } from "@acct/types/MappingCheck";
+import type { MappingCheckRequest } from "@acct/types/MappingCheckRequest";
 import type { Me } from "@acct/types/Me";
 import type { PresentUser } from "@acct/types/PresentUser";
 import type { SignedUp } from "@acct/types/SignedUp";
@@ -99,6 +101,11 @@ export function submitCommand(
  * pre-fills on the Save tax cards; nothing is applied until the owner accepts one. */
 export function requestAiSuggestions(clientId: string, fetchFn: typeof fetch = fetch): Promise<AiSuggestRun> {
   return postJson<AiSuggestRun>(`/api/businesses/${clientId}/ai-suggestions`, {}, fetchFn);
+}
+
+/** Checks a draft mapping against its template and the master chart without saving it. */
+export function checkMapping(req: MappingCheckRequest, fetchFn: typeof fetch = fetch): Promise<MappingCheck> {
+  return postJson<MappingCheck>("/api/mappings/check", req, fetchFn);
 }
 
 /** Checks a TB CSV against a year without changing anything. */

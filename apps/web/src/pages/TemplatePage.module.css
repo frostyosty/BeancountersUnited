@@ -1,0 +1,97 @@
+.statement {
+  max-width: none;
+}
+
+.statementHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  flex: 1 1 16rem;
+  font-weight: 600;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  border-top: 1px solid var(--border);
+  padding: var(--space-1) 0;
+}
+
+.rowLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rowLine input:not([type]) {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.kind {
+  min-width: 3.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.buttons button {
+  padding: 0 var(--space-2);
+  margin-left: 2px;
+}
+
+.key {
+  font-size: 0.8rem;
+}
+
+.extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 0 4rem;
+  font-size: 0.9rem;
+}
+
+.small {
+  width: 4rem;
+}
+
+.addsUp summary {
+  cursor: pointer;
+}
+
+.check {
+  display: block;
+}
+
+.children {
+  margin-left: var(--space-4);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border);
+}
+
+.addRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.broken {
+  border-color: var(--danger);
+}
+
+.actions {
+  margin-top: var(--space-4);
+  align-items: center;
+}

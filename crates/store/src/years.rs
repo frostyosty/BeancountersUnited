@@ -127,3 +127,22 @@ pub async fn set_status(conn: &mut SqliteConnection, id: &str, status: YearStatu
         .await?;
     Ok(())
 }
+
+/// Pins an open year to other template and mapping versions (`move_year_layout`). The command
+/// pipeline checks the year is open and the versions fit together first.
+pub async fn set_layout(
+    conn: &mut SqliteConnection,
+    id: &str,
+    template_version_id: &str,
+    mapping_version_id: &str,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE client_years SET template_version_id = ?, mapping_version_id = ? WHERE id = ?",
+    )
+    .bind(template_version_id)
+    .bind(mapping_version_id)
+    .bind(id)
+    .execute(conn)
+    .await?;
+    Ok(())
+}

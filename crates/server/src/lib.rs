@@ -10,6 +10,7 @@ pub mod error;
 pub mod finalise;
 pub mod fixtures;
 pub mod history;
+pub mod layouts;
 pub mod ledger;
 pub mod merchants;
 pub mod paragraphs;
@@ -202,6 +203,22 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::POST,
             "/api/businesses/{id}/ai-suggestions",
             post(ai::post_ai_suggestions),
+        ),
+        (
+            Method::GET,
+            "/api/templates/{id}",
+            get(layouts::get_template),
+        ),
+        (Method::GET, "/api/mappings/{id}", get(layouts::get_mapping)),
+        (
+            Method::POST,
+            "/api/mappings/check",
+            post(layouts::check_mapping),
+        ),
+        (
+            Method::GET,
+            "/api/years/{id}/layout",
+            get(layouts::get_year_layout),
         ),
         (Method::GET, "/api/sync", get(reads::sync)),
         (Method::GET, "/api/history", get(history::get_history)),

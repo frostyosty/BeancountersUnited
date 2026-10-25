@@ -642,6 +642,7 @@ async fn years_pin_versions_and_revisions_dont_reach_back() {
         .ok(Command::ReviseTemplate {
             template_id: template_id.clone(),
             body: template,
+            mappings: None,
         })
         .await;
     let mapping: Mapping = serde_json::from_str(MAPPING).unwrap();
@@ -724,6 +725,7 @@ async fn bad_templates_and_mappings_are_rejected() {
         Command::ReviseTemplate {
             template_id,
             body: template,
+            mappings: None,
         },
         "invalid_template",
     )

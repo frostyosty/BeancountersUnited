@@ -219,6 +219,18 @@ fn samples() -> Vec<Sample> {
             "Sam revised a statement template.",
         ),
         s(
+            "move_year_layout",
+            json!({ "client_year_id": "y1" }),
+            "Sam moved the year ending 31 Mar 2026 onto Sole trader (standard) v2, mapping \
+             Sole trader (standard) v1.",
+        )
+        .changed(changes(vec![change(
+            "the year ending 31 Mar 2026",
+            "layout",
+            Some("Sole trader (standard) v1, mapping Sole trader (standard) v1"),
+            Some("Sole trader (standard) v2, mapping Sole trader (standard) v1"),
+        )])),
+        s(
             "create_mapping",
             json!({ "template_id": "t1", "name": "Standard", "body": mapping }),
             "Sam created the mapping “Standard”.",

@@ -33,6 +33,7 @@ use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
 use crate::finalise;
 use crate::history;
+use crate::layouts;
 use crate::ledger;
 use crate::merchants;
 use crate::paragraphs;
@@ -722,14 +723,28 @@ async fn apply(
             Ok(created(id))
         }
 
-        Command::ReviseTemplate { template_id, body } => {
-            templates::get_template(tx, template_id)
-                .await?
-                .ok_or_else(|| CommandError::not_found("template", template_id))?;
-            check_template(body)?;
-            let version_id = new_id();
-            templates::add_template_version(tx, &version_id, template_id, body, seq).await?;
+        Command::ReviseTemplate {
+            template_id,
+            body,
+            mappings,
+        } => {
+            let revisions = mappings.as_deref().unwrap_or_default();
+            let version_id =
+                layouts::revise_template(tx, seq, template_id, body, revisions).await?;
             Ok(created(version_id))
+        }
+
+        Command::MoveYearLayout {
+            client_year_id,
+            mapping_id,
+        } => {
+            let year = open_year(tx, client_year_id).await?;
+            layouts::move_year(tx, &year, mapping_id.as_deref()).await?;
+            Ok(Effect {
+                entity_id: None,
+                client_id: Some(year.client_id),
+                client_year_id: Some(year.id),
+            })
         }
 
         Command::CreateMapping {
@@ -2010,6 +2025,8 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::ConfirmIrdPayment { .. }
         | C::ResolveDuplicate { .. }
         | C::ConfirmSupplyInfo { .. }
+        // A finalised year's statements are its snapshot, and its layout is part of it.
+        | C::MoveYearLayout { .. }
         // Adding a year before a finalised one would give it opening balances.
         | C::CreateClientYear { .. }
         // A finalised year is finalised once; reopen it first.

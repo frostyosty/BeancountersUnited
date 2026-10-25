@@ -1,7 +1,9 @@
 //! Trial balances from stored journals. Opening balances are computed by rolling each year into
 //! the next, never posted (CLAUDE.md, Rollover).
 
-use acct_core::{Chart, Journal, ReportDoc, ReportInput, TrialBalance, build_report, rollover};
+use acct_core::{
+    Chart, Journal, Mapping, ReportDoc, ReportInput, Template, TrialBalance, build_report, rollover,
+};
 use acct_store::clients::Client;
 use acct_store::years::{StoredYear, YearStatus};
 use acct_store::{SqliteConnection, clients, journals, templates, years};
@@ -80,18 +82,61 @@ pub async fn report(
     conn: &mut SqliteConnection,
     client_year_id: &str,
 ) -> Result<ReportDoc, CommandError> {
+    report_with(conn, client_year_id, None).await
+}
+
+/// A template version and a mapping version to present a year through.
+pub struct Layout<'a> {
+    pub template: &'a Template,
+    pub mapping: &'a Mapping,
+}
+
+/// [`report`], presented through `layout` instead of the year's pinned versions when it's given.
+/// `move_year_layout` and its preview use this to see a year as it would be after the move.
+pub async fn report_with(
+    conn: &mut SqliteConnection,
+    client_year_id: &str,
+    layout: Option<Layout<'_>>,
+) -> Result<ReportDoc, CommandError> {
     let (client, _, balances) = balances_to(conn, client_year_id).await?;
+    let current = balances.last().expect("the year itself");
+    let pinned;
+    let layout = match layout {
+        Some(l) => l,
+        None => {
+            pinned = pinned_layout(conn, &current.year).await?;
+            Layout {
+                template: &pinned.0,
+                mapping: &pinned.1,
+            }
+        }
+    };
     let [.., prior, current] = balances.as_slice() else {
-        return build(
-            conn,
-            &client,
-            balances.last().expect("the year itself"),
-            None,
-        )
-        .await;
+        return build(conn, &client, current, None, &layout).await;
     };
     let prior_tb = crate::finalise::comparative_tb(conn, &prior.year, &prior.closing).await?;
-    build(conn, &client, current, Some((&prior.year, &prior_tb))).await
+    build(
+        conn,
+        &client,
+        current,
+        Some((&prior.year, &prior_tb)),
+        &layout,
+    )
+    .await
+}
+
+/// The template and mapping versions a year is pinned to.
+pub async fn pinned_layout(
+    conn: &mut SqliteConnection,
+    year: &StoredYear,
+) -> Result<(Template, Mapping), CommandError> {
+    let template = templates::template_version(conn, &year.template_version_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("template version", &year.template_version_id))?;
+    let mapping = templates::mapping_version(conn, &year.mapping_version_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("mapping version", &year.mapping_version_id))?;
+    Ok((template.body, mapping.body))
 }
 
 async fn build(
@@ -99,20 +144,11 @@ async fn build(
     client: &Client,
     current: &YearBalances,
     prior: Option<(&StoredYear, &TrialBalance)>,
+    layout: &Layout<'_>,
 ) -> Result<ReportDoc, CommandError> {
-    let template = templates::template_version(conn, &current.year.template_version_id)
-        .await?
-        .ok_or_else(|| {
-            CommandError::not_found("template version", &current.year.template_version_id)
-        })?;
-    let mapping = templates::mapping_version(conn, &current.year.mapping_version_id)
-        .await?
-        .ok_or_else(|| {
-            CommandError::not_found("mapping version", &current.year.mapping_version_id)
-        })?;
     let input = ReportInput {
-        template: &template.body,
-        mapping: &mapping.body,
+        template: layout.template,
+        mapping: layout.mapping,
         year: &current.year.year,
         tb: &current.closing,
         prior: prior.map(|(year, tb)| acct_core::Prior {

@@ -283,6 +283,7 @@ async fn command_targets(
         C::PostJournal { client_year_id, .. }
         | C::ImportTb { client_year_id, .. }
         | C::RunDepreciation { client_year_id }
+        | C::MoveYearLayout { client_year_id, .. }
         | C::PickNotes { client_year_id, .. }
         | C::EditNote { client_year_id, .. } => (
             Need::Accounting,
@@ -446,6 +447,8 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
             R::Practice(Need::Read)
         }
         "/api/paragraphs/{id}/push-preview" if get => R::Practice(Need::Admin),
+        "/api/templates/{id}" | "/api/mappings/{id}" if get => R::Practice(Need::Read),
+        "/api/mappings/check" if post => R::Practice(Need::Admin),
         "/api/users" if get => R::Practice(Need::Admin),
         "/api/clients" | "/api/sync" | "/api/history" if get => R::Listing,
         "/api/presence" if post => R::Listing,
@@ -476,6 +479,7 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         | "/api/years/{id}/finalise-check"
         | "/api/years/{id}/report.pdf"
         | "/api/years/{id}/notes"
+        | "/api/years/{id}/layout"
             if get =>
         {
             R::Year(Need::Read)

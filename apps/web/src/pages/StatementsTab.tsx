@@ -12,6 +12,7 @@ import { getJson } from "../lib/api";
 import { formatDate, isFullYear } from "../lib/dates";
 import { formatStatementCents, formatStatementDollars } from "../lib/money";
 import { keys } from "../lib/queries";
+import { LayoutMove } from "./LayoutMove";
 import styles from "./StatementsTab.module.css";
 import { useYearContext } from "./YearLayout";
 
@@ -25,13 +26,18 @@ export function StatementsTab() {
     queryKey: keys.report(year.id),
     queryFn: () => getJson<ReportDoc>(`/api/years/${year.id}/report`),
   });
-  if (report.error) {
-    return <ErrorMessage error={report.error} />;
-  }
-  if (!report.data) {
-    return <p className="muted">Building statements…</p>;
-  }
-  return <Statements doc={report.data} />;
+  return (
+    <>
+      <LayoutMove year={year} />
+      {report.error ? (
+        <ErrorMessage error={report.error} />
+      ) : !report.data ? (
+        <p className="muted">Building statements…</p>
+      ) : (
+        <Statements doc={report.data} />
+      )}
+    </>
+  );
 }
 
 export function Statements({ doc }: { doc: ReportDoc }) {

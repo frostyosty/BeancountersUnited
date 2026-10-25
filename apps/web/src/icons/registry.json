@@ -676,5 +676,43 @@
       "type": "emoji",
       "value": "🌱"
     }
+  },
+  "layouts": {
+    "template": {
+      "type": "emoji",
+      "value": "🧱"
+    },
+    "mapping": {
+      "type": "emoji",
+      "value": "🔗"
+    },
+    "statements": {
+      "type": "emoji",
+      "value": "📑"
+    },
+    "add_row": {
+      "type": "emoji",
+      "value": "➕"
+    },
+    "check": {
+      "type": "emoji",
+      "value": "⚖️"
+    },
+    "unmapped": {
+      "type": "emoji",
+      "value": "⚠️"
+    },
+    "covered": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "move": {
+      "type": "emoji",
+      "value": "📐"
+    },
+    "save": {
+      "type": "emoji",
+      "value": "💾"
+    }
   }
 }

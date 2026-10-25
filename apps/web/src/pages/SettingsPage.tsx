@@ -72,16 +72,16 @@ function Defaults() {
                   <span className="muted">({c.accounts.length} accounts)</span>
                 </td>
                 <td>
-                  {p.templates
-                    .filter((t) => t.entity_type === c.entity_type)
-                    .map((t) => `${t.name} v${t.latest_version}`)
-                    .join(", ") || <span className="muted">none yet</span>}
+                  <Links
+                    items={p.templates.filter((t) => t.entity_type === c.entity_type)}
+                    to={(id) => `/settings/templates/${id}`}
+                  />
                 </td>
                 <td>
-                  {p.mappings
-                    .filter((m) => m.entity_type === c.entity_type)
-                    .map((m) => `${m.name} v${m.latest_version}`)
-                    .join(", ") || <span className="muted">none yet</span>}
+                  <Links
+                    items={p.mappings.filter((m) => m.entity_type === c.entity_type)}
+                    to={(id) => `/settings/mappings/${id}`}
+                  />
                 </td>
               </tr>
             ))}
@@ -89,8 +89,8 @@ function Defaults() {
         </table>
       )}
       <p className="muted">
-        Open a master chart to edit its accounts. Editing templates and mappings comes later. Changing a default never
-        alters existing clients.
+        Open a master chart, template or mapping to edit it. Changing a default never alters existing clients: a year
+        moves onto a newer template or mapping only from its own Statements tab.
       </p>
       <p>
         <Link to="/settings/paragraphs">
@@ -102,6 +102,19 @@ function Defaults() {
       <NewMasterChart practice={p} />
     </>
   );
+}
+
+/** Templates or mappings, each linking to its editor, with its latest version. */
+function Links({ items, to }: { items: { id: string; name: string; latest_version: number }[]; to: (id: string) => string }) {
+  if (items.length === 0) {
+    return <span className="muted">none yet</span>;
+  }
+  return items.map((item, i) => (
+    <span key={item.id}>
+      {i > 0 && ", "}
+      <Link to={to(item.id)}>{item.name}</Link> <span className="muted">v{item.latest_version}</span>
+    </span>
+  ));
 }
 
 /** The starter sets not installed yet. Each sets up an entity type's defaults in one command. */
@@ -188,8 +201,8 @@ function NewMasterChart({ practice }: { practice: PracticeView }) {
         </label>
       </div>
       <p className="muted">
-        Each entity type has one master chart. Clients of a new entity type also need a statement template and mapping
-        before their first year can be added; those can't be made here yet.
+        Each entity type has one master chart. Its page then sets up the statement template and mapping that clients of
+        that type need before their first year can be added.
       </p>
       <ErrorMessage error={create.error} />
       <div>

@@ -574,6 +574,7 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         }
 
         "pick_notes" => Refused(json!({ "client_year_id": b.year, "paragraph_ids": [] })),
+        "move_year_layout" => Refused(json!({ "client_year_id": b.year })),
         "edit_note" => Refused(json!({
             "client_year_id": b.year, "paragraph_id": new_id(), "title": "X", "body": "X",
         })),
