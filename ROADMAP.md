@@ -1,3 +1,14 @@
+## QOL
+
+### On comp
+
+
+
+### phone
+
+the "🕘 Changes" on mobile can this be a thing on the left hand side like a small tab thing you tap that brings it out?
+
+
 ## Ready to go live:
   When you're ready to be found, the changes would be: 
   1. Remove SiteGate from App.tsx, which is a one-line change.
