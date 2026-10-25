@@ -5,3 +5,4 @@ release text eol=lf
 
 # The PDF template is compiled into the binary; its bytes decide the PDF bytes (ADR 010).
 *.typ text eol=lf
+crates/store/migrations/*.sql text eol=lf
