@@ -17,3 +17,5 @@ the "🕘 Changes" on mobile can this be a thing on the left hand side like a sm
   4. Serve the landing page as static HTML, either prerendered or a separate static    
      page. That's the step that lets AI crawlers read it.
 
+ Run make clean-cache whenever the disk gets low, as   
+  long as nothing is compiling
