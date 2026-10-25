@@ -2,8 +2,8 @@
 import type { AiSuggestion } from "./AiSuggestion";
 
 /**
- * `GET /api/businesses/{id}/ai-suggestions`: whether suggestions can be asked for, the consent
- * state, and the suggestions waiting on the owner.
+ * `GET /api/businesses/{id}/ai-suggestions`: whether suggestions can be asked for, the business's
+ * settings, and the suggestions waiting on the owner.
  */
 export type AiSuggestionsView = { 
 /**
@@ -11,14 +11,10 @@ export type AiSuggestionsView = {
  */
 available: boolean, 
 /**
- * The provider's name, for the consent text.
+ * The provider's name, as Save tax and the privacy notice show it.
  */
 provider: string | null, model: string | null, 
 /**
- * The version to send with `set_ai_suggestions` once the owner agrees to the wording.
+ * On unless the business turned it off (ADR 011).
  */
-consent_version: string | null, enabled: boolean, 
-/**
- * On, but agreed to an older wording or another provider: ask again before any request.
- */
-needs_consent: boolean, activity: string | null, private_names: Array<string>, suggestions: Array<AiSuggestion>, };
+enabled: boolean, activity: string | null, private_names: Array<string>, suggestions: Array<AiSuggestion>, };

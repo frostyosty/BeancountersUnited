@@ -6,6 +6,9 @@ Status: accepted (2026-10-23).
 - The consent wording is accepted as drafted, with Anthropic's retention period of 30 days filled in
   (2026-10-24).
 - IRD must confirm in writing before real owners use it.
+- **Amended by ADR 011 (2026-10-26):** the consent screen is gone, and suggestions are on by default. A
+  generaliser replaces the redaction in "What leaves the server" before real owners use suggestions. The
+  "Consent" section below is kept as the record of what was decided then.
 ADR 008 is reserved for M12's hosting decision.
 
 ## Context

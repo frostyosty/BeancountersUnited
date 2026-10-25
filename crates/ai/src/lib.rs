@@ -82,7 +82,7 @@ pub type SuggestFuture<'a> =
 /// Something that suggests categories. The server holds an `Arc<dyn Suggester>`, chosen by
 /// [`Config`].
 pub trait Suggester: Send + Sync {
-    /// The provider's name as the consent text shows it, such as `Anthropic`.
+    /// The provider's name as Save tax and the privacy notice show it, such as `Anthropic`.
     fn provider(&self) -> &str;
     /// The model id recorded with each suggestion, such as `claude-haiku-5-5`.
     fn model(&self) -> &str;
@@ -138,7 +138,7 @@ pub enum Provider {
 #[derive(Clone)]
 pub struct Config {
     pub provider: Provider,
-    /// The provider's name for the consent text (`AI_PROVIDER_NAME`, needed for
+    /// The provider's name as Save tax shows it (`AI_PROVIDER_NAME`, needed for
     /// `openai_compatible`).
     pub provider_name: String,
     pub model: String,

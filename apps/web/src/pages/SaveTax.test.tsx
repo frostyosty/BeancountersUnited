@@ -83,7 +83,7 @@ function routes(save: () => SaveTaxQueue, me = sam) {
     "GET /api/businesses/b1": () => business,
     "GET /api/businesses/b1/tax": () => ({ total: 0, gst: [], income: [], notices: [] }),
     "GET /api/businesses/b1/save-tax": save,
-    "GET /api/businesses/b1/ai-suggestions": () => ({ available: false, provider: null, model: null, consent_version: null, enabled: false, needs_consent: false, activity: null, private_names: [], suggestions: [] }),
+    "GET /api/businesses/b1/ai-suggestions": () => ({ available: false, provider: null, model: null, enabled: true, activity: null, private_names: [], suggestions: [] }),
     "GET /api/clients/b1/chart": () => chart,
     "POST /api/commands": () => ({ seq: 20, entity_id: null }),
   });

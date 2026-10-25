@@ -17,16 +17,24 @@ IRD's approval has its own review steps, so start early.
       and read the build packs. Record anything they require on screen (declaration wording, consent, IRD
       messages) in `docs/ird.md`.
 - [ ] Customer terms and a privacy policy, including consent to file for the owner. IRD can ask for
-      evidence of that consent.
+      evidence of that consent. The privacy policy names the AI provider as a subprocessor and says what
+      it's sent (ADR 011), since there's no longer a consent screen for AI suggestions. Accepting the
+      terms at sign-up should be recorded as a command, so it's the evidence IR1269 4(h) and 4(i) ask for.
+- [ ] Have a privacy lawyer check ADR 011's reading: that a generalised AI request isn't personal
+      information, so the privacy policy is enough and no consent screen is needed.
 
-## AI suggestions (ADR 009): before real owners turn them on
-Development with synthetic data isn't affected.
-- [ ] Ask our IRD account manager to confirm in writing that sending redacted bank lines to an AI
-      provider is acceptable (ADR 009, "IRD's position"). Do this as part of the business track.
+## AI suggestions (ADR 009, ADR 011): before real owners get them
+Development with synthetic data isn't affected. Suggestions are on by default with no consent screen
+(ADR 011), so none of this can be skipped: real owners mustn't get suggestions until the generaliser
+ships.
+- [ ] Decide whether to accept ADR 011's generaliser (it's "proposed"), after the bake-off compares it
+      with ADR 009's redaction.
+- [ ] Ask our IRD account manager to confirm in writing that sending generalised bank lines to an AI
+      provider is acceptable (ADR 009, "IRD's position"; ADR 011, "IRD"). Do this as part of the
+      business track.
 - [ ] Apply to Anthropic's sales team for zero data retention. ZDR doesn't cover the Batch API or prompt
       caching, so decide then whether to give up those discounts. If the retention period changes, update
-      `RETENTION_DAYS` in `apps/web/src/pages/SaveTaxAi.tsx` and bump `CONSENT_WORDING` in
-      `crates/server/src/ai.rs`.
+      the privacy policy.
 - [ ] List Anthropic as a subprocessor in `docs/security.md` (M12) and in the OSF answers.
 - [ ] Someone with accounting knowledge checks the labels in `fixtures/ai/labelled-lines.json` (category
       and GST code per line). Fix them in `tools/ai-labelled-lines/generate.py` and rebuild.
@@ -99,6 +107,13 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       records offshore](https://www.taxtechnical.ird.govt.nz/general-articles/third-party-providers-approved-to-store-taxpayer-electronic-records-offshore)).
       Check whether Fly.io and Tigris are on it; if not, apply to IRD, or choose a host that is. Record the
       outcome in ADR 008 and `docs/security.md` ("Where the data lives").
+      Found 2026-10-26: the list approves software providers, not hosts. Xero and MYOB are on it; AWS
+      and Microsoft aren't. So we'd apply ourselves under s 22(8)(a) of the Tax Administration Act.
+      Fly.io won't be on it.
+- [ ] Decide: stay on Fly.io (Sydney) and apply for that approval, or move to a New Zealand host (AWS's
+      Auckland region, open since 1 Sep 2025, or Catalyst Cloud), which needs no approval. Moving is
+      cheapest before launch. Either way, a host change is a material change under IR1269 5.2, and needs
+      an ADR amending 008.
 
 ## M12 tenancy (Agent 3): decisions and checks
 - [ ] Make the `austin` overseer on the hosted server, once it runs a build with M12's roles:

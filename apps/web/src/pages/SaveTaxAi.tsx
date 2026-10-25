@@ -12,31 +12,6 @@ import styles from "./SaveTax.module.css";
 /** Under the business's key, so every command that invalidates the business refetches it. */
 const aiKey = (clientId: string) => [...keys.business(clientId), "ai-suggestions"] as const;
 
-/**
- * Days the provider keeps a request (Anthropic: 30, confirmed 2026-10-24). Changing it changes the
- * wording, so bump `CONSENT_WORDING` in crates/server/src/ai.rs too, and everyone is asked again.
- */
-const RETENTION_DAYS = 30;
-
-/** ADR 009's consent wording (version 2026-10-24). Keep in step with `CONSENT_WORDING`. */
-export function ConsentWording({ provider }: { provider: string }) {
-  const kept = `within ${RETENTION_DAYS} days`;
-  return (
-    <>
-      <p>
-        We can ask an AI service ({provider}) to suggest a category for each transaction, so you can accept them in one go. It sees
-        each transaction's description and rounded amount, and our list of categories. It never sees your name, your business's
-        name, your bank account numbers or your IRD number, and we strip those out of descriptions too. A description can still
-        name someone you paid.
-      </p>
-      <p>
-        The service runs overseas. It doesn't use your data to train its models, and deletes it {kept}. Nothing changes until you
-        accept a suggestion. You can turn this off at any time.
-      </p>
-    </>
-  );
-}
-
 function names(text: string): string[] {
   return text
     .split(",")
@@ -45,9 +20,9 @@ function names(text: string): string[] {
 }
 
 /**
- * AI suggestions on the Save tax screen (ADR 009): the consent to turn them on, then a button to
- * ask for suggestions and one to turn them off. Shows nothing when the server has no AI service.
- * Until M12's owner role, staff turn it on for the owner, once the owner has agreed.
+ * AI suggestions on the Save tax screen: on by default, with no consent screen (ADR 011). A button
+ * asks for suggestions, and the owner can turn them off. Shows nothing when the server has no AI
+ * service.
  */
 export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
   const view = useQuery({
@@ -58,63 +33,61 @@ export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
   if (!v || !v.available) {
     return null;
   }
-  return v.enabled && !v.needs_consent ? <AiOn clientId={clientId} view={v} /> : <AiConsent clientId={clientId} view={v} />;
+  return v.enabled ? <AiOn clientId={clientId} view={v} /> : <AiOff clientId={clientId} />;
 }
 
-function AiConsent({ clientId, view }: { clientId: string; view: AiSuggestionsView }) {
+function AiOff({ clientId }: { clientId: string }) {
   const command = useCommand([keys.business(clientId)]);
-  const [agreed, setAgreed] = useState(false);
-  const [activity, setActivity] = useState(view.activity ?? "");
-  const [privateNames, setPrivateNames] = useState(view.private_names.join(", "));
-  const provider = view.provider ?? "an AI service";
-
-  const turnOn = () =>
-    command.mutate({
-      kind: "set_ai_suggestions",
-      payload: {
-        client_id: clientId,
-        enabled: true,
-        consent_version: view.consent_version ?? undefined,
-        activity: activity.trim(),
-        private_names: names(privateNames),
-      },
-    });
-
   return (
     <section className={styles.acceptAll} aria-label="AI suggestions">
-      <h2>
-        <Icon name="business.save_ai" fallback="🤖" /> Suggest categories for me
-      </h2>
-      {view.needs_consent && (
-        <p>
-          <Icon name="business.notice" fallback="ℹ️" /> What we say about this has changed, or the AI service has, so the owner
-          needs to agree again before we ask for more suggestions.
-        </p>
-      )}
-      <ConsentWording provider={provider} />
-      <details>
-        <summary>Keep more names private (optional)</summary>
-        <div className={styles.form}>
-          <label>
-            Other names to strip from descriptions, such as the owner's and anyone else on the account, separated by commas
-            <input value={privateNames} onChange={(e) => setPrivateNames(e.target.value)} placeholder="Q Marsh" />
-          </label>
-          <label>
-            What the business does, in a few words (helps the suggestions)
-            <input value={activity} onChange={(e) => setActivity(e.target.value)} maxLength={60} placeholder="candle maker" />
-          </label>
-        </div>
-      </details>
-      <label className={styles.check}>
-        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> The owner has read this and agrees
-      </label>
+      <p>
+        <Icon name="business.save_ai" fallback="🤖" /> AI suggestions are off for this business.
+      </p>
       <div className="row">
-        <button type="button" onClick={turnOn} disabled={!agreed || command.isPending}>
-          <Icon name="business.ok" fallback="✅" /> Turn on suggestions
+        <button
+          type="button"
+          onClick={() => command.mutate({ kind: "set_ai_suggestions", payload: { client_id: clientId, enabled: true } })}
+          disabled={command.isPending}
+        >
+          <Icon name="business.ok" fallback="✅" /> Turn suggestions on
         </button>
       </div>
       {command.error && <ErrorMessage error={command.error} />}
     </section>
+  );
+}
+
+/** Names to strip and the business's activity phrase, both optional. */
+function AiSettingsForm({ clientId, view }: { clientId: string; view: AiSuggestionsView }) {
+  const command = useCommand([keys.business(clientId)]);
+  const [activity, setActivity] = useState(view.activity ?? "");
+  const [privateNames, setPrivateNames] = useState(view.private_names.join(", "));
+  const save = () =>
+    command.mutate({
+      kind: "set_ai_suggestions",
+      payload: { client_id: clientId, enabled: true, activity: activity.trim(), private_names: names(privateNames) },
+    });
+  return (
+    <details>
+      <summary>Keep more names private (optional)</summary>
+      <div className={styles.form}>
+        <label>
+          Other names to strip from descriptions, such as the owner's and anyone else on the account, separated by commas
+          <input value={privateNames} onChange={(e) => setPrivateNames(e.target.value)} placeholder="Q Marsh" />
+        </label>
+        <label>
+          What the business does, in a few words (helps the suggestions)
+          <input value={activity} onChange={(e) => setActivity(e.target.value)} maxLength={60} placeholder="candle maker" />
+        </label>
+        <div className="row">
+          <button type="button" onClick={save} disabled={command.isPending}>
+            <Icon name="business.ok" fallback="✅" /> Save
+          </button>
+        </div>
+        {command.isSuccess && <p role="status">Saved.</p>}
+        {command.error && <ErrorMessage error={command.error} />}
+      </div>
+    </details>
   );
 }
 
@@ -157,6 +130,7 @@ function AiOn({ clientId, view }: { clientId: string; view: AiSuggestionsView })
         </p>
       )}
       {(ask.error ?? turnOff.error) && <ErrorMessage error={ask.error ?? turnOff.error} />}
+      <AiSettingsForm clientId={clientId} view={view} />
     </section>
   );
 }

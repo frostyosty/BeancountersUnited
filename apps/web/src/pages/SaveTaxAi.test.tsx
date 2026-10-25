@@ -20,13 +20,11 @@ const business: BusinessView = {
   possible_duplicates: [],
 };
 
-const off: AiSuggestionsView = {
+const on: AiSuggestionsView = {
   available: true,
   provider: "Anthropic",
   model: "claude-haiku-5-5",
-  consent_version: "2026-10-24:Anthropic",
-  enabled: false,
-  needs_consent: false,
+  enabled: true,
   activity: null,
   private_names: [],
   suggestions: [],
@@ -52,54 +50,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("AI suggestions consent (ADR 009)", () => {
+describe("AI suggestions (ADR 009, ADR 011)", () => {
   it("shows nothing when the server has no AI service", async () => {
-    routes(() => ({ ...off, available: false, provider: null, model: null, consent_version: null }));
+    routes(() => ({ ...on, available: false, provider: null, model: null }));
     renderApp(<App />, "/businesses/b1/save-tax");
     expect(await screen.findByText(/Tax to pay if submitted now/)).toBeTruthy();
-    expect(screen.queryByText("Suggest categories for me")).toBeNull();
+    expect(screen.queryByText(/AI suggestions are/)).toBeNull();
   });
 
-  it("turns them on only once the owner agrees, with the consent version", async () => {
-    const calls = routes(() => off);
-    renderApp(<App />, "/businesses/b1/save-tax");
-    const user = userEvent.setup();
-    expect(await screen.findByText("Suggest categories for me")).toBeTruthy();
-    expect(screen.getByText(/It never sees your name, your business's name, your bank account numbers or your IRD/)).toBeTruthy();
-    expect(screen.getByText(/We can ask an AI service \(Anthropic\)/)).toBeTruthy();
-    const turnOn = screen.getByRole("button", { name: /Turn on suggestions/ });
-    expect((turnOn as HTMLButtonElement).disabled).toBe(true);
-
-    await user.click(screen.getByText(/Keep more names private/));
-    await user.type(screen.getByLabelText(/Other names to strip/), "Q Marsh, J Doe");
-    await user.type(screen.getByLabelText(/What the business does/), "candle maker");
-    await user.click(screen.getByLabelText(/The owner has read this and agrees/));
-    await user.click(turnOn);
-    await waitFor(() => expect(posts(calls)).toHaveLength(1));
-    expect(posts(calls)[0]).toMatchObject({
-      kind: "set_ai_suggestions",
-      payload: {
-        client_id: "b1",
-        enabled: true,
-        consent_version: "2026-10-24:Anthropic",
-        activity: "candle maker",
-        private_names: ["Q Marsh", "J Doe"],
-      },
-    });
-  });
-
-  it("asks again when the wording or provider changed", async () => {
-    routes(() => ({ ...off, enabled: true, needs_consent: true }));
-    renderApp(<App />, "/businesses/b1/save-tax");
-    expect(await screen.findByText(/needs to agree again/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Turn on suggestions/ })).toBeTruthy();
-  });
-
-  it("once on, asks for suggestions and can be turned off", async () => {
-    const calls = routes(() => ({ ...off, enabled: true }));
+  it("is on by default with no consent screen, asks for suggestions, and can be turned off", async () => {
+    const calls = routes(() => on);
     renderApp(<App />, "/businesses/b1/save-tax");
     const user = userEvent.setup();
     expect(await screen.findByText(/AI suggestions are on, from Anthropic/)).toBeTruthy();
+    expect(screen.queryByText(/agrees/)).toBeNull();
     await user.click(screen.getByRole("button", { name: /Suggest categories now/ }));
     expect(await screen.findByText(/Asked about 12 transactions, and got 0 suggestions/)).toBeTruthy();
     expect(calls.some((c) => c.method === "POST" && c.path === "/api/businesses/b1/ai-suggestions")).toBe(true);
@@ -109,10 +73,35 @@ describe("AI suggestions consent (ADR 009)", () => {
     expect(posts(calls)[0]).toMatchObject({ kind: "set_ai_suggestions", payload: { client_id: "b1", enabled: false } });
   });
 
+  it("saves names to keep private and the business's activity", async () => {
+    const calls = routes(() => on);
+    renderApp(<App />, "/businesses/b1/save-tax");
+    const user = userEvent.setup();
+    await user.click(await screen.findByText(/Keep more names private/));
+    await user.type(screen.getByLabelText(/Other names to strip/), "Q Marsh, J Doe");
+    await user.type(screen.getByLabelText(/What the business does/), "candle maker");
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({
+      kind: "set_ai_suggestions",
+      payload: { client_id: "b1", enabled: true, activity: "candle maker", private_names: ["Q Marsh", "J Doe"] },
+    });
+  });
+
+  it("can be turned back on once off", async () => {
+    const calls = routes(() => ({ ...on, enabled: false }));
+    renderApp(<App />, "/businesses/b1/save-tax");
+    const user = userEvent.setup();
+    expect(await screen.findByText(/AI suggestions are off for this business/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Turn suggestions on/ }));
+    await waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({ kind: "set_ai_suggestions", payload: { client_id: "b1", enabled: true } });
+  });
+
   it("isn't shown to viewers", async () => {
-    routes(() => off, val);
+    routes(() => on, val);
     renderApp(<App />, "/businesses/b1/save-tax");
     expect(await screen.findByText(/viewers can't answer questions/)).toBeTruthy();
-    expect(screen.queryByText("Suggest categories for me")).toBeNull();
+    expect(screen.queryByText(/AI suggestions are/)).toBeNull();
   });
 });

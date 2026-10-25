@@ -21,7 +21,7 @@ pub struct Client {
 
 impl Client {
     /// `base_url` is the provider's API root, such as `https://api.openai.com/v1`.
-    /// `provider` is the name the consent text shows, such as `OpenAI`.
+    /// `provider` is the name Save tax shows, such as `OpenAI`.
     pub fn new(
         provider: &str,
         http: reqwest::Client,

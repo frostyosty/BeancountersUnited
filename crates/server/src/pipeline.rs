@@ -329,7 +329,6 @@ async fn apply(
         Command::SetAiSuggestions {
             client_id,
             enabled,
-            consent_version,
             activity,
             private_names,
         } => {
@@ -338,7 +337,6 @@ async fn apply(
                 seq,
                 client_id,
                 *enabled,
-                consent_version.as_deref(),
                 activity.as_deref(),
                 private_names.as_deref(),
             )

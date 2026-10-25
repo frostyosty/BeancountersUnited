@@ -426,9 +426,7 @@ async fn observe(
         }
         C::SetAiSuggestions { .. } => {
             if let Some(c) = client_id {
-                let on = ai_store::settings(conn, c)
-                    .await?
-                    .is_some_and(|s| s.enabled);
+                let on = ai_store::enabled(conn, c).await?;
                 facts.push(fact("AI suggestions", "AI suggestions", on_off(on).into()));
             }
         }

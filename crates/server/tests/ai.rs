@@ -1,5 +1,5 @@
-//! ADR 009 end to end, over HTTP with the fake suggester: consent gating, what reaches the
-//! suggester, pre-fills in the Save tax queue, accepting one with `via`, and turning it off.
+//! ADR 009 and ADR 011 end to end, over HTTP with the fake suggester: on by default and turning
+//! it off, what reaches the suggester, pre-fills in the Save tax queue, accepting one with `via`, and turning it off.
 //! No network.
 
 mod common;
@@ -157,11 +157,10 @@ async fn ask(s: &Server, cookie: &str, client: &str) -> (StatusCode, Value) {
     .await
 }
 
-fn set(client: &str, enabled: bool, consent_version: Option<String>) -> Command {
+fn set(client: &str, enabled: bool) -> Command {
     Command::SetAiSuggestions {
         client_id: client.into(),
         enabled,
-        consent_version,
         activity: Some("candle maker".into()),
         private_names: Some(vec!["Q Marsh".into()]),
     }
@@ -184,40 +183,26 @@ async fn suggestions_are_gated_redacted_and_only_ever_pre_filled() {
     let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
     s.state.suggester = Some(fake.clone());
 
-    // Off by default.
+    // On by default, with no consent screen (ADR 011).
     let v = view(&s, &sam, &client).await;
     assert_eq!(v["available"], true);
-    assert_eq!(v["enabled"], false);
-    let current = v["consent_version"].as_str().unwrap().to_owned();
+    assert_eq!(v["enabled"], true);
+    assert!(v.get("consent_version").is_none());
+
+    // Turned off, nothing is asked. Viewers can't change it.
+    let (kind, p) = payload(set(&client, false));
+    assert_eq!(s.command(&val, &kind, p).await.0, StatusCode::FORBIDDEN);
+    ok(&s, &sam, set(&client, false)).await;
+    assert_eq!(view(&s, &sam, &client).await["enabled"], false);
     let (_, body) = ask(&s, &sam, &client).await;
     assert_eq!(body["code"], "ai_suggestions_off");
     assert!(fake.seen().is_empty());
 
-    // Turning it on needs the current wording, and viewers can't.
-    let (kind, p) = payload(set(&client, true, None));
-    assert_eq!(s.command(&sam, &kind, p).await.1["code"], "consent_needed");
-    let (kind, p) = payload(set(&client, true, Some("2020-01-01:Anthropic".into())));
-    assert_eq!(
-        s.command(&sam, &kind, p).await.1["code"],
-        "consent_out_of_date"
-    );
-    let (kind, p) = payload(set(&client, true, Some(current.clone())));
-    assert_eq!(s.command(&val, &kind, p).await.0, StatusCode::FORBIDDEN);
-
-    // Agreed with another provider named: ask again before any request.
-    ok(
-        &s,
-        &sam,
-        set(&client, true, Some("2026-10-24:Anthropic".into())),
-    )
-    .await;
-    assert_eq!(view(&s, &sam, &client).await["needs_consent"], true);
-    let (_, body) = ask(&s, &sam, &client).await;
-    assert_eq!(body["code"], "consent_out_of_date");
-    assert!(fake.seen().is_empty());
-
-    ok(&s, &sam, set(&client, true, Some(current))).await;
-    assert_eq!(view(&s, &sam, &client).await["needs_consent"], false);
+    // An old payload with ADR 009's consent version still reads; the field is ignored.
+    let (kind, mut p) = payload(set(&client, true));
+    p["consent_version"] = json!("2026-10-24:Anthropic");
+    assert_eq!(s.command(&sam, &kind, p).await.0, StatusCode::OK);
+    assert_eq!(view(&s, &sam, &client).await["enabled"], true);
     let (status, _) = ask(&s, &val, &client).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 
@@ -301,7 +286,7 @@ async fn suggestions_are_gated_redacted_and_only_ever_pre_filled() {
     assert!(again["asked"].as_u64().unwrap() <= asked - made.len() as u64);
 
     // Turning it off stops requests and deletes the suggestions still waiting.
-    ok(&s, &sam, set(&client, false, None)).await;
+    ok(&s, &sam, set(&client, false)).await;
     assert!(
         view(&s, &sam, &client).await["suggestions"]
             .as_array()
@@ -346,6 +331,7 @@ async fn record_suggestions_is_checked_like_any_command() {
     let personal = json!({ "direction": "out", "kind": "personal" });
 
     // Off: nothing is recorded.
+    ok(&s, &boss, set(&client, false)).await;
     let (_, body) = s
         .command(
             &boss,
@@ -355,8 +341,7 @@ async fn record_suggestions_is_checked_like_any_command() {
         .await;
     assert_eq!(body["code"], "ai_suggestions_off");
 
-    let v = acct_server::ai::consent_version("Anthropic");
-    ok(&s, &boss, set(&client, true, Some(v))).await;
+    ok(&s, &boss, set(&client, true)).await;
     for (coding, confidence, code) in [
         (personal.clone(), "low", "low_confidence"),
         (
@@ -502,13 +487,7 @@ async fn the_merchant_list_suggests_after_rules_and_history_and_before_ai() {
     // AI is asked only about what the list didn't answer.
     let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
     s.state.suggester = Some(fake.clone());
-    let consent = view(&s, &sam, &client).await["consent_version"].clone();
-    ok(
-        &s,
-        &sam,
-        set(&client, true, Some(consent.as_str().unwrap().to_owned())),
-    )
-    .await;
+    ok(&s, &sam, set(&client, true)).await;
     let (status, run) = ask(&s, &sam, &client).await;
     assert_eq!(status, StatusCode::OK, "{run}");
     for request in fake.seen() {

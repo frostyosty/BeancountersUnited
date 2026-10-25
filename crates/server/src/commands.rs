@@ -443,17 +443,15 @@ pub enum Command {
         client_id: String,
         settings: CodingSettings,
     },
-    /// Turns AI category suggestions on or off for a business (ADR 009). Off by default.
-    /// Turning them on needs `consent_version`, from `GET /api/businesses/{id}/ai-suggestions`,
-    /// once the owner has agreed to the wording; turning them off stops all requests and deletes
-    /// the suggestions still waiting. The business owner does this, or staff on their behalf. `activity` (the owner's phrase for what the business does)
-    /// and `private_names` (names to strip from what's sent, besides the business's own), when
-    /// absent, keep what's stored.
+    /// Turns AI category suggestions on or off for a business. They're on by default, with no
+    /// consent screen (ADR 011). Turning them off stops all requests and deletes the suggestions
+    /// still waiting. The business owner does this, or staff on their behalf. `activity` (the
+    /// owner's phrase for what the business does) and `private_names` (names to strip from what's
+    /// sent, besides the business's own), when absent, keep what's stored. Older log entries may
+    /// carry a `consent_version` from ADR 009; it's ignored.
     SetAiSuggestions {
         client_id: String,
         enabled: bool,
-        #[ts(optional)]
-        consent_version: Option<String>,
         #[ts(optional)]
         activity: Option<String>,
         #[ts(optional)]

@@ -1,5 +1,6 @@
-//! AI category suggestions (ADR 009): consent, asking the suggester for the lines layers 1 to 3
-//! couldn't answer, and turning its answers into pre-fills.
+//! AI category suggestions (ADR 009, ADR 011): turning them on or off, asking the suggester for the
+//! lines layers 1 to 3 couldn't answer, and turning its answers into pre-fills. They're on by
+//! default wherever the server has a suggester; ADR 011 removed the consent screen.
 //!
 //! The flow, from `POST /api/businesses/{id}/ai-suggestions`:
 //! 1. Read the Save tax queue: its categorise cards with no rule or history suggestion are the
@@ -40,19 +41,8 @@ use crate::error::CommandError;
 use crate::pipeline;
 use crate::save_tax::{self, CardKind};
 
-/// The consent wording's version (ADR 009: accepted 2026-10-23, with the 30-day retention period
-/// filled in 2026-10-24). Change it whenever the wording changes; every business is then asked
-/// again.
-pub const CONSENT_WORDING: &str = "2026-10-24";
-
 /// How many lines go in one request.
 const BATCH: usize = 50;
-
-/// The consent version for a provider: the wording's version and the provider's name, so a change
-/// of either asks the owner again.
-pub fn consent_version(provider: &str) -> String {
-    format!("{CONSENT_WORDING}:{provider}")
-}
 
 /// The suggester the server's environment names, if any. A bad configuration is logged and
 /// leaves suggestions off.
@@ -152,46 +142,18 @@ impl AiSuggestion {
 // ---------------------------------------------------------------------------------------------
 // Commands.
 
-/// Checks a consent version's shape: the current wording, and a provider.
-fn check_consent_version(version: &str) -> Result<(), CommandError> {
-    match version.split_once(':') {
-        Some((wording, provider)) if wording == CONSENT_WORDING && !provider.trim().is_empty() => {
-            Ok(())
-        }
-        _ => Err(CommandError::invalid(
-            "consent_out_of_date",
-            "That's not the current wording of the consent. Show the owner the current wording \
-             and ask again.",
-        )),
-    }
-}
-
-/// `set_ai_suggestions`. Turning it on needs the consent version the owner agreed to. Turning it
-/// off stops all requests and deletes the suggestions still waiting (ADR 009, "Retention").
-/// `activity` and `private_names`, when absent, keep what's stored.
+/// `set_ai_suggestions`. Turning it off stops all requests and deletes the suggestions still
+/// waiting (ADR 009, "Retention"). `activity` and `private_names`, when absent, keep what's stored.
 pub async fn set_ai_suggestions(
     tx: &mut SqliteConnection,
     seq: i64,
     client_id: &str,
     enabled: bool,
-    consent_version: Option<&str>,
     activity: Option<&str>,
     private_names: Option<&[String]>,
 ) -> Result<(), CommandError> {
     business::business(tx, client_id).await?;
     let current = ai_store::settings(tx, client_id).await?;
-    let consent_version = if enabled {
-        let v = consent_version.ok_or_else(|| {
-            CommandError::invalid(
-                "consent_needed",
-                "Turning suggestions on needs the owner's agreement to the consent wording.",
-            )
-        })?;
-        check_consent_version(v)?;
-        Some(v.to_owned())
-    } else {
-        None
-    };
     let activity = match activity {
         Some(a) => {
             let a = a.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -221,7 +183,6 @@ pub async fn set_ai_suggestions(
         &AiSettings {
             client_id: client_id.to_owned(),
             enabled,
-            consent_version,
             activity,
             private_names,
             updated_seq: seq,
@@ -260,10 +221,7 @@ pub async fn record_suggestions(
     suggestions: &[SuggestedCoding],
 ) -> Result<(), CommandError> {
     let books = save_tax::books(tx, client_id).await?;
-    let enabled = ai_store::settings(tx, client_id)
-        .await?
-        .is_some_and(|s| s.enabled);
-    if !enabled {
+    if !ai_store::enabled(tx, client_id).await? {
         return Err(CommandError::invalid(
             "ai_suggestions_off",
             "AI suggestions are turned off for this business.",
@@ -402,24 +360,38 @@ pub async fn accept_via(
 // ---------------------------------------------------------------------------------------------
 // Reads and the request.
 
-/// `GET /api/businesses/{id}/ai-suggestions`: whether suggestions can be asked for, the consent
-/// state, and the suggestions waiting on the owner.
+/// `GET /api/businesses/{id}/ai-suggestions`: whether suggestions can be asked for, the business's
+/// settings, and the suggestions waiting on the owner.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub struct AiSuggestionsView {
     /// The server has a suggester configured.
     pub available: bool,
-    /// The provider's name, for the consent text.
+    /// The provider's name, as Save tax and the privacy notice show it.
     pub provider: Option<String>,
     pub model: Option<String>,
-    /// The version to send with `set_ai_suggestions` once the owner agrees to the wording.
-    pub consent_version: Option<String>,
+    /// On unless the business turned it off (ADR 011).
     pub enabled: bool,
-    /// On, but agreed to an older wording or another provider: ask again before any request.
-    pub needs_consent: bool,
     pub activity: Option<String>,
     pub private_names: Vec<String>,
     pub suggestions: Vec<AiSuggestion>,
+}
+
+/// A business's settings, or the defaults when it has never changed them: on, with no activity
+/// phrase or extra private names (ADR 011).
+async fn settings_or_default(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+) -> Result<AiSettings, CommandError> {
+    Ok(ai_store::settings(conn, client_id)
+        .await?
+        .unwrap_or_else(|| AiSettings {
+            client_id: client_id.to_owned(),
+            enabled: true,
+            activity: None,
+            private_names: Vec::new(),
+            updated_seq: 0,
+        }))
 }
 
 /// The view for a business, with the server's suggester.
@@ -429,12 +401,7 @@ pub async fn view(
     client_id: &str,
 ) -> Result<AiSuggestionsView, CommandError> {
     business::business(conn, client_id).await?;
-    let settings = ai_store::settings(conn, client_id).await?;
-    let current = suggester.map(|s| consent_version(s.provider()));
-    let enabled = settings.as_ref().is_some_and(|s| s.enabled);
-    let needs_consent = enabled
-        && current.is_some()
-        && settings.as_ref().and_then(|s| s.consent_version.as_ref()) != current.as_ref();
+    let settings = settings_or_default(conn, client_id).await?;
     let suggestions = ai_store::live_suggestions(conn, client_id)
         .await?
         .into_iter()
@@ -444,11 +411,9 @@ pub async fn view(
         available: suggester.is_some(),
         provider: suggester.map(|s| s.provider().to_owned()),
         model: suggester.map(|s| s.model().to_owned()),
-        consent_version: current,
-        enabled,
-        needs_consent,
-        activity: settings.as_ref().and_then(|s| s.activity.clone()),
-        private_names: settings.map(|s| s.private_names).unwrap_or_default(),
+        enabled: settings.enabled,
+        activity: settings.activity,
+        private_names: settings.private_names,
         suggestions,
     })
 }
@@ -757,19 +722,11 @@ pub async fn suggest(
     let prepared = {
         let mut conn = state.store.reader().await?;
         business::business(&mut conn, client_id).await?;
-        let settings = ai_store::settings(&mut conn, client_id)
-            .await?
-            .filter(|s| s.enabled)
-            .ok_or_else(|| {
-                CommandError::invalid(
-                    "ai_suggestions_off",
-                    "AI suggestions are turned off for this business.",
-                )
-            })?;
-        if settings.consent_version.as_deref() != Some(&consent_version(suggester.provider())) {
+        let settings = settings_or_default(&mut conn, client_id).await?;
+        if !settings.enabled {
             return Err(CommandError::invalid(
-                "consent_out_of_date",
-                "The owner needs to agree to the current consent wording first.",
+                "ai_suggestions_off",
+                "AI suggestions are turned off for this business.",
             ));
         }
         prepare(&mut conn, client_id, &settings).await?
@@ -966,15 +923,5 @@ mod tests {
             labelled, offered,
             "rebuild the set with tools/ai-labelled-lines/generate.py"
         );
-    }
-
-    #[test]
-    fn consent_versions_name_the_wording_and_provider() {
-        assert_eq!(consent_version("Anthropic"), "2026-10-24:Anthropic");
-        assert!(check_consent_version("2026-10-24:Anthropic").is_ok());
-        assert!(check_consent_version("2026-10-23:Anthropic").is_err());
-        assert!(check_consent_version("2026-01-01:Anthropic").is_err());
-        assert!(check_consent_version("2026-10-24:").is_err());
-        assert!(check_consent_version("yes").is_err());
     }
 }

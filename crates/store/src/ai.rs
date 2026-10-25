@@ -1,18 +1,18 @@
-//! AI category suggestions (ADR 009): each business's consent, and the suggestions waiting on the
-//! owner. Prompts and responses are never stored.
+//! AI category suggestions (ADR 009, ADR 011): each business's settings, and the suggestions
+//! waiting on the owner. Prompts and responses are never stored.
 
 use acct_core::coding::Coding;
 use sqlx::{FromRow, SqliteConnection};
 
 use crate::{Result, from_json, to_json};
 
-/// A business's AI settings. No row means suggestions are off.
+/// A business's AI settings. No row means suggestions are on, with no activity phrase or extra
+/// private names (ADR 011). The `consent_version` column is no longer written or read: ADR 011
+/// removed the consent screen, and migrations are append-only.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AiSettings {
     pub client_id: String,
     pub enabled: bool,
-    /// The consent version agreed to when it was turned on.
-    pub consent_version: Option<String>,
     pub activity: Option<String>,
     pub private_names: Vec<String>,
     pub updated_seq: i64,
@@ -22,7 +22,6 @@ pub struct AiSettings {
 struct SettingsRow {
     client_id: String,
     enabled: bool,
-    consent_version: Option<String>,
     activity: Option<String>,
     private_names: String,
     updated_seq: i64,
@@ -32,14 +31,13 @@ pub async fn set_settings(conn: &mut SqliteConnection, s: &AiSettings) -> Result
     sqlx::query(
         "INSERT INTO ai_settings
              (client_id, enabled, consent_version, activity, private_names, updated_seq)
-         VALUES (?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, NULL, ?, ?, ?)
          ON CONFLICT (client_id) DO UPDATE SET enabled = excluded.enabled,
-             consent_version = excluded.consent_version, activity = excluded.activity,
+             consent_version = NULL, activity = excluded.activity,
              private_names = excluded.private_names, updated_seq = excluded.updated_seq",
     )
     .bind(&s.client_id)
     .bind(s.enabled)
-    .bind(&s.consent_version)
     .bind(&s.activity)
     .bind(to_json(&s.private_names))
     .bind(s.updated_seq)
@@ -49,21 +47,28 @@ pub async fn set_settings(conn: &mut SqliteConnection, s: &AiSettings) -> Result
 }
 
 pub async fn settings(conn: &mut SqliteConnection, client_id: &str) -> Result<Option<AiSettings>> {
-    let row: Option<SettingsRow> = sqlx::query_as("SELECT * FROM ai_settings WHERE client_id = ?")
-        .bind(client_id)
-        .fetch_optional(conn)
-        .await?;
+    let row: Option<SettingsRow> = sqlx::query_as(
+        "SELECT client_id, enabled, activity, private_names, updated_seq
+         FROM ai_settings WHERE client_id = ?",
+    )
+    .bind(client_id)
+    .fetch_optional(conn)
+    .await?;
     row.map(|r| {
         Ok(AiSettings {
             client_id: r.client_id,
             enabled: r.enabled,
-            consent_version: r.consent_version,
             activity: r.activity,
             private_names: from_json(&r.private_names)?,
             updated_seq: r.updated_seq,
         })
     })
     .transpose()
+}
+
+/// Whether suggestions are on for a business: on unless it has turned them off (ADR 011).
+pub async fn enabled(conn: &mut SqliteConnection, client_id: &str) -> Result<bool> {
+    Ok(settings(conn, client_id).await?.is_none_or(|s| s.enabled))
 }
 
 /// A suggestion as stored.

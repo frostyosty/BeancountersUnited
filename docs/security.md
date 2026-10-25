@@ -31,7 +31,7 @@ them).
 | 4(a), 4(g) | Keep taxpayer information strictly confidential, with appropriate security against unauthorised access or use. | The controls in "Controls" below. |
 | 4(c) | Keep our gateway account and login credentials safe. | "Secrets and credentials". |
 | 4(e) | Comply with the Privacy Act 2020. | "Breach response", "What leaves the server". |
-| 4(h), 4(i) | Use taxpayer information only as authorised; don't disclose it to a third party without the taxpayer's consent, and produce evidence of consent if asked. | Consent is a logged command (`command_log`), e.g. `set_ai_suggestions` (ADR 009). IRD-sourced data is never sent to any third party. |
+| 4(h), 4(i) | Use taxpayer information only as authorised; don't disclose it to a third party without the taxpayer's consent, and produce evidence of consent if asked. | Accepting the customer terms and privacy notice at sign-up, recorded as a command (`command_log`). The AI provider gets generalised lines that identify no-one (ADR 011). IRD-sourced data is never sent to any third party. |
 | 4(j) | Give IRD our customer terms and conditions if asked. | Customer terms: [CUSTOMER TERMS LOCATION]. |
 | 4(k) | Allow audits of our premises, systems and records, on 14 days' written notice. | `command_log`, access logs and this document are the starting point. |
 | 4(p) | Don't share or outsource gateway access without approval. | Only `acctd` holds gateway credentials (M14). |
@@ -143,7 +143,7 @@ numbers or request bodies.
 | Destination | What goes | When | Basis |
 |---|---|---|---|
 | IRD's gateway services | Return payloads core builds, filing and status requests, the business's IRD identifiers. | M14, when the owner files or checks a return. | The owner's own return, authorised through myIR. |
-| AI provider (Anthropic, Claude Haiku 5.5 during development; the bake-off picks the production model) | Redacted bank descriptions (60 characters at most), whole-dollar amounts, direction, our category list, and the owner's optional activity phrase. Processed overseas; retained up to 30 days; not used for training. | M11, only for businesses that opted in (`set_ai_suggestions`). | Consent, recorded in `command_log`; the provider acts as our agent (Privacy Act 2020 s 11). IRD must confirm in writing before real owners use it (ADR 009). |
+| AI provider (Anthropic, Claude Haiku 5.5 during development; the bake-off picks the production model) | Today: redacted bank descriptions (60 characters at most), whole-dollar amounts, direction, our category list, and the owner's optional activity phrase. Once ADR 011's generaliser ships: transaction kind, counterparty kind, size to two significant figures, recurrence and vocabulary words only, with placeholders for everything else. Processed overseas; retained up to 30 days; not used for training. | M11. On by default unless the business turns it off (`set_ai_suggestions`, ADR 011). Real owners only once the generaliser ships. | Nothing that identifies anyone (ADR 011); the provider acts as our agent (Privacy Act 2020 s 11); named in the privacy notice. IRD must confirm in writing before real owners use it (ADR 009). |
 | Backup storage (Tigris, through Fly) | The whole database, encrypted. | Continuously, by Litestream. **Planned (M12, Agent 2).** | Our own bucket; `litestream.yml`, ADR 008. |
 | The host (Fly.io) | Everything, as the place the server runs. | Always. | ADR 008. |
 
@@ -165,7 +165,7 @@ under IR1269 5.2(b): tell IRD first.
 |---|---|---|---|
 | Fly.io | Hosting, volumes, volume snapshots | Everything | Sydney, Australia (`syd`) |
 | Tigris (through Fly) | Continuous backup storage | The whole database | [TIGRIS REGION, ADR 008] |
-| Anthropic | AI category suggestions (opt-in) | Redacted lines, as above | Overseas (global routing) |
+| Anthropic | AI category suggestions (on unless turned off) | Generalised lines, as above | Overseas (global routing) |
 | [EMAIL PROVIDER, if sign-up sends email] | Sign-up and sign-in email | Email address, name | [LOCATION] |
 
 GitHub holds the code only, never customer data (hard rule 1).

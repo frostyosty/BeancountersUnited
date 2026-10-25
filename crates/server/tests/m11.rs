@@ -794,7 +794,6 @@ async fn via_is_recorded_in_the_log() {
     s.ok(Command::SetAiSuggestions {
         client_id: s.client.clone(),
         enabled: true,
-        consent_version: Some(acct_server::ai::consent_version("Anthropic")),
         activity: None,
         private_names: None,
     })
