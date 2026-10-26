@@ -5,17 +5,33 @@ import { ErrorMessage } from "../components/ErrorMessage";
 import { Icon } from "../lib/icons";
 import { keys, useClients, usePractice } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "../ui";
+import styles from "./ClientsPage.module.css";
 
 export function ClientsPage() {
   const me = useCurrentUser();
   const clients = useClients();
   return (
     <>
-      <h1>Clients</h1>
+      <PageHeader
+        icon={<Icon name="nav.clients" fallback="📒" />}
+        title="Clients"
+        actions={
+          can(me, "staff") && (
+            <ButtonLink to="/businesses/new" variant="primary">
+              <Icon name="business.new" fallback="🧾" /> Set up a business
+            </ButtonLink>
+          )
+        }
+      />
       <ErrorMessage error={clients.error} />
-      {clients.data && clients.data.length === 0 && <p className="muted">No clients yet.</p>}
+      {clients.data && clients.data.length === 0 && (
+        <EmptyState title="No clients yet.">
+          <p>Set up a business, or add a client below, and it shows here.</p>
+        </EmptyState>
+      )}
       {clients.data && clients.data.length > 0 && (
-        <table className="table">
+        <table className={`table ${styles.list}`}>
           <thead>
             <tr>
               <th>Name</th>
@@ -26,20 +42,17 @@ export function ClientsPage() {
             {clients.data.map((c) => (
               <tr key={c.id}>
                 <td>
-                  <Link to={c.entity_type === "sole_trader" ? `/businesses/${c.id}` : `/clients/${c.id}`}>{c.name}</Link>
+                  <Link to={c.entity_type === "sole_trader" ? `/businesses/${c.id}` : `/clients/${c.id}`} className={styles.name}>
+                    {c.name}
+                  </Link>
                 </td>
-                <td>{c.entity_type}</td>
+                <td>
+                  <Badge>{c.entity_type.replace(/_/g, " ")}</Badge>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-      )}
-      {can(me, "staff") && (
-        <p>
-          <Link to="/businesses/new">
-            <Icon name="business.new" fallback="🧾" /> Set up a business
-          </Link>
-        </p>
       )}
       {can(me, "staff") && <NewClientForm />}
     </>
@@ -79,7 +92,7 @@ function NewClientForm() {
       <p className="muted">
         <Icon name="defaults.none_yet" fallback="🌱" /> There are no master charts yet, so clients can't be created.{" "}
         {can(me, "practice_admin") ? (
-          <Link to="/settings">Install a starter set in Practice settings</Link>
+          <Link to="/settings">Install a starter set in Settings</Link>
         ) : (
           "Ask a practice admin to set one up."
         )}

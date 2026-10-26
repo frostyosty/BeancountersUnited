@@ -1,0 +1,13 @@
+.list {
+  width: 100%;
+  max-width: 48rem;
+}
+
+.name {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.name:hover {
+  text-decoration: underline;
+}

@@ -5,7 +5,9 @@ import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate, nextYear, previousYear } from "../lib/dates";
 import { keys, useClient, usePractice } from "../lib/queries";
+import { Icon } from "../lib/icons";
 import { useCommand } from "../lib/useCommand";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "../ui";
 
 export function ClientPage() {
   const { clientId = "" } = useParams();
@@ -21,10 +23,23 @@ export function ClientPage() {
   const c = client.data;
   return (
     <>
-      <p className="crumbs">
-        <Link to="/">Clients</Link> /
-      </p>
-      <h1>{c.name}</h1>
+      <PageHeader
+        crumbs={[{ to: "/", label: "Clients" }]}
+        title={c.name}
+        badge={<Badge>{c.entity_type.replace(/_/g, " ")}</Badge>}
+        actions={
+          <>
+            <ButtonLink to={`/clients/${c.id}/chart`}>
+              <Icon name="client.chart" fallback="📚" /> Chart of accounts and rounding priority
+            </ButtonLink>
+            {c.entity_type === "sole_trader" && (
+              <ButtonLink to={`/businesses/${c.id}`}>
+                <Icon name="client.owner_view" fallback="👀" /> Owner's view: statements and tax
+              </ButtonLink>
+            )}
+          </>
+        }
+      />
       <dl className="facts">
         <dt>Entity type</dt>
         <dd>{c.entity_type}</dd>
@@ -33,18 +48,14 @@ export function ClientPage() {
         <dt>Rounding priority</dt>
         <dd>{c.rounding_priority.length ? c.rounding_priority.join(", ") : "none set"}</dd>
       </dl>
-      <p>
-        <Link to={`/clients/${c.id}/chart`}>Chart of accounts and rounding priority</Link>
-      </p>
-      {c.entity_type === "sole_trader" && (
-        <p>
-          <Link to={`/businesses/${c.id}`}>Owner's view: statements and tax</Link>
-        </p>
-      )}
 
-      <h2>Years</h2>
+      <h2>
+        <Icon name="client.years" fallback="📅" /> Years
+      </h2>
       {c.years.length === 0 ? (
-        <p className="muted">No years yet.</p>
+        <EmptyState title="No years yet." icon={<Icon name="client.years" fallback="📅" />}>
+          {can(me, "staff") && <p>Add the first one below.</p>}
+        </EmptyState>
       ) : (
         <table className="table">
           <thead>
@@ -62,7 +73,9 @@ export function ClientPage() {
                     {formatDate(y.start)} to {formatDate(y.end)}
                   </Link>
                 </td>
-                <td>{y.status}</td>
+                <td>
+                  <Badge tone={y.status === "finalised" ? "ok" : "accent"}>{y.status}</Badge>
+                </td>
                 <td>{y.books_source === null ? "—" : y.books_source.replace(/_/g, " ")}</td>
               </tr>
             ))}

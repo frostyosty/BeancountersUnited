@@ -1,0 +1,32 @@
+Account Number	Account Name	Header	Balance	Account Type	GST Code	Inactive Account	Description
+1-0000	Assets	H	0.00	Asset		N	
+1-1000	Current Assets	H	0.00	Asset		N	
+1-1110	Business Cheque Account		0.00	Bank	N-T	N	
+1-1200	Trade Debtors		0.00	Accounts Receivable	N-T	N	
+1-2000	Fixed Assets	H	0.00	Asset		N	
+1-2110	Grooming Equipment at Cost		0.00	Fixed Asset	N-T	N	
+1-2120	Grooming Equipment Accum Dep		0.00	Fixed Asset	N-T	N	
+2-0000	Liabilities	H	0.00	Liability		N	
+2-1200	GST Clearing		0.00	Other Current Liability	N-T	N	
+2-1500	Trade Creditors		0.00	Accounts Payable	N-T	N	
+3-0000	Equity	H	0.00	Equity		N	
+3-1000	Owner's Capital		0.00	Equity	N-T	N	
+3-1100	Owner's Drawings		0.00	Equity	N-T	N	
+3-8000	Retained Earnings		0.00	Equity	N-T	N	
+3-9000	Current Year Earnings		0.00	Equity	N-T	N	
+4-0000	Income	H	0.00	Income		N	
+4-1000	Grooming Fees		0.00	Income	S	N	
+4-2000	Product Sales		0.00	Income	S	N	
+5-0000	Cost of Sales	H	0.00	Cost of Sales		N	
+5-1000	Shampoo and Supplies		0.00	Cost of Sales	S	N	
+6-0000	Expenses	H	0.00	Expense		N	
+6-1000	Advertising		0.00	Expense	S	N	
+6-2000	Bank Fees		0.00	Expense	E	N	
+6-3000	Depreciation		0.00	Expense	N-T	N	
+6-4000	Van Running Costs		0.00	Expense	S	N	
+6-5000	Salon Rent		0.00	Expense	S	N	
+6-6000	Phone and Internet		0.00	Expense	S	N	
+8-0000	Other Income	H	0.00	Other Income		N	
+8-1000	Interest Received		0.00	Other Income	E	N	
+9-0000	Other Expenses	H	0.00	Other Expense		N	
+9-1000	Old Sundry Costs		0.00	Other Expense	S	Y	

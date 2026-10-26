@@ -1,17 +1,16 @@
-import { Route, Routes } from "react-router";
-import { CurrentUser, useMe } from "./auth";
+import { Navigate, Route, Routes } from "react-router";
+import { useMe } from "./auth";
+import { ViewAsProvider } from "./lib/viewAs";
 import { Layout } from "./components/Layout";
 import { SiteGate } from "./components/SiteGate";
 import { ContactPage } from "./pages/ContactPage";
 import { AboutPage } from "./pages/AboutPage";
 import { AccountantsPage } from "./pages/AccountantsPage";
-import { AccountPage } from "./pages/AccountPage";
 import { AnalysisTab } from "./pages/AnalysisTab";
 import { AssetsTab } from "./pages/AssetsTab";
 import { BusinessPage } from "./pages/BusinessPage";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
-import { ClientsPage } from "./pages/ClientsPage";
 import { FinaliseTab } from "./pages/FinaliseTab";
 import { GlTab } from "./pages/GlTab";
 import { HomePage } from "./pages/HomePage";
@@ -27,7 +26,8 @@ import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
 import { ReconcileTab } from "./pages/ReconcileTab";
 import { SaveTaxPage } from "./pages/SaveTaxPage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { AdminSettingsTab, MyAccountTab, SettingsHome, SettingsLayout } from "./pages/SettingsLayout";
+import { HomeRoute } from "./pages/OverviewPage";
 import { AcceptInvitePage, InviteSignedOutPage, SignUpPage } from "./pages/SignUpPage";
 import { StatementsTab } from "./pages/StatementsTab";
 import { TbImportTab } from "./pages/TbImportTab";
@@ -64,10 +64,10 @@ export function App() {
     );
   }
   return (
-    <CurrentUser value={me.data}>
+    <ViewAsProvider me={me.data}>
       <Routes>
-        <Route element={<Layout me={me.data} />}>
-          <Route index element={<ClientsPage />} />
+        <Route element={<Layout />}>
+          <Route index element={<HomeRoute />} />
           <Route path="clients/:clientId" element={<ClientPage />} />
           <Route path="clients/:clientId/chart" element={<ChartPage />} />
           <Route path="businesses/new" element={<NewBusinessPage />} />
@@ -85,16 +85,20 @@ export function App() {
             <Route path="analysis" element={<AnalysisTab />} />
             <Route path="finalise" element={<FinaliseTab />} />
           </Route>
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<SettingsHome />} />
+            <Route path="admin" element={<AdminSettingsTab />} />
+            <Route path="account" element={<MyAccountTab />} />
+          </Route>
           <Route path="settings/paragraphs" element={<ParagraphLibraryPage />} />
           <Route path="settings/charts/:entityType" element={<MasterChartPage />} />
           <Route path="settings/templates/:templateId" element={<TemplatePage />} />
           <Route path="settings/mappings/:mappingId" element={<MappingPage />} />
-          <Route path="account" element={<AccountPage />} />
+          <Route path="account" element={<Navigate to="/settings/account" replace />} />
           <Route path="invite/:token" element={<AcceptInvitePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </CurrentUser>
+    </ViewAsProvider>
   );
 }

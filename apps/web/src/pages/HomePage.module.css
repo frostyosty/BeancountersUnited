@@ -43,6 +43,15 @@
   color: #fff;
 }
 
+.links .navTool {
+  color: #c9d6ee;
+}
+
+.links .navTool:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .links .navCta {
   color: #fff;
   padding: 0.35rem 0.9rem;
@@ -209,7 +218,7 @@
   width: 2.6rem;
   height: 2.6rem;
   font-size: var(--theme-icon-size, 1.4rem);
-  background: #e8f0fc;
+  background: var(--accent-soft);
   border-radius: 10px;
 }
 

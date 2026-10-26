@@ -71,6 +71,10 @@
           "value": "icons/nav_signout_1_icon.png"
         }
       ]
+    },
+    "view_as": {
+      "type": "emoji",
+      "value": "👁️"
     }
   },
   "home": {
@@ -533,6 +537,10 @@
     "invite": {
       "type": "emoji",
       "value": "🤝"
+    },
+    "home": {
+      "type": "emoji",
+      "value": "🏪"
     }
   },
   "signup": {
@@ -615,6 +623,26 @@
     "finalise_reopen": {
       "type": "emoji",
       "value": "🔓"
+    },
+    "journals": {
+      "type": "emoji",
+      "value": "📒"
+    },
+    "tb": {
+      "type": "emoji",
+      "value": "⚖️"
+    },
+    "import": {
+      "type": "emoji",
+      "value": "📥"
+    },
+    "assets": {
+      "type": "emoji",
+      "value": "🚜"
+    },
+    "statements": {
+      "type": "emoji",
+      "value": "🧾"
     }
   },
   "notes": {
@@ -713,6 +741,72 @@
     "save": {
       "type": "emoji",
       "value": "💾"
+    }
+  },
+  "ui": {
+    "theme_system": {
+      "type": "emoji",
+      "value": "🖥️"
+    },
+    "theme_light": {
+      "type": "emoji",
+      "value": "☀️"
+    },
+    "theme_dark": {
+      "type": "emoji",
+      "value": "🌙"
+    },
+    "close": {
+      "type": "emoji",
+      "value": "✖️"
+    },
+    "warning": {
+      "type": "emoji",
+      "value": "⚠️"
+    },
+    "empty": {
+      "type": "emoji",
+      "value": "🗂️"
+    },
+    "info": {
+      "type": "emoji",
+      "value": "💡"
+    },
+    "ok": {
+      "type": "emoji",
+      "value": "✅"
+    }
+  },
+  "client": {
+    "chart": {
+      "type": "emoji",
+      "value": "📚"
+    },
+    "owner_view": {
+      "type": "emoji",
+      "value": "👀"
+    },
+    "years": {
+      "type": "emoji",
+      "value": "📅"
+    }
+  },
+  "settings": {
+    "practice": {
+      "type": "emoji",
+      "value": "🏢"
+    },
+    "admin": {
+      "type": "emoji",
+      "value": "🛠️"
+    },
+    "view_as": {
+      "type": "emoji",
+      "value": "👁️"
+    },
+    "sharing": {
+      "type": "emoji",
+      "value": "🤝"
     }
   }
 }

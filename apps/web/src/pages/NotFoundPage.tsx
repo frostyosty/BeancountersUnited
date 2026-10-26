@@ -1,12 +1,15 @@
 import { Link } from "react-router";
+import { EmptyState, PageHeader } from "../ui";
 
 export function NotFoundPage() {
   return (
     <>
-      <h1>Not found</h1>
-      <p>
-        There's nothing here. <Link to="/">Go home</Link>
-      </p>
+      <PageHeader title="Not found" />
+      <EmptyState title="There's nothing here.">
+        <p>
+          <Link to="/">Go home</Link>
+        </p>
+      </EmptyState>
     </>
   );
 }

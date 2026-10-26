@@ -17,15 +17,15 @@
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-left-width: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .passed {
-  border-left-color: #2e7d32 !important;
+  border-left-color: var(--ok) !important;
 }
 
 .failed {
-  border-left-color: #c62828 !important;
+  border-left-color: var(--danger) !important;
 }
 
 .skipped {
@@ -55,17 +55,6 @@
   gap: var(--space-2);
   align-items: flex-start;
   margin-bottom: var(--space-3);
-}
-
-.confirm {
-  padding: var(--space-3);
-  border: 1px solid #c98a00;
-  background: var(--surface-raised);
-  border-radius: 4px;
-}
-
-.confirm p {
-  margin-top: 0;
 }
 
 .facts dt {

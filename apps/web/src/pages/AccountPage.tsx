@@ -2,8 +2,9 @@ import { type FormEvent, useState } from "react";
 import { useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { useCommand } from "../lib/useCommand";
+import { Icon } from "../lib/icons";
 
-/** The signed-in user's own login. */
+/** The signed-in user's own login: the "My account" tab of Settings. */
 export function AccountPage() {
   const me = useCurrentUser();
   const change = useCommand();
@@ -28,7 +29,9 @@ export function AccountPage() {
 
   return (
     <>
-      <h1>Your account</h1>
+      <h2>
+        <Icon name="nav.account" fallback="👤" /> Your account
+      </h2>
       <p>
         {me.display_name} ({me.username}), {me.role}
       </p>

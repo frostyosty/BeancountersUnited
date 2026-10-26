@@ -151,3 +151,42 @@ pub async fn mark_accepted(
         .await?;
     Ok(())
 }
+
+/// Whether the owner of `client_id` lets practice users see the owner's own edits in Changes.
+/// Off unless the owner turned it on.
+pub async fn owner_edits_shared(conn: &mut SqliteConnection, client_id: &str) -> Result<bool> {
+    let row: Option<(bool,)> =
+        sqlx::query_as("SELECT share_owner_edits FROM history_sharing WHERE client_id = ?")
+            .bind(client_id)
+            .fetch_optional(conn)
+            .await?;
+    Ok(row.is_some_and(|(shared,)| shared))
+}
+
+/// The businesses whose owners share their edits with the practice.
+pub async fn sharing_clients(conn: &mut SqliteConnection) -> Result<Vec<String>> {
+    let rows: Vec<(String,)> =
+        sqlx::query_as("SELECT client_id FROM history_sharing WHERE share_owner_edits = 1")
+            .fetch_all(conn)
+            .await?;
+    Ok(rows.into_iter().map(|(c,)| c).collect())
+}
+
+pub async fn set_owner_edits_shared(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    shared: bool,
+    seq: i64,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO history_sharing (client_id, share_owner_edits, updated_seq) VALUES (?, ?, ?)
+         ON CONFLICT (client_id) DO UPDATE
+         SET share_owner_edits = excluded.share_owner_edits, updated_seq = excluded.updated_seq",
+    )
+    .bind(client_id)
+    .bind(shared)
+    .bind(seq)
+    .execute(conn)
+    .await?;
+    Ok(())
+}

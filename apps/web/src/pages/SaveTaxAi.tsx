@@ -20,8 +20,8 @@ function names(text: string): string[] {
 }
 
 /**
- * AI suggestions on the Save tax screen: on by default, with no consent screen (ADR 011). A button
- * asks for suggestions, and the owner can turn them off. Shows nothing when the server has no AI
+ * "Ask the experts" on the Save tax screen (AI suggestions): on by default, with no consent screen
+ * (ADR 011). A quiet button asks, within a daily allowance, and the owner can turn them off. Shows nothing when the server has no AI
  * service.
  */
 export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
@@ -39,9 +39,9 @@ export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
 function AiOff({ clientId }: { clientId: string }) {
   const command = useCommand([keys.business(clientId)]);
   return (
-    <section className={styles.acceptAll} aria-label="AI suggestions">
+    <section className={styles.acceptAll} aria-label="Ask the experts">
       <p>
-        <Icon name="business.save_ai" fallback="🤖" /> AI suggestions are off for this business.
+        <Icon name="business.save_ai" fallback="🤖" /> The experts are turned off for this business.
       </p>
       <div className="row">
         <button
@@ -49,7 +49,7 @@ function AiOff({ clientId }: { clientId: string }) {
           onClick={() => command.mutate({ kind: "set_ai_suggestions", payload: { client_id: clientId, enabled: true } })}
           disabled={command.isPending}
         >
-          <Icon name="business.ok" fallback="✅" /> Turn suggestions on
+          <Icon name="business.ok" fallback="✅" /> Turn the experts on
         </button>
       </div>
       {command.error && <ErrorMessage error={command.error} />}
@@ -91,6 +91,10 @@ function AiSettingsForm({ clientId, view }: { clientId: string; view: AiSuggesti
   );
 }
 
+function questionsLeft(n: number): string {
+  return n === 1 ? "1 question left today" : `${n} questions left today`;
+}
+
 function AiOn({ clientId, view }: { clientId: string; view: AiSuggestionsView }) {
   const qc = useQueryClient();
   const turnOff = useCommand([keys.business(clientId)]);
@@ -99,38 +103,49 @@ function AiOn({ clientId, view }: { clientId: string; view: AiSuggestionsView })
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.business(clientId) }),
   });
   const run = ask.data;
+  const left = view.remaining_today;
+  const spent = left === 0;
 
   return (
-    <section className={styles.acceptAll} aria-label="AI suggestions">
-      <p>
-        <Icon name="business.save_ai" fallback="🤖" /> AI suggestions are on{view.provider ? `, from ${view.provider}` : ""}.{" "}
-        {view.suggestions.length > 0 &&
-          `${view.suggestions.length === 1 ? "1 suggestion is" : `${view.suggestions.length} suggestions are`} waiting on the cards below.`}
-      </p>
+    <section className={styles.acceptAll} aria-label="Ask the experts">
       <div className="row">
-        <button type="button" onClick={() => ask.mutate()} disabled={ask.isPending}>
-          <Icon name="business.save_ai_ask" fallback="✨" /> {ask.isPending ? "Asking…" : "Suggest categories now"}
+        <button type="button" onClick={() => ask.mutate()} disabled={ask.isPending || spent}>
+          <Icon name="business.save_ai_ask" fallback="✨" /> {ask.isPending ? "Asking…" : "Ask the experts"}
         </button>
-        <button
-          type="button"
-          onClick={() => turnOff.mutate({ kind: "set_ai_suggestions", payload: { client_id: clientId, enabled: false } })}
-          disabled={turnOff.isPending}
-        >
-          <Icon name="business.save_ai_off" fallback="🚫" /> Turn suggestions off
-        </button>
+        <span className="muted">
+          {spent ? "Back tomorrow" : left !== null ? questionsLeft(left) : "Ask as often as you like"}
+          {view.suggestions.length > 0 &&
+            ` · ${view.suggestions.length === 1 ? "1 suggestion is" : `${view.suggestions.length} suggestions are`} waiting below`}
+        </span>
       </div>
       {run && (
         <p role="status">
           {run.asked === 0
             ? "There was nothing new to ask about."
-            : `Asked about ${run.asked === 1 ? "1 transaction" : `${run.asked} transactions`}, and got ${
+            : `The experts looked at ${run.asked === 1 ? "1 transaction" : `${run.asked} transactions`} and have ${
                 run.suggestions.length === 1 ? "1 suggestion" : `${run.suggestions.length} suggestions`
               }.`}
           {run.failed_batches > 0 && " Some couldn't be reached. Try again in a minute."}
         </p>
       )}
       {(ask.error ?? turnOff.error) && <ErrorMessage error={ask.error ?? turnOff.error} />}
-      <AiSettingsForm clientId={clientId} view={view} />
+      <details>
+        <summary>About the experts</summary>
+        <p className="muted">
+          Suggestions are AI-assisted{view.provider ? `, from ${view.provider}` : ""}. Names and account numbers are
+          removed before anything is sent, and nothing is applied until you accept it.
+        </p>
+        <div className="row">
+          <button
+            type="button"
+            onClick={() => turnOff.mutate({ kind: "set_ai_suggestions", payload: { client_id: clientId, enabled: false } })}
+            disabled={turnOff.isPending}
+          >
+            <Icon name="business.save_ai_off" fallback="🚫" /> Turn the experts off
+          </button>
+        </div>
+        <AiSettingsForm clientId={clientId} view={view} />
+      </details>
     </section>
   );
 }

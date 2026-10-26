@@ -53,6 +53,9 @@ pub struct AppState {
     pub suggester: Option<Arc<dyn acct_ai::Suggester>>,
     /// Who's signed in now (M13), kept in memory.
     pub presence: Arc<presence::Presence>,
+    /// How many times a day a business may ask the AI for suggestions. Kept in memory, so a
+    /// restart gives everyone a fresh day. No limit unless the server sets one.
+    pub ai_quota: Arc<ai::Quota>,
 }
 
 impl AppState {
@@ -62,6 +65,7 @@ impl AppState {
             store,
             suggester: ai::suggester_from_env(),
             presence: Arc::default(),
+            ai_quota: Arc::new(ai::Quota::from_env()),
         }
     }
 }
@@ -198,6 +202,11 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::GET,
             "/api/businesses/{id}/ai-suggestions",
             get(ai::get_ai_suggestions),
+        ),
+        (
+            Method::GET,
+            "/api/businesses/{id}/history-sharing",
+            get(history::get_history_sharing),
         ),
         (
             Method::POST,

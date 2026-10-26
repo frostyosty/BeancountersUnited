@@ -1,0 +1,4 @@
+Co./Last Name	First Name	Card ID	Card Status	Addr 1 - Line 1	Addr 1 - City	Addr 1 - Phone No. 1	Addr 1 - Email	GST ID No.	% Monthly Charge	Receipt Memo
+Totara Kennel Club		CUS001	N	1 Showground Road	Kowhai Bay	021 555 0101	shows@example.com	000-111-222	0.00	
+Wren	Mere	CUS002	N	7 Ponga Lane	Kowhai Bay	021 555 0102			0.00	
+Old Retired Customer		*None	Y						0.00	

@@ -164,6 +164,14 @@ async fn setup() -> (Server, Owner, String, Owner) {
 async fn m13_is_done() {
     let (server, ana, sam, ben) = setup().await;
     let biz = ana.business_id.clone();
+    // Ana lets her accountant see her edits (they're private until she does).
+    done(
+        &server,
+        &ana.cookie,
+        "set_history_sharing",
+        json!({ "client_id": biz, "share_owner_edits": true }),
+    )
+    .await;
 
     // Presence: Ana and Sam each have the business open, and see each other.
     let here = presence(&server, &ana.cookie, Some(&biz)).await;
@@ -256,6 +264,7 @@ async fn m13_is_done() {
         kinds,
         [
             "code_bank_line",
+            "set_history_sharing",
             "accept_invite",
             "create_invite",
             "import_statement",
@@ -389,4 +398,70 @@ async fn m13_is_done() {
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
     let here = presence(&server, &ana.cookie, Some(&biz)).await;
     assert_eq!(names(&here), ["ana"], "{here:?}");
+}
+
+#[tokio::test]
+async fn owner_edits_are_private_until_the_owner_shares_them() {
+    let (server, ana, sam, _ben) = setup().await;
+    let biz = ana.business_id.clone();
+    let kinds = |page: &Value| -> Vec<String> {
+        page["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["kind"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let uri = format!("/api/history?business={biz}");
+
+    // The practice sees what its own people did, but none of Ana's edits.
+    let page = server.get_json(&uri, &sam).await;
+    assert_eq!(kinds(&page), ["accept_invite"], "{page}");
+    // Ana sees all of it.
+    let page = server.get_json(&uri, &ana.cookie).await;
+    assert!(kinds(&page).contains(&"import_statement".to_owned()), "{page}");
+    assert!(kinds(&page).contains(&"create_invite".to_owned()), "{page}");
+
+    // Accountants can't turn it on for her.
+    let (status, _) = server
+        .command(
+            &sam,
+            "set_history_sharing",
+            json!({ "client_id": biz, "share_owner_edits": true }),
+        )
+        .await;
+    assert_ne!(status, StatusCode::OK);
+
+    done(
+        &server,
+        &ana.cookie,
+        "set_history_sharing",
+        json!({ "client_id": biz, "share_owner_edits": true }),
+    )
+    .await;
+    let shared = server
+        .get_json(&format!("/api/businesses/{biz}/history-sharing"), &sam)
+        .await;
+    assert_eq!(shared["share_owner_edits"], true);
+    let page = server.get_json(&uri, &sam).await;
+    assert!(kinds(&page).contains(&"import_statement".to_owned()), "{page}");
+
+    // The filters: staff only drops the owner's edits again; ledger keeps the statement.
+    let page = server.get_json(&format!("{uri}&staff_only=true"), &sam).await;
+    assert_eq!(kinds(&page), ["accept_invite"], "{page}");
+    let page = server.get_json(&format!("{uri}&ledger=true"), &sam).await;
+    assert_eq!(kinds(&page), ["import_statement"], "{page}");
+    let page = server.get_json(&format!("{uri}&manual=true"), &sam).await;
+    assert!(kinds(&page).is_empty(), "{page}");
+
+    // And she can take it back.
+    done(
+        &server,
+        &ana.cookie,
+        "set_history_sharing",
+        json!({ "client_id": biz, "share_owner_edits": false }),
+    )
+    .await;
+    let page = server.get_json(&uri, &sam).await;
+    assert_eq!(kinds(&page), ["accept_invite"], "{page}");
 }

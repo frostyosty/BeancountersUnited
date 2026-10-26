@@ -2,7 +2,7 @@ import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type FormEvent, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -13,14 +13,16 @@ import { Icon } from "../lib/icons";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useBusiness, useTax } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 import styles from "./BusinessPage.module.css";
 
 /**
  * The owner's screen (PLAN.md M10): upload bank statements, see the tax to pay if submitted, and
  * submit to IRD. Save tax (M11) opens its own screen; Submit arrives in M14, so it shows but is switched off.
  */
-export function BusinessPage() {
-  const { clientId = "" } = useParams();
+export function BusinessPage({ clientId: given }: { clientId?: string }) {
+  const params = useParams();
+  const clientId = given ?? params.clientId ?? "";
   const me = useCurrentUser();
   const business = useBusiness(clientId);
   const tax = useTax(clientId);
@@ -35,16 +37,19 @@ export function BusinessPage() {
   const canEdit = can(me, "staff");
   return (
     <>
-      {isOwner(me) ? (
-        <p className="crumbs">
-          <Link to="/">My business</Link> /
-        </p>
-      ) : (
-        <p className="crumbs">
-          <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>Accountant view</Link>
-        </p>
-      )}
-      <h1>{b.name}</h1>
+      <PageHeader
+        crumbs={
+          isOwner(me)
+            ? undefined
+            : [
+                { to: "/", label: "Clients" },
+                { to: `/clients/${clientId}`, label: "Accountant view" },
+              ]
+        }
+        icon={<Icon name="business.home" fallback="🏪" />}
+        title={b.name}
+        subtitle={isOwner(me) ? "Overview" : undefined}
+      />
 
       <div className={styles.areas}>
         <section className={styles.area} aria-labelledby="upload-heading">

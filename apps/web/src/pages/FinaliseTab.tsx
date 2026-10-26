@@ -10,6 +10,7 @@ import { periodEndedLabel } from "../lib/dates";
 import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { ConfirmDialog } from "../ui";
 import styles from "./FinaliseTab.module.css";
 import { useYearContext } from "./YearLayout";
 
@@ -121,36 +122,28 @@ function PreChecks({ check }: { check: FinaliseCheck }) {
               {check.uncategorised_lines === 1 ? "line" : "lines"} as they are. This is recorded in the history.
             </label>
           )}
-          {!confirming ? (
-            <button type="button" className="primary" disabled={!ready} onClick={() => setConfirming(true)}>
-              <Icon name="year.finalise" fallback="🔏" /> Finalise year…
-            </button>
-          ) : (
-            <div className={styles.confirm} role="alertdialog" aria-label="Confirm finalising">
-              <p>
-                Finalise the {periodEndedLabel(year.start, year.end).toLowerCase()} for {client.name}? Its statements will
-                be kept as signed, and its numbers locked.
-              </p>
-              <div className="row">
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={finalise.isPending}
-                  onClick={() =>
-                    finalise.mutate(
-                      { kind: "finalise_year", payload: { client_year_id: year.id, accept_uncategorised: unsorted && accept } },
-                      { onSettled: () => setConfirming(false) },
-                    )
-                  }
-                >
-                  Yes, finalise
-                </button>
-                <button type="button" onClick={() => setConfirming(false)}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          <button type="button" className="primary" disabled={!ready} onClick={() => setConfirming(true)}>
+            <Icon name="year.finalise" fallback="🔏" /> Finalise year…
+          </button>
+          <ConfirmDialog
+            open={confirming}
+            title="Finalise this year?"
+            aria-label="Confirm finalising"
+            confirmLabel="Yes, finalise"
+            busy={finalise.isPending}
+            onCancel={() => setConfirming(false)}
+            onConfirm={() =>
+              finalise.mutate(
+                { kind: "finalise_year", payload: { client_year_id: year.id, accept_uncategorised: unsorted && accept } },
+                { onSettled: () => setConfirming(false) },
+              )
+            }
+          >
+            <p>
+              Finalise the {periodEndedLabel(year.start, year.end).toLowerCase()} for {client.name}? Its statements will be
+              kept as signed, and its numbers locked.
+            </p>
+          </ConfirmDialog>
           <ErrorMessage error={finalise.error} />
         </>
       )}

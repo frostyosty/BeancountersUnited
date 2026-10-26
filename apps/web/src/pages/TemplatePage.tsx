@@ -32,6 +32,7 @@ import {
   updateNode,
 } from "../lib/templateEdit";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 import styles from "./TemplatePage.module.css";
 
 const KINDS: { kind: NodeKind; label: string }[] = [
@@ -111,12 +112,11 @@ function Editor({ detail }: { detail: TemplateDetail }) {
 
   return (
     <>
-      <p className="crumbs">
-        <Link to="/settings">Practice settings</Link> /
-      </p>
-      <h1>
-        <Icon name="layouts.template" fallback="🧱" /> {detail.name}
-      </h1>
+      <PageHeader
+        crumbs={[{ to: "/settings", label: "Settings" }]}
+        icon={<Icon name="layouts.template" fallback="🧱" />}
+        title={detail.name}
+      />
       <p className="muted">
         Statement template for {entityLabel(detail.entity_type)} clients, version {detail.version}. Saving writes version{" "}
         {detail.version + 1}. Each year keeps the version it uses until it's moved onto a newer one from its Statements

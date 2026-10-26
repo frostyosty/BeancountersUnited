@@ -15,7 +15,7 @@ import { keys, useAssetClasses, usePractice, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import styles from "./SettingsPage.module.css";
 
-/** Practice settings: practice admins only (the server checks too). */
+/** The Practice tab of Settings: practice admins only (the server checks too). */
 export function SettingsPage() {
   const me = useCurrentUser();
   if (!can(me, "practice_admin")) {
@@ -23,7 +23,9 @@ export function SettingsPage() {
   }
   return (
     <>
-      <h1>Practice settings</h1>
+      <h2>
+        <Icon name="settings.practice" fallback="🏢" /> Practice
+      </h2>
       <Defaults />
       <AssetClasses />
       <Users />

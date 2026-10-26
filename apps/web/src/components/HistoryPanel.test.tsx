@@ -105,13 +105,16 @@ describe("history panel", () => {
     await waitFor(() => expect(asked.at(-1)!.has("figure")).toBe(false));
   });
 
-  it("filters by person, date and business", async () => {
+  it("filters by person, kind of change and business", async () => {
     const { asked } = setup();
     await screen.findByRole("list", { name: "Changes, newest first" });
     await userEvent.selectOptions(screen.getByLabelText("Person"), "u-sam");
     await waitFor(() => expect(asked.at(-1)!.get("user")).toBe("u-sam"));
-    await userEvent.type(screen.getByLabelText("From"), "2026-10-01");
-    await waitFor(() => expect(asked.at(-1)!.get("from")).toBe("2026-10-01"));
+    await userEvent.click(screen.getByRole("button", { name: "Filter changes" }));
+    await userEvent.click(screen.getByLabelText("Staff only"));
+    await waitFor(() => expect(asked.at(-1)!.get("staff_only")).toBe("true"));
+    await userEvent.click(screen.getByLabelText("Manual entries"));
+    await waitFor(() => expect(asked.at(-1)!.get("manual")).toBe("true"));
     await userEvent.click(screen.getByLabelText("Every business"));
     await waitFor(() => expect(asked.at(-1)!.has("business")).toBe(false));
   });
@@ -123,8 +126,6 @@ describe("historyQuery", () => {
       historyQuery({
         business: null,
         user: null,
-        from: null,
-        to: null,
         figure: { label: "Sales", year: "y1", accounts: ["100", "110"] },
       }),
     ).toBe("?year=y1&accounts=100%2C110");

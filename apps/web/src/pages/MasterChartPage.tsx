@@ -13,6 +13,7 @@ import { entityLabel } from "../lib/entityTypes";
 import { Icon } from "../lib/icons";
 import { keys, usePractice } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 
 /** The commands that edit one entity type's master chart. */
 function masterCommands(entity_type: string): ChartCommands {
@@ -40,15 +41,11 @@ export function MasterChartPage() {
     return <p className="muted">Loading…</p>;
   }
   const chart = practice.data.master_charts.find((c) => c.entity_type === entityType);
-  const crumbs = (
-    <p className="crumbs">
-      <Link to="/settings">Practice settings</Link> /
-    </p>
-  );
+  const crumbs = [{ to: "/settings", label: "Settings" }];
   if (!chart) {
     return (
       <>
-        {crumbs}
+        <PageHeader crumbs={crumbs} title="Master chart" />
         <p>There's no {entityLabel(entityType)} master chart.</p>
       </>
     );
@@ -56,10 +53,7 @@ export function MasterChartPage() {
   const commands = masterCommands(chart.entity_type);
   return (
     <>
-      {crumbs}
-      <h1>
-        <Icon name="defaults.chart" fallback="🗂️" /> {chart.name} master chart
-      </h1>
+      <PageHeader crumbs={crumbs} icon={<Icon name="defaults.chart" fallback="🗂️" />} title={`${chart.name} master chart`} />
       <p className="muted">
         Each new {entityLabel(chart.entity_type)} client starts with a copy of this chart. Changing it never alters a
         client already set up: change theirs on the client's own chart page.

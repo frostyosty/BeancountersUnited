@@ -1,0 +1,32 @@
+Account Number	Account Name	Account Type	Header	Parent Account Number	Tax Code/GST Code	Inactive Account
+1-0000	Assets	Asset	H			N
+1-1000	Current Assets	Asset	H	1-0000		N
+1-1110	Business Cheque Account	Bank		1-1000	N-T	N
+1-1200	Trade Debtors	Accounts receivable		1-1000	N-T	N
+1-2000	Fixed Assets	Asset	H	1-0000		N
+1-2110	Grooming Equipment at Cost	Fixed asset		1-2000	N-T	N
+1-2120	Grooming Equipment Accum Dep	Fixed asset		1-2000	N-T	N
+2-0000	Liabilities	Liability	H			N
+2-1200	GST Clearing	Other current liability		2-0000	N-T	N
+2-1500	Trade Creditors	Accounts payable		2-0000	N-T	N
+3-0000	Equity	Equity	H			N
+3-1000	Owner's Capital	Equity		3-0000	N-T	N
+3-1100	Owner's Drawings	Equity		3-0000	N-T	N
+3-8000	Retained Earnings	Equity		3-0000	N-T	N
+3-9000	Current Year Earnings	Equity		3-0000	N-T	N
+4-0000	Income	Income	H			N
+4-1000	Grooming Fees	Income		4-0000	S	N
+4-2000	Product Sales	Income		4-0000	S	N
+5-0000	Cost of Sales	Cost of sales	H			N
+5-1000	Shampoo and Supplies	Cost of sales		5-0000	S	N
+6-0000	Expenses	Expense	H			N
+6-1000	Advertising	Expense		6-0000	S	N
+6-2000	Bank Fees	Expense		6-0000	E	N
+6-3000	Depreciation	Expense		6-0000	N-T	N
+6-4000	Van Running Costs	Expense		6-0000	S	N
+6-5000	Salon Rent	Expense		6-0000	S	N
+6-6000	Phone and Internet	Expense		6-0000	S	N
+8-0000	Other Income	Other income	H			N
+8-1000	Interest Received	Other income		8-0000	E	N
+9-0000	Other Expenses	Other expense	H			N
+9-1000	Old Sundry Costs	Other expense		9-0000	S	Y

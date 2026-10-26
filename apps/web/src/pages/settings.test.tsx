@@ -115,11 +115,24 @@ describe("practice settings", () => {
     expect(screen.getByRole("button", { name: "Install the sole trader starter set" })).toBeTruthy();
   });
 
-  it("is only for practice admins", async () => {
+  it("is only for practice admins: staff land on their account", async () => {
     stubApi({ "GET /api/me": () => sam, "GET /api/clients": () => [], "GET /api/practice": () => practice });
     renderApp(<App />, "/settings");
-    expect(await screen.findByText("Only practice admins can change practice settings.")).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Practice settings" })).toBeNull();
+    expect(await screen.findByRole("heading", { name: /Your account/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Practice/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Admin/ })).toBeNull();
+  });
+
+  it("lets an admin preview the site as another role", async () => {
+    stubApi({ "GET /api/me": () => boss, "GET /api/clients": () => [], "GET /api/practice": () => practice, "GET /api/users": () => users, "GET /api/asset-classes": () => [] });
+    renderApp(<App />, "/settings/admin");
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText("Viewing as"), "viewer");
+    expect(await screen.findByRole("button", { name: "Stop viewing as viewer" })).toBeTruthy();
+    // The admin tab stays, so they can switch back.
+    expect(screen.getByRole("link", { name: /Admin/ })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Stop viewing as viewer" }));
+    expect(screen.queryByRole("button", { name: "Stop viewing as viewer" })).toBeNull();
   });
 });
 

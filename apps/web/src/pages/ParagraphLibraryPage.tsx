@@ -3,7 +3,6 @@ import type { Placement } from "@acct/types/Placement";
 import type { PushChange } from "@acct/types/PushChange";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { getJson } from "../lib/api";
@@ -11,6 +10,7 @@ import { formatDate } from "../lib/dates";
 import { Icon } from "../lib/icons";
 import { keys, useParagraphLibrary, usePractice } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { ConfirmDialog, PageHeader } from "../ui";
 import { FieldHelp, placementLabel } from "./NotesTab";
 import styles from "./ParagraphLibraryPage.module.css";
 
@@ -39,12 +39,11 @@ export function ParagraphLibraryPage() {
   const entityType = chosen ?? (types.includes("sole_trader") ? "sole_trader" : (types[0] ?? ""));
   return (
     <>
-      <p className="crumbs">
-        <Link to="/settings">Practice settings</Link> /
-      </p>
-      <h1>
-        <Icon name="notes.library" fallback="📚" /> Paragraph library
-      </h1>
+      <PageHeader
+        crumbs={[{ to: "/settings", label: "Settings" }]}
+        icon={<Icon name="notes.library" fallback="📚" />}
+        title="Paragraph library"
+      />
       <p className="muted">
         The accounting policies and notes each client-year picks from, in our own words. A year keeps its own copies:
         changing a paragraph here changes no client's notes until you push it, and a push never reaches a finalised year
@@ -121,27 +120,23 @@ function Library({ entityType }: { entityType: string }) {
                 onPush={() => command.mutate({ kind: "push_paragraph", payload: { paragraph_id: p.id } }, done)}
               />
             )}
-            {m === "remove" && (
-              <div role="alertdialog" aria-label={`Remove ${p.paragraph.title}`} className={styles.confirm}>
-                <p>
-                  Remove “{p.paragraph.title}” from the library? Years that already use it keep their copies, but no year can
-                  pick it again.
-                </p>
-                <div className="row">
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={command.isPending}
-                    onClick={() => command.mutate({ kind: "remove_paragraph", payload: { paragraph_id: p.id } }, done)}
-                  >
-                    Remove it
-                  </button>
-                  <button type="button" onClick={() => setMode(null)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <ConfirmDialog
+              open={m === "remove"}
+              title={`Remove “${p.paragraph.title}”?`}
+              aria-label={`Remove ${p.paragraph.title}`}
+              confirmLabel="Remove it"
+              tone="danger"
+              busy={command.isPending}
+              onCancel={() => setMode(null)}
+              onConfirm={() =>
+                command.mutate({ kind: "remove_paragraph", payload: { paragraph_id: p.id } }, { onSettled: () => setMode(null) })
+              }
+            >
+              <p>
+                Remove “{p.paragraph.title}” from the library? Years that already use it keep their copies, but no year can pick
+                it again.
+              </p>
+            </ConfirmDialog>
             {m === null && (
               <div className="row">
                 <button type="button" onClick={() => setMode({ id: p.id, kind: "revise" })}>

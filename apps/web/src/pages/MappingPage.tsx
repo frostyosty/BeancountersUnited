@@ -10,6 +10,7 @@ import { entityLabel } from "../lib/entityTypes";
 import { Icon } from "../lib/icons";
 import { keys, useMapping } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 import styles from "./MappingPage.module.css";
 
 /** A mapping: which ranges of account codes go to which template line. */
@@ -73,12 +74,11 @@ function Editor({ detail }: { detail: MappingDetail }) {
 
   return (
     <>
-      <p className="crumbs">
-        <Link to="/settings">Practice settings</Link> /
-      </p>
-      <h1>
-        <Icon name="layouts.mapping" fallback="🔗" /> {detail.name}
-      </h1>
+      <PageHeader
+        crumbs={[{ to: "/settings", label: "Settings" }]}
+        icon={<Icon name="layouts.mapping" fallback="🔗" />}
+        title={detail.name}
+      />
       <p className="muted">
         Mapping for {entityLabel(detail.entity_type)} clients onto the template{" "}
         <Link to={`/settings/templates/${detail.template_id}`}>{detail.template_name}</Link>, version {detail.version}.

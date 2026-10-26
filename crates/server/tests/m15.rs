@@ -678,6 +678,9 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         })),
         "set_coding_settings" => Allowed(json!({ "client_id": biz, "settings": settings })),
         "set_ai_suggestions" => Allowed(json!({ "client_id": biz, "enabled": false })),
+        "set_history_sharing" => {
+            Allowed(json!({ "client_id": biz, "share_owner_edits": true }))
+        }
         "record_suggestions" => {
             Allowed(json!({ "client_id": biz, "model": "x", "suggestions": [] }))
         }

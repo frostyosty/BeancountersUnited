@@ -1,10 +1,11 @@
 import type { GstSetup } from "@acct/types/GstSetup";
 import { type FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 
 export type Frequency = GstSetup["frequency"];
 
@@ -49,13 +50,12 @@ export function NewBusinessPage() {
 
   return (
     <>
-      <p className="crumbs">
-        <Link to="/">Clients</Link> /
-      </p>
-      <h1>
-        <Icon name="business.new" fallback="🧾" /> Set up a business
-      </h1>
-      <p className="muted">A sole trader, with a 31 March year end.</p>
+      <PageHeader
+        crumbs={[{ to: "/", label: "Clients" }]}
+        icon={<Icon name="business.new" fallback="🧾" />}
+        title="Set up a business"
+        subtitle="A sole trader, with a 31 March year end."
+      />
       <form onSubmit={submit} className="form">
         <label>
           Business name

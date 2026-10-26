@@ -1,0 +1,102 @@
+.modal {
+  width: min(100% - 2rem, var(--modal-width));
+  max-height: min(100% - 2rem, 48rem);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+}
+
+.modal[open] {
+  display: flex;
+  animation: pop 180ms var(--ease);
+}
+
+.modal::backdrop {
+  background: rgb(6 12 26 / 0.55);
+  backdrop-filter: blur(3px);
+  animation: fade 180ms var(--ease);
+}
+
+.sm {
+  --modal-width: 26rem;
+}
+
+.md {
+  --modal-width: 36rem;
+}
+
+.lg {
+  --modal-width: 52rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.close {
+  margin-right: calc(-1 * var(--space-2));
+  color: var(--text-muted);
+}
+
+.body {
+  padding: 0 var(--space-5) var(--space-4);
+  overflow-y: auto;
+}
+
+.body > :first-child {
+  margin-top: 0;
+}
+
+.body > :last-child {
+  margin-bottom: 0;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--border);
+}
+
+:global(html:has(dialog[open]:modal)) {
+  overflow: hidden;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

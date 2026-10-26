@@ -4,4 +4,6 @@
 //! server checks the rows against the client's chart and books.
 
 pub mod bank;
+pub mod history;
+pub mod myob;
 pub mod tb;

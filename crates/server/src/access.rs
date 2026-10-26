@@ -318,6 +318,7 @@ async fn command_targets(
         | C::AddRule { client_id, .. }
         | C::AnswerQuestion { client_id, .. }
         | C::SetAiSuggestions { client_id, .. }
+        | C::SetHistorySharing { client_id, .. }
         | C::RecordSuggestions { client_id, .. }
         | C::CreateInvite { client_id, .. } => (Need::Owner, vec![client(client_id)]),
         C::ImportStatement {
@@ -462,6 +463,7 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         | "/api/businesses/{id}/coding-settings"
         | "/api/businesses/{id}/rules"
         | "/api/businesses/{id}/ai-suggestions"
+        | "/api/businesses/{id}/history-sharing"
             if get =>
         {
             R::Client(Need::Read)

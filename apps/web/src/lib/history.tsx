@@ -21,8 +21,12 @@ export interface FigureFilter {
 export interface HistoryFilters {
   business: string | null;
   user: string | null;
-  from: string | null;
-  to: string | null;
+  /** Only changes made by practice staff and admins. */
+  staffOnly?: boolean;
+  /** Only journals typed in by hand. With `ledger`, either. */
+  manual?: boolean;
+  /** Only changes that post to the ledger. */
+  ledger?: boolean;
   figure: FigureFilter | null;
   /** How many entries to fetch, newest first. */
   limit?: number;
@@ -33,8 +37,9 @@ export function historyQuery(f: HistoryFilters, before?: number): string {
   const q = new URLSearchParams();
   if (f.business) q.set("business", f.business);
   if (f.user) q.set("user", f.user);
-  if (f.from) q.set("from", f.from);
-  if (f.to) q.set("to", f.to);
+  if (f.staffOnly) q.set("staff_only", "true");
+  if (f.manual) q.set("manual", "true");
+  if (f.ledger) q.set("ledger", "true");
   if (f.figure?.figure) q.set("figure", f.figure.figure);
   if (f.figure?.year && f.figure.accounts) {
     q.set("year", f.figure.year);

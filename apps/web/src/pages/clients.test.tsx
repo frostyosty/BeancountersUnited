@@ -54,7 +54,7 @@ describe("clients", () => {
       "GET /api/clients": () => [],
     });
     renderApp(<App />);
-    const link = await screen.findByRole("link", { name: "Install a starter set in Practice settings" });
+    const link = await screen.findByRole("link", { name: "Install a starter set in Settings" });
     expect(link.getAttribute("href")).toBe("/settings");
   });
 

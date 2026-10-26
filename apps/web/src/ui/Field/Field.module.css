@@ -1,0 +1,10 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

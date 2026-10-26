@@ -18,9 +18,10 @@ use acct_core::{AccountCode, Chart, DepreciationSettings, GstCode, Money};
 use acct_store::bank::BankLine;
 use acct_store::coding::{LineState, LineStateKind};
 use acct_store::log::LoggedCommand;
+use acct_store::users::Role;
 use acct_store::{
     SqliteConnection, ai as ai_store, assets as asset_store, bank, clients, coding, journals, log,
-    users, years,
+    tenancy, users, years,
 };
 use axum::Json;
 use axum::extract::rejection::QueryRejection;
@@ -428,6 +429,12 @@ async fn observe(
             if let Some(c) = client_id {
                 let on = ai_store::enabled(conn, c).await?;
                 facts.push(fact("AI suggestions", "AI suggestions", on_off(on).into()));
+            }
+        }
+        C::SetHistorySharing { .. } => {
+            if let Some(c) = client_id {
+                let on = tenancy::owner_edits_shared(conn, c).await?;
+                facts.push(fact("Changes", "owner edits shared with accountants", on_off(on).into()));
             }
         }
         C::MoveYearLayout { client_year_id, .. } => {
@@ -1239,6 +1246,12 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
         C::SetAiSuggestions { enabled, .. } => {
             format!("turned AI suggestions {}", on_off(*enabled))
         }
+        C::SetHistorySharing {
+            share_owner_edits, ..
+        } => format!(
+            "{} their accountants see the owner's edits in Changes",
+            if *share_owner_edits { "let" } else { "stopped letting" }
+        ),
         C::AddMerchant {
             entity_type,
             description_contains,
@@ -1324,6 +1337,16 @@ pub struct HistoryQuery {
     /// Comma-separated account codes, with `year`: the drill-down from a statement or TB line.
     #[ts(optional)]
     pub accounts: Option<String>,
+    /// Only changes made by practice staff and admins, not owners or the system.
+    #[serde(default)]
+    pub staff_only: bool,
+    /// Only journals typed in or reversed by hand. With `ledger`, either.
+    #[serde(default)]
+    pub manual: bool,
+    /// Only changes that post to the ledger: journals, imports, bank coding, depreciation. With
+    /// `manual`, either.
+    #[serde(default)]
+    pub ledger: bool,
     /// Only entries before this `seq`, for the next page.
     #[ts(optional)]
     pub before: Option<i64>,
@@ -1374,6 +1397,24 @@ pub struct HistoryPage {
     pub next_before: Option<i64>,
 }
 
+/// Commands a person types in by hand.
+const MANUAL_KINDS: &[&str] = &["post_journal", "reverse_journal", "set_opening_balance"];
+/// Commands that post to the ledger.
+const LEDGER_KINDS: &[&str] = &[
+    "post_journal",
+    "reverse_journal",
+    "import_tb",
+    "run_depreciation",
+    "import_statement",
+    "set_opening_balance",
+    "code_bank_line",
+    "code_bank_lines",
+    "confirm_transfer",
+    "confirm_ird_payment",
+    "resolve_duplicate",
+    "dispose_asset",
+];
+
 const HISTORY_MAX: i64 = 200;
 const HISTORY_DEFAULT: i64 = 50;
 /// How many log entries are read at a time while filtering.
@@ -1423,6 +1464,20 @@ pub async fn get_history(
         }
     };
     let limit = q.limit.unwrap_or(HISTORY_DEFAULT).clamp(1, HISTORY_MAX);
+    let roles: BTreeMap<String, Role> = users::list(&mut conn)
+        .await?
+        .into_iter()
+        .map(|u| (u.id, u.role))
+        .collect();
+    // Owners' own edits are theirs to share: the practice sees them only where the owner allows it.
+    let hides_owners = actor.role.is_practice();
+    let sharing: BTreeSet<String> = tenancy::sharing_clients(&mut conn).await?.into_iter().collect();
+    let kinds: Vec<&str> = match (q.manual, q.ledger) {
+        (false, false) => Vec::new(),
+        (true, false) => MANUAL_KINDS.to_vec(),
+        (false, true) => LEDGER_KINDS.to_vec(),
+        (true, true) => LEDGER_KINDS.to_vec(),
+    };
 
     let mut picked: Vec<(LoggedCommand, Option<Changes>)> = Vec::new();
     let mut cursor = q.before.unwrap_or(i64::MAX);
@@ -1447,6 +1502,19 @@ pub async fn get_history(
                 break;
             }
             if !visible.shows(e.client_id.as_deref()) {
+                continue;
+            }
+            let author = e.user_id.as_ref().and_then(|u| roles.get(u)).copied();
+            if hides_owners
+                && author == Some(Role::BusinessOwner)
+                && !e.client_id.as_ref().is_some_and(|c| sharing.contains(c))
+            {
+                continue;
+            }
+            if q.staff_only && !matches!(author, Some(Role::PracticeAdmin | Role::Staff)) {
+                continue;
+            }
+            if !kinds.is_empty() && !kinds.contains(&e.kind.as_str()) {
                 continue;
             }
             let day = e.at.date_naive();
@@ -1507,6 +1575,24 @@ pub async fn get_history(
     Ok(Json(HistoryPage {
         entries,
         next_before,
+    }))
+}
+
+/// `GET /api/businesses/{id}/history-sharing`: whether the owner lets accountants see their edits.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct HistorySharing {
+    pub share_owner_edits: bool,
+}
+
+pub async fn get_history_sharing(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Result<Json<HistorySharing>, CommandError> {
+    let mut conn = state.store.reader().await?;
+    Ok(Json(HistorySharing {
+        share_owner_edits: tenancy::owner_edits_shared(&mut conn, &id).await?,
     }))
 }
 

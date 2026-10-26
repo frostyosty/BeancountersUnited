@@ -375,6 +375,10 @@ pub struct AiSuggestionsView {
     pub activity: Option<String>,
     pub private_names: Vec<String>,
     pub suggestions: Vec<AiSuggestion>,
+    /// Asks allowed per day, or `None` for no limit.
+    pub daily_limit: Option<u32>,
+    /// Asks left today, or `None` for no limit.
+    pub remaining_today: Option<u32>,
 }
 
 /// A business's settings, or the defaults when it has never changed them: on, with no activity
@@ -394,10 +398,76 @@ async fn settings_or_default(
         }))
 }
 
+/// How many times a day each business may ask for suggestions. In memory: a restart resets the
+/// day, which is fine for a courtesy limit on spend.
+#[derive(Debug)]
+pub struct Quota {
+    /// `None`: no limit.
+    limit: Option<u32>,
+    used: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
+}
+
+impl Default for Quota {
+    /// No limit, for tests and tools.
+    fn default() -> Quota {
+        Quota::new(None)
+    }
+}
+
+impl Quota {
+    pub fn new(limit: Option<u32>) -> Quota {
+        Quota {
+            limit,
+            used: std::sync::Mutex::default(),
+        }
+    }
+
+    /// `ACCT_AI_DAILY_LIMIT` asks per business per day (UTC), 1 when unset, `0` or `off` for none.
+    pub fn from_env() -> Quota {
+        let limit = match std::env::var("ACCT_AI_DAILY_LIMIT") {
+            Ok(v) if v.eq_ignore_ascii_case("off") => None,
+            Ok(v) => match v.trim().parse::<u32>() {
+                Ok(0) | Err(_) => None,
+                Ok(n) => Some(n),
+            },
+            Err(_) => Some(1),
+        };
+        Quota::new(limit)
+    }
+
+    pub fn limit(&self) -> Option<u32> {
+        self.limit
+    }
+
+    /// How many asks `client_id` has left on `day`; `None` when there's no limit.
+    pub fn remaining(&self, client_id: &str, day: chrono::NaiveDate) -> Option<u32> {
+        let limit = self.limit?;
+        let used = self.used.lock().unwrap_or_else(|e| e.into_inner());
+        let n = used.get(&(client_id.to_owned(), day)).copied().unwrap_or(0);
+        Some(limit.saturating_sub(n))
+    }
+
+    /// Spends one ask. False when none are left.
+    pub fn take(&self, client_id: &str, day: chrono::NaiveDate) -> bool {
+        let Some(limit) = self.limit else {
+            return true;
+        };
+        let mut used = self.used.lock().unwrap_or_else(|e| e.into_inner());
+        used.retain(|(_, d), _| *d >= day);
+        let n = used.entry((client_id.to_owned(), day)).or_insert(0);
+        if *n >= limit {
+            return false;
+        }
+        *n += 1;
+        true
+    }
+}
+
 /// The view for a business, with the server's suggester.
 pub async fn view(
     conn: &mut SqliteConnection,
     suggester: Option<&dyn Suggester>,
+    quota: &Quota,
     client_id: &str,
 ) -> Result<AiSuggestionsView, CommandError> {
     business::business(conn, client_id).await?;
@@ -415,6 +485,8 @@ pub async fn view(
         activity: settings.activity,
         private_names: settings.private_names,
         suggestions,
+        daily_limit: quota.limit(),
+        remaining_today: quota.remaining(client_id, chrono::Utc::now().date_naive()),
     })
 }
 
@@ -425,7 +497,7 @@ pub async fn get_ai_suggestions(
 ) -> Result<Json<AiSuggestionsView>, CommandError> {
     let mut conn = state.store.reader().await?;
     Ok(Json(
-        view(&mut conn, state.suggester.as_deref(), &id).await?,
+        view(&mut conn, state.suggester.as_deref(), &state.ai_quota, &id).await?,
     ))
 }
 
@@ -732,6 +804,18 @@ pub async fn suggest(
         prepare(&mut conn, client_id, &settings).await?
     };
 
+    // Only a real ask spends the day's allowance.
+    if !prepared.asks.is_empty()
+        && !state
+            .ai_quota
+            .take(client_id, chrono::Utc::now().date_naive())
+    {
+        return Err(CommandError::invalid(
+            "ai_daily_limit",
+            "You've used today's question. The experts are back tomorrow.",
+        ));
+    }
+
     // 2 and 3. Ask, with no transaction open, and check the answers.
     let names: Vec<&str> = prepared.private_names.iter().map(String::as_str).collect();
     let mut suggestions = Vec::new();
@@ -840,6 +924,22 @@ pub async fn post_ai_suggestions(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_daily_quota_is_per_business_and_per_day() {
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 10, 26).unwrap();
+        let next = day.succ_opt().unwrap();
+        let q = Quota::new(Some(1));
+        assert_eq!(q.remaining("a", day), Some(1));
+        assert!(q.take("a", day));
+        assert_eq!(q.remaining("a", day), Some(0));
+        assert!(!q.take("a", day), "the second ask in a day is refused");
+        assert!(q.take("b", day), "another business has its own");
+        assert!(q.take("a", next), "tomorrow is a fresh day");
+        let none = Quota::default();
+        assert_eq!(none.remaining("a", day), None);
+        assert!(none.take("a", day) && none.take("a", day));
+    }
 
     fn cat(key: &str, direction: Direction) -> Category {
         Category {

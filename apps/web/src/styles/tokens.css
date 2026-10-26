@@ -1,0 +1,91 @@
+/* Design tokens: the only place colours, sizes and shadows are defined. Components and pages use these
+   variables, never raw hex, so the theme and dark mode reach every screen.
+
+   Brand colours come from apps/web/.env through lib/theme.ts (--theme-*). Every colour token is a
+   light-dark() pair: the page follows the system setting unless data-theme on <html> pins one
+   (lib/theme.ts). Anything that must always print like paper (statements) sets
+   `color-scheme: light` and gets the light half of every token. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Brand */
+  --brand-1: var(--theme-color-1, #0d1b36);
+  --brand-2: var(--theme-color-2, #16305f);
+  --brand-glow: var(--theme-accent, #5aa2ff);
+
+  /* Type */
+  --font: var(--theme-font, system-ui, "Segoe UI", Roboto, sans-serif);
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.2rem;
+  --text-2xl: 1.6rem;
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1.25rem;
+  --space-5: 1.75rem;
+  --space-6: 2.5rem;
+
+  /* Shape */
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --dur: 140ms;
+
+  /* Layers */
+  --z-header: 20;
+
+  /* Surfaces and text */
+  --surface: light-dark(#f4f6fa, #0b1220);
+  --surface-raised: light-dark(#ffffff, #131c2e);
+  --surface-sunken: light-dark(#eef1f6, #0f1727);
+  --surface-hover: light-dark(#f0f3f8, #1a2439);
+  --text: light-dark(#121a2b, #e5eaf3);
+  --text-muted: light-dark(#5a6478, #9aa6bd);
+  --border: light-dark(#dfe4ec, #243149);
+  --border-strong: light-dark(#c3cbd8, #34445f);
+
+  /* Accent: a deeper shade of the brand glow on light, the glow itself on dark */
+  --accent: light-dark(color-mix(in oklab, var(--brand-glow) 60%, #08142b), color-mix(in oklab, var(--brand-glow) 88%, white));
+  --accent-hover: light-dark(color-mix(in oklab, var(--accent) 85%, black), color-mix(in oklab, var(--accent) 85%, white));
+  --accent-text: light-dark(#ffffff, #07122a);
+  --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+
+  /* Status */
+  --ok: light-dark(#1a7f45, #4fcf8a);
+  --warn: light-dark(#9a6200, #f0b44c);
+  --danger: light-dark(#c0362c, #ff7d73);
+  --ok-soft: color-mix(in srgb, var(--ok) 12%, transparent);
+  --warn-soft: color-mix(in srgb, var(--warn) 13%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 11%, transparent);
+
+  /* App header: the landing page's navy */
+  --header-bg: light-dark(var(--brand-1), color-mix(in oklab, var(--brand-1) 70%, black));
+  --header-text: #ffffff;
+  --header-muted: #b9c7e3;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px light-dark(rgb(16 24 40 / 0.06), rgb(0 0 0 / 0.4));
+  --shadow-2:
+    0 1px 3px light-dark(rgb(16 24 40 / 0.05), rgb(0 0 0 / 0.3)), 0 8px 24px light-dark(rgb(16 24 40 / 0.08), rgb(0 0 0 / 0.35));
+  --shadow-3: 0 24px 64px light-dark(rgb(8 20 45 / 0.28), rgb(0 0 0 / 0.6));
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

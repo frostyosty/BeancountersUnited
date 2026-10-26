@@ -13,6 +13,7 @@ import { Icon } from "../lib/icons";
 import { formatMoney } from "../lib/money";
 import { keys, useBusiness, useChart } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { PageHeader } from "../ui";
 import { AiSuggestionsPanel } from "./SaveTaxAi";
 import { CardBody } from "./SaveTaxCards";
 import { describeCoding } from "./SaveTaxCategorise";
@@ -51,12 +52,11 @@ export function SaveTaxPage() {
 
   return (
     <>
-      <p className="crumbs">
-        <Link to={`/businesses/${clientId}`}>{business.data.name}</Link> / Save tax
-      </p>
-      <h1>
-        <Icon name="business.save" fallback="✂️" /> Save tax
-      </h1>
+      <PageHeader
+        crumbs={[{ to: `/businesses/${clientId}`, label: business.data.name }]}
+        icon={<Icon name="business.save" fallback="✂️" />}
+        title="Save tax"
+      />
 
       <div className={styles.scoreboard} role="status">
         <div>

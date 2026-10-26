@@ -457,6 +457,9 @@ pub enum Command {
         #[ts(optional)]
         private_names: Option<Vec<String>>,
     },
+    /// Lets the business's accountants see the owner's own edits in Changes, or stops them. Off
+    /// by default. The business owner decides this, not the accountants. It changes no figures.
+    SetHistorySharing { client_id: String, share_owner_edits: bool },
     /// Adds an entry to an entity type's merchant list (ADR 009's layer 3), such as "Z ENERGY is
     /// vehicle costs", in the master chart's codes. Save tax suggests it after the business's
     /// rules and history. It never changes a coded line. Use synthetic or consented data only.
@@ -610,6 +613,7 @@ impl Command {
             Command::AddCardAccount { .. } => "add_card_account",
             Command::SetCodingSettings { .. } => "set_coding_settings",
             Command::SetAiSuggestions { .. } => "set_ai_suggestions",
+            Command::SetHistorySharing { .. } => "set_history_sharing",
             Command::RecordSuggestions { .. } => "record_suggestions",
             Command::AddMerchant { .. } => "add_merchant",
             Command::RemoveMerchant { .. } => "remove_merchant",

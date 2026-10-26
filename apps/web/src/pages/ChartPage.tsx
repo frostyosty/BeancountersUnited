@@ -1,12 +1,14 @@
 import type { Account } from "@acct/types/Account";
 import type { ClientDetail } from "@acct/types/ClientDetail";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { AccountTable, AddAccountForm, type ChartCommands } from "../components/AccountEditor";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { keys, useChart, useClient } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { Icon } from "../lib/icons";
+import { PageHeader } from "../ui";
 import styles from "./ChartPage.module.css";
 
 /** The commands that edit one client's chart. */
@@ -38,10 +40,14 @@ export function ChartPage() {
   const retained = client.data.retained_earnings;
   return (
     <>
-      <p className="crumbs">
-        <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>{client.data.name}</Link> /
-      </p>
-      <h1>Chart of accounts</h1>
+      <PageHeader
+        crumbs={[
+          { to: "/", label: "Clients" },
+          { to: `/clients/${clientId}`, label: client.data.name },
+        ]}
+        icon={<Icon name="client.chart" fallback="📚" />}
+        title="Chart of accounts"
+      />
       <div className={styles.layout}>
         <section>
           <AccountTable

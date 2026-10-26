@@ -86,6 +86,9 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - `viewer`: read-only.
   - `business_owner`: signs up themselves and sees only their own business: uploads, Save tax, and inviting their accountant. Practice users see an owner's business only after accepting that invite.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
+  - Our own components live in `apps/web/src/ui/` (Button, Modal, ConfirmDialog, PageHeader, Card…), and colours come
+    only from the tokens in `apps/web/src/styles/tokens.css` (light and dark). Read `apps/web/src/ui/README.md` before
+    building a screen.
 - **Desktop app (ADR 006, amended in M12):** one Tauri 2 app, `acct-dev` in `apps/desktop` (with its shared crate `acct-desktop` in `apps/desktop/shell`): a throwaway server with the synthetic fixtures, a window per role, and the sync simulator, for development and trying builds on Windows. `.github/workflows/release.yml` builds its exe. `acct-master` and `acct-client` are retired: `acctd` is the server, and everyone else uses a browser.
 
 ## Layout

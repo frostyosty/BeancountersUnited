@@ -6,15 +6,29 @@
 }
 
 .area {
-  padding: var(--space-3);
-  border: 1px solid var(--border, #ccc);
-  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.area > button {
+  align-self: flex-start;
+}
+
+.area h2 {
+  margin-top: 0;
+  font-size: var(--text-lg);
 }
 
 .figure {
   margin: var(--space-2) 0;
-  font-size: 2.25rem;
-  font-weight: 700;
+  font-size: 2.4rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -23,8 +37,9 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 2px dashed var(--border, #ccc);
-  border-radius: 6px;
+  background: var(--surface-sunken);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
 }
 
 .results {
@@ -34,9 +49,9 @@
 .notice {
   margin: var(--space-2) 0;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid #c98a00;
-  background: #fff7e0;
-  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  background: var(--warn-soft);
+  border-radius: var(--radius-md);
 }
 
 .breakdown {

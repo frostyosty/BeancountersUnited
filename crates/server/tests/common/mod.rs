@@ -53,6 +53,7 @@ impl Server {
             state: AppState {
                 store: Arc::new(store),
                 suggester: None,
+                ai_quota: Default::default(),
                 presence: Arc::default(),
             },
         };
@@ -89,6 +90,7 @@ impl Server {
             state: AppState {
                 store: Arc::new(store),
                 suggester: None,
+                ai_quota: Default::default(),
                 presence: Arc::default(),
             },
         }

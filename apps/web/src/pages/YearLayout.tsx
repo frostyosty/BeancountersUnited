@@ -1,12 +1,12 @@
 import type { Account } from "@acct/types/Account";
 import type { ClientDetail } from "@acct/types/ClientDetail";
 import type { YearSummary } from "@acct/types/YearSummary";
-import { Link, NavLink, Outlet, useOutletContext, useParams } from "react-router";
+import { Outlet, useOutletContext, useParams } from "react-router";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Icon } from "../lib/icons";
 import { formatDate, periodEndedLabel } from "../lib/dates";
 import { useChart, useClient, useYear } from "../lib/queries";
-import styles from "./YearLayout.module.css";
+import { Badge, PageHeader, Tab, Tabs } from "../ui";
 
 export type YearContext = { year: YearSummary; client: ClientDetail; chart: Account[] };
 
@@ -33,41 +33,52 @@ export function YearLayout() {
   const context: YearContext = { year: y, client: client.data, chart: chart.data };
   return (
     <>
-      <p className="crumbs">
-        <Link to="/">Clients</Link> / <Link to={`/clients/${clientId}`}>{client.data.name}</Link> /
-      </p>
-      <h1>
-        {periodEndedLabel(y.start, y.end)}{" "}
-        <span className={y.status === "finalised" ? styles.finalised : styles.open}>{y.status}</span>
-      </h1>
-      <p className="muted">
-        {formatDate(y.start)} to {formatDate(y.end)}
-        {y.books_source && ` · books from ${y.books_source.replace(/_/g, " ")}`}
-      </p>
-      <nav className={styles.tabs} aria-label="Year">
-        <NavLink to="" end>
-          Journals
-        </NavLink>
-        <NavLink to="tb">Trial balance</NavLink>
-        <NavLink to="import">Import TB</NavLink>
-        <NavLink to="assets">Assets</NavLink>
-        <NavLink to="statements">Statements</NavLink>
-        <NavLink to="notes">
+      <PageHeader
+        crumbs={[
+          { to: "/", label: "Clients" },
+          { to: `/clients/${clientId}`, label: client.data.name },
+        ]}
+        title={periodEndedLabel(y.start, y.end)}
+        badge={<Badge tone={y.status === "finalised" ? "ok" : "accent"}>{y.status}</Badge>}
+        subtitle={
+          <>
+            {formatDate(y.start)} to {formatDate(y.end)}
+            {y.books_source && ` · books from ${y.books_source.replace(/_/g, " ")}`}
+          </>
+        }
+      />
+      <Tabs label="Year">
+        <Tab to="" end>
+          <Icon name="year.journals" fallback="📒" /> Journals
+        </Tab>
+        <Tab to="tb">
+          <Icon name="year.tb" fallback="⚖️" /> Trial balance
+        </Tab>
+        <Tab to="import">
+          <Icon name="year.import" fallback="📥" /> Import TB
+        </Tab>
+        <Tab to="assets">
+          <Icon name="year.assets" fallback="🚜" /> Assets
+        </Tab>
+        <Tab to="statements">
+          <Icon name="year.statements" fallback="🧾" /> Statements
+        </Tab>
+        <Tab to="notes">
           <Icon name="year.notes" fallback="📝" /> Notes
-        </NavLink>
-        <NavLink to="reconcile">
+        </Tab>
+        <Tab to="reconcile">
           <Icon name="year.reconcile" fallback="🏦" /> Reconcile
-        </NavLink>
-        <NavLink to="gl">
+        </Tab>
+        <Tab to="gl">
           <Icon name="year.gl" fallback="📖" /> General ledger
-        </NavLink>
-        <NavLink to="analysis">
+        </Tab>
+        <Tab to="analysis">
           <Icon name="year.analysis" fallback="📊" /> Analysis
-        </NavLink>
-        <NavLink to="finalise">
+        </Tab>
+        <Tab to="finalise">
           <Icon name="year.finalise" fallback="🔏" /> Finalise
-        </NavLink>
-      </nav>
+        </Tab>
+      </Tabs>
       <Outlet context={context} />
     </>
   );

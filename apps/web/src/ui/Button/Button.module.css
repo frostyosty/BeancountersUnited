@@ -1,0 +1,16 @@
+/* The button's look is in styles/controls.css, shared with plain <button> markup. Only the spinner is here. */
+
+.spinner {
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

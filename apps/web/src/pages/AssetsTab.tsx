@@ -15,6 +15,7 @@ import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft,
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useClientAssetClasses, useYearAssets } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { useConfirm } from "../ui";
 import { useYearContext } from "./YearLayout";
 
 /** Everything an asset command can change: every year's figures and the class views. */
@@ -141,8 +142,10 @@ function Register({
 }) {
   const [editing, setEditing] = useState<{ id: string; mode: "edit" | "dispose" } | null>(null);
   const command = useCommand(INVALIDATES);
+  const [confirm, confirmDialog] = useConfirm();
   return (
     <>
+      {confirmDialog}
       <ErrorMessage error={command.error} />
       <table className="table" aria-label="Register">
         <thead>
@@ -201,10 +204,14 @@ function Register({
                       {!a.fixed && (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (window.confirm(`Delete ${a.name} from the register?`)) {
-                              command.mutate({ kind: "delete_asset", payload: { asset_id: a.id } });
-                            }
+                          onClick={async () => {
+                            const yes = await confirm({
+                              title: `Delete ${a.name}?`,
+                              children: <p>Delete {a.name} from the register?</p>,
+                              confirmLabel: "Delete",
+                              tone: "danger",
+                            });
+                            if (yes) command.mutate({ kind: "delete_asset", payload: { asset_id: a.id } });
                           }}
                         >
                           Delete

@@ -19,7 +19,7 @@ use acct_store::users::{Role, User};
 use acct_store::years::{BooksSource, StoredYear, YearStatus};
 use acct_store::{
     SqliteConnection, Store, charts, clients, journals, log, new_id, practice, sessions, templates,
-    users, years,
+    tenancy, users, years,
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
@@ -341,6 +341,15 @@ async fn apply(
                 private_names.as_deref(),
             )
             .await?;
+            Ok(client_effect(client_id))
+        }
+
+        Command::SetHistorySharing {
+            client_id,
+            share_owner_edits,
+        } => {
+            business::business(tx, client_id).await?;
+            tenancy::set_owner_edits_shared(tx, client_id, *share_owner_edits, seq).await?;
             Ok(client_effect(client_id))
         }
 
@@ -2079,7 +2088,9 @@ pub fn lock_rule(command: &Command) -> Lock {
         C::SetCodingSettings { .. } => {
             Lock::Allowed("changes no figures; applies only to lines coded afterwards")
         }
-        C::SetAiSuggestions { .. } | C::RecordSuggestions { .. } => Lock::Allowed(NO_FIGURES),
+        C::SetAiSuggestions { .. } | C::RecordSuggestions { .. } | C::SetHistorySharing { .. } => {
+            Lock::Allowed(NO_FIGURES)
+        }
         C::CreateInvite { .. } | C::AcceptInvite { .. } => {
             Lock::Allowed("who can see the business, not its figures")
         }

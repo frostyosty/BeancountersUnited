@@ -4,10 +4,11 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { makeQueryClient } from "./lib/queryClient";
-import { applyTheme } from "./lib/theme";
+import { applyScheme, applyTheme, storedScheme } from "./lib/theme";
 import "./styles/global.css";
 
 applyTheme();
+applyScheme(storedScheme());
 
 const queryClient = makeQueryClient();
 

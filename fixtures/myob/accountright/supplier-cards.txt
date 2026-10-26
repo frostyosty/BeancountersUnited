@@ -1,0 +1,4 @@
+Co./Last Name	First Name	Card ID	Card Status	Addr 1 - Line 1	Addr 1 - City	Addr 1 - Phone No. 1	Addr 1 - Email	GST ID No.	Cost Per Hour	Payment Memo
+Fernglen Pet Supplies		SUP001	N	22 Depot Street	Fernglen	09 555 0103	orders@example.com	000-333-444	0.00	Payment; Fernglen
+Harbour Lane Properties		SUP002	N	3 Wharf Road	Kowhai Bay	09 555 0104		000-555-666	0.00	
+Kowhai Print Co		SUP003	N		Kowhai Bay		print@example.com		0.00	

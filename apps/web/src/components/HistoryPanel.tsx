@@ -101,8 +101,10 @@ function Changes({ business, people }: { business: string | null; people: [strin
   const { figure, clearFigure } = useHistoryContext();
   const { pathname } = useLocation();
   const [user, setUser] = useState<string | null>(null);
-  const [from, setFrom] = useState<string | null>(null);
-  const [to, setTo] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [staffOnly, setStaffOnly] = useState(false);
+  const [manual, setManual] = useState(false);
+  const [ledger, setLedger] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState(false);
   const [limit, setLimit] = useState(PAGE);
 
@@ -112,11 +114,13 @@ function Changes({ business, people }: { business: string | null; people: [strin
   const filters: HistoryFilters = {
     business: figure?.figure ? business : allBusinesses ? null : business,
     user,
-    from,
-    to,
+    staffOnly,
+    manual,
+    ledger,
     figure,
     limit,
   };
+  const active = [user, staffOnly, manual, ledger, allBusinesses].filter(Boolean).length;
   const history = useHistory(filters);
   const entries = history.data?.entries ?? [];
 
@@ -130,6 +134,17 @@ function Changes({ business, people }: { business: string | null; people: [strin
     <section aria-labelledby="changes-heading" className={styles.changes}>
       <h2 id="changes-heading">
         <Icon name="history.changes" fallback="🕘" /> Changes
+        <button
+          type="button"
+          className={styles.filterToggle}
+          aria-expanded={open}
+          aria-controls="changes-filters"
+          aria-label="Filter changes"
+          onClick={() => setOpen(!open)}
+        >
+          <span aria-hidden="true">{open ? "▴" : "▾"}</span>
+          {active > 0 && <span className={styles.badge}>{active}</span>}
+        </button>
       </h2>
       {figure && (
         <p className={styles.figure} role="status">
@@ -139,37 +154,43 @@ function Changes({ business, people }: { business: string | null; people: [strin
           </button>
         </p>
       )}
-      <div className={styles.filters}>
-        <label>
-          Person
-          <select value={user ?? ""} onChange={(e) => setUser(e.target.value || null)}>
-            <option value="">Everyone</option>
-            {[...names].map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          From
-          <input type="date" value={from ?? ""} onChange={(e) => setFrom(e.target.value || null)} />
-        </label>
-        <label>
-          To
-          <input type="date" value={to ?? ""} onChange={(e) => setTo(e.target.value || null)} />
-        </label>
-        {business && !figure?.figure && (
-          <label className={styles.check}>
-            <input type="checkbox" checked={allBusinesses} onChange={(e) => setAllBusinesses(e.target.checked)} />
-            Every business
+      {open && (
+        <div className={styles.filters} id="changes-filters">
+          <label>
+            Person
+            <select value={user ?? ""} onChange={(e) => setUser(e.target.value || null)}>
+              <option value="">Everyone</option>
+              {[...names].map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </label>
-        )}
-      </div>
+          <label className={styles.check}>
+            <input type="checkbox" checked={staffOnly} onChange={(e) => setStaffOnly(e.target.checked)} />
+            Staff only
+          </label>
+          <label className={styles.check}>
+            <input type="checkbox" checked={manual} onChange={(e) => setManual(e.target.checked)} />
+            Manual entries
+          </label>
+          <label className={styles.check}>
+            <input type="checkbox" checked={ledger} onChange={(e) => setLedger(e.target.checked)} />
+            Ledger
+          </label>
+          {business && !figure?.figure && (
+            <label className={styles.check}>
+              <input type="checkbox" checked={allBusinesses} onChange={(e) => setAllBusinesses(e.target.checked)} />
+              Every business
+            </label>
+          )}
+        </div>
+      )}
       <ErrorMessage error={history.error} />
       {history.data && entries.length === 0 && (
         <p className="muted">
-          <Icon name="history.empty" fallback="🌱" /> No changes {figure || user || from || to ? "match" : "yet"}.
+          <Icon name="history.empty" fallback="🌱" /> No changes {figure || active > 0 ? "match" : "yet"}.
         </p>
       )}
       {entries.length > 0 && (
