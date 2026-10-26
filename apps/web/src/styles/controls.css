@@ -1,19 +1,20 @@
 /* Buttons, form controls and tables. This is the one definition of how they look: plain elements get it,
    and the ui/ components (Button, Field…) apply these same class names.
 
-   Button variants: .primary, .danger, .ghost; size: .sm. */
+   Button variants: .primary, .danger, .ghost; size: .sm.
+   Selectors sit in :where(), so they weigh nothing: any class in a module or component overrides them. */
 
-button,
-input,
-select,
-textarea {
+:where(button),
+:where(input),
+:where(select),
+:where(textarea) {
   font: inherit;
   color: inherit;
 }
 
 /* ---- Buttons ---- */
 
-button {
+:where(button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -35,67 +36,67 @@ button {
     transform var(--dur) var(--ease);
 }
 
-button:hover:not(:disabled) {
+:where(button:hover:not(:disabled)) {
   background: var(--surface-hover);
   border-color: color-mix(in srgb, var(--border-strong) 70%, var(--text));
 }
 
-button:active:not(:disabled) {
+:where(button:active:not(:disabled)) {
   transform: translateY(1px);
 }
 
-button:focus-visible {
+:where(button:focus-visible) {
   outline: none;
   box-shadow: var(--ring);
   border-radius: var(--radius-sm);
 }
 
-button.primary {
+:where(button.primary) {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
 }
 
-button.primary:hover:not(:disabled) {
+:where(button.primary:hover:not(:disabled)) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 
-button.danger {
+:where(button.danger) {
   background: var(--danger);
   border-color: var(--danger);
   color: light-dark(#fff, #2a0805);
 }
 
-button.danger:hover:not(:disabled) {
+:where(button.danger:hover:not(:disabled)) {
   background: color-mix(in oklab, var(--danger) 85%, var(--text));
 }
 
-button.ghost {
+:where(button.ghost) {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
 }
 
-button.ghost:hover:not(:disabled) {
+:where(button.ghost:hover:not(:disabled)) {
   background: var(--surface-hover);
   border-color: transparent;
 }
 
-button.sm {
+:where(button.sm) {
   padding: 0.2rem 0.55rem;
   font-size: var(--text-sm);
   border-radius: 6px;
 }
 
-button:disabled {
+:where(button:disabled) {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 /* A link that looks like a button: <ButtonLink> */
-a.button {
+:where(a.button) {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
@@ -111,25 +112,25 @@ a.button {
   transition: background-color var(--dur) var(--ease);
 }
 
-a.button:hover {
+:where(a.button:hover) {
   background: var(--surface-hover);
 }
 
-a.button.primary {
+:where(a.button.primary) {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
 }
 
-a.button.primary:hover {
+:where(a.button.primary:hover) {
   background: var(--accent-hover);
 }
 
 /* ---- Inputs ---- */
 
-input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
-select,
-textarea {
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"])),
+:where(select),
+:where(textarea) {
   padding: 0.42rem 0.65rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -141,36 +142,36 @@ textarea {
     box-shadow var(--dur) var(--ease);
 }
 
-input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]):hover,
-select:hover,
-textarea:hover {
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]):hover),
+:where(select:hover),
+:where(textarea:hover) {
   border-color: color-mix(in srgb, var(--border-strong) 60%, var(--text));
 }
 
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+:where(input:focus-visible),
+:where(select:focus-visible),
+:where(textarea:focus-visible) {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--ring);
   border-radius: var(--radius-sm);
 }
 
-input:disabled,
-select:disabled,
-textarea:disabled,
-input:read-only:not([type="checkbox"], [type="radio"]) {
+:where(input:disabled),
+:where(select:disabled),
+:where(textarea:disabled),
+:where(input:read-only:not([type="checkbox"], [type="radio"])) {
   background: var(--surface-sunken);
 }
 
-input::placeholder,
-textarea::placeholder {
+:where(input)::placeholder,
+:where(textarea)::placeholder {
   color: var(--text-muted);
   opacity: 0.8;
 }
 
-input[type="checkbox"],
-input[type="radio"] {
+:where(input[type="checkbox"]),
+:where(input[type="radio"]) {
   accent-color: var(--accent);
   width: 1rem;
   height: 1rem;
@@ -178,11 +179,11 @@ input[type="radio"] {
   vertical-align: -0.15em;
 }
 
-input[type="file"] {
+:where(input[type="file"]) {
   font-size: var(--text-sm);
 }
 
-input[type="file"]::file-selector-button {
+:where(input[type="file"])::file-selector-button {
   margin-right: var(--space-3);
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--border-strong);

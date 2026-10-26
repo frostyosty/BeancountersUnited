@@ -98,8 +98,16 @@ fn classify(table: &Table) -> Option<(MyobExport, HistorySource)> {
 
 /// Splits the file into rows and finds its header.
 fn read(text: &str) -> Result<(Table, MyobExport, HistorySource), HistoryError> {
-    let text = text.trim_start_matches('\u{feff}');
-    let delimiter = if text.lines().take(MAX_PREAMBLE + 1).any(|l| l.contains('\t')) {
+    // The csv reader counts CRLF line endings as two lines, which would put row numbers off.
+    let text = text
+        .trim_start_matches('\u{feff}')
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    let delimiter = if text
+        .lines()
+        .take(MAX_PREAMBLE + 1)
+        .any(|l| l.contains('\t'))
+    {
         b'\t'
     } else {
         b','
@@ -117,7 +125,10 @@ fn read(text: &str) -> Result<(Table, MyobExport, HistorySource), HistoryError> 
         })?;
         let cells: Vec<String> = record.iter().map(str::to_owned).collect();
         // Blank rows, and the `{}` row MYOB's import templates start with.
-        if cells.iter().all(|c| c.is_empty() || c.chars().all(|ch| "{} ".contains(ch))) {
+        if cells
+            .iter()
+            .all(|c| c.is_empty() || c.chars().all(|ch| "{} ".contains(ch)))
+        {
             continue;
         }
         let row = record
@@ -133,7 +144,11 @@ fn read(text: &str) -> Result<(Table, MyobExport, HistorySource), HistoryError> 
     for i in 0..records.len().min(MAX_PREAMBLE + 1) {
         let table = Table {
             preamble: Vec::new(),
-            header: records[i].1.iter().map(|h| fields::column_name(h)).collect(),
+            header: records[i]
+                .1
+                .iter()
+                .map(|h| fields::column_name(h))
+                .collect(),
             rows: Vec::new(),
         };
         if let Some((kind, source)) = classify(&table) {
@@ -169,9 +184,7 @@ pub fn parse(text: &str) -> Result<HistoryImport, Vec<HistoryError>> {
         MyobExport::Accounts => HistoryFile::Chart(accounts::parse(&table)?),
         MyobExport::TrialBalance => HistoryFile::Tb(tb::parse(&table)?),
         MyobExport::GeneralLedger => HistoryFile::Gl(gl::parse(&table)?),
-        MyobExport::Cards | MyobExport::Contacts => {
-            HistoryFile::Contacts(contacts::parse(&table)?)
-        }
+        MyobExport::Cards | MyobExport::Contacts => HistoryFile::Contacts(contacts::parse(&table)?),
     };
     Ok(HistoryImport { source, file })
 }

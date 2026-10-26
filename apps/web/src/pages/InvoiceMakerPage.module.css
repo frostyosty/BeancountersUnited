@@ -1,0 +1,223 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.inline input,
+.inline select {
+  width: auto;
+  min-width: 10rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.message {
+  margin-bottom: var(--space-3);
+}
+
+.hint {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* The grey desk the page sits on. The editor scales the page down to fit narrow screens. */
+.desk {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* One A4 page at 96 dpi. It's paper in dark mode too: color-scheme pins every token to its light half. */
+.paper {
+  color-scheme: light;
+  position: relative;
+  flex: none;
+  width: 794px;
+  height: 1123px;
+  overflow: hidden;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: var(--shadow-2);
+}
+
+/* The blocks below are built by lib/invoiceEditor.ts and saved with these class names, so they stay global. */
+.paper :global(.invoice-element) {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 40px;
+  min-height: 10px;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-sm);
+  touch-action: none;
+}
+
+.paper :global(.invoice-element:hover) {
+  border-color: var(--border-strong);
+}
+
+.paper :global(.invoice-element.selected) {
+  border-color: var(--accent);
+  outline: 2px solid var(--ring);
+  z-index: 2;
+}
+
+.paper :global(.invoice-element.is-dragging) {
+  opacity: 0.85;
+  cursor: grabbing;
+}
+
+.paper :global(.invoice-text) {
+  min-height: 1.4em;
+  padding: var(--space-2);
+  outline: none;
+}
+
+.paper :global(.style-shadow) {
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-2);
+}
+
+.paper :global(.style-outline-dark) {
+  border: 2px solid var(--text);
+}
+
+.paper :global(.style-inset) {
+  background: var(--surface-sunken);
+}
+
+.paper :global(.invoice-items-table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.paper :global(.invoice-items-table th),
+.paper :global(.invoice-items-table td) {
+  padding: var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  outline: none;
+}
+
+.paper :global(.invoice-items-table th) {
+  background: var(--surface-sunken);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.paper :global(.invoice-items-table th + th),
+.paper :global(.invoice-items-table td + td) {
+  text-align: right;
+}
+
+.paper :global(.add-row-btn) {
+  margin-top: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.paper :global(.image-element) {
+  cursor: pointer;
+}
+
+.paper :global(.image-placeholder) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  background: var(--surface-sunken);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.paper :global(.image-element.has-image .image-placeholder) {
+  display: none;
+}
+
+.paper :global(.line-element) {
+  display: flex;
+  align-items: center;
+}
+
+.paper :global(.inner-line) {
+  width: 100%;
+  border-top: 1px solid var(--text);
+}
+
+/* The control bar floats above a block while it's selected. */
+.paper :global(.element-controls) {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  display: none;
+  gap: 2px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.paper :global(.invoice-element.selected > .element-controls) {
+  display: flex;
+}
+
+.paper :global(.element-control-icon) {
+  padding: 1px var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.paper :global(.delete-element-icon) {
+  color: var(--danger);
+}
+
+/* What the PDF shows: the page only, with none of the editing marks. */
+.paper:global(.exporting) {
+  box-shadow: none;
+}
+
+.paper:global(.exporting) :global(.invoice-element) {
+  border-color: transparent;
+  outline: none;
+}
+
+.paper:global(.exporting) :global(.element-controls),
+.paper:global(.exporting) :global(.add-row-btn),
+.paper:global(.exporting) :global(.image-placeholder) {
+  display: none;
+}
+
+.saveState {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/* An image block while its picture uploads. */
+.paper :global(.image-element.is-uploading) {
+  opacity: 0.5;
+  cursor: progress;
+}

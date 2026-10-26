@@ -484,7 +484,11 @@ async fn observe(
         | C::AddParagraph { .. }
         | C::ReviseParagraph { .. }
         | C::PushParagraph { .. }
-        | C::RemoveParagraph { .. } => {}
+        | C::RemoveParagraph { .. }
+        | C::SaveInvoiceDraft { .. }
+        | C::SaveInvoiceTemplate { .. }
+        | C::DeleteInvoiceTemplate { .. }
+        | C::AddInvoiceImage { .. } => {}
         C::PickNotes { client_year_id, .. } => {
             let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
             let titles: Vec<&str> = notes.iter().map(|n| n.paragraph.title.trim()).collect();
@@ -1305,6 +1309,11 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
             "pushed a library paragraph's latest wording onto open years".into()
         }
         C::RemoveParagraph { .. } => "removed a paragraph from the library".into(),
+        // Personal: the listing leaves these out, but each still has words.
+        C::SaveInvoiceDraft { .. } => "saved their invoice".into(),
+        C::SaveInvoiceTemplate { .. } => "saved an invoice template".into(),
+        C::DeleteInvoiceTemplate { .. } => "deleted an invoice template".into(),
+        C::AddInvoiceImage { .. } => "added an image to their invoices".into(),
     }
 }
 
@@ -1501,7 +1510,9 @@ pub async fn get_history(
             if (picked.len() as i64) >= limit {
                 break;
             }
-            if !visible.shows(e.client_id.as_deref()) {
+            // A user's own invoices are no one else's business, and too frequent to be news.
+            if !visible.shows(e.client_id.as_deref()) || crate::commands::is_personal_kind(&e.kind)
+            {
                 continue;
             }
             let author = e.user_id.as_ref().and_then(|u| roles.get(u)).copied();

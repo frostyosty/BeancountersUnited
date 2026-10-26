@@ -12,6 +12,8 @@
 //!   a practice user sees it only after accepting the owner's invite.
 //! - A business owner sees only their own business, and does only the owner's work on it.
 //! - What each role may do once it can see something is [`Need`]'s ladder.
+//! - A user's own things (the invoice maker's drafts, templates and images) are theirs alone, at
+//!   any role: no one else sees them, an overseer included.
 //!
 //! Something a user can't see is reported as not found, the same as if it didn't exist, naming
 //! only the id they sent. Something they can see but their role can't do is forbidden.
@@ -19,7 +21,9 @@
 use std::collections::BTreeSet;
 
 use acct_store::users::{self, Role};
-use acct_store::{SqliteConnection, assets, bank, clients, coding, journals, tenancy, years};
+use acct_store::{
+    SqliteConnection, assets, bank, clients, coding, invoices, journals, tenancy, years,
+};
 use axum::extract::{FromRequestParts, MatchedPath, RawPathParams, Request, State};
 use axum::http::Method;
 use axum::middleware::Next;
@@ -76,6 +80,33 @@ pub enum Target {
     Client(ClientRef),
     /// Accepting an owner's invite. The token is the permission; any practice user may use one.
     Invite,
+    /// One of a user's own things, and who it belongs to (`None`: no such thing).
+    Own(OwnRef),
+}
+
+/// Something that belongs to one user, as the request named it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OwnRef {
+    pub entity: &'static str,
+    pub id: String,
+    pub owner: Option<String>,
+}
+
+async fn invoice_template_target(conn: &mut SqliteConnection, id: &str) -> Result<Target, CommandError> {
+    let owner = invoices::template(conn, id).await?.map(|t| t.user_id);
+    Ok(Target::Own(OwnRef {
+        entity: "invoice template",
+        id: id.to_owned(),
+        owner,
+    }))
+}
+
+async fn invoice_image_target(conn: &mut SqliteConnection, id: &str) -> Result<Target, CommandError> {
+    Ok(Target::Own(OwnRef {
+        entity: "invoice image",
+        id: id.to_owned(),
+        owner: invoices::image_owner(conn, id).await?,
+    }))
 }
 
 /// A client a request touches, and what the request actually named (a year, a bank line, ...),
@@ -123,6 +154,16 @@ pub async fn check(
         },
         Target::Listing => true,
         Target::Invite => signed_in && role.is_practice(),
+        // Someone else's is reported as not found, the same as one that doesn't exist.
+        Target::Own(o) => {
+            if !signed_in {
+                return Err(CommandError::Unauthenticated);
+            }
+            if o.owner.is_none() || o.owner != actor.user_id {
+                return Err(CommandError::not_found(o.entity, &o.id));
+            }
+            true
+        }
         Target::Client(c) => {
             if !can_see(conn, actor, &c.client_id).await? {
                 let (entity, id) = &c.named;
@@ -236,6 +277,14 @@ async fn command_targets(
         C::Initialise { .. } => (Need::Read, vec![Target::Server]),
         C::SignUp { .. } => (Need::Read, vec![Target::SignUp]),
         C::ChangeOwnPassword { .. } => (Need::Read, vec![Target::SignedIn]),
+        // The user's own invoices, at any role, a viewer's included: they're no business's data.
+        C::SaveInvoiceDraft { .. } | C::SaveInvoiceTemplate { .. } | C::AddInvoiceImage { .. } => {
+            (Need::Read, vec![Target::SignedIn])
+        }
+        C::DeleteInvoiceTemplate { template_id } => (
+            Need::Read,
+            vec![invoice_template_target(conn, template_id).await?],
+        ),
         C::AcceptInvite { .. } => (Need::Read, vec![Target::Invite]),
 
         C::CreateUser { role, .. } => (Need::Admin, vec![Target::User(Some(*role))]),
@@ -426,6 +475,10 @@ pub enum RouteRule {
     Client(Need),
     /// The `{id}` parameter is a client-year id.
     Year(Need),
+    /// The `{id}` parameter is one of the user's own invoice templates.
+    InvoiceTemplate,
+    /// The `{id}` parameter is one of the user's own invoice images.
+    InvoiceImage,
 }
 
 /// The rule for each route in [`crate::api_routes`]. `None` means the route is refused for
@@ -437,7 +490,9 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
     Some(match path {
         "/api/health" if get => R::Public,
         "/api/login" | "/api/logout" | "/api/signup" if post => R::Public,
-        "/api/me" if get => R::SignedIn,
+        "/api/me" | "/api/invoices/draft" | "/api/invoices/templates" if get => R::SignedIn,
+        "/api/invoices/templates/{id}" if get => R::InvoiceTemplate,
+        "/api/invoices/images/{id}" if get => R::InvoiceImage,
         "/api/commands" if post => R::SignedIn,
         "/api/practice"
         | "/api/asset-classes"
@@ -536,6 +591,8 @@ async fn check_route(
         RouteRule::Practice(need) => (Target::Practice, need),
         RouteRule::Client(need) => (Target::Client(ClientRef::direct(id()?)), need),
         RouteRule::Year(need) => (year_target(&mut conn, id()?).await?, need),
+        RouteRule::InvoiceTemplate => (invoice_template_target(&mut conn, id()?).await?, Need::Read),
+        RouteRule::InvoiceImage => (invoice_image_target(&mut conn, id()?).await?, Need::Read),
     };
     check(&mut conn, actor, &target, need).await
 }

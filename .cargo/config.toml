@@ -3,3 +3,7 @@
 TS_RS_LARGE_INT = "number"
 # Every crate exports its TypeScript types to one place.
 TS_RS_EXPORT_DIR = { value = "packages/types/src", relative = true }
+
+[build]
+# Incremental caches took 3.8 GB of a 32 GB Codespace; whole-crate rebuilds are cheap here.
+incremental = false

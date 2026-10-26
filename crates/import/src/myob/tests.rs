@@ -5,8 +5,8 @@ use chrono::NaiveDate;
 
 use super::*;
 use crate::history::{
-    gl_differences, ContactKind, HistoryAccount, HistoryContact, HistoryGl, HistoryTb,
-    SourceAccountType,
+    ContactKind, HistoryAccount, HistoryContact, HistoryGl, HistoryTb, SourceAccountType,
+    gl_differences,
 };
 
 const AR_ACCOUNTS: &str = include_str!("../../../../fixtures/myob/accountright/accounts.txt");
@@ -124,7 +124,10 @@ fn a_header_too_far_down_is_not_found() {
 #[test]
 fn the_import_template_brace_row_a_bom_and_crlf_are_tolerated() {
     let text = "\u{feff}{}\r\nAccount Number,Account Name,Account Type\r\n1-1110,Bank,Bank\r\n";
-    assert_eq!(detect(text), Some((MyobExport::Accounts, HistorySource::MyobAccountRight)));
+    assert_eq!(
+        detect(text),
+        Some((MyobExport::Accounts, HistorySource::MyobAccountRight))
+    );
     assert_eq!(chart(text)[0].row, 3);
 }
 
@@ -203,7 +206,10 @@ fn bad_accounts_are_reported_by_row() {
 fn accountright_trial_balances() {
     let fy24 = tb(AR_TB_2024);
     assert_eq!(fy24.as_at, Some(date(2024, 3, 31)));
-    assert_eq!(fy24.rows.iter().map(|r| r.balance).sum::<Money>(), Money::ZERO);
+    assert_eq!(
+        fy24.rows.iter().map(|r| r.balance).sum::<Money>(),
+        Money::ZERO
+    );
     assert_eq!(balance(&fy24, "1-1110"), 721_172);
     assert_eq!(balance(&fy24, "1-2120"), -112_000);
     assert_eq!(balance(&fy24, "3-1100"), 150_000);
@@ -307,8 +313,20 @@ fn a_tb_must_balance() {
 #[test]
 fn accountright_gl_detail_sums_to_the_tb_each_year() {
     for (gl_text, tb_text, from, to, lines) in [
-        (AR_GL_2024, AR_TB_2024, date(2023, 4, 1), date(2024, 3, 31), 49),
-        (AR_GL_2025, AR_TB_2025, date(2024, 4, 1), date(2025, 3, 31), 40),
+        (
+            AR_GL_2024,
+            AR_TB_2024,
+            date(2023, 4, 1),
+            date(2024, 3, 31),
+            49,
+        ),
+        (
+            AR_GL_2025,
+            AR_TB_2025,
+            date(2024, 4, 1),
+            date(2025, 3, 31),
+            40,
+        ),
     ] {
         let g = gl(gl_text);
         assert_eq!((g.from, g.to), (Some(from), Some(to)));
@@ -332,7 +350,16 @@ fn business_gl_detail_sums_to_its_tb_and_matches_accountright() {
                 .collect::<Vec<_>>(),
             g.lines
                 .into_iter()
-                .map(|l| (l.code, l.date, l.reference, l.source, l.description, l.amount))
+                .map(|l| {
+                    (
+                        l.code,
+                        l.date,
+                        l.reference,
+                        l.source,
+                        l.description,
+                        l.amount,
+                    )
+                })
                 .collect::<Vec<_>>(),
         )
     };
@@ -365,7 +392,10 @@ fn the_second_years_openings_are_the_first_years_closing() {
             _ => profit_and_loss += row.balance.cents(),
         }
     }
-    assert_eq!(opening("3-8000"), balance(&fy24, "3-8000") + profit_and_loss);
+    assert_eq!(
+        opening("3-8000"),
+        balance(&fy24, "3-8000") + profit_and_loss
+    );
     assert_eq!(opening("3-8000"), -512_867);
     assert!(fy25.openings.iter().all(|o| !o.balance.is_zero()));
 }
@@ -373,7 +403,11 @@ fn the_second_years_openings_are_the_first_years_closing() {
 #[test]
 fn gl_lines_carry_reference_source_memo_and_sign() {
     let g = gl(AR_GL_2025);
-    let rent: Vec<_> = g.lines.iter().filter(|l| l.reference == "CD000010").collect();
+    let rent: Vec<_> = g
+        .lines
+        .iter()
+        .filter(|l| l.reference == "CD000010")
+        .collect();
     assert_eq!(rent.len(), 3);
     let bank = rent.iter().find(|l| l.code == "1-1110").unwrap();
     assert_eq!(bank.amount, Money::from_cents(-172_500));

@@ -83,7 +83,7 @@ Each is enforced in core and re-checked in the command pipeline. Each is covered
   - `overseer`: us, running the service. Every business and every view. Only an overseer (or the server itself) makes another.
   - `practice_admin` (was `master`): practice settings, users, defaults, master charts, templates, finalising and reopening years.
   - `staff`: client work, including custom depreciation rates.
-  - `viewer`: read-only.
+  - `viewer`: read-only. TODO read only of what?
   - `business_owner`: signs up themselves and sees only their own business: uploads, Save tax, and inviting their accountant. Practice users see an owner's business only after accepting that invite.
 - **Web:** React, Vite, TypeScript, TanStack Query, React Router, CSS modules. No UI kit in v1.
   - Our own components live in `apps/web/src/ui/` (Button, Modal, ConfirmDialog, PageHeader, Card…), and colours come
@@ -117,6 +117,9 @@ NON-CODE-TODOS.md  everything a person has to do outside the code: checks, appro
 - `make desktop-check`: clippy and tests for the desktop apps (needs `scripts/desktop-deps.sh` on Linux). `make check` skips them.
 - `make desktop`: release builds of the desktop apps for this OS.
 - `make clean-cache`: `cargo clean`, to free the Rust build cache when the disk runs low. Only while nothing is compiling.
+- `scripts/one-build.sh <command>`: shares one build between every session. It compiles the whole workspace once for
+  everyone waiting (or reuses a compile that started after you asked), then runs your command alongside the others.
+  It runs `cargo clean` first if less than 8 GB is free. In a Codespace, start every build and test through it.
 - `make icons`: Icon Studio on :8081, for making and swapping the web app's icon images (see Icons and emoji below).
 
 ## Icons and emoji 🎨
@@ -139,4 +142,11 @@ NON-CODE-TODOS.md  everything a person has to do outside the code: checks, appro
 ## Codespaces
 - Forwarded ports stay private. Never make them public.
 - The desktop apps compile and test here, but can't be run without a display. Windows builds happen only in GitHub Actions.
-- The disk is 32 GB, and desktop builds are large. If it fills up, `cargo clean` is safe.
+- The disk is 32 GB, and desktop builds are large. Sessions share one `target/` and one build:
+  - Prefix every `cargo` and `make` build or test with `scripts/one-build.sh`.
+  - Use the workspace-wide form so the shared build covers it: `cargo test -- <filter>` (for example
+    `cargo test -- myob::`) and `cargo clippy --all-targets -- -D warnings`, not `-p <crate>`. Selecting one
+    crate changes dependency features, which recompiles them and fills the disk again.
+  - Another session's half-finished code can break the shared build. Read past errors in crates you don't own.
+  - Don't run `cargo clean` or delete `target/` yourself; the script cleans when space runs low.
+- Incremental builds are off (`.cargo/config.toml`), because their caches filled the disk.

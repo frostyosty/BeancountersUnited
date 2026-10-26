@@ -42,6 +42,10 @@ and figures are made up.
   - `expected`: the position before any answers, after the answers only, and after everything: the
     TB (debits positive), the GST boxes and the income tax.
 
+- `xero/`: M16's synthetic Xero exports (chart, contacts, two years of TB and Account Transactions)
+  for an invented sole trader, Kereru Ridge Pottery. These are CSVs in dollars, as Xero writes them;
+  see `xero/README.md`.
+
 Amounts are integer cents, debits positive. `acct-core`'s fixture tests read these files at compile
 time and snapshot the resulting ReportDocs. `make db-reset` loads them into the dev database through
 the command pipeline (`acct-load-fixtures`), with dev users `admin`, `staff` and `viewer`, password

@@ -1,0 +1,7 @@
+*ContactName,AccountNumber,EmailAddress,FirstName,LastName,POAddressLine1,POCity,POPostalCode,POCountry,PhoneNumber,MobileNumber,TaxNumber,AccountsReceivableTaxCodeName,AccountsPayableTaxCodeName,SalesAccount,PurchasesAccount
+Harbourside Gift Co,,orders@harbourside.example,,,,,,New Zealand,021 555 0101,,,15% GST on Income,,200,
+Matai Street Cafe,,hello@mataist.example,,,,,,New Zealand,021 555 0102,,,15% GST on Income,,200,
+Clayworks Supply Ltd,,accounts@clayworks.example,,,,,,New Zealand,09 555 0103,,123-456-789,,15% GST on Expenses,,310
+Studio Landlord Ltd,,,,,,,,New Zealand,09 555 0104,,987-654-321,,15% GST on Expenses,,469
+Ruru Hall Committee,,,,,,,,New Zealand,,,,15% GST on Income,15% GST on Expenses,210,491
+Inland Revenue,,,,,,,,New Zealand,,,,,,,

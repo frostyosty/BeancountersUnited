@@ -118,6 +118,8 @@ struct Victim {
     template_id: String,
     mapping_id: String,
     coding_settings: Value,
+    invoice_template_id: String,
+    invoice_image_id: String,
 }
 
 impl Victim {
@@ -130,6 +132,8 @@ impl Victim {
             &self.rule_id,
             &self.journal_id,
             &self.asset_id,
+            &self.invoice_template_id,
+            &self.invoice_image_id,
         ]
         .into_iter()
         .cloned()
@@ -305,6 +309,22 @@ async fn setup() -> (Server, Victim, Owner) {
         )
         .await;
 
+    // A's own invoice maker things.
+    let invoice_template_id = server
+        .ok(
+            &a.cookie,
+            "save_invoice_template",
+            json!({ "name": "A's layout", "html": "<p>Ana's Gardens</p>" }),
+        )
+        .await;
+    let invoice_image_id = server
+        .ok(
+            &a.cookie,
+            "add_invoice_image",
+            json!({ "content_base64": base64(b"GIF89a\x01\x00\x01\x00\x00\x00\x00;") }),
+        )
+        .await;
+
     let victim = Victim {
         owner: a,
         year_id,
@@ -318,6 +338,8 @@ async fn setup() -> (Server, Victim, Owner) {
         template_id,
         mapping_id,
         coding_settings,
+        invoice_template_id,
+        invoice_image_id,
     };
     (server, victim, b)
 }
@@ -344,6 +366,8 @@ fn param(path: &str, name: &str, v: &Victim) -> String {
         "id" if path.starts_with("/api/years/") => v.year_id.clone(),
         "id" if path.starts_with("/api/templates/") => v.template_id.clone(),
         "id" if path.starts_with("/api/mappings/") => v.mapping_id.clone(),
+        "id" if path.starts_with("/api/invoices/templates/") => v.invoice_template_id.clone(),
+        "id" if path.starts_with("/api/invoices/images/") => v.invoice_image_id.clone(),
         "id" => v.owner.business_id.clone(),
         "class_id" => v.class_id.clone(),
         "entity_type" => "sole_trader".to_owned(),
@@ -367,7 +391,14 @@ fn fill(path: &str, v: &Victim) -> String {
 /// No login needed.
 const PUBLIC: [&str; 4] = ["/api/health", "/api/login", "/api/logout", "/api/signup"];
 /// About the signed-in user only, or checked per command (`/api/commands`, covered below).
-const OWN: [&str; 2] = ["/api/me", "/api/commands"];
+const OWN: [&str; 4] = [
+    "/api/me",
+    "/api/commands",
+    "/api/invoices/draft",
+    "/api/invoices/templates",
+];
+/// One user's own things (the invoice maker's): no one else reaches them, A's accountant included.
+const PERSONAL: [&str; 2] = ["/api/invoices/templates/{id}", "/api/invoices/images/{id}"];
 /// The practice's own data. No business owner sees it.
 const PRACTICE: [&str; 9] = [
     "/api/practice",
@@ -430,6 +461,17 @@ async fn an_owner_reaches_no_route_into_another_owners_business() {
             );
         } else if PRACTICE.contains(&path) {
             assert_eq!(status, StatusCode::FORBIDDEN, "{method} {path}: {body}");
+        } else if PERSONAL.contains(&path) {
+            for (who, (status, body)) in [
+                ("B", (status, body)),
+                ("A's accountant", split(server.send(request(&sam)).await).await),
+            ] {
+                assert_eq!(status, StatusCode::NOT_FOUND, "{method} {path} as {who}: {body}");
+                assert!(
+                    a_ids.contains(body["details"]["id"].as_str().unwrap_or("")),
+                    "{body}"
+                );
+            }
         } else if LISTS.contains(&path) {
             assert_eq!(status, StatusCode::OK, "{method} {path}: {body}");
             assert!(
@@ -470,8 +512,12 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
     let classes: Vec<Value> = serde_json::from_str(ASSET_CLASSES).unwrap();
     let class = &classes[0];
     Some(match kind {
-        // Only ever B's own account.
-        "change_own_password" => return None,
+        // Only ever B's own account, or B's own invoices.
+        "change_own_password"
+        | "save_invoice_draft"
+        | "save_invoice_template"
+        | "add_invoice_image" => return None,
+        "delete_invoice_template" => json!({ "template_id": v.invoice_template_id }),
         "initialise" => json!({
             "practice_name": "Mine now", "username": "mallory",
             "display_name": "Mallory", "password": PASSWORD,
@@ -660,6 +706,8 @@ async fn an_owner_can_submit_no_command_against_another_owners_business() {
         "confirm_supply_info",
         "confirm_transfer",
         "create_invite",
+        // Not an owner's work as such, but anyone's own; A's is reported as not found.
+        "delete_invoice_template",
         "import_statement",
         "record_suggestions",
         "remove_rule",

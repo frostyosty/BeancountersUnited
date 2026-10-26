@@ -1,0 +1,25 @@
+Trial Balance
+Kereru Ridge Pottery
+As at 31 March 2025
+
+Account Code,Account,Account Type,Debit,Credit,YTD Debit,YTD Credit
+090,Business Cheque Account,Bank,,"1,078.18","5,083.55",
+610,Trade Debtors,Current Asset,37.19,,"1,973.16",
+710,Kilns and Equipment,Fixed Asset,,,"4,600.00",
+711,Accumulated Depreciation - Kilns and Equipment,Fixed Asset,,"1,150.00",,"1,150.00"
+800,Trade Creditors,Current Liability,,386.18,,386.18
+820,GST,Current Liability,"1,203.27",,,
+880,Owner Drawings,Equity,"1,200.00",,"14,400.00",
+881,Owner Funds Introduced,Equity,,,,"8,000.00"
+200,Pottery Sales,Revenue,,"2,094.78",,"27,494.09"
+210,Workshop Fees,Revenue,,,,"1,800.00"
+270,Interest Received,Other Income,,0.45,,9.78
+310,Clay and Glazes,Direct Costs,335.81,,"1,942.59",
+404,Bank Charges,Expense,5.00,,60.00,
+416,Depreciation,Depreciation,"1,150.00",,"1,150.00",
+429,Sundry Expenses,Expense,,,37.50,
+445,Power,Overhead,108.32,,"1,313.25",
+469,Studio Rent,Overhead,600.00,,"7,200.00",
+489,Phone and Internet,Overhead,70.00,,840.00,
+491,Market Stall Fees,Expense,,,240.00,
+,Total,,,,"38,840.05","38,840.05"

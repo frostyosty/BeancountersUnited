@@ -29,11 +29,12 @@ impl Record {
 
 /// The file's non-blank records, cells trimmed. A byte order mark is ignored.
 pub fn records(text: &str) -> Result<Vec<Record>, HistoryError> {
+    let text = text.trim_start_matches('\u{feff}');
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .flexible(true)
         .trim(csv::Trim::All)
-        .from_reader(text.trim_start_matches('\u{feff}').as_bytes());
+        .from_reader(text.as_bytes());
     let mut out = Vec::new();
     for record in reader.records() {
         let record = record.map_err(|e| HistoryError::Unreadable {
@@ -42,10 +43,20 @@ pub fn records(text: &str) -> Result<Vec<Record>, HistoryError> {
         if record.iter().all(str::is_empty) {
             continue;
         }
-        let row = record
-            .position()
-            .and_then(|p| u32::try_from(p.line()).ok())
-            .unwrap_or(0);
+        // Counted from the byte offset, because the csv crate's own line count is off for CRLF
+        // files (Xero writes them) and after blank lines. Its offset can land on the line
+        // break before the record, so skip those first.
+        let row = record.position().map_or(0, |p| {
+            let bytes = text.as_bytes();
+            let mut at = usize::try_from(p.byte())
+                .unwrap_or(usize::MAX)
+                .min(bytes.len());
+            while at < bytes.len() && matches!(bytes[at], b'\r' | b'\n') {
+                at += 1;
+            }
+            let newlines = bytes[..at].iter().filter(|&&b| b == b'\n').count();
+            u32::try_from(newlines + 1).unwrap_or(u32::MAX)
+        });
         out.push(Record {
             row,
             fields: record.iter().map(str::to_owned).collect(),
@@ -65,7 +76,6 @@ pub fn key(cell: &str) -> String {
 
 /// A header row's columns, found by name.
 pub struct Header {
-    pub row: u32,
     pub names: Vec<String>,
     keys: Vec<String>,
 }
@@ -73,7 +83,6 @@ pub struct Header {
 impl Header {
     pub fn new(record: &Record) -> Header {
         Header {
-            row: record.row,
             names: record.fields.clone(),
             keys: record.fields.iter().map(|f| key(f)).collect(),
         }
@@ -94,8 +103,8 @@ impl Header {
 }
 
 /// The first record (within the first `within`) whose keys include all of `required`.
-pub fn find_header<'a>(
-    records: &'a [Record],
+pub fn find_header(
+    records: &[Record],
     within: usize,
     required: &[&[&str]],
 ) -> Option<(usize, Header)> {
@@ -132,11 +141,7 @@ pub fn date_in(line: &str, last: bool) -> Option<NaiveDate> {
     let mut found = (0..words.len().saturating_sub(2))
         .filter_map(|i| date(&words[i..i + 3].join(" ")))
         .chain(words.iter().filter_map(|w| date(w)));
-    if last {
-        found.last()
-    } else {
-        found.next()
-    }
+    if last { found.last() } else { found.next() }
 }
 
 /// An account cell from a Xero report: `Sales (200)` or `200 - Sales`. Returns the code and the
@@ -165,7 +170,12 @@ fn is_code(s: &str) -> bool {
         && !s.contains(char::is_whitespace)
 }
 
-pub fn bad_row(record_row: u32, column: &str, value: &str, reason: impl Into<String>) -> HistoryError {
+pub fn bad_row(
+    record_row: u32,
+    column: &str,
+    value: &str,
+    reason: impl Into<String>,
+) -> HistoryError {
     HistoryError::BadRow {
         row: record_row,
         column: column.to_owned(),

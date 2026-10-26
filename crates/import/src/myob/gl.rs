@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use acct_core::Money;
 
 use super::fields::{self, bad_row};
-use super::{cell, Table};
+use super::{Table, cell};
 use crate::history::{HistoryError, HistoryGl, HistoryGlLine, HistoryTbRow};
 
 struct Account {
@@ -59,7 +59,7 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
         };
         let (debit_raw, credit_raw) = (cell(cells, debit_col), cell(cells, credit_col));
         let balance_raw = cell(cells, balance_col);
-        let mut amount = |raw: &str, column: &str, errors: &mut Vec<HistoryError>| {
+        let amount = |raw: &str, column: &str, errors: &mut Vec<HistoryError>| {
             fields::amount(raw).unwrap_or_else(|reason| {
                 errors.push(bad_row(row, column, raw, reason));
                 Money::ZERO
@@ -68,7 +68,8 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
 
         if date_raw.is_empty() {
             let memo = cell(cells, memo_col).to_lowercase();
-            let is_opening_row = memo.contains("beginning balance") || memo.contains("opening balance");
+            let is_opening_row =
+                memo.contains("beginning balance") || memo.contains("opening balance");
             let code = match (named, &current) {
                 // A heading: the account starts here.
                 (Some((code, name)), _) => {
@@ -138,7 +139,12 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
         }
 
         let Some(date) = fields::date(date_raw) else {
-            errors.push(bad_row(row, "Date", date_raw, "not a day-first date such as 31/03/2025"));
+            errors.push(bad_row(
+                row,
+                "Date",
+                date_raw,
+                "not a day-first date such as 31/03/2025",
+            ));
             continue;
         };
         let code = match named {
@@ -167,7 +173,12 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
         let debit = amount(debit_raw, "Debit", &mut errors);
         let credit = amount(credit_raw, "Credit", &mut errors);
         if !debit.is_zero() && !credit.is_zero() {
-            errors.push(bad_row(row, "Credit", credit_raw, "a row has a debit or a credit, not both"));
+            errors.push(bad_row(
+                row,
+                "Credit",
+                credit_raw,
+                "a row has a debit or a credit, not both",
+            ));
             continue;
         }
         let posting = debit - credit;
@@ -175,15 +186,17 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
         if !balance_raw.is_empty() {
             let shown = amount(balance_raw, "Ending Balance", &mut errors);
             if let (Some(before), Some(credit_normal)) = (account.shown, account.credit_normal) {
-                let expected = if credit_normal { before - posting } else { before + posting };
+                let expected = if credit_normal {
+                    before - posting
+                } else {
+                    before + posting
+                };
                 if shown != expected {
                     errors.push(bad_row(
                         row,
                         "Ending Balance",
                         balance_raw,
-                        format!(
-                            "the running balance should be {expected}, from the rows above"
-                        ),
+                        format!("the running balance should be {expected}, from the rows above"),
                     ));
                 }
             }
@@ -196,7 +209,11 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
             };
         }
         let memo = cell(cells, memo_col);
-        let description = if memo.is_empty() { cell(cells, card_col) } else { memo };
+        let description = if memo.is_empty() {
+            cell(cells, card_col)
+        } else {
+            memo
+        };
         lines.push(HistoryGlLine {
             row,
             code,

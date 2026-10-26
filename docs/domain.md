@@ -761,6 +761,198 @@ show are those copies with the client's fields filled in. Asked and answered on 
   - When unsure, keep the line and offer it as a possible duplicate in Save tax. A duplicate deposit only
     overstates the figure; a dropped one would understate it.
 
+### Importing from Xero and MYOB (M16, parsers written 2026-10-26; a person still has to check them against real exports)
+Every history importer reads one export file and returns the same source-neutral shape,
+`acct_import::history`:
+- the chart (code, name, type, default tax code);
+- a TB at one date;
+- GL detail for a period (each account's opening balance, then its postings);
+- or contacts.
+
+Rules for all sources:
+- Codes are kept exactly as the source writes them. Mapping them onto the client's chart comes later,
+  with a preview.
+- Amounts are integer cents, debit positive. Brackets and a leading `-` both mean negative, and
+  thousands separators must be in groups of three (`1,23.00` is rejected, never guessed).
+- Each source type collapses onto asset, liability, equity, income, cost of sales, expense, other
+  income or other expense. The source's own type is kept beside it.
+- Problems are reported per row, with the column, the value and the reason, all at once. A TB whose
+  rows don't sum to zero is rejected.
+- **GL against TB.** For each account, the TB balance at the end of a period must equal the GL's
+  opening balance plus the sum of its postings (`history::gl_differences`). Codes are compared
+  verbatim.
+
+#### Xero
+`acct_import::xero::parse` works out which export a file is by inspecting it, in this order: chart,
+contacts, GL, TB.
+- **Headers.** Columns are found by name, never by position. Matching ignores case, spaces, `-`, `_`,
+  and the `*` Xero puts on required columns in its import templates.
+- **Codes.** A Xero account may have no code; bank accounts often don't. We reject such an account
+  with "give it one in Xero and export again", because without a code nothing can be matched across
+  files.
+
+The four exports:
+- **Chart of accounts** (Accounting › Chart of accounts › Export). Its columns match Xero's import
+  template: `*Code, *Name, *Type, *Tax Code, Description, Dashboard, Expense Claims, Enable Payments,
+  Balance`.
+  - We read the code, name, type and tax code, and a `Status` column if there is one (`Archived`
+    makes the account inactive).
+  - Types are read by display name or API code: Bank, Current Asset, Fixed Asset, Inventory,
+    Non-current Asset and Prepayment are assets. Current Liability, Liability, Non-current Liability
+    and PAYG Liability are liabilities. Equity is equity. Revenue and Sales are income. Other Income
+    is other income. Direct Costs is cost of sales. Expense, Overhead and Depreciation are expenses.
+- **Trial Balance** (Reports › Trial Balance › Export).
+  - It starts with a preamble: the title, the organisation, and `As at <date>`, which gives the
+    balance date. Then comes the header row.
+  - The header is either `Account Code, Account, Account Type, Debit, Credit, YTD Debit, YTD Credit`,
+    or `Account, Debit, Credit, YTD Debit, YTD Credit` with the code in the account cell (`Sales (200)`
+    or `200 - Sales`).
+  - The YTD columns hold the balance at the date, so we use them whenever they're there. Debit and
+    Credit alone hold the month's movement.
+  - Section headings and `Total` rows are skipped.
+- **Account Transactions** (Reports › Account Transactions › Export): the GL detail.
+  - It starts with a preamble whose `For the period <from> to <to>` line gives the period.
+  - Then a header row: `Date, Source, Description, Reference, Debit, Credit, Running Balance, Gross,
+    GST`.
+  - By default the rows are grouped by account: a heading row (`Sales (200)`), `Opening Balance`, the
+    postings, `Total …` and `Closing Balance`. Rows may instead be ungrouped, with `Account Code` and
+    `Account` columns on every row.
+  - An opening balance comes from Debit and Credit, or from the running balance (debit positive) when
+    those are blank.
+  - Totals and closing balances are skipped, since the TB check covers them.
+  - **Retained earnings.** Xero closes the year virtually. The next year's TB shows retained earnings
+    with no postings behind it, so the GL's opening balance for that account has to carry it.
+- **Contacts** (Contacts › All contacts › Export).
+  - The columns follow Xero's contact import template (`ContactName`, `EmailAddress`, `PhoneNumber`,
+    `TaxNumber`, address columns, default accounts…). We read the name, email, phone (`PhoneNumber`,
+    then mobile, then DDI) and GST number (`TaxNumber`).
+  - The export has no customer or supplier flag. A sales default (account or tax rate) makes a
+    contact a customer, a purchases default makes it a supplier, both make it both, and neither
+    leaves it "other".
+- **Dates** are read as `1 Apr 2025`, `01 April 2025`, `01/04/2025` or `2025-04-01`.
+
+Sources (the Xero Central links couldn't be fetched without a browser on 2026-10-26, so a person should open them):
+- Xero Central, "Import a chart of accounts": the `*` marks required columns; a code is up to 10
+  characters and doesn't start with a symbol; a `Balance` column holds conversion balances.
+  <https://central.xero.com/s/article/Import-a-chart-of-accounts>
+- Xero Central, "Import contacts into Xero": the template's column names and the rule that
+  `ContactName` is the only required one. <https://central.xero.com/s/article/Import-contacts-into-Xero>
+- Xero Central, "Trial Balance report" and "Account Transactions report": the reports' columns and
+  export. <https://central.xero.com/s/article/Trial-Balance-report>,
+  <https://central.xero.com/s/article/Account-Transactions-report>
+- Xero's accounting API spec: the account type codes (`BANK`, `CURRENT`, `CURRLIAB`, `DEPRECIATN`,
+  `DIRECTCOSTS`, `EQUITY`, `EXPENSE`, `FIXED`, `INVENTORY`, `LIABILITY`, `NONCURRENT`,
+  `OTHERINCOME`, `OVERHEADS`, `PREPAYMENT`, `REVENUE`, `SALES`, `TERMLIAB`, `PAYG`) and the NZ tax
+  types. <https://github.com/XeroAPI/Xero-OpenAPI/blob/master/xero_accounting.yaml>
+
+**Check.**
+- Xero Central renders its pages in the browser, so the report layouts above (preamble, header
+  names, grouping, how the opening balance is shown) come from those articles as we know them, not
+  from a fresh read.
+- Before M16 is done, a person exports each of the four files from Xero's demo company (whose data is
+  Xero's, so it isn't committed) and confirms the parsers read them. Any difference becomes a test
+  with a synthetic copy of the layout. This is listed in `NON-CODE-TODOS.md`.
+
+The synthetic fixtures are in `fixtures/xero/` (see its README).
+
+#### MYOB
+This covers MYOB AccountRight (desktop) and MYOB Business (browser), not MYOB AO Classic (see M16).
+`acct_import::myob::detect` and `parse` find the header row by name, up to 20 rows below a report's
+title rows. They check for cards, contacts, GL, TB, then accounts.
+- **Files.** Exports are tab or comma separated text; tab wins if any of the first rows has one. Blank
+  rows, a BOM and the `{}` first row of MYOB's import templates are skipped. Header names ignore case
+  and spacing, MYOB's `*` (required) and `^` (matching) markers, and a trailing `:`.
+- **Account numbers** are kept verbatim (`1-1110`), up to 10 characters of letters, digits, `-`, `.`
+  and `/`. AccountRight's are five digits with an optional separator; MYOB Business allows ten.
+  Their first digit is MYOB's classification: 1 asset, 2 liability, 3 equity, 4 income, 5 cost of
+  sales, 6 expense, 8 other income, 9 other expense. We fall back on it when a type is blank, and
+  use it to tell which side a report's balance is on.
+- **Amounts** may have `$` (`-$12.00` and `$-12.00` are both negative). Zeros beyond two decimals are
+  dropped; any other third decimal is rejected, not rounded.
+- **Dates** are day first, as MYOB writes them in New Zealand: `1/04/2024` and `01/04/24`, plus Excel's
+  `1-Apr-2024` and `1 Apr 2024`, and `2024-04-01`. US-style `04/31/2024` is rejected.
+- **Source.** An accounts list with `Parent Account Number`, or a contacts report, is MYOB Business;
+  everything else is reported as AccountRight. The two products' TB and GL reports look the same.
+
+The exports:
+- **Accounts list.** In AccountRight it's File › Export Data › Accounts. The user picks the fields,
+  and Match All takes them all, starting `Account Number, Account Name, Header, Balance, Account Type,
+  …, GST Code (NZ), …, Inactive Account`. In MYOB Business it's Settings › Import and export data ›
+  Export › Chart of accounts, a tab-separated `.txt` with `Account Number, Account Name, Account Type,
+  Header, Parent Account Number, Tax Code/GST Code, Inactive Account`.
+  - Only the number is required. Types are read by name in either product, ignoring case:
+    - Assets: Asset, Bank, Accounts Receivable, Other Current Asset, Fixed Asset, Other Asset.
+    - Liabilities: Liability, Credit Card, Accounts Payable, Other Current Liability, Long Term
+      Liability, Other Liability.
+    - The rest: Equity, Income, Cost of Sales, Expense, Other Income, Other Expense.
+  - `Header` and `Inactive Account` are one-character flags: blank or `N` is off, anything else
+    (`H`, `Y`) is on. Header accounts are kept and marked. AccountRight's help says any non-blank
+    value marks a header, and MYOB Business's says `H`. MYOB Business's help is unclear about a blank
+    `Inactive Account`; we follow AccountRight's (blank is active).
+  - The tax code comes from the column named `GST Code` or `Tax Code` (not the freight one).
+  - `Balance` is ignored: it's the balance on the day of the export. History comes from the TB.
+- **Trial Balance** report, exported as CSV or TSV from AccountRight. MYOB Business exports reports
+  only as Excel or PDF, so the user saves the Excel file as CSV.
+  - Title rows come first. Their last date is the balance date: `As of 31/03/2025`, or a month on
+    its own (`March 2025`) meaning its last day.
+  - Columns are `Debit, Credit` (the month) and `YTD Debit, YTD Credit` (the year to date). The YTD
+    columns win when present.
+  - MYOB leaves the `Account No.` column off this report by default. Without it, we take the number
+    from an account cell that starts with one (`1-1110 Business Cheque Account`). If neither has a
+    number, the row is rejected with "add the Account No. column to the report before exporting".
+  - `Total` rows and headings without amounts are skipped. A repeated account is rejected.
+- **General Ledger [Detail]** report, exported the same way. The title rows' first and last dates are
+  the period. The columns are `ID No., Src, Date, Memo, Debit, Credit, Name`, plus the account and,
+  if shown, `Ending Balance`.
+  - The report is grouped by account. The heading row names the account (`Account No.` and
+    `Account Name`, or a combined account cell) and carries its beginning balance; a separate
+    `Beginning Balance` row under it also works. Then come the postings (any row with a date) and a
+    `Total` row, which is skipped.
+  - A file that repeats the account on every posting row, as people do to flatten the Excel export,
+    reads the same.
+  - A posting is `Debit − Credit`. Its reference is `ID No.`, its source is `Src` (`CR`, `CD`, `GJ`,
+    `SJ`, `PJ`), and its description is `Memo`, or the card's `Name` when the memo is blank.
+  - The beginning balance comes from `Debit`/`Credit` when either is filled. Otherwise it comes from
+    the balance column, read as positive on the account's normal side: a credit for 2, 3, 4 and 8
+    accounts. **Assumed, not documented**: MYOB's help doesn't say how this report signs balances.
+    When `Ending Balance` is there, every posting row is checked against the running balance, so a
+    file that signs balances another way fails loudly, row by row, instead of importing wrong
+    openings.
+  - An account that appears twice, or a posting before any account heading, is rejected.
+- **Cards** (AccountRight, File › Export Data › Cards). Customer, supplier and personal cards come as
+  separate files, and only the fields tell them apart. Customer-only fields (`% Monthly Charge`,
+  `Receipt Memo`, `Salesperson`, `Price Level`, `Use Customer's GST Code`) make a customer file, and
+  supplier-only fields (`Cost Per Hour`, `Payment Memo`, `Use Supplier's GST Code`,
+  `Particulars (NZ only)`) make a supplier file. Neither makes them other contacts.
+  - The name is `Co./Last Name`, with `First Name` in front for an individual.
+  - We also read `GST ID No.`, the email (`Email` or `Addr 1 - Email`) and the phone (`Phone No. 1`
+    or `Addr 1 - Phone No. 1`).
+- **Contacts** (MYOB Business). It has no contacts export, so its Contacts report goes to Excel and
+  is saved as CSV. We read a name, `Contact type` (Customer, Supplier, both, or Personal/Other), email,
+  phone and GST number. **Assumed, not documented**: the column names.
+
+Sources (read 2026-10-26):
+- MYOB, "Import and export fields" (AccountRight): the accounts, general journal and card fields with
+  their formats.
+  https://www.myob.com/au/support/myob-business/import-export/myob-business-importing-and-exporting-data-import-and-export-fields
+- MYOB, "Importing and exporting categories" (MYOB Business chart of accounts): the columns, types, NZ
+  GST codes and default parent numbers.
+  https://www.myob.com/au/support/myob-business/import-export/importing-data/importing-and-exporting-an-accounts-list
+- MYOB, "Accounts reports": the Trial Balance's `Debit, Credit, YTD Debit, YTD Credit`, and the GL
+  Detail's `ID No., Src, Date, Memo, Debit, Credit, Name`.
+  https://www.myob.com/au/support/myob-business/reporting/accounts-reports
+- MYOB, "Exporting reports": the browser exports Excel or PDF; AccountRight also exports CSV and TSV;
+  account numbers are off by default on the TB.
+  https://www.myob.com/au/support/myob-business/reporting/exporting-reports
+- MYOB AccountRight help, "Exporting data": tab or comma separated, with fields picked or Match All.
+  https://help.myob.co.nz/prem19/win/app_importexport.029.2.htm
+- Community: Contacts in MYOB Business are exported through the Contacts report.
+  https://community.myob.com/discussions/bus-sales/exporting-supplier-contacts/892379
+
+Fixtures: `fixtures/myob/` (synthetic, two years). The layouts above came from MYOB's help, not from
+real files. A person still has to check them against real exports from both products, especially the
+GL detail's balance signs and the MYOB Business contacts columns.
+
 ## Worked example: the fixture company (hand-checked 2026-09-23)
 Example Widgets Limited (`fixtures/clients/example-widgets.json`), years ending 31 March 2025 and 2026.
 Rounding priority list: 235, 205, 290, 610, 800, 960. Snapshots: `crates/core/tests/snapshots/fixture__*.snap`.

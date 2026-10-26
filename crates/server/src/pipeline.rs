@@ -33,6 +33,7 @@ use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
 use crate::finalise;
 use crate::history;
+use crate::invoices;
 use crate::layouts;
 use crate::ledger;
 use crate::merchants;
@@ -493,6 +494,23 @@ async fn apply(
         }
         Command::RemoveParagraph { paragraph_id } => {
             paragraphs::remove(tx, seq, paragraph_id).await
+        }
+
+        Command::SaveInvoiceDraft { html } => {
+            invoices::save_draft(tx, actor.user_id.as_deref(), html, seq).await?;
+            Ok(no_effect())
+        }
+        Command::SaveInvoiceTemplate { name, html } => {
+            let id = invoices::save_template(tx, actor.user_id.as_deref(), name, html, seq).await?;
+            Ok(created(id))
+        }
+        Command::DeleteInvoiceTemplate { template_id } => {
+            invoices::delete_template(tx, template_id).await?;
+            Ok(no_effect())
+        }
+        Command::AddInvoiceImage { content_base64 } => {
+            let id = invoices::add_image(tx, actor.user_id.as_deref(), content_base64, seq).await?;
+            Ok(created(id))
         }
 
         Command::Initialise {
@@ -2101,5 +2119,11 @@ pub fn lock_rule(command: &Command) -> Lock {
             Lock::Allowed(DEFAULTS)
         }
         C::PushParagraph { .. } => Lock::Allowed("updates copies in open years only"),
+        C::SaveInvoiceDraft { .. }
+        | C::SaveInvoiceTemplate { .. }
+        | C::DeleteInvoiceTemplate { .. }
+        | C::AddInvoiceImage { .. } => {
+            Lock::Allowed("the user's own invoices, which aren't part of any business's books")
+        }
     }
 }

@@ -1,0 +1,973 @@
+import interact from 'interactjs';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+
+// --- MODULE-LEVEL STATE & CONFIGURATION ---
+let isInitialized = false;
+let overlay, canvas, templateNameInput, loadTemplateSelect;
+let elementCounter = 0;
+let lastPosition = { x: 30, y: 30 };
+let autoSaveTimer;
+let recordTimer = null;
+let suppressNextClick = false;
+const GRID_SIZE = 15;
+let storageWarningShown = false;
+
+// Uploaded images are embedded in the saved invoice, and localStorage only holds
+// about 5MB in total, so they are shrunk before being stored.
+const MAX_IMAGE_DIMENSION = 1000;
+const MAX_IMAGE_DATA_LENGTH = 500000;
+const MIN_CANVAS_SCALE = 0.6;
+
+let lastUsedStyle = {
+  fontFamily: "'Lato', sans-serif",
+  fontSize: "14px",
+  elementStyle: 'style-default'
+};
+
+// History State
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY_STATES = 50;
+
+const fontFamilies = ["'Lato', sans-serif", "'Montserrat', sans-serif", "'Anton', sans-serif", "'Raleway', sans-serif"];
+const fontSizes = ["12px", "14px", "16px", "18px", "24px", "36px"];
+const elementStyles = ['style-default', 'style-shadow', 'style-outline-dark', 'style-inset'];
+const lineStyles = ['solid', 'dashed', 'dotted'];
+const DEFAULT_INVOICE_TEMPLATE = `
+    <div class="invoice-element" style="position: absolute; left: 30px; top: 30px; color: black;"><div contenteditable="true" style="padding: 10px; font-size: 36px; font-weight: bold; font-family: 'Anton', sans-serif;">INVOICE</div></div>
+    <div class="invoice-element" style="position: absolute; left: 30px; top: 100px; color: black;"><div contenteditable="true" class="address-block" style="padding: 10px;"><b>Billed To:</b><br>John Appleseed<br>123 Example Street<br>Exampleton, EX 12345</div></div>
+    <div class="invoice-element image-element" style="position: absolute; left: 550px; top: 30px; width: 200px; height: 80px; background-size: contain; background-repeat: no-repeat; background-position: center; background-image: url('/favicon.svg');"><input type="file" accept="image/*" style="display:none;"></div>
+    <div class="invoice-element" style="position: absolute; left: 500px; top: 120px; width: 250px; color: black;"><div contenteditable="true" class="address-block" style="padding: 10px; text-align: right;"><b>From:</b> CaniBarter Inc.<br>11/7 Example Road<br>Example City, NZ<br>www.canibarter.com</div></div>
+    <div class="invoice-element" style="position: absolute; left: 30px; top: 220px; color: black;"><div contenteditable="true" class="address-block" style="padding: 10px; font-size: 14px;"><b>Invoice Number:</b> INV-001<br><b>Date:</b> ${new Date().toLocaleDateString("en-GB")}<br><b>Due Date:</b> 01 Jan 2026</div></div>
+    <div class="invoice-element" style="position: absolute; left: 30px; top: 350px; width: 92%; color: black;"><table class="invoice-items-table" style="width: 100%;"><thead><tr><th contenteditable="true">Description</th><th contenteditable="true">Value/Quantity</th></tr></thead><tbody><tr><td contenteditable="true">10 Hours of Web Development</td><td contenteditable="true">1 Basket of Vegetables</td></tr></tbody></table><button class="add-row-btn">+ Add Row</button></div>
+    <div class="invoice-element" style="position: absolute; left: 450px; top: 500px; width: 300px; text-align: right; color: black;"><div contenteditable="true" style="padding: 10px;">Subtotal: 1 Basket<br>Tax (0%): ---<br><hr style="border: 0; border-top: 1px solid #ccc;"><b style="font-size: 1.2em;">TOTAL DUE: One Basket</b></div></div>
+    <div class="invoice-element" style="position: absolute; left: 30px; top: 680px; width: 92%; border: none; color: black;"><div contenteditable="true" class="terms-block" style="padding: 10px;"><b>Terms:</b> Payment or barter equivalent is required by the due date.<br><b>Bank Details (if applicable):</b> Example Bank, 01-0234-0567890-00</div></div>
+    <div class="invoice-element line-element" style="position: absolute; left: 450px; top: 800px; height:10px; width: 300px; border:none;"><div class="inner-line" style="border-top: 1px dotted black;"></div></div>
+`;
+
+// --- PRIMARY EXPORTED FUNCTIONS ---
+export function initialize() {
+  if (isInitialized) {
+    openInvoiceEditor();
+    return;
+  }
+
+  // Assign DOM elements to module-scoped variables
+  overlay = document.getElementById('cib-invoice-overlay');
+  canvas = document.getElementById('cib-invoice-canvas');
+  templateNameInput = document.getElementById('cib-template-name-input');
+  loadTemplateSelect = document.getElementById('cib-load-template-select');
+
+  if (!overlay || !canvas) return console.error("Could not initialize: Invoice overlay or canvas not found.");
+
+  loadUserPreferences();
+  setupAllListeners();
+  loadInitialCanvasState();
+  populateTemplateSelector();
+
+  openInvoiceEditor();
+  isInitialized = true;
+}
+
+export function closeInvoiceEditor() {
+  if (overlay && !overlay.classList.contains('invoice-overlay-hidden')) {
+    hideOverlay();
+
+    // Clean up URL hash if needed (Mobile Back Button support)
+    if (window.location.hash === "#invoice-editor") {
+        window.history.back();
+    }
+  }
+}
+
+
+// --- SETUP FUNCTIONS ---
+function setupAllListeners() {
+  // Core Controls
+  document.getElementById('cib-close-invoice-editor-btn')?.addEventListener('click', closeInvoiceEditor);
+  document.getElementById('cib-add-text-btn')?.addEventListener('click', () => createInvoiceElement('text'));
+  document.getElementById('cib-add-image-btn')?.addEventListener('click', () => createInvoiceElement('image'));
+  document.getElementById('cib-add-items-table-btn')?.addEventListener('click', () => createInvoiceElement('items-table'));
+  document.getElementById('cib-add-deposit-table-btn')?.addEventListener('click', () => createInvoiceElement('deposit-table'));
+  document.getElementById('cib-add-line-btn')?.addEventListener('click', () => createInvoiceElement('line'));
+  document.getElementById('cib-export-pdf-btn')?.addEventListener('click', exportAsPDF);
+  document.getElementById('cib-save-template-btn')?.addEventListener('click', saveAsTemplate);
+  document.getElementById('cib-delete-template-btn')?.addEventListener('click', deleteTemplate);
+
+  loadTemplateSelect?.addEventListener('change', (e) => {
+    const templateName = e.target.value;
+    const deleteBtn = document.getElementById('cib-delete-template-btn');
+
+    if (templateName) {
+      if (deleteBtn) deleteBtn.disabled = false;
+      loadTemplate(templateName);
+    } else {
+      if (deleteBtn) deleteBtn.disabled = true;
+    }
+  });
+
+  // Undo/Redo Button Listeners
+  document.getElementById('cib-mobile-undo-btn')?.addEventListener('click', (e) => {
+    if (navigator.vibrate) navigator.vibrate(50);
+    undo();
+  });
+
+  // (Optional) Desktop undo/redo listeners if you have buttons for them
+  document.getElementById('cib-undo-btn')?.addEventListener('click', undo);
+  document.getElementById('cib-redo-btn')?.addEventListener('click', redo);
+
+
+  // Canvas, Document, and Window Listeners
+  canvas?.addEventListener('click', handleCanvasClick);
+  // Clicking the grey area around the page deselects, same as clicking the page itself.
+  canvas?.parentElement?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) setSelectedElement(null);
+  });
+  canvas?.addEventListener('mousedown', handleCanvasMouseDown);
+  canvas?.addEventListener('input', scheduleRecord);
+  document.addEventListener('keydown', handleKeyboardShortcuts);
+  document.addEventListener('selectionchange', handleTextSelection);
+  window.addEventListener('close-invoice-editor', closeInvoiceEditor);
+  window.addEventListener('popstate', handlePopState);
+  window.addEventListener('resize', fitCanvasToWrapper);
+  // Don't lose the last couple of seconds of edits when the tab is closed or backgrounded.
+  window.addEventListener('pagehide', saveIfOpen);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveIfOpen();
+  });
+}
+
+// --- CORE HANDLERS & HELPERS ---
+
+function openInvoiceEditor() {
+  if (overlay) {
+    overlay.classList.remove('invoice-overlay-hidden');
+    document.body.classList.add('no-scroll');
+    // Push state for mobile back button support
+    if (window.location.hash !== "#invoice-editor") {
+      window.history.pushState({ invoiceEditorOpen: true }, "", "#invoice-editor");
+    }
+    fitCanvasToWrapper();
+  }
+}
+
+// Shrink the page to fit narrow screens. Below MIN_CANVAS_SCALE it would be
+// unreadable, so from there on the wrapper scrolls sideways instead.
+function fitCanvasToWrapper() {
+  const wrapper = canvas?.parentElement;
+  if (!wrapper || overlay.classList.contains('invoice-overlay-hidden')) return;
+
+  const wrapperStyle = getComputedStyle(wrapper);
+  const available = wrapper.clientWidth - parseFloat(wrapperStyle.paddingLeft) - parseFloat(wrapperStyle.paddingRight);
+  const fullWidth = canvas.offsetWidth;
+  const scale = Math.min(1, Math.max(available / fullWidth, MIN_CANVAS_SCALE));
+
+  Object.assign(canvas.style, {
+    transformOrigin: 'top left',
+    transform: scale < 1 ? `scale(${scale})` : 'none',
+    // A transform doesn't shrink the layout box; pull the leftover space back in.
+    marginRight: `${-fullWidth * (1 - scale)}px`,
+    marginBottom: `${-canvas.offsetHeight * (1 - scale)}px`,
+  });
+  wrapper.style.justifyContent = fullWidth * scale > available ? 'flex-start' : 'center';
+}
+
+function saveIfOpen() {
+  if (!overlay || overlay.classList.contains('invoice-overlay-hidden')) return;
+  flushPendingRecord();
+  saveNow();
+}
+
+function hideOverlay() {
+  flushPendingRecord();
+  saveNow();
+  setSelectedElement(null);
+  overlay.classList.add('invoice-overlay-hidden');
+  document.body.classList.remove('no-scroll');
+}
+
+// Back button pressed while the editor is open: the hash is already gone, just hide.
+function handlePopState() {
+  if (!overlay || overlay.classList.contains('invoice-overlay-hidden')) return;
+  if (window.location.hash !== "#invoice-editor") hideOverlay();
+}
+
+// Keep the text selection (and focus) alive when a control icon is pressed,
+// otherwise the font cycler is removed before its click arrives.
+function handleCanvasMouseDown(e) {
+  if (e.target.closest('.element-control-icon')) e.preventDefault();
+}
+
+function handleCanvasClick(e) {
+  // The click that ends a drag/resize is not a real click.
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    return;
+  }
+
+  const target = e.target;
+  const element = target.closest('.invoice-element');
+
+  setSelectedElement(element);
+  if (!element) return;
+
+  if (target.matches('.card-style-cycler-icon')) cycleCardStyle(element);
+  else if (target.matches('.delete-element-icon')) deleteElement(element);
+  else if (target.matches('.add-row-btn')) addTableRow(element);
+  else if (target.matches('.font-cycler-icon')) cycleFont(element);
+  else if (target.matches('.font-size-cycler-icon')) cycleFontSize(element);
+  else if (target.matches('.line-style-cycler-icon')) cycleLineStyle(element);
+  else if (element.matches('.image-element') && target.tagName !== 'INPUT') {
+    element.querySelector('input[type="file"]')?.click();
+  }
+}
+
+function handleKeyboardShortcuts(e) {
+  if (!overlay || overlay.classList.contains('invoice-overlay-hidden')) return;
+
+  // Undo/Redo Shortcuts
+  const key = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && key === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && key === 'y') {
+    e.preventDefault();
+    redo();
+    return;
+  }
+
+  const selected = canvas.querySelector('.invoice-element.selected');
+  const target = e.target;
+  const isInputFocused = target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !isInputFocused) {
+    e.preventDefault();
+    deleteElement(selected);
+    return;
+  }
+
+  if (selected && e.key.startsWith('Arrow') && !isInputFocused) {
+    e.preventDefault();
+    nudgeElement(selected, e.key);
+  }
+}
+
+function handleTextSelection() {
+  if (!overlay || overlay.classList.contains('invoice-overlay-hidden')) return;
+
+  const selection = window.getSelection();
+  const active = document.activeElement;
+  const hasSelection = selection.rangeCount > 0 && !selection.isCollapsed && active?.isContentEditable;
+  const parentEl = hasSelection ? active.closest('.invoice-element') : null;
+
+  canvas.querySelectorAll('.font-cycler-icon').forEach((icon) => {
+    if (icon.parentElement !== parentEl) icon.remove();
+  });
+  if (parentEl) addFontCycler(parentEl);
+}
+
+// --- HISTORY (UNDO/REDO) MANAGEMENT ---
+
+// Canvas markup without editor-only state (selection, drag highlight, font cycler).
+function getCanvasState() {
+  const clone = canvas.cloneNode(true);
+  stripTransientState(clone);
+  return clone.innerHTML;
+}
+
+function stripTransientState(root) {
+  root.querySelectorAll('.invoice-element').forEach((el) => el.classList.remove('selected', 'is-dragging'));
+  root.querySelectorAll('.font-cycler-icon').forEach((icon) => icon.remove());
+}
+
+function updateUndoRedoButtons() {
+    const mobileUndo = document.getElementById('cib-mobile-undo-btn');
+    const desktopUndo = document.getElementById('cib-undo-btn');
+    const desktopRedo = document.getElementById('cib-redo-btn');
+
+    // We can only undo if there's more than just the initial state
+    const canUndo = undoStack.length > 1;
+    const canRedo = redoStack.length > 0;
+
+    if (mobileUndo) mobileUndo.disabled = !canUndo;
+    if (desktopUndo) desktopUndo.disabled = !canUndo;
+    if (desktopRedo) desktopRedo.disabled = !canRedo;
+}
+
+function recordState() {
+  clearTimeout(recordTimer);
+  recordTimer = null;
+
+  const state = getCanvasState();
+  // Nothing actually changed (e.g. a plain click) - don't pollute the history.
+  if (undoStack[undoStack.length - 1] === state) return;
+
+  redoStack = [];
+  undoStack.push(state);
+
+  if (undoStack.length > MAX_HISTORY_STATES) {
+    undoStack.shift();
+  }
+
+  updateUndoRedoButtons(); // <--- CRITICAL: Updates buttons after recording
+}
+
+// Debounced record for rapid-fire changes (typing, arrow-key nudging).
+function scheduleRecord() {
+  clearTimeout(recordTimer);
+  recordTimer = setTimeout(() => {
+    recordState();
+    autoSave();
+  }, 500);
+}
+
+function flushPendingRecord() {
+  if (recordTimer) recordState();
+}
+
+function restoreState(state) {
+  canvas.innerHTML = state;
+  reinitializeElements();
+  autoSave();
+  updateUndoRedoButtons();
+}
+
+function undo() {
+  flushPendingRecord();
+  if (undoStack.length <= 1) return;
+
+  redoStack.push(undoStack.pop());
+  restoreState(undoStack[undoStack.length - 1]);
+}
+
+function redo() {
+  flushPendingRecord();
+  if (redoStack.length === 0) return;
+
+  const nextState = redoStack.pop();
+  undoStack.push(nextState);
+  restoreState(nextState);
+}
+
+
+// --- FEATURE & ELEMENT CREATION ---
+
+function createInvoiceElement(type) {
+  elementCounter++;
+  const el = document.createElement("div");
+  el.id = `cib-invoice-element-${elementCounter}`;
+  el.className = `invoice-element ${lastUsedStyle.elementStyle}`;
+  el.tabIndex = 0;
+
+  lastPosition.x = ((lastPosition.x + 25) % 200) + 30;
+  lastPosition.y = ((lastPosition.y + 25) % 300) + 30;
+  Object.assign(el.style, {
+    position: "absolute",
+    left: `${lastPosition.x}px`,
+    top: `${lastPosition.y}px`,
+  });
+
+  let contentHtml = "";
+
+  switch (type) {
+    case "text":
+      el.style.minWidth = "250px";
+      contentHtml = `<div contenteditable="true" style="padding: 10px; min-height: 20px; font-family: ${lastUsedStyle.fontFamily}; font-size: ${lastUsedStyle.fontSize};">New Text Block</div>`;
+      break;
+    case "image":
+      el.classList.add('image-element');
+      contentHtml = `<div class="image-placeholder"></div><input type="file" accept="image/*" style="display:none;">`;
+      Object.assign(el.style, {
+        backgroundImage: `url('/favicon.svg')`,
+        backgroundSize: "contain",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        minWidth: "120px",
+        minHeight: "120px",
+      });
+      break;
+    case "items-table":
+    case "deposit-table":
+      el.style.width = "90%";
+      const title = type === "items-table" ? "I Agree to Provide:" : "In Exchange For:";
+      contentHtml = `<table class="invoice-items-table" style="width: 100%;"><thead><tr><th contenteditable="true">${title}</th><th contenteditable="true">Quantity/Value</th><th contenteditable="true">Notes</th></tr></thead><tbody><tr><td contenteditable="true">Example Item</td><td contenteditable="true">1</td><td contenteditable="true">N/A</td></tr></tbody></table><button class="add-row-btn">+ Add Row</button>`;
+      break;
+    case 'line':
+      el.classList.add('line-element');
+      contentHtml = `<div class="inner-line" style="border-top-style: solid;"></div>`;
+      Object.assign(el.style, { height: '10px', width: '300px', border: 'none' });
+      break;
+  }
+
+  el.innerHTML = contentHtml;
+  ensureControls(el);
+
+  canvas.appendChild(el);
+  if (type === "image") setupImageUpload(el);
+  makeInteractable(el);
+  setSelectedElement(el);
+  recordState(); // <--- Record state on creation
+  autoSave();
+}
+
+// --- ALL HELPER FUNCTIONS ---
+
+// Every element gets a control bar, including ones from the default template
+// and older saved invoices that were stored without one.
+function ensureControls(el) {
+  if (el.querySelector(':scope > .element-controls')) return;
+
+  const controls = document.createElement("div");
+  controls.className = "element-controls";
+  let controlsHtml = `<span class="element-control-icon card-style-cycler-icon" title="Cycle Card Style">🖼️</span><span class="element-control-icon delete-element-icon" title="Delete">🗑️</span>`;
+
+  if (el.classList.contains('line-element')) {
+    controlsHtml += `<span class="element-control-icon line-style-cycler-icon" title="Cycle Line Style">↔</span>`;
+  } else if (el.querySelector('[contenteditable="true"]')) {
+    controlsHtml += `<span class="element-control-icon font-size-cycler-icon" title="Cycle Font Size">Aa</span>`;
+  }
+
+  controls.innerHTML = controlsHtml;
+  el.prepend(controls);
+}
+
+function setSelectedElement(target) {
+  canvas.querySelectorAll(".invoice-element.selected").forEach((el) => {
+    if (el !== target) el.classList.remove("selected");
+  });
+  target?.classList.add("selected");
+}
+
+function setupImageUpload(el) {
+  const placeholder = el.querySelector(".image-placeholder");
+  const fileInput = el.querySelector('input[type="file"]');
+
+  // Opening the picker is handled by handleCanvasClick.
+  if (fileInput) {
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        e.target.value = ""; // allow picking the same file again
+        prepareImage(file).then((dataUrl) => {
+          el.style.backgroundImage = `url("${dataUrl}")`;
+          Object.assign(el.style, {
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            backgroundColor: "transparent",
+          });
+          if (placeholder) placeholder.style.display = "none";
+          recordState(); // <--- Record state on image upload
+          autoSave();
+        }).catch((error) => {
+          console.error("Could not read image:", error);
+          alert("Sorry, that image could not be loaded.");
+        });
+      }
+    });
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Returns a data URL small enough to live in localStorage alongside the rest of the invoice.
+async function prepareImage(file) {
+  const original = await readFileAsDataUrl(file);
+
+  const img = new Image();
+  const loaded = await new Promise((resolve) => {
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = original;
+  });
+  // Can't be measured (e.g. an SVG without a size) - use it untouched.
+  if (!loaded || !img.naturalWidth || !img.naturalHeight) return original;
+
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+  if (scale === 1 && original.length <= MAX_IMAGE_DATA_LENGTH) return original;
+
+  const scaled = document.createElement("canvas");
+  scaled.width = Math.round(img.naturalWidth * scale);
+  scaled.height = Math.round(img.naturalHeight * scale);
+  const ctx = scaled.getContext("2d");
+  ctx.drawImage(img, 0, 0, scaled.width, scaled.height);
+
+  // PNG keeps a logo's transparency; photos are far smaller as JPEG.
+  if (file.type !== "image/jpeg") {
+    const png = scaled.toDataURL("image/png");
+    if (png.length <= MAX_IMAGE_DATA_LENGTH) return png;
+  }
+  ctx.globalCompositeOperation = "destination-over";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, scaled.width, scaled.height);
+  return scaled.toDataURL("image/jpeg", 0.85);
+}
+
+// The canvas is shrunk with a CSS transform on small screens, so pointer
+// distances have to be converted back into canvas pixels.
+function getCanvasScale() {
+  const width = canvas.offsetWidth;
+  return width ? canvas.getBoundingClientRect().width / width : 1;
+}
+
+// Older saves positioned dragged elements with transform + data-x/y. Fold that
+// into left/top so dragging, nudging and resizing all share one coordinate system.
+function normalizePosition(el) {
+  const dx = parseFloat(el.getAttribute('data-x')) || 0;
+  const dy = parseFloat(el.getAttribute('data-y')) || 0;
+  if (dx || dy) {
+    el.style.left = `${(parseFloat(el.style.left) || 0) + dx}px`;
+    el.style.top = `${(parseFloat(el.style.top) || 0) + dy}px`;
+  }
+  el.style.transform = '';
+  el.removeAttribute('data-x');
+  el.removeAttribute('data-y');
+}
+
+function endInteraction(element) {
+  element.classList.remove('is-dragging');
+  suppressNextClick = true;
+  setTimeout(() => { suppressNextClick = false; }, 50);
+  recordState();
+  autoSave();
+}
+
+function makeInteractable(element) {
+  const pressTimeoutDuration = 400;
+  const noDragSelector = '.element-controls, .element-control-icon, .add-row-btn, input';
+  const isLine = element.classList.contains('line-element');
+  let pressTimer = null;
+  let downPoint = null;
+  let wasEditing = false;
+  let pos = { x: 0, y: 0 };
+
+  normalizePosition(element);
+  const interactable = interact(element);
+
+  const cancelPress = () => {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+    downPoint = null;
+  };
+
+  const startDrag = (interaction) => {
+    cancelPress();
+    if (!interaction.pointerIsDown || interaction.interacting()) return;
+    // An edge grab is a resize, which interact starts on its own.
+    if (interaction.prepared?.name === 'resize') return;
+    // Dragging replaces text editing: drop focus and any half-made text selection.
+    if (document.activeElement?.isContentEditable) document.activeElement.blur();
+    window.getSelection()?.removeAllRanges();
+    interaction.start({ name: 'drag' }, interactable, element);
+  };
+
+  interactable
+    .on('down', (event) => {
+      cancelPress();
+      if (event.target.closest?.(noDragSelector)) return;
+
+      downPoint = { x: event.clientX, y: event.clientY };
+      // While a text block is being edited, dragging inside it selects text instead.
+      wasEditing = !!document.activeElement?.isContentEditable && element.contains(document.activeElement);
+
+      if (event.pointerType === 'touch') {
+        const interaction = event.interaction;
+        pressTimer = setTimeout(() => startDrag(interaction), pressTimeoutDuration);
+      }
+    })
+    .on('move', (event) => {
+      if (!downPoint || event.interaction.interacting()) return;
+      if (event.interaction.prepared?.name === 'resize') return;
+      const distance = Math.hypot(event.clientX - downPoint.x, event.clientY - downPoint.y);
+
+      if (event.pointerType === 'touch') {
+        // Finger moved before the long-press fired: it's a scroll/tap, not a drag.
+        if (distance > 10) cancelPress();
+      } else if (distance > 4 && !wasEditing) {
+        startDrag(event.interaction);
+      }
+    })
+    .on('up', cancelPress)
+    .on('cancel', cancelPress)
+    .draggable({
+      manualStart: true,
+      listeners: {
+        start() {
+          pos = { x: parseFloat(element.style.left) || 0, y: parseFloat(element.style.top) || 0 };
+          setSelectedElement(element);
+          element.classList.add('is-dragging');
+        },
+        move(event) {
+          const scale = getCanvasScale();
+          pos.x += event.dx / scale;
+          pos.y += event.dy / scale;
+          element.style.left = `${Math.max(0, Math.round(pos.x / GRID_SIZE) * GRID_SIZE)}px`;
+          element.style.top = `${Math.max(0, Math.round(pos.y / GRID_SIZE) * GRID_SIZE)}px`;
+        },
+        end() {
+          endInteraction(element);
+        }
+      },
+      modifiers: [
+        interact.modifiers.restrictRect({ restriction: 'parent' })
+      ]
+    })
+    .resizable({
+      // A line is only 10px tall, so top/bottom edges would swallow every drag.
+      edges: isLine ? { left: true, right: true } : { left: true, right: true, bottom: true, top: true },
+      ignoreFrom: noDragSelector,
+      listeners: {
+        start() {
+          cancelPress();
+          setSelectedElement(element);
+        },
+        move(event) {
+          const scale = getCanvasScale();
+          const left = (parseFloat(element.style.left) || 0) + event.deltaRect.left / scale;
+          const top = (parseFloat(element.style.top) || 0) + event.deltaRect.top / scale;
+          Object.assign(element.style, {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${event.rect.width / scale}px`,
+          });
+          if (!isLine) element.style.height = `${event.rect.height / scale}px`;
+        },
+        end() {
+          endInteraction(element);
+        }
+      },
+      modifiers: [
+        interact.modifiers.restrictEdges({ outer: 'parent' }),
+        interact.modifiers.restrictSize({ min: { width: 40, height: 10 } })
+      ]
+    });
+}
+
+function addTableRow(element) {
+  const table = element.querySelector("table");
+  const tableBody = table?.querySelector("tbody");
+  if (tableBody) {
+    // Match however many columns this table actually has.
+    const columnCount = table.querySelector("tr")?.children.length || 3;
+    const defaults = ["New Item", "1", "Unit"];
+    const newRow = tableBody.insertRow();
+    newRow.innerHTML = Array.from({ length: columnCount }, (_, i) => `<td contenteditable="true">${defaults[i] || ""}</td>`).join("");
+    recordState();
+    autoSave();
+  }
+}
+
+function deleteElement(element) {
+  if (!element) return;
+  element.remove();
+  recordState();
+  autoSave();
+}
+
+function nudgeElement(element, key) {
+  const x = parseFloat(element.style.left) || 0;
+  const y = parseFloat(element.style.top) || 0;
+  const amount = 1;
+  let newX = x, newY = y;
+
+  if (key === "ArrowLeft") newX -= amount;
+  else if (key === "ArrowRight") newX += amount;
+  if (key === "ArrowUp") newY -= amount;
+  else if (key === "ArrowDown") newY += amount;
+
+  element.style.left = `${newX}px`;
+  element.style.top = `${newY}px`;
+  scheduleRecord(); // one undo step per burst of key presses
+}
+
+function cycleCardStyle(parentElement) {
+  // Work from the class actually on the element so styles never stack up.
+  const currentIndex = elementStyles.findIndex((style) => parentElement.classList.contains(style));
+  const nextIndex = (currentIndex + 1) % elementStyles.length;
+  parentElement.classList.remove(...elementStyles);
+  parentElement.classList.add(elementStyles[nextIndex]);
+  // An inline "border: none" (older saves, default template) would hide the new style.
+  if (!parentElement.classList.contains('line-element')) parentElement.style.border = '';
+  lastUsedStyle.elementStyle = elementStyles[nextIndex];
+  recordState();
+  autoSave();
+}
+
+function addFontCycler(element) {
+  if (element.querySelector(".font-cycler-icon")) return;
+  const fontCycler = document.createElement("span");
+  fontCycler.className = "element-control-icon font-cycler-icon";
+  fontCycler.title = "Cycle Font";
+  // The "T" label comes from the stylesheet (.font-cycler-icon:before).
+  element.appendChild(fontCycler);
+}
+
+function cycleFont(parentElement) {
+  const textElements = parentElement.querySelectorAll('[contenteditable="true"]');
+  if (!textElements.length) return;
+  const firstTextEl = textElements[0];
+  const currentFont = getComputedStyle(firstTextEl).fontFamily;
+  let currentIndex = fontFamilies.findIndex((f) => currentFont.includes(f.split(",")[0].replace(/'/g, "")));
+  currentIndex = currentIndex === -1 ? 0 : currentIndex;
+  const nextIndex = (currentIndex + 1) % fontFamilies.length;
+  const nextFont = fontFamilies[nextIndex];
+  textElements.forEach((el) => { el.style.fontFamily = nextFont; });
+  lastUsedStyle.fontFamily = nextFont;
+  recordState();
+  autoSave();
+}
+
+function cycleFontSize(parentElement) {
+  const textElements = parentElement.querySelectorAll('[contenteditable="true"]');
+  if (!textElements.length) return;
+  const currentSize = getComputedStyle(textElements[0]).fontSize;
+  let currentIndex = fontSizes.indexOf(currentSize);
+  currentIndex = currentIndex === -1 ? 2 : currentIndex;
+  const nextIndex = (currentIndex + 1) % fontSizes.length;
+  const nextSize = fontSizes[nextIndex];
+  textElements.forEach((el) => { el.style.fontSize = nextSize; });
+  lastUsedStyle.fontSize = nextSize;
+  recordState();
+  autoSave();
+}
+
+function cycleLineStyle(parentElement) {
+  const innerLine = parentElement.querySelector(".inner-line");
+  if (!innerLine) return;
+
+  const currentStyle = getComputedStyle(innerLine).borderTopStyle;
+  let currentIndex = lineStyles.indexOf(currentStyle);
+  currentIndex = currentIndex === -1 ? 0 : currentIndex;
+  const nextStyle = lineStyles[(currentIndex + 1) % lineStyles.length];
+  innerLine.style.borderTopStyle = nextStyle;
+  recordState();
+  autoSave();
+}
+
+
+// --- PERSISTENCE & EXPORT ---
+function saveNow() {
+  clearTimeout(autoSaveTimer);
+  if (!canvas) return;
+  try {
+    localStorage.setItem("invoiceCanvasState", getCanvasState());
+    localStorage.setItem("invoiceElementCounter", elementCounter.toString());
+  } catch (e) {
+    console.error("Could not auto-save invoice:", e);
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      alert("Your invoice could not be auto-saved because this browser's storage is full. Export it as a PDF, or delete a saved template to free up space.");
+    }
+  }
+  saveUserPreferences();
+}
+
+function autoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveNow, 1500);
+}
+
+function loadInitialCanvasState() {
+  const autoSavedState = localStorage.getItem("invoiceCanvasState");
+  const initialState = autoSavedState && autoSavedState.trim() !== "" ? autoSavedState : DEFAULT_INVOICE_TEMPLATE;
+
+  if (initialState && canvas) {
+    canvas.innerHTML = initialState;
+    reinitializeElements();
+    syncElementCounter();
+
+    // Initialize history for the new session
+    undoStack = [];
+    redoStack = [];
+    recordState(); // This records the initial state AND updates button visibility
+  }
+}
+
+function reinitializeElements() {
+  stripTransientState(canvas);
+  canvas.querySelectorAll(".invoice-element").forEach((el) => {
+    ensureControls(el);
+    makeInteractable(el);
+    if (el.querySelector('input[type="file"]')) {
+      el.classList.add('image-element');
+      setupImageUpload(el);
+    }
+  });
+}
+
+// Keep new element ids ahead of every id already on the canvas.
+function syncElementCounter() {
+  const elements = canvas.querySelectorAll(".invoice-element");
+  let highest = elements.length;
+  elements.forEach((el) => {
+    const idNumber = parseInt(el.id.replace("cib-invoice-element-", ""), 10);
+    if (idNumber > highest) highest = idNumber;
+  });
+  elementCounter = Math.max(elementCounter, highest);
+}
+
+
+// --- TEMPLATE FUNCTIONS ---
+
+function saveAsTemplate() {
+  if (!templateNameInput || !canvas) return;
+  const name = templateNameInput.value.trim();
+  if (!name) return alert("Please enter a name for your template.");
+
+  try {
+    const templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "{}");
+
+    if (templates[name]) {
+      if (!confirm(`A template named "${name}" already exists. Do you want to overwrite it?`)) {
+        return;
+      }
+    }
+
+    templates[name] = getCanvasState();
+    localStorage.setItem("invoiceTemplates", JSON.stringify(templates));
+
+    alert(`Template '${name}' saved successfully!`);
+    populateTemplateSelector();
+    loadTemplateSelect.value = name;
+    const deleteBtn = document.getElementById('cib-delete-template-btn');
+    if (deleteBtn) deleteBtn.disabled = false;
+    templateNameInput.value = "";
+  } catch (error) {
+    console.error("Error saving template:", error);
+    alert("Could not save template - this browser's storage is full. Delete a template you no longer need and try again.");
+  }
+}
+
+function populateTemplateSelector() {
+  if (!loadTemplateSelect) return;
+  try {
+    const templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "{}");
+    const currentSelection = loadTemplateSelect.value;
+
+    loadTemplateSelect.innerHTML = '<option value="" disabled selected>Load Template</option>';
+    Object.keys(templates).forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      loadTemplateSelect.appendChild(option);
+    });
+
+    if (templates[currentSelection]) {
+      loadTemplateSelect.value = currentSelection;
+    }
+
+    const deleteBtn = document.getElementById('cib-delete-template-btn');
+    if (deleteBtn) deleteBtn.disabled = !loadTemplateSelect.value;
+
+  } catch (e) {
+    console.error("Failed to populate template selector:", e);
+  }
+}
+
+function loadTemplate(name) {
+  if (!name || !canvas) return;
+  let templates = {};
+  try {
+    templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "{}");
+  } catch (error) {
+    console.error("Saved templates are unreadable:", error);
+    return alert("Could not load template.");
+  }
+
+  if (templates[name]) {
+    if (!confirm(`Are you sure you want to load the "${name}" template? This will replace your current invoice.`)) {
+      loadTemplateSelect.value = "";
+      const deleteBtn = document.getElementById('cib-delete-template-btn');
+      if (deleteBtn) deleteBtn.disabled = true;
+      return;
+    }
+
+    clearTimeout(recordTimer);
+    recordTimer = null;
+    canvas.innerHTML = templates[name];
+    reinitializeElements();
+
+    // Reset History
+    undoStack = [getCanvasState()];
+    redoStack = [];
+    updateUndoRedoButtons(); // <--- CRITICAL: Update buttons after loading
+
+    syncElementCounter();
+    autoSave();
+  }
+}
+
+function deleteTemplate() {
+  if (!loadTemplateSelect) return;
+  const selectedTemplate = loadTemplateSelect.value;
+  if (!selectedTemplate) return alert("Please select a template.");
+
+  if (confirm(`Permanently delete template "${selectedTemplate}"?`)) {
+    try {
+      const templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "{}");
+      delete templates[selectedTemplate];
+      localStorage.setItem("invoiceTemplates", JSON.stringify(templates));
+      populateTemplateSelector();
+      alert(`Template deleted.`);
+    } catch (error) {
+      console.error("Failed to delete template:", error);
+    }
+  }
+}
+
+// --- USER PREFS ---
+function saveUserPreferences() {
+  try { localStorage.setItem("invoiceUserPrefs", JSON.stringify(lastUsedStyle)); } catch (e) {}
+}
+
+function loadUserPreferences() {
+  const prefs = localStorage.getItem("invoiceUserPrefs");
+  if (prefs) {
+    try { lastUsedStyle = { ...lastUsedStyle, ...JSON.parse(prefs) }; } catch (e) {}
+  }
+}
+
+// --- EXPORT PDF ---
+async function exportAsPDF() {
+  const pdfBtn = document.getElementById("cib-export-pdf-btn");
+  if (!canvas || !pdfBtn) return alert("Export button not found.");
+
+  pdfBtn.textContent = "Generating...";
+  pdfBtn.disabled = true;
+  if (document.activeElement?.isContentEditable) document.activeElement.blur();
+  setSelectedElement(null);
+  canvas.classList.add("exporting");
+  await document.fonts?.ready;
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  try {
+    const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4", compress: true });
+    const canvasImage = await html2canvas(canvas, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvasImage.height * pdfWidth) / canvasImage.width;
+    // JPEG keeps the file to a few hundred KB; a PNG of the page can run to tens of MB.
+    pdf.addImage(canvasImage.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("canibarter-invoice.pdf");
+  } catch (error) {
+    console.error("PDF export failed:", error);
+    alert("Error creating PDF.");
+  } finally {
+    canvas.classList.remove("exporting");
+    pdfBtn.textContent = "Export as PDF";
+    pdfBtn.disabled = false;
+  }
+}

@@ -59,8 +59,7 @@ pub fn parse(records: &[Record]) -> Result<HistoryTb, Vec<HistoryError>> {
     for r in &records[at + 1..] {
         let label = r.get(account);
         let first = r.filled().next().unwrap_or("");
-        if first.to_ascii_lowercase().starts_with("total") || label.eq_ignore_ascii_case("total")
-        {
+        if first.to_ascii_lowercase().starts_with("total") || label.eq_ignore_ascii_case("total") {
             continue;
         }
         let (d, c) = (r.get(debit), r.get(credit));

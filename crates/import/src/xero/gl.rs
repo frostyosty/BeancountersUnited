@@ -82,7 +82,11 @@ pub fn parse(records: &[Record]) -> Result<HistoryGl, Vec<HistoryError>> {
             _ => current.clone(),
         };
 
-        if first.starts_with("opening balance") {
+        let opening_row = first.starts_with("opening balance")
+            || text(r, SOURCE)
+                .to_ascii_lowercase()
+                .starts_with("opening balance");
+        if opening_row {
             let balance = if d.is_empty() && c.is_empty() {
                 col(RUNNING).map_or(Money::ZERO, |i| {
                     amount(r.get(i)).unwrap_or_else(|e| {
@@ -94,7 +98,12 @@ pub fn parse(records: &[Record]) -> Result<HistoryGl, Vec<HistoryError>> {
                 movement
             };
             let Some((code, name)) = account else {
-                errors.push(bad_row(r.row, "", &first, "an opening balance with no account"));
+                errors.push(bad_row(
+                    r.row,
+                    "",
+                    &first,
+                    "an opening balance with no account",
+                ));
                 continue;
             };
             if let Some(o) = openings.iter_mut().find(|o| o.code == code) {
@@ -111,7 +120,7 @@ pub fn parse(records: &[Record]) -> Result<HistoryGl, Vec<HistoryError>> {
         }
 
         let raw_date = r.get(date_col);
-        if raw_date.is_empty() && d.is_empty() && c.is_empty() {
+        if d.is_empty() && c.is_empty() && date(raw_date).is_none() {
             // An account heading in the grouped layout.
             let label = r.filled().next().unwrap_or("");
             match split_account(label) {
@@ -126,7 +135,12 @@ pub fn parse(records: &[Record]) -> Result<HistoryGl, Vec<HistoryError>> {
             continue;
         }
         let Some(when) = date(raw_date) else {
-            errors.push(bad_row(r.row, &header.name(date_col), raw_date, "not a date"));
+            errors.push(bad_row(
+                r.row,
+                &header.name(date_col),
+                raw_date,
+                "not a date",
+            ));
             continue;
         };
         let Some((code, account_name)) = account else {

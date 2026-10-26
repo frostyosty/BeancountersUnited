@@ -24,6 +24,7 @@ pub mod bank;
 pub mod charts;
 pub mod clients;
 pub mod coding;
+pub mod invoices;
 pub mod journals;
 pub mod log;
 pub mod merchants;

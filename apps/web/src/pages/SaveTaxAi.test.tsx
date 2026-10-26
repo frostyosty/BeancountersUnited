@@ -28,6 +28,8 @@ const on: AiSuggestionsView = {
   activity: null,
   private_names: [],
   suggestions: [],
+  daily_limit: 1,
+  remaining_today: 1,
 };
 
 function routes(view: () => AiSuggestionsView, me = sam) {
@@ -55,20 +57,21 @@ describe("AI suggestions (ADR 009, ADR 011)", () => {
     routes(() => ({ ...on, available: false, provider: null, model: null }));
     renderApp(<App />, "/businesses/b1/save-tax");
     expect(await screen.findByText(/Tax to pay if submitted now/)).toBeTruthy();
-    expect(screen.queryByText(/AI suggestions are/)).toBeNull();
+    expect(screen.queryByText(/Ask the experts/)).toBeNull();
   });
 
   it("is on by default with no consent screen, asks for suggestions, and can be turned off", async () => {
     const calls = routes(() => on);
     renderApp(<App />, "/businesses/b1/save-tax");
     const user = userEvent.setup();
-    expect(await screen.findByText(/AI suggestions are on, from Anthropic/)).toBeTruthy();
+    expect(await screen.findByText(/1 question left today/)).toBeTruthy();
     expect(screen.queryByText(/agrees/)).toBeNull();
-    await user.click(screen.getByRole("button", { name: /Suggest categories now/ }));
-    expect(await screen.findByText(/Asked about 12 transactions, and got 0 suggestions/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Ask the experts/ }));
+    expect(await screen.findByText(/The experts looked at 12 transactions and have 0 suggestions/)).toBeTruthy();
     expect(calls.some((c) => c.method === "POST" && c.path === "/api/businesses/b1/ai-suggestions")).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: /Turn suggestions off/ }));
+    await user.click(screen.getByText(/About the experts/));
+    await user.click(screen.getByRole("button", { name: /Turn the experts off/ }));
     await waitFor(() => expect(posts(calls)).toHaveLength(1));
     expect(posts(calls)[0]).toMatchObject({ kind: "set_ai_suggestions", payload: { client_id: "b1", enabled: false } });
   });
@@ -92,8 +95,8 @@ describe("AI suggestions (ADR 009, ADR 011)", () => {
     const calls = routes(() => ({ ...on, enabled: false }));
     renderApp(<App />, "/businesses/b1/save-tax");
     const user = userEvent.setup();
-    expect(await screen.findByText(/AI suggestions are off for this business/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /Turn suggestions on/ }));
+    expect(await screen.findByText(/The experts are turned off for this business/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Turn the experts on/ }));
     await waitFor(() => expect(posts(calls)).toHaveLength(1));
     expect(posts(calls)[0]).toMatchObject({ kind: "set_ai_suggestions", payload: { client_id: "b1", enabled: true } });
   });
@@ -102,6 +105,13 @@ describe("AI suggestions (ADR 009, ADR 011)", () => {
     routes(() => on, val);
     renderApp(<App />, "/businesses/b1/save-tax");
     expect(await screen.findByText(/viewers can't answer questions/)).toBeTruthy();
-    expect(screen.queryByText(/AI suggestions are/)).toBeNull();
+    expect(screen.queryByText(/Ask the experts/)).toBeNull();
+  });
+
+  it("stops asking once today's questions are used", async () => {
+    routes(() => ({ ...on, remaining_today: 0 }));
+    renderApp(<App />, "/businesses/b1/save-tax");
+    expect(await screen.findByText(/Back tomorrow/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Ask the experts/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

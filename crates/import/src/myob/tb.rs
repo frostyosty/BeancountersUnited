@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use acct_core::Money;
 
 use super::fields::{self, bad_row};
-use super::{cell, Table};
+use super::{Table, cell};
 use crate::history::{HistoryError, HistoryTb, HistoryTbRow};
 
 pub(super) fn parse(table: &Table) -> Result<HistoryTb, Vec<HistoryError>> {
@@ -30,8 +30,13 @@ pub(super) fn parse(table: &Table) -> Result<HistoryTb, Vec<HistoryError>> {
     let mut seen: BTreeMap<String, u32> = BTreeMap::new();
     for (row, cells) in &table.rows {
         let row = *row;
-        let first = cells.iter().find(|c| !c.is_empty()).map_or("", String::as_str);
-        if first.to_lowercase().starts_with("total") || first.to_lowercase().starts_with("grand total") {
+        let first = cells
+            .iter()
+            .find(|c| !c.is_empty())
+            .map_or("", String::as_str);
+        if first.to_lowercase().starts_with("total")
+            || first.to_lowercase().starts_with("grand total")
+        {
             continue;
         }
         let (debit_raw, credit_raw) = (cell(cells, debit_col), cell(cells, credit_col));
@@ -59,6 +64,17 @@ pub(super) fn parse(table: &Table) -> Result<HistoryTb, Vec<HistoryError>> {
             continue;
         };
 
+        if let Some(first) = seen.get(&code) {
+            errors.push(bad_row(
+                row,
+                "Account No.",
+                &code,
+                format!("the account is already on row {first}"),
+            ));
+            continue;
+        }
+        seen.insert(code.clone(), row);
+
         let mut amount = |raw: &str, column: &str| {
             fields::amount(raw).unwrap_or_else(|reason| {
                 errors.push(bad_row(row, column, raw, reason));
@@ -76,16 +92,6 @@ pub(super) fn parse(table: &Table) -> Result<HistoryTb, Vec<HistoryError>> {
             ));
             continue;
         }
-        if let Some(first) = seen.get(&code) {
-            errors.push(bad_row(
-                row,
-                "Account No.",
-                &code,
-                format!("the account is already on row {first}"),
-            ));
-            continue;
-        }
-        seen.insert(code.clone(), row);
         rows.push(HistoryTbRow {
             row,
             code,

@@ -10,6 +10,7 @@ pub mod error;
 pub mod finalise;
 pub mod fixtures;
 pub mod history;
+pub mod invoices;
 pub mod layouts;
 pub mod ledger;
 pub mod merchants;
@@ -232,6 +233,22 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
         (Method::GET, "/api/sync", get(reads::sync)),
         (Method::GET, "/api/history", get(history::get_history)),
         (Method::POST, "/api/presence", post(presence::post_presence)),
+        (Method::GET, "/api/invoices/draft", get(invoices::get_draft)),
+        (
+            Method::GET,
+            "/api/invoices/templates",
+            get(invoices::get_templates),
+        ),
+        (
+            Method::GET,
+            "/api/invoices/templates/{id}",
+            get(invoices::get_template),
+        ),
+        (
+            Method::GET,
+            "/api/invoices/images/{id}",
+            get(invoices::get_image),
+        ),
     ]
 }
 

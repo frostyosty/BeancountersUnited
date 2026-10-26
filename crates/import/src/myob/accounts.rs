@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use super::fields::{self, bad_row};
-use super::{cell, Table};
+use super::{Table, cell};
 use crate::history::{HistoryAccount, HistoryError};
 
 pub(super) fn parse(table: &Table) -> Result<Vec<HistoryAccount>, Vec<HistoryError>> {
@@ -17,10 +17,9 @@ pub(super) fn parse(table: &Table) -> Result<Vec<HistoryAccount>, Vec<HistoryErr
     let name_col = table.col(&["account name", "name"]);
     let header_col = table.col(&["header"]);
     let type_col = table.col(&["account type", "type"]);
-    let tax_col = table
-        .header
-        .iter()
-        .position(|h| !h.starts_with("freight") && (h.contains("gst code") || h.contains("tax code")));
+    let tax_col = table.header.iter().position(|h| {
+        !h.starts_with("freight") && (h.contains("gst code") || h.contains("tax code"))
+    });
     let inactive_col = table.col(&["inactive account", "inactive"]);
 
     let mut accounts = Vec::new();
@@ -48,8 +47,8 @@ pub(super) fn parse(table: &Table) -> Result<Vec<HistoryAccount>, Vec<HistoryErr
         seen.insert(code.clone(), row);
 
         let source_type = cell(cells, type_col).to_owned();
-        let Some(account_type) = fields::type_from_name(&source_type)
-            .or_else(|| fields::type_from_code(&code))
+        let Some(account_type) =
+            fields::type_from_name(&source_type).or_else(|| fields::type_from_code(&code))
         else {
             errors.push(bad_row(
                 row,

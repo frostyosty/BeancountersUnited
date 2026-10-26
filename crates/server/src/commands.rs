@@ -555,6 +555,19 @@ pub enum Command {
     /// Takes a paragraph out of the library. Years that picked it keep their copies, but no year
     /// can newly pick it. Its key can be added again. Practice admin only.
     RemoveParagraph { paragraph_id: String },
+    /// Saves the invoice the user is working on in the invoice maker (Settings › Tools), replacing
+    /// the one saved before. Personal: it belongs to the user, not to any business, and isn't part
+    /// of anyone's books. The log keeps only a hash of `html`. Any signed-in user.
+    SaveInvoiceDraft { html: String },
+    /// Saves the invoice maker's page as a template under `name`, replacing the user's template of
+    /// that name if there is one. Personal, like `save_invoice_draft`.
+    SaveInvoiceTemplate { name: String, html: String },
+    /// Deletes one of the user's own invoice templates.
+    DeleteInvoiceTemplate { template_id: String },
+    /// Uploads an image (PNG, JPEG, GIF or WebP, as base64) for the user's invoices, which show it
+    /// from `/api/invoices/images/{id}`. Uploading the same image again returns the same id.
+    /// Personal; the log keeps only a hash of the image.
+    AddInvoiceImage { content_base64: String },
 }
 
 impl Command {
@@ -628,7 +641,17 @@ impl Command {
             Command::EditNote { .. } => "edit_note",
             Command::PushParagraph { .. } => "push_paragraph",
             Command::RemoveParagraph { .. } => "remove_paragraph",
+            Command::SaveInvoiceDraft { .. } => "save_invoice_draft",
+            Command::SaveInvoiceTemplate { .. } => "save_invoice_template",
+            Command::DeleteInvoiceTemplate { .. } => "delete_invoice_template",
+            Command::AddInvoiceImage { .. } => "add_invoice_image",
         }
+    }
+
+    /// Whether the command is about the user's own things only, not any business or the practice:
+    /// the invoice maker's. These stay out of everyone else's change feed and out of Changes.
+    pub fn is_personal(&self) -> bool {
+        is_personal_kind(self.kind())
     }
 
     /// The payload as stored in `command_log`. Commands carrying secrets blank them here.
@@ -640,8 +663,33 @@ impl Command {
                 *secret = "[redacted]".into();
             }
         }
+        // An invoice's page and images are the user's own business, and large: the log keeps a
+        // hash and size, which is enough to recognise a resubmitted command.
+        if self.is_personal() {
+            for key in ["html", "content_base64"] {
+                if let Some(content) = payload.get_mut(key)
+                    && let Some(text) = content.as_str()
+                {
+                    *content = serde_json::json!({
+                        "sha256": crate::invoices::sha256_hex(text.as_bytes()),
+                        "bytes": text.len(),
+                    });
+                }
+            }
+        }
         payload
     }
+}
+
+/// The kinds [`Command::is_personal`] covers, for reading the log.
+pub fn is_personal_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "save_invoice_draft"
+            | "save_invoice_template"
+            | "delete_invoice_template"
+            | "add_invoice_image"
+    )
 }
 
 /// A mapping's new version, revised along with its template in `revise_template`.

@@ -143,9 +143,13 @@ pub struct HistoryImport {
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum HistoryError {
     /// The file couldn't be read as text or CSV at all.
-    Unreadable { message: String },
+    Unreadable {
+        message: String,
+    },
     /// The file isn't an export we recognise. `header` is the first row we looked at.
-    UnknownFormat { header: Vec<String> },
+    UnknownFormat {
+        header: Vec<String>,
+    },
     /// A row we couldn't read: which column, what it held, and why.
     BadRow {
         row: u32,
@@ -154,7 +158,9 @@ pub enum HistoryError {
         reason: String,
     },
     /// The TB's rows don't sum to zero.
-    Unbalanced { difference: Money },
+    Unbalanced {
+        difference: Money,
+    },
     Empty,
 }
 
@@ -220,7 +226,11 @@ mod tests {
     fn gl_agrees_with_tb_when_openings_plus_lines_match() {
         let tb = HistoryTb {
             as_at: None,
-            rows: vec![tb_row("090", 1_500), tb_row("200", -500), tb_row("970", -1_000)],
+            rows: vec![
+                tb_row("090", 1_500),
+                tb_row("200", -500),
+                tb_row("970", -1_000),
+            ],
         };
         let mut gl = HistoryGl {
             from: None,

@@ -25,8 +25,13 @@ fn account_type(raw: &str) -> Option<SourceAccountType> {
     Some(match key(raw).as_str() {
         "bank" | "currentasset" | "current" | "fixedasset" | "fixed" | "inventory"
         | "noncurrentasset" | "noncurrent" | "prepayment" => Asset,
-        "currentliability" | "currliab" | "liability" | "noncurrentliability" | "termliab"
-        | "paygliability" | "payg" => Liability,
+        "currentliability"
+        | "currliab"
+        | "liability"
+        | "noncurrentliability"
+        | "termliab"
+        | "paygliability"
+        | "payg" => Liability,
         "equity" => Equity,
         "revenue" | "sales" => Income,
         "otherincome" => OtherIncome,

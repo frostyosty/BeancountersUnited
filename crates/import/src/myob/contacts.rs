@@ -9,7 +9,7 @@
 //! A card's name is `Co./Last Name`, with `First Name` in front for an individual.
 
 use super::fields::{self, bad_row};
-use super::{cell, Table};
+use super::{Table, cell};
 use crate::history::{ContactKind, HistoryContact, HistoryError};
 
 const CUSTOMER_FIELDS: &[&str] = &[
@@ -42,7 +42,12 @@ pub(super) fn parse(table: &Table) -> Result<Vec<HistoryContact>, Vec<HistoryErr
         "tax id",
     ]);
     let email_col = table.col(&["email", "addr 1 - email", "email address"]);
-    let phone_col = table.col(&["phone no. 1", "addr 1 - phone no. 1", "phone", "phone number"]);
+    let phone_col = table.col(&[
+        "phone no. 1",
+        "addr 1 - phone no. 1",
+        "phone",
+        "phone number",
+    ]);
 
     let file_kind = if CUSTOMER_FIELDS.iter().any(|f| table.has(f)) {
         ContactKind::Customer

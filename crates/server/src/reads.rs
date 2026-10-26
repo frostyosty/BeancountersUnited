@@ -399,6 +399,10 @@ pub async fn sync(
         changes: entries
             .into_iter()
             .filter(|e| visible.shows(e.client_id.as_deref()))
+            // A user's own invoices show only in their own feed.
+            .filter(|e| {
+                !crate::commands::is_personal_kind(&e.kind) || e.user_id.as_deref() == Some(&user.0.id)
+            })
             .map(|e| Change {
                 seq: e.seq,
                 kind: e.kind,

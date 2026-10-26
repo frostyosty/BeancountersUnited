@@ -47,6 +47,11 @@
   padding: 0;
   color: var(--accent);
   text-align: left;
+  font-weight: inherit;
+  line-height: inherit;
+  white-space: normal;
+  display: inline;
+  box-shadow: none;
 }
 
 .tag {

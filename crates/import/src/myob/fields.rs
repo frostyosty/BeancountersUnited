@@ -8,7 +8,10 @@ use crate::history::{HistoryError, SourceAccountType};
 /// A header cell, normalised: lower case, single spaces, without MYOB's `*` (required) and
 /// `^` (matching) markers or a trailing colon.
 pub fn column_name(raw: &str) -> String {
-    let s = raw.trim().trim_start_matches(['*', '^']).trim_end_matches(':');
+    let s = raw
+        .trim()
+        .trim_start_matches(['*', '^'])
+        .trim_end_matches(':');
     s.split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
@@ -83,10 +86,18 @@ pub fn type_from_code(code: &str) -> Option<SourceAccountType> {
 pub fn type_from_name(name: &str) -> Option<SourceAccountType> {
     use SourceAccountType::*;
     Some(match column_name(name).as_str() {
-        "asset" | "bank" | "accounts receivable" | "other current asset" | "fixed asset"
+        "asset"
+        | "bank"
+        | "accounts receivable"
+        | "other current asset"
+        | "fixed asset"
         | "other asset" => Asset,
-        "liability" | "credit card" | "accounts payable" | "other current liability"
-        | "long term liability" | "other liability" => Liability,
+        "liability"
+        | "credit card"
+        | "accounts payable"
+        | "other current liability"
+        | "long term liability"
+        | "other liability" => Liability,
         "equity" => Equity,
         "income" => Income,
         "cost of sales" => CostOfSales,
@@ -117,7 +128,9 @@ pub fn amount(raw: &str) -> Result<Money, String> {
         None => s,
     };
     let s = match s.split_once('.') {
-        Some((int, frac)) if frac.len() > 2 && frac[2..].trim_end_matches(')').bytes().all(|b| b == b'0') => {
+        Some((int, frac))
+            if frac.len() > 2 && frac[2..].trim_end_matches(')').bytes().all(|b| b == b'0') =>
+        {
             let close = if frac.ends_with(')') { ")" } else { "" };
             format!("{int}.{}{close}", &frac[..2])
         }
@@ -130,20 +143,16 @@ pub fn amount(raw: &str) -> Result<Money, String> {
 /// saves it (`1-Apr-2024`, `1 Apr 2024`, `2024-04-01`).
 pub fn date(raw: &str) -> Option<NaiveDate> {
     let s = raw.trim();
-    for format in ["%d/%m/%Y", "%d-%b-%Y", "%d %b %Y", "%Y-%m-%d", "%d.%m.%Y"] {
-        if let Ok(d) = NaiveDate::parse_from_str(s, format) {
-            return Some(d);
-        }
-    }
-    // Two-digit years, which chrono's %Y would read as the first century.
-    let parts: Vec<&str> = s.split('/').collect();
-    if let [d, m, y] = parts[..] {
+    // Two-digit years first, which chrono's %Y would read as the first century.
+    if let [d, m, y] = s.split('/').collect::<Vec<_>>()[..] {
         if y.len() == 2 {
             let (d, m, y) = (d.parse().ok()?, m.parse().ok()?, y.parse::<i32>().ok()?);
             return NaiveDate::from_ymd_opt(2000 + y, m, d);
         }
     }
-    None
+    ["%d/%m/%Y", "%d-%b-%Y", "%d %b %Y", "%Y-%m-%d", "%d.%m.%Y"]
+        .iter()
+        .find_map(|format| NaiveDate::parse_from_str(s, format).ok())
 }
 
 /// The dates in a report's title rows, in order: `1/04/2024 To 31/03/2025` gives two. A month
@@ -232,7 +241,15 @@ mod tests {
 
     #[test]
     fn amounts_myob_never_writes_are_rejected() {
-        for bad in ["1.234", "12.345)", "1,23.00", "abc", "$", "92233720368547758.08", "1.2.3"] {
+        for bad in [
+            "1.234",
+            "12.345)",
+            "1,23.00",
+            "abc",
+            "$",
+            "92233720368547758.08",
+            "1.2.3",
+        ] {
             assert!(amount(bad).is_err(), "{bad}");
         }
     }
@@ -280,11 +297,23 @@ mod tests {
 
     #[test]
     fn types_from_names_and_numbers() {
-        assert_eq!(type_from_name("Accounts Receivable"), Some(SourceAccountType::Asset));
-        assert_eq!(type_from_name("long term liability"), Some(SourceAccountType::Liability));
-        assert_eq!(type_from_name("Cost of Sales"), Some(SourceAccountType::CostOfSales));
+        assert_eq!(
+            type_from_name("Accounts Receivable"),
+            Some(SourceAccountType::Asset)
+        );
+        assert_eq!(
+            type_from_name("long term liability"),
+            Some(SourceAccountType::Liability)
+        );
+        assert_eq!(
+            type_from_name("Cost of Sales"),
+            Some(SourceAccountType::CostOfSales)
+        );
         assert_eq!(type_from_name("Bank Account"), None);
-        assert_eq!(type_from_code("8-1000"), Some(SourceAccountType::OtherIncome));
+        assert_eq!(
+            type_from_code("8-1000"),
+            Some(SourceAccountType::OtherIncome)
+        );
         assert_eq!(type_from_code("7-1000"), None);
     }
 }

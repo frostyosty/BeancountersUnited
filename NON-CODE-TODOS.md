@@ -49,6 +49,10 @@ ships.
       the same way.
 - [ ] M15's worked example, "Worked example: the sole trader's statements" in `docs/domain.md`, the same
       way.
+- [ ] Invoice maker (Settings › Tools): check it in a browser, on a desktop and a phone. Drag and resize
+      blocks (a long press starts a drag on touch), upload a logo, save and load a template, and Save as PDF;
+      the PDF should match the page, with no editing marks. Also confirm it looks right in dark mode, and
+      that signing in on a second device shows the same invoice and templates (they're saved to the account).
 - [ ] M15: check the Reconcile tab in a browser on the synthetic sole trader (two accounts agree, Rimu
       can't be checked, and the gap journal is listed).
 - [ ] M15: read the sole-trader starter paragraphs in `fixtures/practice/paragraphs.json` (the filled-in
@@ -70,6 +74,23 @@ ships.
       business. Check each sees the other under "Here now", and the other's changes in the panel within a
       few seconds. Click the tax figure and a TB line to see their changes, and try the filters. Check the
       wording of the descriptions reads well to an owner.
+- [ ] M16: in a Xero demo company (Xero's data, so don't commit it), export the chart of accounts, a Trial
+      Balance, Account Transactions for the year and contacts. Run each through `acct_import::xero::parse` and
+      compare with "Importing from Xero and MYOB" in `docs/domain.md`. Also open the four Xero Central
+      articles cited there (they need a browser). Any layout difference becomes a synthetic test.
+- [ ] M16: check the MYOB parsers against real exports. Use MYOB's sample company or a trial file, not
+      client data (hard rule 1), and don't commit the files. Run each through `acct_import::myob::parse`
+      and compare with "Importing from Xero and MYOB" in `docs/domain.md`. Any layout difference becomes
+      a synthetic test in `fixtures/myob/`.
+      - AccountRight: File › Export Data › Accounts and Cards (customer and supplier), and the Trial
+        Balance and General Ledger [Detail] reports exported as CSV.
+      - MYOB Business: the chart of accounts export, and the Trial Balance, General Ledger detail and
+        Contacts reports exported to Excel and saved as CSV.
+      - Most important: how the GL detail report signs balances. The parser assumes a balance is
+        positive on the account's normal side (a credit, for liabilities, equity and income); MYOB
+        doesn't document it. Then the MYOB Business contacts report's column names, which are a guess.
+- [ ] M16: decide whether MYOB Business's report exports should be read straight from Excel (.xlsx).
+      Today the user has to save them as CSV first, and reading .xlsx needs a new dependency.
 
 ## For the tax specialist, before M14 files anything
 The items marked **check** in `docs/domain.md`; its "Open" section has the detail.

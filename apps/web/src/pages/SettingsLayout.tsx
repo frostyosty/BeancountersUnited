@@ -7,7 +7,7 @@ import { Icon } from "../lib/icons";
 import { keys, useClients } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import { useViewAs } from "../lib/viewAs";
-import { Notice, PageHeader, Tab, Tabs } from "../ui";
+import { ButtonLink, Card, Notice, PageHeader, Tab, Tabs } from "../ui";
 import { AccountPage } from "./AccountPage";
 import { SettingsPage } from "./SettingsPage";
 
@@ -39,6 +39,9 @@ export function SettingsLayout() {
         )}
         <Tab to="/settings/account">
           <Icon name="nav.account" fallback="👤" /> My account
+        </Tab>
+        <Tab to="/settings/tools">
+          <Icon name="settings.tools" fallback="🧰" /> Tools
         </Tab>
       </Tabs>
       <Outlet />
@@ -83,6 +86,27 @@ export function AdminSettingsTab() {
           You're viewing as {ROLE_LABEL[as].toLowerCase()}. Use the bar at the top of any page to stop.
         </Notice>
       )}
+    </section>
+  );
+}
+
+/** Tools tab: small extras for anyone signed in, on any plan. */
+export function ToolsTab() {
+  return (
+    <section>
+      <h2>
+        <Icon name="settings.tools" fallback="🧰" /> Tools
+      </h2>
+      <p className="muted">Handy extras that come free with your account.</p>
+      <Card title="Invoice maker" icon={<Icon name="tools.invoice" fallback="🧾" />}>
+        <p>
+          Lay out an invoice with your logo, items and payment details, then save it as a PDF to send. Your invoices
+          and templates are saved to your account, where only you can see them.
+        </p>
+        <ButtonLink to="/tools/invoice" variant="primary">
+          Open the invoice maker
+        </ButtonLink>
+      </Card>
     </section>
   );
 }

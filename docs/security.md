@@ -85,6 +85,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | One write path | Every change to practice or client data is a command: validated, applied and appended to `command_log` in one transaction (hard rule 6). | `crates/server/src/pipeline.rs`; `command_log` in `crates/store/migrations/0001_initial.sql:43` |
 | Who changed what | Each command row records its kind, payload, result, `user_id`, business and time. M13 builds the visible history on it. | As above |
 | Immutable ledger | Posted journals never change; corrections reverse. Finalised years and filed periods reject changes. | `CLAUDE.md`, "Domain invariants" |
+| A user's own invoices | The invoice maker (Settings › Tools) saves each user's draft, templates and images through commands like everything else, but they belong to that user alone: no one else can read or change them, an overseer included, and they stay out of others' change feed and out of Changes. The log keeps a SHA-256 and size in place of the invoice's page and images, so customers' names and logos don't sit in `command_log`. Images must be PNG, JPEG, GIF or WebP (checked by their bytes, so no SVG) and are served with `nosniff`; the web app cleans each page against an allowlist before showing it. | `crates/server/src/invoices.rs`, `access.rs` (`Target::Own`), `commands.rs` (`logged_payload`), `apps/web/src/lib/invoices.ts`; migration 0011 |
 
 ### Operations
 

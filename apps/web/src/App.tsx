@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { useMe } from "./auth";
 import { ViewAsProvider } from "./lib/viewAs";
@@ -26,13 +27,16 @@ import { PricingPage } from "./pages/PricingPage";
 import { ProductPage } from "./pages/ProductPage";
 import { ReconcileTab } from "./pages/ReconcileTab";
 import { SaveTaxPage } from "./pages/SaveTaxPage";
-import { AdminSettingsTab, MyAccountTab, SettingsHome, SettingsLayout } from "./pages/SettingsLayout";
+import { AdminSettingsTab, MyAccountTab, SettingsHome, SettingsLayout, ToolsTab } from "./pages/SettingsLayout";
 import { HomeRoute } from "./pages/OverviewPage";
 import { AcceptInvitePage, InviteSignedOutPage, SignUpPage } from "./pages/SignUpPage";
 import { StatementsTab } from "./pages/StatementsTab";
 import { TbImportTab } from "./pages/TbImportTab";
 import { TrialBalanceTab } from "./pages/TrialBalanceTab";
 import { YearLayout } from "./pages/YearLayout";
+
+// Loaded on first visit: the editor and its libraries are only for the few who open it.
+const InvoiceMakerPage = lazy(() => import("./pages/InvoiceMakerPage").then((m) => ({ default: m.InvoiceMakerPage })));
 
 export function App() {
   const me = useMe();
@@ -89,11 +93,20 @@ export function App() {
             <Route index element={<SettingsHome />} />
             <Route path="admin" element={<AdminSettingsTab />} />
             <Route path="account" element={<MyAccountTab />} />
+            <Route path="tools" element={<ToolsTab />} />
           </Route>
           <Route path="settings/paragraphs" element={<ParagraphLibraryPage />} />
           <Route path="settings/charts/:entityType" element={<MasterChartPage />} />
           <Route path="settings/templates/:templateId" element={<TemplatePage />} />
           <Route path="settings/mappings/:mappingId" element={<MappingPage />} />
+          <Route
+            path="tools/invoice"
+            element={
+              <Suspense fallback={<p>Opening the invoice maker…</p>}>
+                <InvoiceMakerPage />
+              </Suspense>
+            }
+          />
           <Route path="account" element={<Navigate to="/settings/account" replace />} />
           <Route path="invite/:token" element={<AcceptInvitePage />} />
           <Route path="*" element={<NotFoundPage />} />

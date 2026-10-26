@@ -807,6 +807,16 @@
     "sharing": {
       "type": "emoji",
       "value": "🤝"
+    },
+    "tools": {
+      "type": "emoji",
+      "value": "🧰"
+    }
+  },
+  "tools": {
+    "invoice": {
+      "type": "emoji",
+      "value": "🧾"
     }
   }
 }

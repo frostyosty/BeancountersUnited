@@ -18,6 +18,11 @@
   cursor: pointer;
   text-align: left;
   text-decoration: underline dotted;
+  font-weight: inherit;
+  line-height: inherit;
+  white-space: normal;
+  display: inline;
+  box-shadow: none;
 }
 
 .account td {

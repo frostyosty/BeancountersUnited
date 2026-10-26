@@ -7,3 +7,4 @@ pub mod bank;
 pub mod history;
 pub mod myob;
 pub mod tb;
+pub mod xero;

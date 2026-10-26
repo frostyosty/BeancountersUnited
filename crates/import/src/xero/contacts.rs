@@ -33,7 +33,12 @@ pub fn parse(records: &[Record]) -> Result<Vec<HistoryContact>, Vec<HistoryError
     for r in &records[1..] {
         let n = r.get(name);
         if n.is_empty() {
-            errors.push(bad_row(r.row, &header.name(name), n, "the contact has no name"));
+            errors.push(bad_row(
+                r.row,
+                &header.name(name),
+                n,
+                "the contact has no name",
+            ));
             continue;
         }
         if let Some(first) = contacts.iter().find(|c| c.name.eq_ignore_ascii_case(n)) {
