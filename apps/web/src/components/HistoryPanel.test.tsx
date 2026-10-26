@@ -108,9 +108,9 @@ describe("history panel", () => {
   it("filters by person, kind of change and business", async () => {
     const { asked } = setup();
     await screen.findByRole("list", { name: "Changes, newest first" });
+    await userEvent.click(screen.getByRole("button", { name: "Filter changes" }));
     await userEvent.selectOptions(screen.getByLabelText("Person"), "u-sam");
     await waitFor(() => expect(asked.at(-1)!.get("user")).toBe("u-sam"));
-    await userEvent.click(screen.getByRole("button", { name: "Filter changes" }));
     await userEvent.click(screen.getByLabelText("Staff only"));
     await waitFor(() => expect(asked.at(-1)!.get("staff_only")).toBe("true"));
     await userEvent.click(screen.getByLabelText("Manual entries"));

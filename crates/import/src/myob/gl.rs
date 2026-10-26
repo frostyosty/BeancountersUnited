@@ -240,12 +240,12 @@ pub(super) fn parse(table: &Table) -> Result<HistoryGl, Vec<HistoryError>> {
 
 /// The account a row names, if any: `Account No.` (with `Account Name`), or a combined
 /// account cell. An unreadable number is an error: the value and the reason.
-fn named_account<'a>(
-    cells: &'a [String],
+fn named_account(
+    cells: &[String],
     code_col: Option<usize>,
     account_col: Option<usize>,
     name_col: Option<usize>,
-) -> Result<Option<(String, String)>, (&'a str, String)> {
+) -> Result<Option<(String, String)>, (&str, String)> {
     let raw = cell(cells, code_col);
     if !raw.is_empty() {
         let lower = raw.to_lowercase();

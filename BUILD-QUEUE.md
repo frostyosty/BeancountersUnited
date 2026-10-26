@@ -33,13 +33,13 @@ The Codespace has 2 cores and 7 GB of RAM, and five Claude sessions share one `t
 |---|---|---|
 | 20:08 | `cargo clippy --all-targets -- -D warnings`, then `cargo test -- myob::` | a0 (MYOB parsers) |
 | 20:08 | `cargo clippy --all-targets -- -D warnings` | 72 (invoice maker) |
-| 20:09 | `make types` | a7 (not replied yet) |
+| 20:09 | `make types` | a7 (history/privacy/Overview) |
 | 20:10 | `cargo test -- xero:: history::` | 53 (Xero import) |
 | 20:10 | `make check` | 4c (web UI refresh) |
 
 ## Per-session reports
 
-_Filled in from each session's reply. A session that hasn't replied is marked as such._
+_All five sessions replied. Two of them (a7 and 72) both changed `crates/server` files such as `commands.rs`, `pipeline.rs`, `access.rs`, `history.rs` and `lib.rs`, so errors there may come from either side._
 
 ### beancountersunited-53: Xero history import (M16)
 - **Queued:** `cargo test -- xero:: history::`
@@ -72,7 +72,13 @@ _Filled in from each session's reply. A session that hasn't replied is marked as
 - **Known failing, not its own:** `SignUpPage.test` (looks for a "My business" link, now labelled "Overview") and the `HistoryPanel.test` person filter (filters now sit behind a toggle). Both come from another session's Layout and HistoryPanel edits.
 
 ### beancountersunited-a7: `make types`
-- **Not replied yet.** The queued `make types` regenerates `packages/types`. It is also needed for beancountersunited-72's new types, and it is part of `make check`.
+- **Queued:** `make types` (pid 232581, resubmitted after cancelling an older one). Nothing else queued.
+- **Task:** Changes filters (`staff_only`/`manual`/`ledger`), owner-edit privacy (new command `set_history_sharing`, migration `0010_history_sharing.sql`), Settings tabs, owner Overview, and "Ask the experts" with a daily AI quota.
+- **Changed:** Rust: `crates/server/src/{history,ai,commands,access,pipeline,lib}.rs`, `crates/store/src/tenancy.rs`, `crates/store/migrations/0010_history_sharing.sql`, server tests `m13`, `m15` and `common`. Web: `Layout`, `App`, `SettingsLayout`, `OverviewPage`, `SaveTaxAi`, `HistoryPanel`, `lib/viewAs`, `lib/historySharing`. Also `PLAN.md` (M17).
+- **Why:** it needs the generated TS types (`HistorySharing`, `AiSuggestionsView.remaining_today`) so `tsc` and vitest can run. The server already compiles.
+- **Fresh machine, in order:** `make types`, `pnpm install`, `make check`. Narrower: `cargo test -- m13 ai` and `pnpm --filter web test`.
+- **Covered by `make check`:** yes, no separate check needed.
+- **State:** all uncommitted. Unverified: the new Rust tests, the web tests, and the updated `SaveTaxAi` and settings tests.
 
 ## Running it on another machine
 

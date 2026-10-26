@@ -144,11 +144,11 @@ pub fn amount(raw: &str) -> Result<Money, String> {
 pub fn date(raw: &str) -> Option<NaiveDate> {
     let s = raw.trim();
     // Two-digit years first, which chrono's %Y would read as the first century.
-    if let [d, m, y] = s.split('/').collect::<Vec<_>>()[..] {
-        if y.len() == 2 {
-            let (d, m, y) = (d.parse().ok()?, m.parse().ok()?, y.parse::<i32>().ok()?);
-            return NaiveDate::from_ymd_opt(2000 + y, m, d);
-        }
+    if let [d, m, y] = s.split('/').collect::<Vec<_>>()[..]
+        && y.len() == 2
+    {
+        let (d, m, y) = (d.parse().ok()?, m.parse().ok()?, y.parse::<i32>().ok()?);
+        return NaiveDate::from_ymd_opt(2000 + y, m, d);
     }
     ["%d/%m/%Y", "%d-%b-%Y", "%d %b %Y", "%Y-%m-%d", "%d.%m.%Y"]
         .iter()
@@ -170,11 +170,10 @@ pub fn title_dates(preamble: &[Vec<String>]) -> Vec<NaiveDate> {
             } else if let (Some(m), Some(y)) = (
                 month(word),
                 words.get(i + 1).and_then(|y| y.parse::<i32>().ok()),
-            ) {
-                if let Some(last) = month_end(y, m) {
-                    out.push(last);
-                    i += 1;
-                }
+            ) && let Some(last) = month_end(y, m)
+            {
+                out.push(last);
+                i += 1;
             }
             i += 1;
         }
