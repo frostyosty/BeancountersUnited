@@ -84,7 +84,21 @@ impl Server {
         let store = Arc::try_unwrap(state.store)
             .unwrap_or_else(|_| panic!("something still holds the store"));
         store.close().await.unwrap();
-        let store = Store::open(&path).await.unwrap();
+        // On Windows the files of the database just closed can stay locked for a moment (a virus
+        // scanner or the closing pool), and reopening then fails with "disk I/O error". A real
+        // restart is a new process, so wait a little and try again.
+        let mut tries = 0;
+        let store = loop {
+            match Store::open(&path).await {
+                Ok(store) => break store,
+                Err(e) if tries < 20 => {
+                    tries += 1;
+                    eprintln!("reopening the database failed ({e}); trying again");
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+                Err(e) => panic!("couldn't reopen the database: {e}"),
+            }
+        };
         Server {
             _dir,
             state: AppState {
