@@ -116,7 +116,8 @@
   background: var(--surface-hover);
 }
 
-:where(a.button.primary) {
+/* Not :where(): base.css's `a` colour would otherwise win, leaving the label in the accent colour. */
+a.button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
