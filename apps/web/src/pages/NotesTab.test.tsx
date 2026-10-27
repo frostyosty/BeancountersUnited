@@ -15,6 +15,7 @@ const client: ClientDetail = {
   id: "c2",
   name: "Tui Street Joinery",
   entity_type: "sole_trader",
+  is_business: false,
   retained_earnings: "970",
   rounding_priority: [],
   years: [{ id: "y2", client_id: "c2", start: "2025-04-01", end: "2026-03-31", status: "open", books_source: null }],

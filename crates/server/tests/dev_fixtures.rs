@@ -49,11 +49,14 @@ async fn the_dev_fixtures_load_with_a_sole_trader_whose_year_has_notes() {
     let clients = clients.as_array().unwrap();
     // The company stays first, where the desktop sync simulator looks for it.
     assert_eq!(clients[0]["name"], "Example Widgets Limited");
+    // It isn't a business, so an owner's home (or an admin previewing one) must skip it.
+    assert_eq!(clients[0]["is_business"], false);
     let sole = clients
         .iter()
         .find(|c| c["name"] == SOLE_TRADER_NAME)
         .unwrap();
     let detail = get(&format!("/api/clients/{}", sole["id"].as_str().unwrap())).await;
+    assert_eq!(detail["is_business"], sole["is_business"]);
     let year = detail["years"][0]["id"].as_str().unwrap().to_owned();
 
     let notes = get(&format!("/api/years/{year}/notes")).await;

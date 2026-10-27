@@ -1,7 +1,9 @@
 import { isOwner, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { Icon } from "../lib/icons";
 import { useClients } from "../lib/queries";
-import { EmptyState } from "../ui";
+import { useViewAs } from "../lib/viewAs";
+import { ButtonLink, EmptyState } from "../ui";
 import { BusinessPage } from "./BusinessPage";
 import { ClientsPage } from "./ClientsPage";
 
@@ -16,17 +18,25 @@ export function HomeRoute() {
  */
 export function OverviewPage() {
   const clients = useClients();
+  const { real } = useViewAs();
   if (clients.error) {
     return <ErrorMessage error={clients.error} />;
   }
   if (!clients.data) {
     return <p className="muted">Loading…</p>;
   }
-  const mine = clients.data[0];
+  // An owner sees only their own business. Someone previewing as an owner sees every client, so
+  // skip the ones that aren't businesses (they have no statements or owner's screen).
+  const mine = clients.data.find((c) => c.is_business);
   if (!mine) {
     return (
       <EmptyState title="No business yet.">
-        <p>Your business will show here once it's set up.</p>
+        <p>Set up your business to upload bank statements and see the tax you'd pay.</p>
+        {!isOwner(real) && (
+          <ButtonLink to="/businesses/new" variant="primary">
+            <Icon name="business.new" fallback="🧾" /> Set up a business
+          </ButtonLink>
+        )}
       </EmptyState>
     );
   }

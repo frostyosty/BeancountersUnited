@@ -66,7 +66,7 @@ async fn clients_years_charts_and_journals_read_back() {
     let list = server.get_json("/api/clients", &boss).await;
     assert_eq!(
         list,
-        json!([{ "id": f.client_id, "name": "Example Widgets Limited", "entity_type": "company" }])
+        json!([{ "id": f.client_id, "name": "Example Widgets Limited", "entity_type": "company", "is_business": false }])
     );
 
     let client = server

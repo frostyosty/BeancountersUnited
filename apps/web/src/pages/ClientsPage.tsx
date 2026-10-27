@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { can, useCurrentUser } from "../auth";
+import { ChartPreview } from "../components/ChartPreview";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Icon } from "../lib/icons";
 import { keys, useClients, usePractice } from "../lib/queries";
@@ -42,7 +43,7 @@ export function ClientsPage() {
             {clients.data.map((c) => (
               <tr key={c.id}>
                 <td>
-                  <Link to={c.entity_type === "sole_trader" ? `/businesses/${c.id}` : `/clients/${c.id}`} className={styles.name}>
+                  <Link to={c.is_business ? `/businesses/${c.id}` : `/clients/${c.id}`} className={styles.name}>
                     {c.name}
                   </Link>
                 </td>
@@ -116,6 +117,7 @@ function NewClientForm() {
           ))}
         </select>
       </label>
+      <ChartPreview chart={chart} />
       <label className="field">
         <span>Retained earnings account</span>
         <select value={re} onChange={(e) => setRetainedEarnings(e.target.value)}>

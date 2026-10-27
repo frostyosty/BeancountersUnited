@@ -32,6 +32,7 @@ export const widgets: ClientDetail = {
   id: "c1",
   name: "Example Widgets Ltd",
   entity_type: "company",
+  is_business: false,
   retained_earnings: "810",
   rounding_priority: [],
   years: [

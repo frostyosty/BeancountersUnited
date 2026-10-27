@@ -27,6 +27,8 @@ pub struct ClientSummary {
     pub id: String,
     pub name: String,
     pub entity_type: String,
+    /// Set up as a business (M10), so it has bank statements and the owner's screen.
+    pub is_business: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -35,6 +37,8 @@ pub struct ClientDetail {
     pub id: String,
     pub name: String,
     pub entity_type: String,
+    /// Set up as a business (M10), so it has bank statements and the owner's screen.
+    pub is_business: bool,
     pub retained_earnings: AccountCode,
     pub rounding_priority: Vec<AccountCode>,
     /// Earliest first.
@@ -255,10 +259,12 @@ pub async fn list_clients(
     let mut conn = state.store.reader().await?;
     let visible = access::visible(&mut conn, &user.actor()).await?;
     let all = clients::list(&mut conn).await?;
+    let businesses = acct_store::bank::business_ids(&mut conn).await?;
     Ok(Json(
         all.into_iter()
             .filter(|c| visible.shows(Some(&c.id)))
             .map(|c| ClientSummary {
+                is_business: businesses.contains(&c.id),
                 id: c.id,
                 name: c.name,
                 entity_type: c.entity_type,
@@ -278,7 +284,9 @@ pub async fn get_client(
         .await?
         .ok_or_else(|| CommandError::not_found("client", &id))?;
     let years = years::for_client(&mut conn, &id).await?;
+    let is_business = acct_store::bank::business(&mut conn, &id).await?.is_some();
     Ok(Json(ClientDetail {
+        is_business,
         id: c.id,
         name: c.name,
         entity_type: c.entity_type,

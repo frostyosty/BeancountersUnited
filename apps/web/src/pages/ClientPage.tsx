@@ -3,11 +3,11 @@ import { type FormEvent, useState } from "react";
 import { Link, useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
-import { formatDate, nextYear, previousYear } from "../lib/dates";
+import { defaultFirstYear, formatDate, nextYear, previousYear } from "../lib/dates";
 import { keys, useClient, usePractice } from "../lib/queries";
 import { Icon } from "../lib/icons";
 import { useCommand } from "../lib/useCommand";
-import { Badge, ButtonLink, EmptyState, PageHeader } from "../ui";
+import { Badge, Button, ButtonLink, EmptyState, PageHeader } from "../ui";
 
 export function ClientPage() {
   const { clientId = "" } = useParams();
@@ -32,7 +32,7 @@ export function ClientPage() {
             <ButtonLink to={`/clients/${c.id}/chart`}>
               <Icon name="client.chart" fallback="📚" /> Chart of accounts and rounding priority
             </ButtonLink>
-            {c.entity_type === "sole_trader" && (
+            {c.is_business && (
               <ButtonLink to={`/businesses/${c.id}`}>
                 <Icon name="client.owner_view" fallback="👀" /> Owner's view: statements and tax
               </ButtonLink>
@@ -97,12 +97,15 @@ function NewYearForm({ client }: { client: ClientDetail }) {
   const next = last && nextYear(last.end);
   const previous = first && previousYear(first.start);
   const [which, setWhich] = useState<Which>("next");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [fallback] = useState(() => defaultFirstYear(new Date()));
+  const [start, setStart] = useState(fallback.start);
+  const [end, setEnd] = useState(fallback.end);
+  const [editing, setEditing] = useState(false);
   const [mappingId, setMappingId] = useState("");
 
   const chosen = which === "next" ? next : which === "previous" ? previous : undefined;
   const dates = chosen ?? { start, end };
+  const showInputs = editing || which === "other";
 
   // A first year needs a mapping when the practice has more than one for this entity type;
   // later years carry their neighbour's.
@@ -136,16 +139,29 @@ function NewYearForm({ client }: { client: ClientDetail }) {
         </label>
       )}
       {!chosen && (
-        <div className="row">
-          <label className="field">
-            <span>Start</span>
-            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
-          </label>
-          <label className="field">
-            <span>End</span>
-            <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
-          </label>
-        </div>
+        <>
+          <p>
+            <Icon name="client.years" fallback="📅" />{" "}
+            <strong>{start && end ? `${formatDate(start)} to ${formatDate(end)}` : "Choose the dates"}</strong>{" "}
+            {!showInputs && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                Change dates
+              </Button>
+            )}
+          </p>
+          {showInputs && (
+            <div className="row">
+              <label className="field">
+                <span>Start</span>
+                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>End</span>
+                <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
+              </label>
+            </div>
+          )}
+        </>
       )}
       {chooseMapping && (
         <label className="field">

@@ -60,6 +60,16 @@ pub async fn insert_business(conn: &mut SqliteConnection, b: &Business) -> Resul
     Ok(())
 }
 
+/// The client ids that are set up as businesses.
+pub async fn business_ids(
+    conn: &mut SqliteConnection,
+) -> Result<std::collections::BTreeSet<String>> {
+    let ids: Vec<(String,)> = sqlx::query_as("SELECT client_id FROM businesses")
+        .fetch_all(conn)
+        .await?;
+    Ok(ids.into_iter().map(|(id,)| id).collect())
+}
+
 pub async fn business(conn: &mut SqliteConnection, client_id: &str) -> Result<Option<Business>> {
     let row: Option<BusinessRow> = sqlx::query_as("SELECT * FROM businesses WHERE client_id = ?")
         .bind(client_id)
