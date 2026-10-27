@@ -580,3 +580,20 @@ async fn sessions_round_trip_and_expire() {
     sessions::delete(&mut w, "new").await.unwrap();
     assert_eq!(sessions::get(&mut w, "new").await.unwrap(), None);
 }
+
+/// Migrations are compiled into the server and checked against checksums stored in each database,
+/// so a CRLF checkout (Windows, before `.gitattributes`) would stop production starting with
+/// `Migrate(VersionMismatch)`. Keep them LF, byte for byte as committed.
+#[test]
+fn migrations_have_lf_line_endings() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path();
+        let bytes = std::fs::read(&path).unwrap();
+        assert!(
+            !bytes.contains(&b'\r'),
+            "{} has CRLF line endings; delete it and run `git checkout -- crates/store/migrations`",
+            path.display()
+        );
+    }
+}

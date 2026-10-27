@@ -23,6 +23,10 @@ FROM rust:1-bookworm AS server
 WORKDIR /src
 COPY . .
 COPY --from=web /src/apps/web/dist apps/web/dist
+# Migrations are compiled into acctd and checked against a checksum stored in the database, so their
+# bytes must never change. A Windows checkout can give them CRLF line endings; strip them, or the
+# server refuses to start with Migrate(VersionMismatch).
+RUN find crates/store/migrations -name '*.sql' -exec sed -i 's/\r$//' {} +
 RUN cargo build --release --locked -p acct-server --bin acctd --features embed-web
 
 # Litestream's official image, pinned. Its binary is static, so it runs on the slim image below.
