@@ -125,7 +125,10 @@ describe("client years", () => {
     });
     renderApp(<App />, "/clients/c1");
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Start"), "2024-04-01");
+    await user.click(await screen.findByRole("button", { name: "Change dates" }));
+    await user.clear(await screen.findByLabelText("Start"));
+    await user.type(screen.getByLabelText("Start"), "2024-04-01");
+    await user.clear(screen.getByLabelText("End"));
     await user.type(screen.getByLabelText("End"), "2025-03-31");
     await user.selectOptions(await screen.findByLabelText("Mapping"), "m2");
     await user.click(screen.getByRole("button", { name: "Add year" }));

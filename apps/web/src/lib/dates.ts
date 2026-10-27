@@ -30,6 +30,15 @@ export function previousYear(start: string): { start: string; end: string } {
   return { start: format(d), end };
 }
 
+/**
+ * The period offered for a client's first year: 1 April two years back to 31 March last year, the
+ * usual NZ year just gone. `now` is passed in so callers (and tests) control the clock.
+ */
+export function defaultFirstYear(now: Date): { start: string; end: string } {
+  const y = now.getUTCFullYear();
+  return { start: `${y - 2}-04-01`, end: `${y - 1}-03-31` };
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** `31 Mar 2026`, for display. A fixed table, not the locale, so every machine shows the same. */

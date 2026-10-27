@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatDate, isFullYear, nextYear, periodEndedLabel, previousYear } from "./dates";
+import { addDays, defaultFirstYear, formatDate, isFullYear, nextYear, periodEndedLabel, previousYear } from "./dates";
 
 describe("dates", () => {
   it("adds days across months and leap years", () => {
@@ -28,5 +28,11 @@ describe("period labels", () => {
     expect(isFullYear("2025-04-01", "2026-06-30")).toBe(false);
     expect(periodEndedLabel("2025-04-01", "2026-03-31")).toBe("Year ended 31 Mar 2026");
     expect(periodEndedLabel("2025-08-01", "2026-03-31")).toBe("Period ended 31 Mar 2026");
+  });
+});
+
+describe("defaultFirstYear", () => {
+  it("is 1 April two years back to 31 March last year", () => {
+    expect(defaultFirstYear(new Date("2026-10-28T00:00:00Z"))).toEqual({ start: "2024-04-01", end: "2025-03-31" });
   });
 });

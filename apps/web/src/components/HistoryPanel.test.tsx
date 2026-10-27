@@ -3,11 +3,16 @@ import type { HistoryEntry } from "@acct/types/HistoryEntry";
 import type { PresentUser } from "@acct/types/PresentUser";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HistoryProvider, historyQuery } from "../lib/history";
 import { renderApp, stubApi } from "../test/render";
 import { ChangesButton } from "./ChangesButton";
 import { HistoryPanel } from "./HistoryPanel";
+
+beforeEach(() => {
+  // The panel starts hidden; most of these tests are about what it shows once open.
+  window.localStorage.setItem("history-panel-collapsed", "0");
+});
 
 afterEach(() => {
   cleanup();
@@ -72,6 +77,13 @@ function setup() {
 }
 
 describe("history panel", () => {
+  it("starts hidden, behind a Show changes button", async () => {
+    window.localStorage.clear();
+    setup();
+    await userEvent.setup().click(await screen.findByRole("button", { name: /Show changes/ }));
+    expect(await screen.findByRole("list", { name: /here now/i })).toBeTruthy();
+  });
+
   it("shows who's here and the changes, with before and after, tax effect and AI attribution", async () => {
     const { beats } = setup();
     const people = await screen.findByRole("list", { name: /here now/i });

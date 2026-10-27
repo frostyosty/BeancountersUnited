@@ -228,6 +228,8 @@ describe("an ended session", () => {
     });
     renderApp(<App />, "/settings");
     const user = userEvent.setup();
+    await user.click(await screen.findByRole("tab", { name: /Add a class/ }));
+    await user.click(screen.getByRole("button", { name: /Custom/ }));
     await user.type(await screen.findByLabelText("Key"), "plant");
     await user.type(screen.getByLabelText("Class name"), "Plant and equipment");
     await user.type(screen.getByLabelText("Rate %"), "15");
@@ -250,6 +252,36 @@ describe("an ended session", () => {
           disposal_year: "to_disposal_date",
         },
         accounts: { cost: "700", accumulated: "705", expense: "210", gain_loss: "250" },
+      },
+    });
+  });
+  it("adds an asset class from a preset, with the accounts matched from the chart", async () => {
+    const chart = [
+      { code: "210", name: "Depreciation", account_type: "expense", active: true },
+      { code: "250", name: "Loss on disposal", account_type: "expense", active: true },
+      { code: "710", name: "Motor vehicles at cost", account_type: "asset", active: true },
+      { code: "715", name: "Motor vehicles accumulated depreciation", account_type: "asset", active: true },
+    ];
+    const calls = stubApi({
+      "GET /api/me": () => boss,
+      "GET /api/practice": () => ({ ...practice, master_charts: [{ ...practice.master_charts[0], accounts: chart }] }),
+      "GET /api/users": () => users,
+      "GET /api/asset-classes": () => [],
+      "POST /api/commands": () => ({ seq: 1, entity_id: "k1" }),
+    });
+    renderApp(<App />, "/settings");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("tab", { name: /Add a class/ }));
+    await user.click(screen.getByRole("button", { name: /Motor vehicles/ }));
+    await user.click(screen.getByRole("button", { name: "Add class" }));
+    await vi.waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({
+      kind: "create_asset_class",
+      payload: {
+        key: "motor_vehicles",
+        name: "Motor vehicles",
+        settings: { method: { kind: "dv", rate_bp: 2100 } },
+        accounts: { cost: "710", accumulated: "715", expense: "210", gain_loss: "250" },
       },
     });
   });

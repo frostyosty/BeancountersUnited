@@ -703,6 +703,10 @@
     "none_yet": {
       "type": "emoji",
       "value": "🌱"
+    },
+    "ranges": {
+      "type": "emoji",
+      "value": "🧭"
     }
   },
   "layouts": {

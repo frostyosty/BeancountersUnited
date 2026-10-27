@@ -6,11 +6,13 @@ import type { UserView } from "@acct/types/UserView";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { can, useCurrentUser } from "../auth";
+import { ChartPreview } from "../components/ChartPreview";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { AssetAccountFields, DepreciationFields, NO_ACCOUNTS } from "../components/DepreciationFields";
 import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft, toDraft, toSettings } from "../lib/depreciation";
+import { ASSET_PRESETS, type AssetPreset, guessAccounts } from "../lib/assetPresets";
 import { entityLabel, STARTER_SETS } from "../lib/entityTypes";
-import { Icon } from "../lib/icons";
+import { Emoji, Icon } from "../lib/icons";
 import { keys, useAssetClasses, usePractice, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import styles from "./SettingsPage.module.css";
@@ -164,12 +166,15 @@ function NewMasterChart({ practice }: { practice: PracticeView }) {
   const navigate = useNavigate();
   const [entityType, setEntityType] = useState("");
   const [name, setName] = useState("");
-  const [from, setFrom] = useState("");
+  // null until the user picks: then the first chart shows, so the preview is never blank.
+  const [picked, setPicked] = useState<string | null>(null);
+  const from = picked ?? practice.master_charts[0]?.entity_type ?? "";
+  const source = practice.master_charts.find((c) => c.entity_type === from);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const type = entityType.trim().toLowerCase().replace(/\s+/g, "_");
-    const accounts = practice.master_charts.find((c) => c.entity_type === from)?.accounts ?? [];
+    const accounts = source?.accounts ?? [];
     create.mutate(
       { kind: "create_master_chart", payload: { entity_type: type, name: name.trim(), accounts } },
       { onSuccess: () => void navigate(`/settings/charts/${type}`) },
@@ -192,16 +197,17 @@ function NewMasterChart({ practice }: { practice: PracticeView }) {
         </label>
         <label className="field">
           <span>Start from</span>
-          <select value={from} onChange={(e) => setFrom(e.target.value)}>
-            <option value="">An empty chart</option>
+          <select value={from} onChange={(e) => setPicked(e.target.value)}>
             {practice.master_charts.map((c) => (
               <option key={c.id} value={c.entity_type}>
                 A copy of {c.name} ({c.accounts.length} accounts)
               </option>
             ))}
+            <option value="">An empty chart</option>
           </select>
         </label>
       </div>
+      <ChartPreview chart={source} />
       <p className="muted">
         Each entity type has one master chart. Its page then sets up the statement template and mapping that clients of
         that type need before their first year can be added.
@@ -367,12 +373,45 @@ function AssetClasses() {
   const practice = usePractice();
   const classes = useAssetClasses();
   const [editing, setEditing] = useState<string | null>(null);
+  const [tab, setTab] = useState<"classes" | "add">("classes");
+  const [preset, setPreset] = useState<AssetPreset | null>(null);
   if (!practice.data || !classes.data) {
     return <ErrorMessage error={practice.error ?? classes.error} />;
   }
   return (
     <>
       <h2>Asset classes</h2>
+      <div role="tablist" aria-label="Asset classes" className={styles.tabs}>
+        <button type="button" role="tab" aria-selected={tab === "classes"} onClick={() => setTab("classes")}>
+          <Icon name="defaults.chart" fallback="🗂️" /> Classes ({classes.data.length})
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "add"} onClick={() => setTab("add")}>
+          <Icon name="defaults.add_account" fallback="➕" /> Add a class
+        </button>
+      </div>
+      {tab === "add" && (
+        <section className="card">
+          <p className="muted">Pick a preset to start from, or choose custom. You can change anything before adding.</p>
+          <div className={styles.presets}>
+            {ASSET_PRESETS.map((p) => (
+              <button type="button" key={p.key} aria-pressed={preset?.key === p.key} onClick={() => setPreset(p)}>
+                <Emoji>{p.icon}</Emoji> {p.name} <span className="muted">{p.blurb}</span>
+              </button>
+            ))}
+            <button type="button" aria-pressed={preset === null} onClick={() => setPreset(null)}>
+              <Emoji>✏️</Emoji> Custom
+            </button>
+          </div>
+          <AssetClassForm
+            key={preset?.key ?? "custom"}
+            preset={preset ?? undefined}
+            charts={practice.data.master_charts}
+            onDone={() => setTab("classes")}
+          />
+        </section>
+      )}
+      {tab === "classes" && (
+        <>
       <table className="table">
         <thead>
           <tr>
@@ -415,28 +454,31 @@ function AssetClasses() {
             onDone={() => setEditing(null)}
           />
         ))}
-      {editing === null && <AssetClassForm charts={practice.data.master_charts} onDone={() => undefined} />}
+        </>
+      )}
     </>
   );
 }
 
 function AssetClassForm({
   existing,
+  preset,
   charts,
   onDone,
 }: {
   existing?: AssetClassView;
+  preset?: AssetPreset;
   charts: MasterChartView[];
   onDone: () => void;
 }) {
   const save = useCommand([keys.assetClasses]);
   const [entityType, setEntityType] = useState(existing?.entity_type ?? charts[0]?.entity_type ?? "");
-  const [key, setKey] = useState(existing?.key ?? "");
-  const [name, setName] = useState(existing?.name ?? "");
-  const [draft, setDraft] = useState<SettingsDraft>(existing ? toDraft(existing.settings) : DEFAULT_DRAFT);
-  const [accounts, setAccounts] = useState(existing?.accounts ?? NO_ACCOUNTS);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [key, setKey] = useState(existing?.key ?? preset?.key ?? "");
+  const [name, setName] = useState(existing?.name ?? preset?.name ?? "");
+  const [draft, setDraft] = useState<SettingsDraft>(existing ? toDraft(existing.settings) : (preset?.draft ?? DEFAULT_DRAFT));
   const chart = charts.find((c) => c.entity_type === entityType)?.accounts ?? [];
+  const [accounts, setAccounts] = useState(existing?.accounts ?? (preset ? guessAccounts(preset, chart) : NO_ACCOUNTS));
+  const [problem, setProblem] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -464,15 +506,23 @@ function AssetClassForm({
   };
 
   return (
-    <form onSubmit={submit} className="card form">
-      <h2>{existing ? `Edit ${existing.name}` : "New asset class"}</h2>
+    <form onSubmit={submit} className={existing ? "card form" : "form"}>
+      {existing && <h2>Edit {existing.name}</h2>}
       {existing && <p className="muted">Existing assets keep their settings until a client's defaults are applied to them.</p>}
       <div className="row">
         {!existing && (
           <>
             <label className="field">
               <span>Entity type</span>
-              <select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+              <select
+                value={entityType}
+                onChange={(e) => {
+                  setEntityType(e.target.value);
+                  if (preset) {
+                    setAccounts(guessAccounts(preset, charts.find((c) => c.entity_type === e.target.value)?.accounts ?? []));
+                  }
+                }}
+              >
                 {charts.map((c) => (
                   <option key={c.entity_type} value={c.entity_type}>
                     {c.entity_type}
