@@ -601,6 +601,31 @@ fn samples() -> Vec<Sample> {
             "Bo removed a paragraph from the library.",
         )
         .by(Some("u-bo")),
+        s(
+            "set_history_sharing",
+            json!({ "client_id": "biz", "share_owner_edits": true }),
+            "Sam let their accountants see the owner's edits in Changes.",
+        ),
+        s(
+            "save_invoice_draft",
+            json!({ "html": "<p>Invoice</p>" }),
+            "Sam saved their invoice.",
+        ),
+        s(
+            "save_invoice_template",
+            json!({ "name": "Plain", "html": "<p>Invoice</p>" }),
+            "Sam saved an invoice template.",
+        ),
+        s(
+            "delete_invoice_template",
+            json!({ "template_id": "t1" }),
+            "Sam deleted an invoice template.",
+        ),
+        s(
+            "add_invoice_image",
+            json!({ "content_base64": "iVBORw0KGgo=" }),
+            "Sam added an image to their invoices.",
+        ),
     ]
 }
 

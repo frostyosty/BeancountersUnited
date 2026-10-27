@@ -419,7 +419,10 @@ async fn owner_edits_are_private_until_the_owner_shares_them() {
     assert_eq!(kinds(&page), ["accept_invite"], "{page}");
     // Ana sees all of it.
     let page = server.get_json(&uri, &ana.cookie).await;
-    assert!(kinds(&page).contains(&"import_statement".to_owned()), "{page}");
+    assert!(
+        kinds(&page).contains(&"import_statement".to_owned()),
+        "{page}"
+    );
     assert!(kinds(&page).contains(&"create_invite".to_owned()), "{page}");
 
     // Accountants can't turn it on for her.
@@ -444,10 +447,15 @@ async fn owner_edits_are_private_until_the_owner_shares_them() {
         .await;
     assert_eq!(shared["share_owner_edits"], true);
     let page = server.get_json(&uri, &sam).await;
-    assert!(kinds(&page).contains(&"import_statement".to_owned()), "{page}");
+    assert!(
+        kinds(&page).contains(&"import_statement".to_owned()),
+        "{page}"
+    );
 
     // The filters: staff only drops the owner's edits again; ledger keeps the statement.
-    let page = server.get_json(&format!("{uri}&staff_only=true"), &sam).await;
+    let page = server
+        .get_json(&format!("{uri}&staff_only=true"), &sam)
+        .await;
     assert_eq!(kinds(&page), ["accept_invite"], "{page}");
     let page = server.get_json(&format!("{uri}&ledger=true"), &sam).await;
     assert_eq!(kinds(&page), ["import_statement"], "{page}");

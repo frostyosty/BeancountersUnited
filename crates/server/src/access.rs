@@ -92,7 +92,10 @@ pub struct OwnRef {
     pub owner: Option<String>,
 }
 
-async fn invoice_template_target(conn: &mut SqliteConnection, id: &str) -> Result<Target, CommandError> {
+async fn invoice_template_target(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Target, CommandError> {
     let owner = invoices::template(conn, id).await?.map(|t| t.user_id);
     Ok(Target::Own(OwnRef {
         entity: "invoice template",
@@ -101,7 +104,10 @@ async fn invoice_template_target(conn: &mut SqliteConnection, id: &str) -> Resul
     }))
 }
 
-async fn invoice_image_target(conn: &mut SqliteConnection, id: &str) -> Result<Target, CommandError> {
+async fn invoice_image_target(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Target, CommandError> {
     Ok(Target::Own(OwnRef {
         entity: "invoice image",
         id: id.to_owned(),
@@ -251,6 +257,12 @@ pub async fn check_command(
     let (need, targets) = command_targets(conn, command).await?;
     // Role first, so a refusal never depends on whether something exists.
     if need > ceiling(actor.role) {
+        return Err(CommandError::Forbidden);
+    }
+    // Who sees the owner's edits is the owner's call, not their accountants'.
+    if matches!(command, Command::SetHistorySharing { .. })
+        && !matches!(actor.role, Role::BusinessOwner | Role::Overseer)
+    {
         return Err(CommandError::Forbidden);
     }
     let mut clients: Vec<String> = Vec::new();
@@ -591,7 +603,9 @@ async fn check_route(
         RouteRule::Practice(need) => (Target::Practice, need),
         RouteRule::Client(need) => (Target::Client(ClientRef::direct(id()?)), need),
         RouteRule::Year(need) => (year_target(&mut conn, id()?).await?, need),
-        RouteRule::InvoiceTemplate => (invoice_template_target(&mut conn, id()?).await?, Need::Read),
+        RouteRule::InvoiceTemplate => {
+            (invoice_template_target(&mut conn, id()?).await?, Need::Read)
+        }
         RouteRule::InvoiceImage => (invoice_image_target(&mut conn, id()?).await?, Need::Read),
     };
     check(&mut conn, actor, &target, need).await

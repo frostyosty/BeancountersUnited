@@ -678,9 +678,7 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         })),
         "set_coding_settings" => Allowed(json!({ "client_id": biz, "settings": settings })),
         "set_ai_suggestions" => Allowed(json!({ "client_id": biz, "enabled": false })),
-        "set_history_sharing" => {
-            Allowed(json!({ "client_id": biz, "share_owner_edits": true }))
-        }
+        "set_history_sharing" => Allowed(json!({ "client_id": biz, "share_owner_edits": true })),
         "record_suggestions" => {
             Allowed(json!({ "client_id": biz, "model": "x", "suggestions": [] }))
         }
@@ -688,6 +686,11 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
             "client_id": biz, "email": "x@example.nz", "token": "ab".repeat(32),
         })),
         "accept_invite" => Allowed(json!({ "token": "cd".repeat(32) })),
+        // The invoice maker is personal: it never touches a business's books.
+        "save_invoice_draft" => Allowed(json!({ "html": "<p>Invoice</p>" })),
+        "save_invoice_template" => Allowed(json!({ "name": "Plain", "html": "<p>Invoice</p>" })),
+        "delete_invoice_template" => Allowed(json!({ "template_id": new_id() })),
+        "add_invoice_image" => Allowed(json!({ "content_base64": "iVBORw0KGgo=" })),
         other => panic!("tests/m15.rs has no lock walk case for the new command {other}; add one"),
     }
 }

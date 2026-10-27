@@ -139,9 +139,8 @@ pub async fn add_image(
     seq: i64,
 ) -> Result<String, CommandError> {
     let user_id = user_of(user_id)?;
-    let bytes = decode_base64(content_base64).ok_or_else(|| {
-        CommandError::invalid("image_unreadable", "The image couldn't be read.")
-    })?;
+    let bytes = decode_base64(content_base64)
+        .ok_or_else(|| CommandError::invalid("image_unreadable", "The image couldn't be read."))?;
     if bytes.len() > MAX_IMAGE_BYTES {
         return Err(CommandError::invalid(
             "image_too_large",
@@ -153,12 +152,17 @@ pub async fn add_image(
         ));
     }
     let content_type = image_type(&bytes).ok_or_else(|| {
-        CommandError::invalid(
-            "image_type",
-            "Use a PNG, JPEG, GIF or WebP image.",
-        )
+        CommandError::invalid("image_type", "Use a PNG, JPEG, GIF or WebP image.")
     })?;
-    Ok(invoices::add_image(conn, user_id, content_type, &sha256_hex(&bytes), &bytes, seq).await?)
+    Ok(invoices::add_image(
+        conn,
+        user_id,
+        content_type,
+        &sha256_hex(&bytes),
+        &bytes,
+        seq,
+    )
+    .await?)
 }
 
 /// `GET /api/invoices/draft`: the invoice the signed-in user is working on.
@@ -264,7 +268,10 @@ mod tests {
         assert_eq!(image_type(&[0xFF, 0xD8, 0xFF, 0xE0]), Some("image/jpeg"));
         assert_eq!(image_type(b"GIF89a..."), Some("image/gif"));
         assert_eq!(image_type(b"RIFF\0\0\0\0WEBPVP8 "), Some("image/webp"));
-        assert_eq!(image_type(b"<svg xmlns=\"http://www.w3.org/2000/svg\"/>"), None);
+        assert_eq!(
+            image_type(b"<svg xmlns=\"http://www.w3.org/2000/svg\"/>"),
+            None
+        );
         assert_eq!(image_type(b""), None);
     }
 

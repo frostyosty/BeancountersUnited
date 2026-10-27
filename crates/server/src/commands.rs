@@ -459,7 +459,10 @@ pub enum Command {
     },
     /// Lets the business's accountants see the owner's own edits in Changes, or stops them. Off
     /// by default. The business owner decides this, not the accountants. It changes no figures.
-    SetHistorySharing { client_id: String, share_owner_edits: bool },
+    SetHistorySharing {
+        client_id: String,
+        share_owner_edits: bool,
+    },
     /// Adds an entry to an entity type's merchant list (ADR 009's layer 3), such as "Z ENERGY is
     /// vehicle costs", in the master chart's codes. Save tax suggests it after the business's
     /// rules and history. It never changes a coded line. Use synthetic or consented data only.

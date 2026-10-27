@@ -7,10 +7,11 @@ use crate::Result;
 
 /// The draft a user is working on, if they've saved one.
 pub async fn draft(conn: &mut SqliteConnection, user_id: &str) -> Result<Option<String>> {
-    let row: Option<(String,)> = sqlx::query_as("SELECT html FROM invoice_drafts WHERE user_id = ?")
-        .bind(user_id)
-        .fetch_optional(conn)
-        .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT html FROM invoice_drafts WHERE user_id = ?")
+            .bind(user_id)
+            .fetch_optional(conn)
+            .await?;
     Ok(row.map(|(html,)| html))
 }
 
@@ -41,7 +42,10 @@ pub struct Template {
 }
 
 /// A user's templates by name, without their pages: `(id, name)`.
-pub async fn templates(conn: &mut SqliteConnection, user_id: &str) -> Result<Vec<(String, String)>> {
+pub async fn templates(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+) -> Result<Vec<(String, String)>> {
     Ok(sqlx::query_as(
         "SELECT id, name FROM invoice_templates WHERE user_id = ? ORDER BY name COLLATE NOCASE, name",
     )

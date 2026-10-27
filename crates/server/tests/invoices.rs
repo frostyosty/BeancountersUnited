@@ -50,14 +50,26 @@ async fn each_user_keeps_their_own_draft() {
     assert_eq!(draft, json!({ "html": null }), "nothing saved yet");
 
     server
-        .ok_or_none(&sam, "save_invoice_draft", json!({ "html": "<p>Sam's</p>" }))
+        .ok_or_none(
+            &sam,
+            "save_invoice_draft",
+            json!({ "html": "<p>Sam's</p>" }),
+        )
         .await;
     server
-        .ok_or_none(&sam, "save_invoice_draft", json!({ "html": "<p>Sam's, again</p>" }))
+        .ok_or_none(
+            &sam,
+            "save_invoice_draft",
+            json!({ "html": "<p>Sam's, again</p>" }),
+        )
         .await;
     // A viewer can't change the books, but their invoices are their own.
     server
-        .ok_or_none(&val, "save_invoice_draft", json!({ "html": "<p>Val's</p>" }))
+        .ok_or_none(
+            &val,
+            "save_invoice_draft",
+            json!({ "html": "<p>Val's</p>" }),
+        )
         .await;
 
     assert_eq!(
@@ -115,7 +127,10 @@ async fn templates_save_by_name_and_only_their_owner_reaches_them() {
     let one = server
         .get_json(&format!("/api/invoices/templates/{id}"), &sam)
         .await;
-    assert_eq!(one, json!({ "id": id, "name": "Standard", "html": "<p>two</p>" }));
+    assert_eq!(
+        one,
+        json!({ "id": id, "name": "Standard", "html": "<p>two</p>" })
+    );
 
     // Someone else, even a practice admin, is told it doesn't exist.
     assert!(
@@ -130,12 +145,20 @@ async fn templates_save_by_name_and_only_their_owner_reaches_them() {
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert_eq!(body["details"]["id"], id.as_str());
     let (status, body) = server
-        .command(&boss, "delete_invoice_template", json!({ "template_id": id }))
+        .command(
+            &boss,
+            "delete_invoice_template",
+            json!({ "template_id": id }),
+        )
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 
     server
-        .ok_or_none(&sam, "delete_invoice_template", json!({ "template_id": id }))
+        .ok_or_none(
+            &sam,
+            "delete_invoice_template",
+            json!({ "template_id": id }),
+        )
         .await;
     let (status, _) = status_of(&server, &format!("/api/invoices/templates/{id}"), &sam).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -155,7 +178,12 @@ async fn bad_invoices_are_rejected() {
         }
     };
     let huge = "x".repeat(acct_server::invoices::MAX_HTML_BYTES + 1);
-    rejected("save_invoice_draft", json!({ "html": huge }), "invoice_too_large").await;
+    rejected(
+        "save_invoice_draft",
+        json!({ "html": huge }),
+        "invoice_too_large",
+    )
+    .await;
     rejected(
         "save_invoice_template",
         json!({ "name": "big", "html": huge }),
@@ -202,7 +230,10 @@ async fn images_are_stored_once_and_shown_only_to_their_owner() {
 
     let payload = json!({ "content_base64": base64(PNG) });
     let id = server.ok(&sam, "add_invoice_image", payload.clone()).await;
-    assert_eq!(server.ok(&sam, "add_invoice_image", payload.clone()).await, id);
+    assert_eq!(
+        server.ok(&sam, "add_invoice_image", payload.clone()).await,
+        id
+    );
     // Someone else uploading the same picture gets their own.
     let vals = server.ok(&val, "add_invoice_image", payload).await;
     assert_ne!(vals, id);
@@ -248,7 +279,11 @@ async fn the_log_keeps_a_hash_not_the_invoice_and_others_never_see_it() {
     assert_eq!(status, StatusCode::OK, "{second}");
     assert_eq!(first, second);
     server
-        .ok(&sam, "add_invoice_image", json!({ "content_base64": base64(PNG) }))
+        .ok(
+            &sam,
+            "add_invoice_image",
+            json!({ "content_base64": base64(PNG) }),
+        )
         .await;
 
     let state = server.state.clone();

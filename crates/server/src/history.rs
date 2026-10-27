@@ -434,7 +434,11 @@ async fn observe(
         C::SetHistorySharing { .. } => {
             if let Some(c) = client_id {
                 let on = tenancy::owner_edits_shared(conn, c).await?;
-                facts.push(fact("Changes", "owner edits shared with accountants", on_off(on).into()));
+                facts.push(fact(
+                    "Changes",
+                    "owner edits shared with accountants",
+                    on_off(on).into(),
+                ));
             }
         }
         C::MoveYearLayout { client_year_id, .. } => {
@@ -919,7 +923,17 @@ pub fn describe(
         None => "The system".into(),
     };
     let Ok(command) = parsed else {
-        return format!("{who} made a change ({}).", entry.kind.replace('_', " "));
+        // The log keeps a hash in place of an invoice's page or image, so these don't parse back.
+        let personal = match entry.kind.as_str() {
+            "save_invoice_draft" => Some("saved their invoice"),
+            "save_invoice_template" => Some("saved an invoice template"),
+            "add_invoice_image" => Some("added an image to their invoices"),
+            _ => None,
+        };
+        return match personal {
+            Some(action) => format!("{who} {action}."),
+            None => format!("{who} made a change ({}).", entry.kind.replace('_', " ")),
+        };
     };
     let user = |id: &str| users.get(id).cloned().unwrap_or_else(|| "a user".into());
     let action = action(&command, changes, &user);
@@ -1254,7 +1268,11 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
             share_owner_edits, ..
         } => format!(
             "{} their accountants see the owner's edits in Changes",
-            if *share_owner_edits { "let" } else { "stopped letting" }
+            if *share_owner_edits {
+                "let"
+            } else {
+                "stopped letting"
+            }
         ),
         C::AddMerchant {
             entity_type,
@@ -1480,7 +1498,10 @@ pub async fn get_history(
         .collect();
     // Owners' own edits are theirs to share: the practice sees them only where the owner allows it.
     let hides_owners = actor.role.is_practice();
-    let sharing: BTreeSet<String> = tenancy::sharing_clients(&mut conn).await?.into_iter().collect();
+    let sharing: BTreeSet<String> = tenancy::sharing_clients(&mut conn)
+        .await?
+        .into_iter()
+        .collect();
     let kinds: Vec<&str> = match (q.manual, q.ledger) {
         (false, false) => Vec::new(),
         (true, false) => MANUAL_KINDS.to_vec(),
@@ -1515,9 +1536,11 @@ pub async fn get_history(
             {
                 continue;
             }
+            // Signing up is logged with no user (the account didn't exist yet), but it's the owner's.
             let author = e.user_id.as_ref().and_then(|u| roles.get(u)).copied();
+            let by_owner = author == Some(Role::BusinessOwner) || e.kind == "sign_up";
             if hides_owners
-                && author == Some(Role::BusinessOwner)
+                && by_owner
                 && !e.client_id.as_ref().is_some_and(|c| sharing.contains(c))
             {
                 continue;

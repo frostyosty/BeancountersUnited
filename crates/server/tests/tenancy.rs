@@ -464,9 +464,16 @@ async fn an_owner_reaches_no_route_into_another_owners_business() {
         } else if PERSONAL.contains(&path) {
             for (who, (status, body)) in [
                 ("B", (status, body)),
-                ("A's accountant", split(server.send(request(&sam)).await).await),
+                (
+                    "A's accountant",
+                    split(server.send(request(&sam)).await).await,
+                ),
             ] {
-                assert_eq!(status, StatusCode::NOT_FOUND, "{method} {path} as {who}: {body}");
+                assert_eq!(
+                    status,
+                    StatusCode::NOT_FOUND,
+                    "{method} {path} as {who}: {body}"
+                );
                 assert!(
                     a_ids.contains(body["details"]["id"].as_str().unwrap_or("")),
                     "{body}"
@@ -629,6 +636,7 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "confirm_supply_info" => json!({ "bank_line_id": line }),
         "set_coding_settings" => json!({ "client_id": biz, "settings": v.coding_settings }),
         "set_ai_suggestions" => json!({ "client_id": biz, "enabled": false }),
+        "set_history_sharing" => json!({ "client_id": biz, "share_owner_edits": true }),
         "record_suggestions" => json!({ "client_id": biz, "model": "x", "suggestions": [] }),
         "create_invite" => json!({
             "client_id": biz, "email": "mallory@example.nz", "token": token(),
@@ -713,6 +721,7 @@ async fn an_owner_can_submit_no_command_against_another_owners_business() {
         "remove_rule",
         "resolve_duplicate",
         "set_ai_suggestions",
+        "set_history_sharing",
         "set_opening_balance",
     ]
     .into();
