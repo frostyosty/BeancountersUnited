@@ -1,0 +1,44 @@
+running 2 tests
+test owner_edits_are_private_until_the_owner_shares_them ... ok
+test m13_is_done ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered ou
+t; finished in 0.87s
+
+     Running tests\m15.rs (target\debug\deps\m15-2f2c150fa2091701.exe)   
+
+running 5 tests
+test the_server_itself_cant_sign_a_year_off ... oktest the_finalise_check
+_runs_the_pre_checks_without_finalising ... ok
+test m15_is_done ... FAILED
+test years_finalise_in_order_reopen_with_a_reason_and_keep_their_snapshot
+s ... ok
+test every_command_kind_respects_a_finalised_year ... ok
+
+failures:
+
+---- m15_is_done stdout ----
+
+thread 'm15_is_done' (19092) panicked at crates\server\tests\common\mod.r
+s:87:46:
+called `Result::unwrap()` on an `Err` value: Sqlx(Database(SqliteError { 
+code: 1546, message: "disk I/O error" }))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backt
+race
+
+
+failures:
+    m15_is_done
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtere
+d out; finished in 5.13s
+
+error: test failed, to rerun pass `-p acct-server --test m15`
+make[1]: *** [Makefile:15: test] Error 101
+make[1]: Leaving directory 'C:/Users/austen.tweed/AppData/Roaming/com.cod
+espace.apptauribrowser/lcode/workspaces/BeancountersUnited'
+make: *** [Makefile:21: check] Error 2
+
+Austen.Tweed@FATWKS02 MINGW64 ~/AppData/Roaming/com.codespace.apptauribro
+wser/lcode/workspaces/BeancountersUnited (master)
+$
