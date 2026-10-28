@@ -73,3 +73,7 @@ opt-level = 3
 # readable (file and line); stepping through variables in a debugger needs this raised locally.
 [profile.dev]
 debug = "line-tables-only"
+
+# Dependencies (Tauri's are huge) get no debug info at all; only our own crates keep line tables.
+[profile.dev.package."*"]
+debug = false

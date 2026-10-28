@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import { useSignIn } from "../auth";
 import { Icon } from "../lib/icons";
 import styles from "./LoginPage.module.css";
@@ -47,6 +48,9 @@ export function LoginPage({ id }: { id?: string }) {
       <button type="submit" className="primary" disabled={busy}>
         Sign in
       </button>
+      <p className="muted">
+        New here? <Link to="/signup">Sign up</Link>
+      </p>
     </form>
   );
 }
