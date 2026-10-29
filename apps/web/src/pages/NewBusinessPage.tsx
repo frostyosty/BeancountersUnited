@@ -56,13 +56,13 @@ export function NewBusinessPage() {
         title="Set up a business"
         subtitle="A sole trader, with a 31 March year end."
       />
-      <form onSubmit={submit} className="form">
-        <label>
-          Business name
+      <form onSubmit={submit} className="form narrow">
+        <label className="field">
+          <span>Business name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
-        <label>
-          Started on
+        <label className="field">
+          <span>Started on</span>
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
         </label>
         <label>
@@ -71,12 +71,12 @@ export function NewBusinessPage() {
         </label>
         {registered && (
           <>
-            <label>
-              Registered from
+            <label className="field">
+              <span>Registered from</span>
               <input type="date" value={gstFrom} onChange={(e) => setGstFrom(e.target.value)} required />
             </label>
-            <label>
-              How often you file
+            <label className="field">
+              <span>How often you file</span>
               <select value={frequency} onChange={(e) => setFrequency(e.target.value as Frequency)}>
                 {FREQUENCIES.map((f) => (
                   <option key={f.value} value={f.value}>

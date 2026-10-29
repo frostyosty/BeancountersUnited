@@ -35,7 +35,7 @@ export function Layout() {
             <ThemeToggle className={styles.tool} />
             <NavLink to="/settings/account" className={styles.user}>
               <Icon name="nav.account" className={styles.icon} />
-              {me.display_name} <span className={styles.role}>{me.role}</span>
+              {me.display_name} <span className={styles.role}>{me.role.replace(/_/g, " ")}</span>
             </NavLink>
             <button type="button" className={`ghost sm ${styles.tool}`} onClick={() => void signOut()}>
               <Icon name="nav.signout" />

@@ -65,6 +65,17 @@ div.error[role="alert"] ul {
   gap: var(--space-3);
 }
 
+/* A column stretches its children, which made a form's button as wide as the page. */
+.form > button,
+.form > a.button {
+  align-self: flex-start;
+}
+
+/* Keeps a short form (sign-up, invite) from stretching across a wide screen. */
+.narrow {
+  max-width: 28rem;
+}
+
 .row {
   display: flex;
   align-items: flex-end;

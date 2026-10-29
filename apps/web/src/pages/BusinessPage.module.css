@@ -1,6 +1,9 @@
 .areas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  /* min() lets a card shrink below 17rem on a phone instead of pushing the page sideways. The cap
+     stops the three cards stretching into wide, mostly empty boxes on a big screen. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  max-width: 72rem;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
@@ -33,14 +36,60 @@
 }
 
 .drop {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3);
+  min-height: 7rem;
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
   background: var(--surface-sunken);
   border: 2px dashed var(--border-strong);
   border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
 }
+
+.drop:hover,
+.over {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.drop:focus-within {
+  box-shadow: var(--ring);
+}
+
+/* The real input stays in the page for keyboards and screen readers; the label is what people see and click. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.42rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 550;
+}
+
+.blurb {
+  flex-grow: 1;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
 
 .results {
   margin-top: var(--space-2);

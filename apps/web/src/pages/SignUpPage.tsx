@@ -63,17 +63,17 @@ export function SignUpPage() {
       <p className="muted">
         For sole traders. Upload your bank statements and see the tax you'd pay, then bring it down.
       </p>
-      <form onSubmit={submit} className="form">
-        <label>
-          Your name
+      <form onSubmit={submit} className="form narrow">
+        <label className="field">
+          <span>Your name</span>
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" required />
         </label>
-        <label>
-          Email
+        <label className="field">
+          <span>Email</span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
         </label>
-        <label>
-          Password (at least 10 characters)
+        <label className="field">
+          <span>Password (at least 10 characters)</span>
           <input
             type="password"
             value={password}
@@ -82,12 +82,12 @@ export function SignUpPage() {
             required
           />
         </label>
-        <label>
-          Business name
+        <label className="field">
+          <span>Business name</span>
           <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
         </label>
-        <label>
-          Started on
+        <label className="field">
+          <span>Started on</span>
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
         </label>
         <label>
@@ -96,12 +96,12 @@ export function SignUpPage() {
         </label>
         {registered && (
           <>
-            <label>
-              Registered from
+            <label className="field">
+              <span>Registered from</span>
               <input type="date" value={gstFrom} onChange={(e) => setGstFrom(e.target.value)} required />
             </label>
-            <label>
-              How often you file
+            <label className="field">
+              <span>How often you file</span>
               <select value={frequency} onChange={(e) => setFrequency(e.target.value as Frequency)}>
                 {FREQUENCIES.map((f) => (
                   <option key={f.value} value={f.value}>

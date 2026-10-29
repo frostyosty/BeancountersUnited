@@ -1,7 +1,7 @@
 import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
-import { type ChangeEvent, type FormEvent, useState } from "react";
+import { type ChangeEvent, type DragEvent, type FormEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { ChangesButton } from "../components/ChangesButton";
@@ -13,7 +13,7 @@ import { Icon } from "../lib/icons";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useBusiness, useTax } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
-import { PageHeader } from "../ui";
+import { Field, PageHeader } from "../ui";
 import styles from "./BusinessPage.module.css";
 
 /**
@@ -71,10 +71,10 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
           <h2 id="submit-heading">
             <Icon name="business.submit" fallback="📨" /> Submit to IRD
           </h2>
+          <p className={styles.blurb}>Filing with IRD is coming. Until then, this shows what you'd file.</p>
           <button type="button" disabled>
             Submit
           </button>
-          <p className="muted">Filing with IRD is coming. Until then, this shows what you'd file.</p>
         </section>
       </div>
 
@@ -118,21 +118,20 @@ function InviteAccountant({ clientId }: { clientId: string }) {
         <Icon name="business.invite" fallback="🤝" /> Invite your accountant
       </h2>
       <p className="muted">They'll be able to see and work on this business. Nobody else can.</p>
-      <form onSubmit={submit} className="form">
-        <label>
-          Their email
+      <form onSubmit={submit} className="form narrow">
+        <Field label="Their email">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
+        </Field>
         <button type="submit" disabled={email.trim() === "" || invite.isPending}>
           Make an invite link
         </button>
         <ErrorMessage error={invite.error} />
       </form>
       {link && (
-        <p role="status">
-          We don't email it yet, so send them this link yourself. It works once, for 14 days:{" "}
+        <div role="status" className="form narrow">
+          <p>We don't email it yet, so send them this link yourself. It works once, for 14 days:</p>
           <input readOnly value={link} aria-label="Invite link" onFocus={(e) => e.target.select()} />
-        </p>
+        </div>
       )}
     </section>
   );
@@ -144,10 +143,23 @@ function Upload({ clientId }: { clientId: string }) {
   const upload = useCommand([keys.business(clientId)]);
   const [results, setResults] = useState<UploadResult[]>([]);
   const [busy, setBusy] = useState(false);
+  const [over, setOver] = useState(false);
 
-  const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onPicked = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    void readFiles(files);
+  };
+
+  const onDrop = (e: DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setOver(false);
+    if (!busy) {
+      void readFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const readFiles = async (files: File[]) => {
     if (files.length === 0) {
       return;
     }
@@ -171,9 +183,28 @@ function Upload({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <label className={styles.drop}>
-        <span>Choose statement files: OFX, QIF or CSV</span>
-        <input type="file" multiple accept=".ofx,.qfx,.qif,.csv,.txt" onChange={(e) => void onFiles(e)} disabled={busy} />
+      <label
+        className={`${styles.drop} ${over ? styles.over : ""}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={onDrop}
+      >
+        <input
+          type="file"
+          multiple
+          accept=".ofx,.qfx,.qif,.csv,.txt"
+          onChange={onPicked}
+          disabled={busy}
+          className={styles.fileInput}
+          aria-label="Choose statement files: OFX, QIF or CSV"
+        />
+        <span className={styles.dropButton} aria-hidden="true">
+          <Icon name="business.upload" fallback="📤" /> Choose files
+        </span>
+        <span className="muted">or drop them here. OFX, QIF or CSV.</span>
       </label>
       {busy && <p className="muted">Reading your statements…</p>}
       {results.length > 0 && (
@@ -203,7 +234,7 @@ function TaxFigure({ tax, clientId }: { tax: TaxPosition; clientId: string }) {
         ${formatMoney(tax.total)}
         <ChangesButton figure={{ label: "tax to pay", figure: "tax" }} />
       </p>
-      <p>
+      <p className={styles.blurb}>
         The most you could owe. Anything not sorted yet is counted the safe way: money in as income, and spending as claiming nothing.
         Save tax to bring it down.
       </p>
@@ -345,14 +376,14 @@ function OpeningBalanceForm({ account, clientId }: { account: BankAccountView; c
     set.mutate({ kind: "set_opening_balance", payload: { bank_account_id: account.id, balance: cents } });
   };
   return (
-    <form onSubmit={submit} className="form-row">
-      <label>
-        This account's first statement starts late. What was its balance when the business started?{" "}
+    <form onSubmit={submit} className="form narrow">
+      <p>This account's first statement starts late. What was its balance when the business started?</p>
+      <div className="row">
         <input value={text} onChange={(e) => setText(e.target.value)} inputMode="decimal" aria-label="Opening balance" />
-      </label>
-      <button type="submit" disabled={cents === null || set.isPending}>
-        Save balance
-      </button>
+        <button type="submit" disabled={cents === null || set.isPending}>
+          Save balance
+        </button>
+      </div>
       <ErrorMessage error={set.error} />
     </form>
   );
