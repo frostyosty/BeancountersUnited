@@ -822,5 +822,23 @@
       "type": "emoji",
       "value": "🧾"
     }
+  },
+  "walkthrough": {
+    "title": {
+      "type": "emoji",
+      "value": "🎬"
+    },
+    "file": {
+      "type": "emoji",
+      "value": "📄"
+    },
+    "sorted": {
+      "type": "emoji",
+      "value": "☕"
+    },
+    "filed": {
+      "type": "emoji",
+      "value": "🎉"
+    }
   }
 }

@@ -110,3 +110,21 @@
 .account {
   margin-bottom: var(--space-3);
 }
+
+/* A new owner's screen: the walkthrough sits below the three cards, or beside them on a wide screen. */
+.withWalkthrough {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.withWalkthrough > .areas {
+  margin-bottom: 0;
+}
+
+@media (min-width: 88rem) {
+  .withWalkthrough {
+    grid-template-columns: minmax(0, 1fr) 27rem;
+    align-items: start;
+  }
+}

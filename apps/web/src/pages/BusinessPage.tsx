@@ -15,6 +15,7 @@ import { keys, useBusiness, useTax } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import { Field, PageHeader } from "../ui";
 import styles from "./BusinessPage.module.css";
+import { Walkthrough } from "./Walkthrough";
 
 /**
  * The owner's screen (PLAN.md M10): upload bank statements, see the tax to pay if submitted, and
@@ -35,6 +36,8 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
   }
   const b = business.data;
   const canEdit = can(me, "staff");
+  // A new owner sees how the three steps go until their first statement is in.
+  const showWalkthrough = isOwner(me) && b.bank_accounts.length === 0;
   return (
     <>
       <PageHeader
@@ -51,31 +54,34 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
         subtitle={isOwner(me) ? "Overview" : undefined}
       />
 
-      <div className={styles.areas}>
-        <section className={styles.area} aria-labelledby="upload-heading">
-          <h2 id="upload-heading">
-            <Icon name="business.upload" fallback="📤" /> Upload bank statements
-          </h2>
-          {canEdit ? <Upload clientId={clientId} /> : <p className="muted">Viewers can't upload.</p>}
-        </section>
+      <div className={showWalkthrough ? styles.withWalkthrough : undefined}>
+        <div className={styles.areas}>
+          <section className={styles.area} aria-labelledby="upload-heading">
+            <h2 id="upload-heading">
+              <Icon name="business.upload" fallback="📤" /> Upload bank statements
+            </h2>
+            {canEdit ? <Upload clientId={clientId} /> : <p className="muted">Viewers can't upload.</p>}
+          </section>
 
-        <section className={styles.area} aria-labelledby="tax-heading">
-          <h2 id="tax-heading">
-            <Icon name="business.tax" fallback="💰" /> Tax to pay if submitted
-          </h2>
-          <ErrorMessage error={tax.error} />
-          {tax.data ? <TaxFigure tax={tax.data} clientId={clientId} /> : !tax.error && <p className="muted">Working it out…</p>}
-        </section>
+          <section className={styles.area} aria-labelledby="tax-heading">
+            <h2 id="tax-heading">
+              <Icon name="business.tax" fallback="💰" /> Tax to pay if submitted
+            </h2>
+            <ErrorMessage error={tax.error} />
+            {tax.data ? <TaxFigure tax={tax.data} clientId={clientId} /> : !tax.error && <p className="muted">Working it out…</p>}
+          </section>
 
-        <section className={styles.area} aria-labelledby="submit-heading">
-          <h2 id="submit-heading">
-            <Icon name="business.submit" fallback="📨" /> Submit to IRD
-          </h2>
-          <p className={styles.blurb}>Filing with IRD is coming. Until then, this shows what you'd file.</p>
-          <button type="button" disabled>
-            Submit
-          </button>
-        </section>
+          <section className={styles.area} aria-labelledby="submit-heading">
+            <h2 id="submit-heading">
+              <Icon name="business.submit" fallback="📨" /> Submit to IRD
+            </h2>
+            <p className={styles.blurb}>Filing with IRD is coming. Until then, this shows what you'd file.</p>
+            <button type="button" disabled>
+              Submit
+            </button>
+          </section>
+        </div>
+        {showWalkthrough && <Walkthrough />}
       </div>
 
       <h2>

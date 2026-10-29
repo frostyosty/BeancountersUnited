@@ -130,4 +130,25 @@ describe("business screen", () => {
       payload: { bank_account_id: "a3", balance: 100000 },
     });
   });
+  it("shows a new owner the walkthrough until their first statement is in", async () => {
+    const owner = { id: "u9", username: "ana", display_name: "Ana Owner", role: "business_owner" as const };
+    const empty: BusinessView = { ...business, bank_accounts: [], ird_payments: [] };
+    stubApi({
+      "GET /api/me": () => owner,
+      "GET /api/businesses/b1": () => empty,
+      "GET /api/businesses/b1/tax": () => tax,
+    });
+    renderApp(<App />, "/businesses/b1");
+    expect(await screen.findByText(/See how it works/)).toBeTruthy();
+    cleanup();
+
+    stubApi({
+      "GET /api/me": () => owner,
+      "GET /api/businesses/b1": () => business,
+      "GET /api/businesses/b1/tax": () => tax,
+    });
+    renderApp(<App />, "/businesses/b1");
+    await screen.findByText(/rimu.csv: 29 Aug 2025/);
+    expect(screen.queryByText(/See how it works/)).toBeNull();
+  });
 });

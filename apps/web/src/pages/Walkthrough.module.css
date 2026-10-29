@@ -1,0 +1,327 @@
+/* One 14-second timeline drives everything. The pointer clicks at 14% (Choose files), 42% (Save tax)
+   and 80% (Submit); each piece of the mock appears just after its click, and all of it resets at 96%. */
+
+.walkthrough {
+  --loop: 14s;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.caption {
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.lede {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.stage {
+  position: relative;
+  max-width: 36rem;
+  aspect-ratio: 16 / 10;
+  min-height: 13rem;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.72rem;
+  user-select: none;
+}
+
+/* ---- The three mini cards ---- */
+
+.card {
+  position: absolute;
+  top: 4%;
+  width: 30.67%;
+  height: 92%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+}
+
+.c1 {
+  left: 2%;
+  animation: active1 var(--loop) infinite;
+}
+
+.c2 {
+  left: 34.67%;
+  animation: active2 var(--loop) infinite;
+}
+
+.c3 {
+  left: 67.33%;
+  animation: active3 var(--loop) infinite;
+}
+
+.step {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.button {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-weight: 550;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.b1 {
+  animation: press1 var(--loop) infinite;
+}
+
+.b2 {
+  animation: press2 var(--loop) infinite;
+}
+
+.b3 {
+  animation: press3 var(--loop) infinite;
+}
+
+/* ---- What each click produces ---- */
+
+.file,
+.read,
+.sorted,
+.filed {
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.file {
+  align-self: flex-start;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  animation: fileIn var(--loop) infinite;
+}
+
+.read {
+  color: var(--text-muted);
+  animation: readIn var(--loop) infinite;
+}
+
+.figures {
+  position: relative;
+  height: 1.6em;
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.f1,
+.f2,
+.f3 {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.f1 {
+  animation: fig1 var(--loop) infinite;
+}
+
+.f2 {
+  animation: fig2 var(--loop) infinite;
+}
+
+.f3 {
+  animation: fig3 var(--loop) infinite;
+}
+
+.sorted {
+  color: var(--text-muted);
+  animation: sortedIn var(--loop) infinite;
+}
+
+.filed {
+  align-self: flex-start;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 650;
+  animation: filedIn var(--loop) infinite;
+}
+
+/* ---- The pointer ---- */
+
+.pointer {
+  position: absolute;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  animation: move var(--loop) infinite;
+}
+
+.pointer svg {
+  display: block;
+  margin: -1px 0 0 -1px;
+  fill: var(--text);
+  stroke: var(--surface-raised);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.3));
+}
+
+.ripple {
+  position: absolute;
+  left: -0.7rem;
+  top: -0.7rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  animation: ripple var(--loop) infinite;
+}
+
+/* ---- The written steps under the animation ---- */
+
+.steps {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+/* ---- Keyframes ---- */
+
+@keyframes move {
+  0% { left: 58%; top: 98%; opacity: 0; }
+  4% { opacity: 1; }
+  12%, 26% { left: 17.33%; top: 80%; }
+  38%, 66% { left: 50%; top: 80%; }
+  76%, 92% { left: 82.67%; top: 80%; opacity: 1; }
+  96%, 100% { left: 82.67%; top: 80%; opacity: 0; }
+}
+
+@keyframes ripple {
+  0%, 13.5%, 17%, 41.5%, 45%, 79.5%, 83%, 100% { opacity: 0; transform: scale(0.2); }
+  14%, 42%, 80% { opacity: 0.9; transform: scale(0.4); }
+  16.5%, 44.5%, 82.5% { opacity: 0; transform: scale(1.8); }
+}
+
+@keyframes press1 {
+  0%, 13%, 15.5%, 100% { transform: translateX(-50%) scale(1); }
+  14% { transform: translateX(-50%) scale(0.9); }
+}
+
+@keyframes press2 {
+  0%, 41%, 43.5%, 100% { transform: translateX(-50%) scale(1); }
+  42% { transform: translateX(-50%) scale(0.9); }
+}
+
+@keyframes press3 {
+  0%, 79%, 81.5%, 100% { transform: translateX(-50%) scale(1); }
+  80% { transform: translateX(-50%) scale(0.9); }
+}
+
+@keyframes active1 {
+  0%, 6%, 32%, 100% { border-color: var(--border); }
+  10%, 28% { border-color: var(--accent); }
+}
+
+@keyframes active2 {
+  0%, 32%, 68%, 100% { border-color: var(--border); }
+  36%, 64% { border-color: var(--accent); }
+}
+
+@keyframes active3 {
+  0%, 68%, 96%, 100% { border-color: var(--border); }
+  72%, 92% { border-color: var(--accent); }
+}
+
+@keyframes fileIn {
+  0%, 16% { opacity: 0; transform: translateY(-0.6rem); }
+  20%, 94% { opacity: 1; transform: none; }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes readIn {
+  0%, 22% { opacity: 0; }
+  25%, 94% { opacity: 1; }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes fig1 {
+  0%, 48% { opacity: 1; }
+  50%, 96% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fig2 {
+  0%, 48% { opacity: 0; }
+  50%, 56% { opacity: 1; }
+  58%, 100% { opacity: 0; }
+}
+
+@keyframes fig3 {
+  0%, 56% { opacity: 0; }
+  58%, 94% { opacity: 1; }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes sortedIn {
+  0%, 45% { opacity: 0; transform: translateX(-0.4rem); }
+  48%, 94% { opacity: 1; transform: none; }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes filedIn {
+  0%, 82% { opacity: 0; transform: scale(0.6); }
+  85% { opacity: 1; transform: scale(1.1); }
+  87%, 94% { opacity: 1; transform: none; }
+  98%, 100% { opacity: 0; }
+}
+
+/* Reduced motion: no pointer, and the mock shows how things look once all three steps are done. */
+@media (prefers-reduced-motion: reduce) {
+  .stage *,
+  .card {
+    animation: none !important;
+  }
+
+  .pointer {
+    display: none;
+  }
+
+  .file,
+  .read,
+  .sorted,
+  .filed,
+  .f3 {
+    opacity: 1;
+  }
+}
