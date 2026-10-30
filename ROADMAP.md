@@ -16,6 +16,14 @@
   Fix, already done locally: I deleted and re-checked-out those two files, and they are now LF with no CRs. git status is clean   
   for them. Migrations 0003–0011 were already LF."
 
+
+
+
+🖥️
+Auto can we have that setting tucked away somehwere not on the main screen? in user settings down out of the way
+
+There are many places on the website you fil in "dates". in each of these instances, can 1 the modal be bigger, and 2 the modal be more intuitive? and 3 the modal be easier to navigate (years days months)
+
 ### On comp
 
 ### phone
