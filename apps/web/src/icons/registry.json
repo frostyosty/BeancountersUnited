@@ -764,6 +764,10 @@
       "type": "emoji",
       "value": "✖️"
     },
+    "calendar": {
+      "type": "emoji",
+      "value": "📅"
+    },
     "warning": {
       "type": "emoji",
       "value": "⚠️"
@@ -839,6 +843,18 @@
     "filed": {
       "type": "emoji",
       "value": "🎉"
+    },
+    "sorted2": {
+      "type": "emoji",
+      "value": "🚗"
+    },
+    "play": {
+      "type": "emoji",
+      "value": "▶️"
+    },
+    "pause": {
+      "type": "emoji",
+      "value": "⏸️"
     }
   }
 }
