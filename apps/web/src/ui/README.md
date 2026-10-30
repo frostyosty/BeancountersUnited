@@ -26,6 +26,9 @@ import { Button, Card, ConfirmDialog, PageHeader } from "../ui";
 - **Every modal is `<Modal>`, and every "are you sure?" is `<ConfirmDialog>` or `useConfirm()`.** Never use
   `window.confirm` or a hand-rolled overlay. Pass `busy` while the command runs. Close the dialog in `onSettled`,
   so a failure shows on the page rather than behind the backdrop.
+- **Dates:** every date the app asks for is `<DateField label="…" value={iso} onChange={setIso} />`, never
+  `<input type="date">`. It takes typed NZ dates (31/3/2026, 31 Mar 26) and opens a large calendar with month and
+  year grids; pass `min`/`max` to grey out days outside a year.
 - **Status:** use `<Badge tone=…>` for a word, `<Notice tone=…>` for a sentence, and `<EmptyState>` for an empty list.
 - **Colours:** use tokens only (`var(--accent)`, `var(--warn-soft)`…), so dark mode and the `.env` theme reach the
   new screen for free. Missing a colour? Add a token, with both its light and dark values.

@@ -15,7 +15,7 @@ import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft,
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useClientAssetClasses, useYearAssets } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
-import { useConfirm } from "../ui";
+import { DateField, useConfirm } from "../ui";
 import { useYearContext } from "./YearLayout";
 
 /** Everything an asset command can change: every year's figures and the class views. */
@@ -350,10 +350,7 @@ function AssetForm({
           <span>Residual value</span>
           <input value={residual} onChange={(e) => setResidual(e.target.value)} disabled={fixed} inputMode="decimal" />
         </label>
-        <label className="field">
-          <span>Acquired</span>
-          <input type="date" value={acquired} onChange={(e) => setAcquired(e.target.value)} disabled={fixed} required />
-        </label>
+        <DateField label="Acquired" value={acquired} onChange={setAcquired} disabled={fixed} required />
       </div>
       <label className="row">
         <input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} />
@@ -433,10 +430,7 @@ function DisposeForm({ assetId, name, chart, onDone }: { assetId: string; name: 
       <h2>Dispose of {name}</h2>
       <p className="muted">This posts the disposal journal and reposts the year's depreciation.</p>
       <div className="row">
-        <label className="field">
-          <span>Disposal date</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        </label>
+        <DateField label="Disposal date" value={date} onChange={setDate} required />
         <label className="field">
           <span>Proceeds</span>
           <input value={proceeds} onChange={(e) => setProceeds(e.target.value)} inputMode="decimal" />

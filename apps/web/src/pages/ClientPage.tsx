@@ -7,7 +7,7 @@ import { defaultFirstYear, formatDate, nextYear, previousYear } from "../lib/dat
 import { keys, useClient, usePractice } from "../lib/queries";
 import { Icon } from "../lib/icons";
 import { useCommand } from "../lib/useCommand";
-import { Badge, Button, ButtonLink, EmptyState, PageHeader } from "../ui";
+import { Badge, Button, ButtonLink, DateField, EmptyState, PageHeader } from "../ui";
 
 export function ClientPage() {
   const { clientId = "" } = useParams();
@@ -151,14 +151,8 @@ function NewYearForm({ client }: { client: ClientDetail }) {
           </p>
           {showInputs && (
             <div className="row">
-              <label className="field">
-                <span>Start</span>
-                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
-              </label>
-              <label className="field">
-                <span>End</span>
-                <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
-              </label>
+              <DateField label="Start" value={start} onChange={setStart} required />
+              <DateField label="End" value={end} onChange={setEnd} min={start || undefined} required />
             </div>
           )}
         </>

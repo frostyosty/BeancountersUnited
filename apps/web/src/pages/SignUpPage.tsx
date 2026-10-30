@@ -6,6 +6,7 @@ import { newId } from "../lib/id";
 import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { DateField } from "../ui";
 import { FREQUENCIES, type Frequency } from "./NewBusinessPage";
 
 /**
@@ -86,20 +87,14 @@ export function SignUpPage() {
           <span>Business name</span>
           <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
         </label>
-        <label className="field">
-          <span>Started on</span>
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
-        </label>
+        <DateField label="Started on" value={start} onChange={setStart} required />
         <label>
           <input type="checkbox" checked={registered} onChange={(e) => setRegistered(e.target.checked)} /> Registered
           for GST
         </label>
         {registered && (
           <>
-            <label className="field">
-              <span>Registered from</span>
-              <input type="date" value={gstFrom} onChange={(e) => setGstFrom(e.target.value)} required />
-            </label>
+            <DateField label="Registered from" value={gstFrom} onChange={setGstFrom} required />
             <label className="field">
               <span>How often you file</span>
               <select value={frequency} onChange={(e) => setFrequency(e.target.value as Frequency)}>

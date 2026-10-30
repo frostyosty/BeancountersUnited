@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyScheme, saveScheme, storedScheme } from "../lib/theme";
-import { ConfirmDialog, Modal, useConfirm } from ".";
+import { ConfirmDialog, DateField, Modal, useConfirm } from ".";
 
 afterEach(() => {
   cleanup();
@@ -95,6 +95,74 @@ describe("ConfirmDialog", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await vi.waitFor(() => expect(answers).toEqual([true, false]));
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+});
+
+describe("DateField", () => {
+  function Harness({ initial = "", min, max }: { initial?: string; min?: string; max?: string }) {
+    const [value, setValue] = useState(initial);
+    return (
+      <>
+        <DateField label="Disposal date" value={value} onChange={setValue} min={min} max={max} />
+        <output>{value}</output>
+      </>
+    );
+  }
+
+  it("reads a typed date the NZ way and tidies it on leaving the box", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const box = screen.getByLabelText("Disposal date");
+    await user.type(box, "31/3/2026");
+    expect(screen.getByRole("status").textContent).toBe("2026-03-31");
+    await user.tab();
+    expect(box).toHaveProperty("value", "31 Mar 2026");
+  });
+
+  it("flags a date that doesn't exist or is out of range, once they've left the box", async () => {
+    const user = userEvent.setup();
+    render(<Harness max="2026-03-31" />);
+    const box = screen.getByLabelText("Disposal date") as HTMLInputElement;
+    await user.type(box, "31/4/2026");
+    expect(screen.queryByText(/Enter a date like/)).toBeNull();
+    await user.tab();
+    expect(screen.getByText(/Enter a date like/)).toBeTruthy();
+    expect(box.validationMessage).toContain("Enter a date like");
+    await user.clear(box);
+    await user.type(box, "1/4/2026");
+    await user.tab();
+    expect(screen.getByText("Choose 31 Mar 2026 or earlier")).toBeTruthy();
+  });
+
+  it("picks a day from the calendar, jumping by year and month", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="2026-03-31" />);
+    await user.click(screen.getByRole("button", { name: "Choose Disposal date from a calendar" }));
+    const dialog = screen.getByRole("dialog", { name: /Disposal date/ });
+    expect(dialog.textContent).toContain("Tuesday 31 March 2026");
+    await user.click(screen.getByRole("button", { name: /^Year: 2026/ }));
+    await user.click(screen.getByRole("button", { name: "2019" }));
+    await user.click(screen.getByRole("button", { name: "June" }));
+    await user.click(screen.getByRole("button", { name: "Saturday 15 June 2019" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("2019-06-15");
+    expect(screen.getByLabelText("Disposal date")).toHaveProperty("value", "15 Jun 2019");
+  });
+
+  it("moves with the keyboard and won't offer days outside min and max", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="2025-04-02" min="2025-04-01" max="2026-03-31" />);
+    await user.click(screen.getByRole("button", { name: /from a calendar/ }));
+    expect(screen.getByRole("button", { name: "Monday 31 March 2025" })).toHaveProperty("disabled", true);
+    const day = screen.getByRole("button", { name: "Wednesday 2 April 2025" });
+    day.focus();
+    await user.keyboard("{ArrowDown}");
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute("aria-label")).toBe("Wednesday 9 April 2025"));
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("status").textContent).toBe("2025-04-09");
+    await user.click(screen.getByRole("button", { name: /from a calendar/ }));
+    await user.click(screen.getByRole("button", { name: /^Last day/ }));
+    expect(screen.getByRole("status").textContent).toBe("2026-03-31");
   });
 });
 

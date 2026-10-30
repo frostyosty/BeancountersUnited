@@ -4,6 +4,7 @@ export { Button, ButtonLink, buttonClass, type ButtonProps, type ButtonSize, typ
 export { Card, type CardProps } from "./Card";
 export { ConfirmDialog, useConfirm, type ConfirmDialogProps, type ConfirmOptions } from "./ConfirmDialog";
 export { cx } from "./cx";
+export { DateField, DatePicker, type DateFieldProps, type DatePickerProps } from "./DateField";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Field, type FieldProps } from "./Field";
 export { Modal, type ModalProps } from "./Modal";

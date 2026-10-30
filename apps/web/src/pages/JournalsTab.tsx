@@ -9,6 +9,7 @@ import { blankRow, describeJournalError, evaluate, type GridRow, normaliseCode }
 import { formatMoney } from "../lib/money";
 import { keys, useJournals } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { DateField } from "../ui";
 import styles from "./JournalsTab.module.css";
 import { useYearContext } from "./YearLayout";
 
@@ -83,10 +84,7 @@ function JournalEntry() {
     <form onSubmit={submit} className={`card ${styles.entry}`} aria-label="New journal">
       <h2>New journal</h2>
       <div className="row">
-        <label className="field">
-          <span>Date</span>
-          <input type="date" value={date} min={year.start} max={year.end} onChange={(ev) => setDate(ev.target.value)} required />
-        </label>
+        <DateField label="Date" value={date} min={year.start} max={year.end} onChange={setDate} required />
         <label className={`field ${styles.grow}`}>
           <span>Narration</span>
           <input value={narration} onChange={(ev) => setNarration(ev.target.value)} />
@@ -308,7 +306,7 @@ function ReverseButton({ journal, clientId }: { journal: JournalView; clientId: 
   }
   return (
     <span className={styles.confirm}>
-      <input type="date" aria-label="Reversal date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <DateField aria-label="Reversal date" value={date} onChange={setDate} />
       <button
         type="button"
         className="primary"
