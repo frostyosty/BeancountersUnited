@@ -3,6 +3,7 @@ import { useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { useCommand } from "../lib/useCommand";
 import { Icon } from "../lib/icons";
+import { ThemeToggle } from "../ui";
 
 /** The signed-in user's own login: the "My account" tab of Settings. */
 export function AccountPage() {
@@ -58,6 +59,13 @@ export function AccountPage() {
           </button>
         </div>
       </form>
+      <section className="card form">
+        <h2>Appearance</h2>
+        <p>Colours: Auto follows your device, or pick Light or Dark. Remembered in this browser only.</p>
+        <div>
+          <ThemeToggle />
+        </div>
+      </section>
     </>
   );
 }

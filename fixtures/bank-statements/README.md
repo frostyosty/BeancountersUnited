@@ -157,3 +157,5 @@ QIF `!Type:CCard`, 9 transactions, 30 Aug to 28 Sep. It follows the OFX for the 
 
 Expected after importing all three: 16 distinct transactions on XXXX-XXXX-XXXX-4417 (derived balance
 -403.04 at 30 Sep) and 7 on XXXX-XXXX-XXXX-8802 (-1087.55 at 14 Sep).
+
+More awkward OFX files (encodings, line endings, bad values, refused files) are in `ofx-edge/`; see its README.

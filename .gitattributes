@@ -6,3 +6,6 @@ release text eol=lf
 # The PDF template is compiled into the binary; its bytes decide the PDF bytes (ADR 010).
 *.typ text eol=lf
 crates/store/migrations/*.sql text eol=lf
+
+# OFX edge-case fixtures hold deliberate CR-only, CRLF and Windows-1252 bytes: never convert them.
+fixtures/bank-statements/ofx-edge/* -text

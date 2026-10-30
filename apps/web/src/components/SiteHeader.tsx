@@ -1,7 +1,6 @@
 import { Link } from "react-router";
 import { Icon } from "../lib/icons";
 import styles from "../pages/HomePage.module.css";
-import { ThemeToggle } from "../ui";
 
 /** The logged-out site's header, shared by the home, product and pricing pages. */
 export function SiteHeader() {
@@ -16,7 +15,6 @@ export function SiteHeader() {
         <Link to="/about">About</Link>
         <Link to="/contact">Contact</Link>
         <Link to="/accountants">For Accountants</Link>
-        <ThemeToggle className={styles.navTool} />
         <Link to="/#signin" className={styles.navCta}>
           Sign in
         </Link>

@@ -43,15 +43,6 @@
   color: #fff;
 }
 
-.links .navTool {
-  color: #c9d6ee;
-}
-
-.links .navTool:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .links .navCta {
   color: #fff;
   padding: 0.35rem 0.9rem;

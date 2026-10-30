@@ -66,7 +66,7 @@ export function HistoryPanel() {
     return (
       <aside className={`${styles.panel} ${styles.collapsed}`} aria-label="Who changed what">
         <button type="button" onClick={toggle} aria-expanded={false}>
-          <Icon name="history.changes" fallback="🕘" /> Show changes
+          <Icon name="history.changes" fallback="🕘" /> <span className={styles.tabLabel}>Show changes</span>
         </button>
       </aside>
     );

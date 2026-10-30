@@ -4,7 +4,6 @@ import { useViewAs } from "../lib/viewAs";
 import { HistoryProvider } from "../lib/history";
 import { Icon } from "../lib/icons";
 import { useLiveRefresh } from "../lib/sync";
-import { ThemeToggle } from "../ui";
 import { HistoryPanel } from "./HistoryPanel";
 import styles from "./Layout.module.css";
 
@@ -32,7 +31,6 @@ export function Layout() {
             </NavLink>
           </nav>
           <div className={styles.tools}>
-            <ThemeToggle className={styles.tool} />
             <NavLink to="/settings/account" className={styles.user}>
               <Icon name="nav.account" className={styles.icon} />
               {me.display_name} <span className={styles.role}>{me.role.replace(/_/g, " ")}</span>

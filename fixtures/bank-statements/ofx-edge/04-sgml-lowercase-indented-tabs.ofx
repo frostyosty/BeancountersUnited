@@ -1,0 +1,35 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<ofx>
+	<bankmsgsrsv1>
+		<stmttrnrs>
+			<stmtrs>
+				<curdef>NZD
+				<bankacctfrom>
+					<bankid>99
+					<acctid>99-1001-0000123-00
+				</bankacctfrom>
+				<banktranlist>
+					<stmttrn>
+						<dtposted>20250811
+						<trnamt>-3.20
+						<fitid>E1
+						<name>PIKORUA CAFE
+					</stmttrn>
+				</banktranlist>
+				<ledgerbal>
+					<balamt>96.80
+					<dtasof>20250831
+				</ledgerbal>
+			</stmtrs>
+		</stmttrnrs>
+	</bankmsgsrsv1>
+</ofx>
