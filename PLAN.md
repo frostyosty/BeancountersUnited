@@ -344,7 +344,7 @@ Work is split into agents, in four waves; the copy-paste prompts are in `M18-PRO
 Done when: every fixture upload shows the proof card, with the excerpt from the uploaded file; the clean set agrees; each single-fault fixture names its fault as the best explanation with the exact amount, and applying its fix makes the card agree; the two-fault fixture is explained in full; and the printed card fits on one A4 page.
 
 ## M19 — Admin "view as" with real impersonation
-Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only preview first (the web app swaps the role it renders for, labelled with a "Viewing as …" banner; the server still enforces the real role). This milestone replaces it with the real thing.
+Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only preview first (the web app swaps the role it renders for, labelled with a "Viewing as …" banner; the server still enforces the real role). This milestone replaces it with the real thing. The agent prompts are in `M19-PROMPTS.md` (five agents, four waves).
 - Write an ADR first (`docs/decisions/`) covering who may impersonate, what it may do, and how it's audited. Starting position:
   - Only an `overseer` may impersonate, and only a user or role below them. Nobody can impersonate an overseer.
   - Impersonating is a session state, not a login: the session keeps the overseer's identity (`user_id`) and adds `acting_as` (a user id, or a role with a business for the owner view). Ending it returns to the overseer's own view.
