@@ -290,7 +290,7 @@ Every upload checks itself. The owner sees proof that the books agree with the b
 
 **How a difference is tracked down.** Testing the difference against every line comes second. First find *where* the books and the bank part ways. The bank states a balance at many points: each statement's opening and closing balance, and every running balance in files that have one. Walk those checkpoints in date order and compare the ledger's balance at each one. The last checkpoint that agrees and the first that doesn't bracket the fault, usually to one statement or a few days. The suspects then look only inside that window, so they run fast and give specific answers. Where a file states only a closing balance, the window is the whole statement. The shape also helps: a jump at one checkpoint points to one bad line, a constant difference from the very start points to the opening balance, and a difference that grows points to a pattern such as a sign or a cut-off.
 
-Work is split into agents. Agents 1 and 2 can run in parallel, then 3 and 4, then 5–7.
+Work is split into agents, in four waves; the copy-paste prompts are in `M18-PROMPTS.md`. Agent 7 is split there: its fixtures come first (7a) and its done check last (7b).
 
 ### Agent 1: checkpoints and the window (core, pure)
 - `acct_core::reconcile`: the checkpoints (date, the stated balance, and where it came from: the statement and the span in its file), the ledger's balance at each, and the window `{ last_agrees, first_differs, difference }`, plus how the difference moves from one checkpoint to the next.
