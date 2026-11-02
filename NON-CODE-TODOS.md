@@ -120,6 +120,10 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
 - [ ] Whether to ship starter sets for trusts or partnerships too (only company and sole trader exist,
       2026-10-26). Each needs its own chart, template and mapping wording, and the presentation answers
       recorded in `docs/domain.md` first.
+- [ ] M18 keeps each uploaded statement file as evidence. Decide how long it's kept, and confirm that
+      deleting a business deletes its files too (`PLAN.md`, M18 Agent 2; record it in `docs/security.md`).
+- [ ] M18 suspect thresholds: is 3 days right for "same amount, nearby date" duplicates, and for date
+      cut-offs, with the NZ banks' posting delays?
 
 ## M12 security (`docs/security.md`): before real data goes in
 - [ ] Offshore storage: production and staging run in Fly.io's Sydney region (`fly.toml`), and backups go

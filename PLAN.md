@@ -283,6 +283,67 @@ Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only p
 
 Done when: a test shows an overseer acting as staff sees only what that staff user sees (including owner edits hidden by the owner's sign-off setting), can't finalise, reopen or file, and that every command and the start and end of the session appear in the log with both identities.
 
+## M18 — Every upload reconciles, or says why
+Status: not started. Planned 2026-11-03. Builds on M10's per-file balance check (`Statement::balance_check`) and duplicate keys, and on the bank reconciliation already in `crates/server/src/reconcile.rs` (M15).
+
+Every upload checks itself. The owner sees proof that the books agree with the bank: two cutouts side by side, the bank file's balance and the ledger's balance on the same date, on a card they can print. When they don't agree, the app works out the likely reasons by itself, shows them biggest first, and offers a fix that previews the corrected balance before anything changes.
+
+**How a difference is tracked down.** Testing the difference against every line comes second. First find *where* the books and the bank part ways. The bank states a balance at many points: each statement's opening and closing balance, and every running balance in files that have one. Walk those checkpoints in date order and compare the ledger's balance at each one. The last checkpoint that agrees and the first that doesn't bracket the fault, usually to one statement or a few days. The suspects then look only inside that window, so they run fast and give specific answers. Where a file states only a closing balance, the window is the whole statement. The shape also helps: a jump at one checkpoint points to one bad line, a constant difference from the very start points to the opening balance, and a difference that grows points to a pattern such as a sign or a cut-off.
+
+Work is split into agents. Agents 1 and 2 can run in parallel, then 3 and 4, then 5–7.
+
+### Agent 1: checkpoints and the window (core, pure)
+- `acct_core::reconcile`: the checkpoints (date, the stated balance, and where it came from: the statement and the span in its file), the ledger's balance at each, and the window `{ last_agrees, first_differs, difference }`, plus how the difference moves from one checkpoint to the next.
+- Move the arithmetic of `crates/server/src/reconcile.rs` into core. The server only loads the data. Output is byte-stable: sorted, with no HashMaps.
+- Property test: put one fault into a random ledger, and the window always contains it.
+
+### Agent 2: keep the evidence (the original file)
+- Migration 0012: `statement_files` (statement id, SHA-256, bytes, media type). Uploading the same file again stores nothing new.
+- The parsers record the source span of each balance they read: OFX `<LEDGERBAL>` (`<BALAMT>`, `<DTASOF>`), the QIF opening entry, a CSV's "Closing balance" row or a running balance cell.
+- `GET /api/statements/{id}/excerpt`: about six lines of the original text around a span, with the span marked, plus the file's name and SHA-256. Access checks as for the statement.
+- Statements uploaded before M18 have no file kept. Their cutout says so and shows the stored figure.
+
+### Agent 3: check on upload, and the proof card
+- `import_statement`'s result carries the reconciliation for that account at the statement's closing date, and at the balance date (31 March) when the statement spans it. This is read-only work after apply, inside the same transaction; there's no new command and no new write path.
+- At 31 March: use a statement ending that day if there is one, else the running balance at the end of that day if a line gives one, else the nearest checkpoint before it, labelled as such.
+- The **Bank vs books** modal opens after every upload, and from each bank account and the Reconcile tab:
+  - Left cutout, "Your bank's file says": the excerpt from Agent 2 with the balance highlighted, the file name, the date and the start of the SHA-256.
+  - Right cutout, "Your books say": the ledger's balance on the bank account at the end of the same date, with the few lines before it.
+  - Between them: "Agrees ✅" or "Out by $412.50 ⚠️", and a link to the findings (Agent 6).
+  - Side by side on a desktop, stacked on a phone. A print stylesheet makes one A4 page with the business, the account, the date, when it was printed and who printed it. No emoji in the printed figures.
+- Cards use the card's own wording on both sides ("you owe $1,087.55").
+- Built from `ui/` (`Modal`, `Card`), tokens and `<Icon>`; money only through `money.ts`.
+
+### Agent 4: the suspects (core, pure)
+- A `Suspect` trait. Given the window, the lines, the journals, the statements and the checkpoints, a suspect returns zero or more `Finding { kind, explains: Money, confidence: Likely | Possible, evidence, fix }`. `evidence` refers to lines, journals and statements by id; `fix` is a suggested command, never applied by the suspect.
+- One module per suspect, each with its own fixture and tests. A new suspect is a new module and fixture, and nothing else changes. The first set, most common first:
+  1. **Duplicates.** Lines of the same amount within 3 days whose descriptions match once normalised, lines with the same bank transaction id (OFX `FITID`) in two files, and M10's `possible_duplicate` lines. It also catches overlapping downloads that M10's exact key missed because the bank formatted the description differently (OFX `NAME` against `MEMO`, cut-short CSV text) or one file used the posting date and the other the transaction date. A single duplicate equal to the difference ranks first; sets of them are left to Agent 5.
+  2. **Missing lines.** Days no statement covers inside the window, where the difference equals the change across them. Also a cut-short download: the file's own balance check fails at its end, or its last line stops short of its stated period.
+  3. **Wrong opening balance.** The difference is the same from the first checkpoint on, so the opening balance entered differs from the first statement's.
+  4. **Sign the wrong way.** The difference is twice a line, or twice a file's net: a card file read as a bank account, or a CSV's debit and credit columns read the wrong way round.
+  5. **Marked duplicate but isn't.** A line the owner marked as a duplicate with no other line of that amount within 3 days.
+  6. **Entries by hand.** Journals on the bank account with no statement line (M15's `journals_without_line`). Any equal to the difference rank first.
+  7. **Date cut-off.** A line the ledger dates after the checkpoint that the file lists before it, or the other way round.
+  8. **Wrong account.** The file's account number differs from the bank account's, or the difference equals the net of a file uploaded to another account.
+  9. **Amount read wrong.** The difference is 99 or 100 times a line (cents read as dollars), or the file's own running balance breaks at one row. Either our parser or the bank's file is wrong: tell the owner, and log it for us with the parser and row, never the content.
+  10. **Transposed digits.** Only for amounts a person typed (opening balances, journals by hand): the difference divides by 9 and swapping two digits gives it.
+
+### Agent 5: explain the whole difference (core, pure)
+- Find the smallest set of findings whose amounts add up exactly to the difference: an exact subset sum over at most 20 findings, ranked by confidence when there's more than one. If none is exact, rank by confidence and size and show what's left over.
+- `Diagnosis { difference, explained_by, remainder, other_findings }`, in a deterministic order, so the same books always give the same report.
+
+### Agent 6: tell the owner and the accountant
+- When an account is out, the modal leads with the best explanation in plain English, for example "These 3 lines look like they were uploaded twice. Removing them makes the books agree." Each has a **Fix it** button that runs an existing command (mark as duplicate, set the opening balance, upload the missing statement) and shows the balance afterwards, so the owner sees ✅ before confirming.
+- The other findings are in an expandable list, each linking to its lines.
+- Findings join M11's Save tax queue as detected items and M15's Reconcile tab. M13's history records that a fix came from a finding.
+- When nothing explains it: "We couldn't work out why. Between 3 Feb and 28 Feb your books and bank go out by $412.50." Then **Ask your accountant**, for an owner with a linked accountant.
+
+### Agent 7: fixtures and the done check
+- `fixtures/reconcile/`: a clean set of synthetic statements, one variant per suspect with that fault put in, and one with two faults together.
+- `crates/server/tests/m18.rs` (`m18_is_done`).
+
+Done when: every fixture upload shows the proof card, with the excerpt from the uploaded file; the clean set agrees; each single-fault fixture names its fault as the best explanation with the exact amount, and applying its fix makes the card agree; the two-fault fixture is explained in full; and the printed card fits on one A4 page.
+
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
