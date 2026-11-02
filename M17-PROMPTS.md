@@ -78,4 +78,4 @@ Don't commit.
 
 Check that the `known_gaps` test is gone or empty, that the ofx-edge README's "Known gaps" list is empty or says "None", and that `make check` passes. Then re-run the fixtures through the import screen by hand once: fixture 25 (truncated) and 20 (bank error) should each refuse with a message a business owner could act on.
 
-Note for the owner of PLAN.md: PLAN.md already has an "M17 — Admin 'view as' with real impersonation". Rename one of the two before work starts.
+Note: PLAN.md's "Admin 'view as' with real impersonation" was renamed from M17 to M19 (2026-11-03), so M17 is these OFX parser fixes.

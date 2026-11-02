@@ -269,20 +269,6 @@ Status: not started (takes in the old M8)
 
 Done when: a synthetic Xero export imports to a TB that matches the export's totals, with comparatives, and the chosen Classic client-years match to the dollar or every difference is explained in `docs/domain.md`.
 
-## M17 — Admin "view as" with real impersonation
-Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only preview first (the web app swaps the role it renders for, labelled with a "Viewing as …" banner; the server still enforces the real role). This milestone replaces it with the real thing.
-- Write an ADR first (`docs/decisions/`) covering who may impersonate, what it may do, and how it's audited. Starting position:
-  - Only an `overseer` may impersonate, and only a user or role below them. Nobody can impersonate an overseer.
-  - Impersonating is a session state, not a login: the session keeps the overseer's identity (`user_id`) and adds `acting_as` (a user id, or a role with a business for the owner view). Ending it returns to the overseer's own view.
-  - Every check in `access.rs` runs against the acting identity, so the overseer sees exactly what that person sees, including the Changes feed and what an owner has or hasn't shared with staff.
-  - **Read-only by default.** Writes while impersonating need an explicit "allow changes" toggle, last for the session, and are refused for sign-off style commands (`finalise_year`, `reopen_year`, `accept_invite`, `change_own_password`, `submit` to IRD) so an overseer can never sign or file as someone else.
-- Audit: `command_log` records both identities (`user_id` = the overseer, new `acting_as` column) so Changes says "Overseer (as Sam Staff)". Starting and ending a session are logged as commands (`start_impersonation`, `end_impersonation`, with a required reason), visible to the impersonated user in their own Changes.
-- Safety: sessions time out after 30 minutes; the UI shows a persistent banner with an End button; it's off for business owners' IRD-linked actions (M14) entirely.
-- Migration: `sessions.acting_as`, `command_log.acting_as` (append-only).
-- Replace the UI-only preview in Settings → Admin with the server-backed switcher, and delete the client-side role override.
-
-Done when: a test shows an overseer acting as staff sees only what that staff user sees (including owner edits hidden by the owner's sign-off setting), can't finalise, reopen or file, and that every command and the start and end of the session appear in the log with both identities.
-
 ## M18 — Every upload reconciles, or says why
 Status: not started. Planned 2026-11-03. Builds on M10's per-file balance check (`Statement::balance_check`) and duplicate keys, and on the bank reconciliation already in `crates/server/src/reconcile.rs` (M15).
 
@@ -343,6 +329,20 @@ Work is split into agents, in four waves; the copy-paste prompts are in `M18-PRO
 - `crates/server/tests/m18.rs` (`m18_is_done`).
 
 Done when: every fixture upload shows the proof card, with the excerpt from the uploaded file; the clean set agrees; each single-fault fixture names its fault as the best explanation with the exact amount, and applying its fix makes the card agree; the two-fault fixture is explained in full; and the printed card fits on one A4 page.
+
+## M19 — Admin "view as" with real impersonation
+Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only preview first (the web app swaps the role it renders for, labelled with a "Viewing as …" banner; the server still enforces the real role). This milestone replaces it with the real thing.
+- Write an ADR first (`docs/decisions/`) covering who may impersonate, what it may do, and how it's audited. Starting position:
+  - Only an `overseer` may impersonate, and only a user or role below them. Nobody can impersonate an overseer.
+  - Impersonating is a session state, not a login: the session keeps the overseer's identity (`user_id`) and adds `acting_as` (a user id, or a role with a business for the owner view). Ending it returns to the overseer's own view.
+  - Every check in `access.rs` runs against the acting identity, so the overseer sees exactly what that person sees, including the Changes feed and what an owner has or hasn't shared with staff.
+  - **Read-only by default.** Writes while impersonating need an explicit "allow changes" toggle, last for the session, and are refused for sign-off style commands (`finalise_year`, `reopen_year`, `accept_invite`, `change_own_password`, `submit` to IRD) so an overseer can never sign or file as someone else.
+- Audit: `command_log` records both identities (`user_id` = the overseer, new `acting_as` column) so Changes says "Overseer (as Sam Staff)". Starting and ending a session are logged as commands (`start_impersonation`, `end_impersonation`, with a required reason), visible to the impersonated user in their own Changes.
+- Safety: sessions time out after 30 minutes; the UI shows a persistent banner with an End button; it's off for business owners' IRD-linked actions (M14) entirely.
+- Migration: `sessions.acting_as`, `command_log.acting_as` (append-only).
+- Replace the UI-only preview in Settings → Admin with the server-backed switcher, and delete the client-side role override.
+
+Done when: a test shows an overseer acting as staff sees only what that staff user sees (including owner edits hidden by the owner's sign-off setting), can't finalise, reopen or file, and that every command and the start and end of the session appear in the log with both identities.
 
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.

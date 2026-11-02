@@ -46,7 +46,7 @@ export function useViewAs(): ViewAs {
 /**
  * Provides the signed-in user, or, when an admin previews another role, the user with that role.
  * It only changes what the UI shows. The server still checks every request as the real user, so
- * previewing never grants anything (real impersonation is planned in PLAN.md M17).
+ * previewing never grants anything (real impersonation is planned in PLAN.md M19).
  */
 export function ViewAsProvider({ me, children }: { me: Me; children: ReactNode }) {
   const [as, setAsState] = useState<Role | null>(() => read(me.role));
