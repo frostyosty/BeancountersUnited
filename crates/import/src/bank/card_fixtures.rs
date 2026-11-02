@@ -31,6 +31,10 @@ fn read(name: &str) -> Statement {
     read_statement(&bytes(name)).unwrap_or_else(|e| panic!("{name}: {e:?}"))
 }
 
+fn read_text(label: &str, text: &str) -> Statement {
+    read_statement(text.as_bytes()).unwrap_or_else(|e| panic!("{label}: {e:?}"))
+}
+
 fn d(s: &str) -> NaiveDate {
     s.parse().unwrap()
 }
@@ -197,5 +201,166 @@ fn windows_line_endings_and_a_bom_read_the_same() {
         let mut with_bom = b"\xEF\xBB\xBF".to_vec();
         with_bom.extend(text.as_bytes());
         assert_eq!(plain, read_statement(&with_bom).unwrap(), "{f}");
+    }
+}
+
+// One invented card, `9999`, spelled every way each card format can spell it. The OFX files are
+// in `ofx-edge/` (15, 16a to 16i), the QIF is `test-card-9999-short-mask-2025-08.qif`, and the
+// Pohutukawa CSVs are built here around one line on 4 August: WAXWING SUPPLIES LTD, 45.00.
+//
+// - OFX `ACCTID` in `CCACCTFROM`: the issuer's mask `XXXXXXXXXXXX9999` (15), stars and spaces
+//   (16a), last four only (16b in SGML, 16i in XML), a full number with dashes (16c) or spaces
+//   (16h), stars with no gaps (16e), lower-case `x` with dashes (16f), a short mask `****9999`
+//   (16g). A bank-style id in a card file (16d) stays the account it is, and a four-digit id in
+//   a bank file (16j) is not a card; both are tested in `tests/ofx_edge.rs`.
+// - QIF `!Type:CCard`: the card in the `!Account` name or, failing that, the opening entry's
+//   category, in any of these spellings except a bare four digits, which free text can't tell
+//   from a year (see `find_card`). The account is then left for the owner to pick.
+// - Pohutukawa CSV: the `Card number` preamble value, in any of these spellings.
+const CARD_9999: &str = "XXXX-XXXX-XXXX-9999";
+const QIF_9999: &str = "test-card-9999-short-mask-2025-08.qif";
+const OFX_9999: [&str; 9] = [
+    "15-card-sgml-masked.ofx",
+    "16a-card-stars-and-spaces.ofx",
+    "16b-card-last-four-only.ofx",
+    "16c-card-full-number.ofx",
+    "16e-card-stars-no-gaps.ofx",
+    "16f-card-lower-case-dashes.ofx",
+    "16g-card-short-mask.ofx",
+    "16h-card-full-number-spaces.ofx",
+    "16i-card-xml-last-four-only.ofx",
+];
+const CARD_SPELLINGS: [&str; 9] = [
+    "9999",
+    "****9999",
+    "XXXX 9999",
+    "XXXXXXXXXXXX9999",
+    "XXXX XXXX XXXX 9999",
+    "xxxx-xxxx-xxxx-9999",
+    "**** **** **** 9999",
+    "4000 0000 0000 9999",
+    "4000000000009999",
+];
+
+fn edge(name: &str) -> Statement {
+    read(&format!("ofx-edge/{name}"))
+}
+
+fn pohutukawa_9999(card_number: &str) -> String {
+    format!(
+        "Pohutukawa Card Services - Card statement (SYNTHETIC SAMPLE)\n\
+         Cardholder,Q MARSH\n\
+         Card number,{card_number}\n\
+         Statement period,01/08/2025,31/08/2025\n\
+         Opening balance,0.00\n\
+         Closing balance,45.00\n\
+         Credit limit,5000.00\n\
+         \n\
+         Processed,Transaction date,Details,Amount\n\
+         04/08/2025,03/08/2025,WAXWING SUPPLIES LTD,45.00\n\
+         End of statement\n"
+    )
+}
+
+#[test]
+fn every_ofx_spelling_of_a_card_masks_to_the_same_account() {
+    for name in OFX_9999 {
+        let s = edge(name);
+        assert_eq!(s.kind, StatementKind::CreditCard, "{name}");
+        assert_eq!(s.account.as_deref(), Some(CARD_9999), "{name}");
+    }
+}
+
+#[test]
+fn every_qif_spelling_of_a_card_masks_to_the_same_account() {
+    let s = read(QIF_9999);
+    assert_eq!(s.kind, StatementKind::CreditCard);
+    assert_eq!(s.account.as_deref(), Some(CARD_9999), "the short mask");
+
+    let text = String::from_utf8(bytes(QIF_9999))
+        .unwrap()
+        .replace("\r\n", "\n");
+    for spelling in CARD_SPELLINGS.iter().filter(|&&c| c != "9999") {
+        let named = text.replace("NTest Card ****9999", &format!("NTest Card {spelling}"));
+        assert_eq!(
+            read_text(spelling, &named).account.as_deref(),
+            Some(CARD_9999),
+            "in the !Account name: {spelling}"
+        );
+        let category_only = text
+            .replace("NTest Card ****9999\n", "NTest Card\n")
+            .replace(
+                "L[Test Card **** **** **** 9999]",
+                &format!("L[Test Card {spelling}]"),
+            );
+        assert_eq!(
+            read_text(spelling, &category_only).account.as_deref(),
+            Some(CARD_9999),
+            "in the opening entry's category: {spelling}"
+        );
+    }
+
+    // Only the last four, in free text, isn't read as the card; the owner picks it instead.
+    let bare = text
+        .replace("NTest Card ****9999\n", "NTest Card 9999\n")
+        .replace("L[Test Card **** **** **** 9999]", "L[Test Card 9999]");
+    let s = read_text("bare", &bare);
+    assert_eq!((s.kind, s.account), (StatementKind::CreditCard, None));
+}
+
+#[test]
+fn every_csv_spelling_of_a_card_masks_to_the_same_account() {
+    for spelling in CARD_SPELLINGS {
+        let s = read_text(spelling, &pohutukawa_9999(spelling));
+        assert_eq!(s.parser, "pohutukawa-card-csv-1", "{spelling}");
+        assert_eq!(s.account.as_deref(), Some(CARD_9999), "{spelling}");
+    }
+}
+
+#[test]
+fn the_same_card_from_each_format_has_the_same_duplicate_keys() {
+    let ofx_last_four = edge("16i-card-xml-last-four-only.ofx");
+    let ofx_short_mask = edge("16g-card-short-mask.ofx");
+    let qif = read(QIF_9999);
+    let csv_last_four = read_text("csv", &pohutukawa_9999("9999"));
+    let csv_full = read_text("csv", &pohutukawa_9999("4000 0000 0000 9999"));
+
+    let want = keys(&ofx_last_four);
+    assert_eq!(want.len(), 1);
+    assert_eq!(want[0].account, CARD_9999);
+    assert_eq!(want[0].description, "WAXWING SUPPLIES LTD");
+    assert_eq!(want[0].amount, m("-45.00"));
+    for (label, s) in [
+        ("OFX short mask", &ofx_short_mask),
+        ("QIF", &qif),
+        ("CSV last four", &csv_last_four),
+        ("CSV full number", &csv_full),
+    ] {
+        assert_eq!(keys(s), want, "{label}");
+    }
+
+    // So the card's line, read from every format, is added once.
+    let mut seen: BTreeSet<DuplicateKey> = BTreeSet::new();
+    for s in [
+        &ofx_last_four,
+        &ofx_short_mask,
+        &qif,
+        &csv_last_four,
+        &csv_full,
+    ] {
+        seen.extend(keys(s));
+    }
+    assert_eq!(seen.len(), 1);
+}
+
+#[test]
+fn a_full_card_number_is_never_kept() {
+    for s in [
+        edge("16c-card-full-number.ofx"),
+        edge("16h-card-full-number-spaces.ofx"),
+        read_text("csv", &pohutukawa_9999("4000000000009999")),
+    ] {
+        assert_eq!(s.account.as_deref(), Some(CARD_9999));
+        assert!(keys(&s).iter().all(|k| k.account == CARD_9999));
     }
 }

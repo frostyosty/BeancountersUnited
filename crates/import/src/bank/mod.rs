@@ -292,6 +292,17 @@ pub enum Problem {
         row: u32,
         section: String,
     },
+    /// The file stops part-way, as a download that was cut off does: an OFX file that ends
+    /// before closing its root, or inside a transaction. Nothing from it is used, because its
+    /// last line may be half-read.
+    Truncated {
+        /// The file's last non-blank line, where it stops.
+        row: u32,
+        /// The row where the last fully read transaction starts, if any was.
+        last_complete_row: Option<u32>,
+        /// That transaction's date, where it had a readable one.
+        last_complete_date: Option<NaiveDate>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

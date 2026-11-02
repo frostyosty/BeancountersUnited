@@ -1,11 +1,16 @@
 //! OFX: 1.x in SGML (leaf tags left unclosed) and 2.x in XML.
 //!
 //! Both are read by one tokenizer that treats `<TAG>text` as a value and `<TAG>` followed by
-//! another tag as an aggregate opening, so closing tags are optional. One statement for one NZD
-//! account is read: a bank statement (`STMTRS` in `BANKMSGSRSV1`, account in `BANKACCTFROM`) or a
-//! credit card statement (`CCSTMTRS` in `CREDITCARDMSGSRSV1`, card in `CCACCTFROM`). A card's
-//! `ACCTID` is masked to its last four digits (see [`normalise_card`]). The description is `NAME`
-//! then `MEMO`. OFX has no opening balance; `LEDGERBAL` gives the closing balance.
+//! another tag as an aggregate opening, so closing tags are optional for leaves. Aggregates are
+//! always closed, so a file that ends before `</OFX>` or inside a `STMTTRN` was cut off and is
+//! refused ([`Problem::Truncated`]). Tags and the header are read in any case. Text decodes the
+//! XML entities and numeric references, reads CDATA literally and drops comments.
+//!
+//! One statement for one NZD account is read: a bank statement (`STMTRS` in `BANKMSGSRSV1`,
+//! account in `BANKACCTFROM`) or a credit card statement (`CCSTMTRS` in `CREDITCARDMSGSRSV1`,
+//! card in `CCACCTFROM`). A card's `ACCTID` is masked to its last four digits (see
+//! [`normalise_card`]). The description is `NAME` then `MEMO`. OFX has no opening balance;
+//! `LEDGERBAL` gives the closing balance.
 //!
 //! OFX already signs card amounts from the account holder's point of view (a purchase is a
 //! negative `TRNAMT`, a payment a positive one, and an amount owed a negative `BALAMT`), which is
@@ -30,26 +35,46 @@ pub const XML: ParserInfo = ParserInfo {
     label: "OFX 2.x (XML)",
 };
 
-/// OFX 2: an XML declaration and an `OFX` processing instruction or root.
+/// OFX 2: an XML declaration and an `OFX` processing instruction or root. Case doesn't matter.
 pub fn detect_xml(text: &str) -> bool {
     let head = text.trim_start();
-    head.starts_with("<?xml") && (head.contains("<?OFX") || head.contains("<OFX>"))
+    starts_with_ci(head, "<?xml") && (find_ci(head, "<?OFX").is_some() || find_root(head).is_some())
 }
 
-/// OFX 1: the `OFXHEADER:` header block, or a bare `<OFX>` root without closed leaf tags.
+/// OFX 1: the `OFXHEADER:` header block, or a bare `<OFX>` root without closed leaf tags. Case
+/// doesn't matter.
 pub fn detect_sgml(text: &str) -> bool {
     let head = text.trim_start();
-    if head.starts_with("OFXHEADER:") {
-        return head.contains("<OFX>");
+    if starts_with_ci(head, "OFXHEADER:") {
+        return find_root(head).is_some();
     }
-    head.starts_with("<OFX>")
+    starts_with_ci(head, "<OFX>")
 }
 
-enum Token<'a> {
-    /// `<TAG>` followed by text: a value.
+fn starts_with_ci(s: &str, prefix: &str) -> bool {
+    s.as_bytes()
+        .get(..prefix.len())
+        .is_some_and(|b| b.eq_ignore_ascii_case(prefix.as_bytes()))
+}
+
+/// Where an ASCII `needle` first appears in `s`, ignoring ASCII case. The index is a char
+/// boundary because the needle starts with an ASCII byte.
+fn find_ci(s: &str, needle: &str) -> Option<usize> {
+    s.as_bytes()
+        .windows(needle.len())
+        .position(|w| w.eq_ignore_ascii_case(needle.as_bytes()))
+}
+
+/// Where the `<OFX>` root opens.
+fn find_root(s: &str) -> Option<usize> {
+    find_ci(s, "<OFX>")
+}
+
+enum Token {
+    /// `<TAG>` followed by text: a value, already decoded.
     Value {
         tag: String,
-        text: &'a str,
+        text: String,
         row: u32,
     },
     /// `<TAG>` followed directly by another tag: an aggregate opening (or an empty value).
@@ -62,14 +87,58 @@ enum Token<'a> {
     },
 }
 
-fn tokens(text: &str) -> Vec<Token<'_>> {
-    let start = text.find("<OFX>").unwrap_or(0);
+const CDATA_OPEN: &str = "<![CDATA[";
+const COMMENT_OPEN: &str = "<!--";
+
+/// How many bytes of `s` (which starts with `<`) a comment or a CDATA section takes, up to and
+/// including its end marker, or `None` if it's neither. One left open runs to the end.
+fn markup_len(s: &str) -> Option<usize> {
+    let (open, close) = if s.starts_with(COMMENT_OPEN) {
+        (COMMENT_OPEN, "-->")
+    } else if s.starts_with(CDATA_OPEN) {
+        (CDATA_OPEN, "]]>")
+    } else {
+        return None;
+    };
+    let body = &s[open.len()..];
+    Some(open.len() + body.find(close).map_or(body.len(), |i| i + close.len()))
+}
+
+/// The value after an opening tag: text up to the next tag, decoded, with CDATA sections read
+/// as literal text and comments dropped. Returns the value, trimmed, and the bytes it used.
+fn read_value(s: &str) -> (String, usize) {
+    let mut out = String::new();
+    let mut pos = 0;
+    loop {
+        let end = s[pos..].find('<').map_or(s.len(), |i| pos + i);
+        out.push_str(&unescape(&s[pos..end]));
+        pos = end;
+        let rest = &s[pos..];
+        let Some(len) = markup_len(rest) else { break };
+        if let Some(body) = rest.strip_prefix(CDATA_OPEN) {
+            let body = &body[..body.find("]]>").unwrap_or(body.len())];
+            out.push_str(body);
+        }
+        pos += len;
+    }
+    (out.trim().to_owned(), pos)
+}
+
+fn tokens(text: &str) -> Vec<Token> {
+    let start = find_root(text).unwrap_or(0);
     let mut row = 1 + count_newlines(&text[..start]);
     let mut rest = &text[start..];
     let mut out = Vec::new();
     while let Some(lt) = rest.find('<') {
         row += count_newlines(&rest[..lt]);
-        rest = &rest[lt + 1..];
+        rest = &rest[lt..];
+        if let Some(len) = markup_len(rest) {
+            // A comment or CDATA between tags, which may itself hold `<` or `>`.
+            row += count_newlines(&rest[..len]);
+            rest = &rest[len..];
+            continue;
+        }
+        rest = &rest[1..];
         let Some(gt) = rest.find('>') else { break };
         let inner = rest[..gt].trim();
         row += count_newlines(&rest[..gt]);
@@ -88,8 +157,7 @@ fn tokens(text: &str) -> Vec<Token<'_>> {
             .next()
             .unwrap_or_default()
             .to_ascii_uppercase();
-        let end = rest.find('<').unwrap_or(rest.len());
-        let value = rest[..end].trim();
+        let (value, used) = read_value(rest);
         if value.is_empty() {
             out.push(Token::Open { tag, row });
         } else {
@@ -99,6 +167,8 @@ fn tokens(text: &str) -> Vec<Token<'_>> {
                 row,
             });
         }
+        row += count_newlines(&rest[..used]);
+        rest = &rest[used..];
     }
     out
 }
@@ -107,16 +177,62 @@ fn count_newlines(s: &str) -> u32 {
     u32::try_from(s.bytes().filter(|&b| b == b'\n').count()).unwrap_or(u32::MAX)
 }
 
-/// Decodes the five XML entities; a bare `&` (common in SGML files) is left alone.
+/// Decodes the five XML entities and numeric character references (`&#201;`, `&#xC9;`) in one
+/// pass. Anything else that starts with `&` is left as written: a bare `&` (common in SGML
+/// files), an unknown name, or a reference that is malformed or names no allowed character.
+///
+/// Entity names are case-sensitive, as in XML, so `&AMP;` stays as it is. The `x` of a hex
+/// reference may be either case, since `&#X41;` can't mean anything else.
 fn unescape(s: &str) -> String {
     if !s.contains('&') {
         return s.to_owned();
     }
-    s.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&amp;", "&")
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        rest = &rest[amp..];
+        // The longest reference we decode is `&#x10FFFF;` or `&#1114111;`; allow a few leading
+        // zeros. Past that, a `;` belongs to something else.
+        let decoded = rest[1..]
+            .find(';')
+            .filter(|&semi| semi <= 14)
+            .and_then(|semi| Some((entity(&rest[1..=semi])?, semi + 2)));
+        match decoded {
+            Some((c, len)) => {
+                out.push(c);
+                rest = &rest[len..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The character `name` (the text between `&` and `;`) stands for, if we decode it.
+fn entity(name: &str) -> Option<char> {
+    let code = match name {
+        "lt" => return Some('<'),
+        "gt" => return Some('>'),
+        "quot" => return Some('"'),
+        "apos" => return Some('\''),
+        "amp" => return Some('&'),
+        _ => name.strip_prefix('#')?,
+    };
+    let (digits, radix) = match code.strip_prefix(['x', 'X']) {
+        Some(hex) => (hex, 16),
+        None => (code, 10),
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
+        return None;
+    }
+    let c = char::from_u32(u32::from_str_radix(digits, radix).ok()?)?;
+    // XML allows no control characters other than tab and the line breaks.
+    (!c.is_control() || matches!(c, '\t' | '\n' | '\r')).then_some(c)
 }
 
 /// `YYYYMMDD`, optionally followed by a time and timezone, which are ignored: the bank's posting
@@ -153,6 +269,8 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut in_ledgerbal = false;
     let mut in_payee = false;
     let mut txn: Option<Txn> = None;
+    let mut root_closed = false;
+    let mut last_complete: Option<(u32, Option<NaiveDate>)> = None;
 
     let date_value = |raw: &str, row: u32, problems: &mut Vec<Problem>| {
         let d = parse_date(raw);
@@ -193,13 +311,22 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 "PAYEE" => in_payee = false,
                 "STMTTRN" => {
                     if let Some(t) = txn.take() {
+                        let date = t.date.as_ref().and_then(|(raw, _)| parse_date(raw));
+                        last_complete = Some((t.row, date));
                         lines.extend(finish(t, &mut problems));
                     }
                 }
+                "OFX" => {
+                    root_closed = true;
+                    break;
+                }
                 _ => {}
             },
-            Token::Value { tag, text, row } => {
-                let value = unescape(text);
+            Token::Value {
+                tag,
+                text: value,
+                row,
+            } => {
                 if let Some(t) = txn.as_mut() {
                     match tag.as_str() {
                         "DTPOSTED" => t.date = Some((value, row)),
@@ -233,9 +360,15 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
             }
         }
     }
-    // An SGML file may leave the last STMTTRN unclosed if it's truncated; keep what was read.
-    if let Some(t) = txn.take() {
-        lines.extend(finish(t, &mut problems));
+    // SGML may leave leaf tags open, but aggregates are always closed. A file that ends before
+    // `</OFX>`, or inside a transaction, was cut off: its last line may be half-read (`-7.0` for
+    // `-7.05`) and its closing balance missing, so none of it is used.
+    if !root_closed || txn.is_some() {
+        return Err(vec![Problem::Truncated {
+            row: 1 + count_newlines(text.trim_end()),
+            last_complete_row: last_complete.map(|(row, _)| row),
+            last_complete_date: last_complete.and_then(|(_, date)| date),
+        }]);
     }
 
     if statements > 1 {
@@ -406,6 +539,46 @@ mod tests {
                     currency: "USD".to_owned()
                 })
         );
+    }
+
+    #[test]
+    fn references_are_decoded_in_one_pass() {
+        assert_eq!(
+            unescape("&amp;lt; &#38;#65; &#x41;&#X42;&#67;"),
+            "&lt; &#65; ABC"
+        );
+        // Left as written: unknown or upper-case names, bad digits, no `;`, out of range.
+        for s in [
+            "&AMP;", "&nbsp;", "&#;", "&#x;", "&#1f;", "&#65", "&#xD800;", "&#0;", "a & b",
+        ] {
+            assert_eq!(unescape(s), s);
+        }
+        // A `;` far away belongs to something else.
+        assert_eq!(unescape("A & B, C & D; E"), "A & B, C & D; E");
+        assert_eq!(unescape("é&amp;é"), "é&é");
+    }
+
+    #[test]
+    fn a_comment_holding_a_bracket_does_not_end_early() {
+        let file = XML_FILE.replace(
+            "<CURDEF>",
+            "<!-- <ACCTID>1 > 2 --><![CDATA[<ACCTID>3]]><CURDEF>",
+        );
+        let s = parse(&file).unwrap();
+        assert_eq!(s.account.as_deref(), Some("99-1001-0000123-00"));
+        assert_eq!(s.lines[0].row, 9, "rows still count the lines");
+    }
+
+    #[test]
+    fn a_file_without_its_root_closed_is_truncated() {
+        let cut = XML_FILE.replace("</OFX>", "");
+        assert!(matches!(
+            &parse(&cut).unwrap_err()[..],
+            [Problem::Truncated {
+                last_complete_row: Some(17),
+                ..
+            }]
+        ));
     }
 
     #[test]

@@ -158,4 +158,11 @@ QIF `!Type:CCard`, 9 transactions, 30 Aug to 28 Sep. It follows the OFX for the 
 Expected after importing all three: 16 distinct transactions on XXXX-XXXX-XXXX-4417 (derived balance
 -403.04 at 30 Sep) and 7 on XXXX-XXXX-XXXX-8802 (-1087.55 at 14 Sep).
 
+### `test-card-9999-short-mask-2025-08.qif`
+Not the fictional business: the invented card `9999` from `ofx-edge/` 15 and 16a–i, as a QIF `!Type:CCard`
+with one line (4 Aug, WAXWING SUPPLIES LTD, -45.00). The `!Account` name gives the card as a short mask
+(`****9999`) and the opening entry's category as stars and spaces. `card_fixtures.rs` reads it, the OFX
+files and a Pohutukawa CSV built in the test, and checks every spelling masks to `XXXX-XXXX-XXXX-9999` and
+gives the same duplicate key.
+
 More awkward OFX files (encodings, line endings, bad values, refused files) are in `ofx-edge/`; see its README.

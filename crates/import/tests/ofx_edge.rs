@@ -89,6 +89,23 @@ fn layout_and_line_ending_variants_read_the_same_lines() {
     let cr = ok("03-sgml-cr-only-line-endings.ofx");
     assert_eq!(cents(&cr), [-500, 1500]);
     assert_eq!(cr.period_end.unwrap().to_string(), "2025-08-31");
+
+    // Tags, the root and the header keywords in any case, with tab indents.
+    for (name, parser) in [
+        ("04-sgml-lowercase-indented-tabs.ofx", "ofx-sgml-1"),
+        ("04b-sgml-mixed-case-header-and-tags.ofx", "ofx-sgml-1"),
+        ("04c-xml-lowercase-declaration-and-root.ofx", "ofx-xml-1"),
+    ] {
+        let s = ok(name);
+        assert_eq!(s.parser, parser, "{name}");
+        assert_eq!(s.account.as_deref(), Some(ACCOUNT), "{name}");
+        assert_eq!(
+            lines(&s),
+            [("2025-08-11".to_owned(), -320, "PIKORUA CAFE".to_owned())],
+            "{name}"
+        );
+        assert_eq!(s.closing.unwrap().amount.cents(), 9680, "{name}");
+    }
 }
 
 #[test]
@@ -159,9 +176,34 @@ fn xml_entities_are_decoded_and_bare_ampersands_are_left_alone() {
 }
 
 #[test]
-fn comments_inside_text_are_dropped() {
+fn cdata_is_literal_numeric_references_are_decoded_and_comments_are_dropped() {
     let s = ok("32-xml-cdata-and-numeric-references.ofx");
-    assert_eq!(s.lines[2].description, "WITH A COMMENT");
+    assert_eq!(
+        descriptions(&s),
+        [
+            // CDATA: the `&` and `<NZ>` inside it are text, not markup.
+            "SMITH & SONS <NZ>",
+            // `&#201;` is É, `&#x41;&#x4D;` is AM, `&#38;` is &.
+            "CAFÉ AMBER & ASH",
+            // The comment goes; the text on both sides of it stays.
+            "WITH A COMMENT AFTER",
+        ]
+    );
+
+    // References that are bad or name no allowed character are left as written, never an error.
+    // Entity names are case-sensitive, so `&AMP;` and `&Amp;` stay; a hex `X` may be upper case.
+    let x = ok("32b-xml-references-left-as-written.ofx");
+    assert_eq!(
+        descriptions(&x),
+        [
+            "SURROGATE &#XD800; HIGH &#1114112; X",
+            "EMPTY &#; &#X; BAD &#12A; &#XZZ;",
+            "NUL &#0; OPEN &#65 UPPER &AMP; &AMP; HEX M",
+            // Entities inside CDATA aren't decoded, and CDATA can sit inside other text.
+            "A &AMP; B PART ONE]] TWO",
+            "MACRON Ā Ā A",
+        ]
+    );
 }
 
 #[test]
@@ -286,7 +328,13 @@ fn cards_are_masked_to_their_last_four() {
     for name in [
         "15-card-sgml-masked.ofx",
         "16a-card-stars-and-spaces.ofx",
+        "16b-card-last-four-only.ofx",
         "16c-card-full-number.ofx",
+        "16e-card-stars-no-gaps.ofx",
+        "16f-card-lower-case-dashes.ofx",
+        "16g-card-short-mask.ofx",
+        "16h-card-full-number-spaces.ofx",
+        "16i-card-xml-last-four-only.ofx",
     ] {
         let s = ok(name);
         assert_eq!(s.kind, StatementKind::CreditCard, "{name}");
@@ -296,6 +344,10 @@ fn cards_are_masked_to_their_last_four() {
     let odd = ok("16d-card-with-bank-style-id.ofx");
     assert_eq!(odd.kind, StatementKind::CreditCard);
     assert_eq!(odd.account.as_deref(), Some(ACCOUNT));
+    // A bare four digits is a card only in a card statement; in a bank statement it's left alone.
+    let bank = ok("16j-bank-last-four-is-not-a-card.ofx");
+    assert_eq!(bank.kind, StatementKind::Bank);
+    assert_eq!(bank.account.as_deref(), Some("9999"));
     // Card amounts are already signed from the holder's side: spending negative, owing negative.
     let s = ok("15-card-sgml-masked.ofx");
     assert_eq!(cents(&s), [-4500, 10_000, -250]);
@@ -387,6 +439,33 @@ fn files_we_will_not_take() {
 }
 
 #[test]
+fn a_cut_off_download_is_refused_saying_how_far_it_got() {
+    // (file, the row it stops on, the row of the last whole transaction). Each one's last whole
+    // transaction is the 5 August line; nothing else is reported, and nothing is imported.
+    for (name, row, last) in [
+        // Cut inside a value: `-7.0` of what was probably `-7.05`.
+        ("25-truncated-mid-transaction.ofx", 50, 40),
+        ("25b-sgml-cut-inside-a-tag.ofx", 50, 40),
+        ("25c-sgml-cut-after-a-complete-transaction.ofx", 46, 40),
+        // The statement and its balance are all there; only `</OFX>` is missing.
+        ("25g-sgml-cut-before-the-closing-root.ofx", 54, 40),
+        ("25d-xml-cut-inside-a-value.ofx", 12, 11),
+        ("25e-xml-cut-inside-a-tag.ofx", 12, 11),
+        ("25f-xml-cut-after-a-complete-transaction.ofx", 11, 11),
+    ] {
+        assert_eq!(
+            problems(name),
+            [Problem::Truncated {
+                row,
+                last_complete_row: Some(last),
+                last_complete_date: Some("2025-08-05".parse().unwrap()),
+            }],
+            "{name}"
+        );
+    }
+}
+
+#[test]
 fn things_that_are_not_ofx_are_not_recognised() {
     for name in [
         "33-html-error-page-saved-as-ofx.ofx",
@@ -412,24 +491,7 @@ fn an_ordinary_month_reads_fully() {
 /// Behaviour we believe is wrong, pinned so it can't change unnoticed. See the README.
 #[test]
 fn known_gaps() {
-    // 1. A lower-case root tag is not detected, though the tokenizer would cope.
-    not_recognised("04-sgml-lowercase-indented-tabs.ofx");
-
-    // 2. A download cut off part-way through a transaction imports a half-read amount
-    //    (-7.0 for what was probably -7.05) as a real line, and the closing balance is lost.
-    let cut = ok("25-truncated-mid-transaction.ofx");
-    assert_eq!(cents(&cut), [-500, -600, -700]);
-    assert!(cut.closing.is_none());
-    assert_eq!(cut.lines[2].description, "");
-
-    // 3. CDATA is skipped, so the text inside it is lost, and numeric character references
-    //    are not decoded.
-    let x = ok("32-xml-cdata-and-numeric-references.ofx");
-    assert_eq!(x.lines[0].description, "");
-    assert_eq!(
-        x.lines[1].description,
-        "CAF&#201; &#X41;&#X4D;BER &#38; ASH"
-    );
+    // Gaps 1, 2, 3 and 5 are fixed (M17); their cases moved to the tests above.
 
     // 4. A sign-on error or an investment-only file is refused as "ACCTID missing", which tells
     //    the user nothing about what is actually wrong with the file.
@@ -445,13 +507,6 @@ fn known_gaps() {
             "{name}"
         );
     }
-
-    // 5. A card file that gives only the last four digits is not masked to the usual form, so
-    //    it won't match the same card from a CSV or QIF.
-    assert_eq!(
-        ok("16b-card-last-four-only.ofx").account.as_deref(),
-        Some("9999")
-    );
 
     // 6. A line with no description at all is accepted with an empty description.
     let s = ok("12-name-memo-payee-shapes.ofx");

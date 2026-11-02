@@ -1,0 +1,9 @@
+<?XML version="1.0" encoding="UTF-8"?>
+<?ofx OFXHEADER="200" VERSION="220" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>
+<ofx><bankmsgsrsv1><stmttrnrs><stmtrs><curdef>NZD</curdef>
+<bankacctfrom><bankid>99</bankid><acctid>99-1001-0000123-00</acctid></bankacctfrom>
+<banktranlist>
+<stmttrn><dtposted>20250811</dtposted><trnamt>-3.20</trnamt><fitid>M1</fitid><name>PIKORUA CAFE</name></stmttrn>
+</banktranlist>
+<ledgerbal><balamt>96.80</balamt><dtasof>20250831</dtasof></ledgerbal>
+</stmtrs></stmttrnrs></bankmsgsrsv1></ofx>

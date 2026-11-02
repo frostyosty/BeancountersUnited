@@ -95,19 +95,36 @@ pub fn find_account(text: &str) -> Option<String> {
 /// A card number, masked to its last four digits as `XXXX-XXXX-XXXX-1234`, so a full card
 /// number is never kept and the same card matches across formats whatever mask the file used.
 ///
-/// Accepts 12 to 19 digits or mask characters (`X`, `*`, `•`), with `-` or spaces between them,
-/// ending in four digits: `XXXXXXXXXXXX1234`, `**** **** **** 1234`, or a full number. A
-/// separated number that is laid out like a NZ bank account (`99-1001-0000123-00`) isn't a card.
+/// Call it only on something already known to be a card's number: a card statement's account
+/// id, or a card number field. It accepts, with `-` or spaces anywhere between the characters:
+/// - 12 to 19 digits or mask characters (`X`, `*`, `•`) ending in four digits:
+///   `XXXXXXXXXXXX1234`, `**** **** **** 1234`, or a full number;
+/// - a short mask, or none, before the last four digits: `****1234`, `XXXX 1234`, `1234`.
+///
+/// A bare four digits is a card only because the caller says this is a card; a bank statement's
+/// account id goes through [`normalise_account`] instead and is never masked. A separated
+/// number that is laid out like a NZ bank account (`99-1001-0000123-00`) isn't a card.
 pub fn normalise_card(raw: &str) -> Option<String> {
+    mask_card(raw, 0)
+}
+
+/// [`normalise_card`], but a short mask needs at least `min_short_mask` mask characters before
+/// the last four digits, so free text (a QIF account name) doesn't turn `Box 2025` into a card.
+fn mask_card(raw: &str, min_short_mask: usize) -> Option<String> {
     let trimmed = raw.trim();
     let is_mask = |c: char| matches!(c, 'X' | 'x' | '*' | '•');
     let compact: Vec<char> = trimmed.chars().filter(|&c| c != '-' && c != ' ').collect();
-    let ok = (12..=19).contains(&compact.len())
-        && compact.iter().all(|&c| c.is_ascii_digit() || is_mask(c))
-        && compact[compact.len() - 4..]
-            .iter()
-            .all(char::is_ascii_digit);
-    if !ok {
+    if compact.len() < 4 || compact.len() > 19 {
+        return None;
+    }
+    let (head, last4) = compact.split_at(compact.len() - 4);
+    if !last4.iter().all(char::is_ascii_digit) {
+        return None;
+    }
+    let full = compact.len() >= 12 && head.iter().all(|&c| c.is_ascii_digit() || is_mask(c));
+    let short =
+        compact.len() < 12 && head.iter().all(|&c| is_mask(c)) && head.len() >= min_short_mask;
+    if !(full || short) {
         return None;
     }
     let masked = compact.iter().any(|&c| is_mask(c));
@@ -115,7 +132,7 @@ pub fn normalise_card(raw: &str) -> Option<String> {
     if !masked && separated && looks_like_nz_account(trimmed) {
         return None;
     }
-    let last4: String = compact[compact.len() - 4..].iter().collect();
+    let last4: String = last4.iter().collect();
     Some(format!("XXXX-XXXX-XXXX-{last4}"))
 }
 
@@ -127,6 +144,9 @@ fn looks_like_nz_account(s: &str) -> bool {
 }
 
 /// The first thing in `text` that looks like a card number, masked (see [`normalise_card`]).
+/// Text is free-form, so a short mask needs at least four mask characters (`****1234`), and a
+/// bare four digits (`Visa 1234`, `Visa ending 1234`) is not taken as a card: it could as easily
+/// be a year or a branch. The owner then says which card the file is for.
 pub fn find_card(text: &str) -> Option<String> {
     let in_number = |c: char| c.is_ascii_digit() || matches!(c, 'X' | 'x' | '*' | '•' | '-' | ' ');
     let mut rest = text;
@@ -134,7 +154,7 @@ pub fn find_card(text: &str) -> Option<String> {
         let start = rest.find(in_number)?;
         rest = &rest[start..];
         let end = rest.find(|c: char| !in_number(c)).unwrap_or(rest.len());
-        if let Some(card) = normalise_card(&rest[..end]) {
+        if let Some(card) = mask_card(&rest[..end], 4) {
             return Some(card);
         }
         rest = &rest[end..];
@@ -250,6 +270,12 @@ mod tests {
             "9999000000004417",
             "9999 0000 0000 4417",
             "9999-000000-04417",
+            "************4417",
+            "****4417",
+            "XXXX 4417",
+            "x-4417",
+            "4417",
+            " 4417 ",
         ] {
             assert_eq!(
                 normalise_card(raw).as_deref(),
@@ -260,11 +286,35 @@ mod tests {
         for raw in [
             "99-1001-0000123-00",
             "99 1001 0000123 000",
-            "4417",
             "XXXX XXXX XXXX XXXX",
+            "441",
+            "12344417",
+            "44X17",
+            "XXXX-4417-XXXX",
+            "99990000000000004417XX",
+            "",
         ] {
             assert_eq!(normalise_card(raw), None, "{raw}");
         }
+    }
+
+    #[test]
+    fn a_full_card_number_keeps_only_its_last_four() {
+        for raw in [
+            "4000123456789010",
+            "4000 1234 5678 9010",
+            "4000-1234-5678-9010",
+            "4000123456789019010",
+        ] {
+            let masked = normalise_card(raw).unwrap();
+            assert_eq!(masked, "XXXX-XXXX-XXXX-9010", "{raw}");
+            let digits: String = masked.chars().filter(char::is_ascii_digit).collect();
+            assert_eq!(digits, "9010", "only the last four digits are kept: {raw}");
+        }
+        assert_eq!(
+            find_card("Visa 4000 1234 5678 9010").as_deref(),
+            Some("XXXX-XXXX-XXXX-9010")
+        );
     }
 
     #[test]
@@ -273,7 +323,19 @@ mod tests {
             find_card("Harbourlight Visa XXXX-XXXX-XXXX-4417").as_deref(),
             Some("XXXX-XXXX-XXXX-4417")
         );
+        assert_eq!(
+            find_card("Visa ****4417").as_deref(),
+            Some("XXXX-XXXX-XXXX-4417")
+        );
+        assert_eq!(
+            find_card("[Visa XXXX 4417]").as_deref(),
+            Some("XXXX-XXXX-XXXX-4417")
+        );
+        // Free text: a bare four digits, or a short mask of fewer than four, isn't a card.
         assert_eq!(find_card("Visa ending 4417"), None);
+        assert_eq!(find_card("Visa 4417"), None);
+        assert_eq!(find_card("PO Box 2025"), None);
+        assert_eq!(find_card("Visa x4417"), None);
         assert_eq!(find_card("Cheque 99-1001-0000123-00"), None);
     }
 

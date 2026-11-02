@@ -1,0 +1,14 @@
+!Account
+NTest Card ****9999
+TCCard
+^
+!Type:CCard
+D01/08/2025
+T0.00
+POpening Balance
+L[Test Card **** **** **** 9999]
+^
+D04/08/2025
+T-45.00
+PWaxwing  Supplies Ltd
+^

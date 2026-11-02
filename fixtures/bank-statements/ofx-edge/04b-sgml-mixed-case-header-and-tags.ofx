@@ -1,0 +1,20 @@
+OfxHeader:100
+Data:OFXSGML
+Version:102
+Security:NONE
+Encoding:USASCII
+Charset:1252
+Compression:NONE
+OldFileUid:NONE
+NewFileUid:NONE
+
+<Ofx>
+<BankMsgsRsV1><StmtTrnRs><StmtRs>
+<CurDef>NZD
+<BankAcctFrom><BankId>99<AcctId>99-1001-0000123-00</BankAcctFrom>
+<BankTranList>
+<StmtTrn><DtPosted>20250811<TrnAmt>-3.20<FitId>M1<Name>PIKORUA CAFE</StmtTrn>
+</BankTranList>
+<LedgerBal><BalAmt>96.80<DtAsOf>20250831</LedgerBal>
+</StmtRs></StmtTrnRs></BankMsgsRsV1>
+</oFX>
