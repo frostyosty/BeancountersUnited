@@ -269,6 +269,19 @@ Status: not started (takes in the old M8)
 
 Done when: a synthetic Xero export imports to a TB that matches the export's totals, with comparatives, and the chosen Classic client-years match to the dollar or every difference is explained in `docs/domain.md`.
 
+## M17 — OFX parser fixes
+Status: not started. Planned 2026-11-03. The agent prompts are in `M17-PROMPTS.md` (three agents, two waves). The OFX edge-case fixtures in `fixtures/bank-statements/ofx-edge/` turned up six gaps, which the `known_gaps` test in `crates/import/tests/ofx_edge.rs` pins as they behave today:
+1. A **truncated download** (fixture 25) imports a half-read last amount as a real line and loses the closing balance. It's the only gap that can put a wrong amount in the books, so it goes first: refuse the file, saying how far it got, and import nothing.
+2. A **lower-case root tag** (04) isn't recognised.
+3. **CDATA text** is lost and **numeric character references** aren't decoded (32).
+4. A **sign-on error** or an **investment-only file** (20, 21) is refused as "ACCTID missing". It should say what the file actually holds, or pass on the bank's error.
+5. A **card file giving only the last four digits** (16b) isn't masked, so it won't match the same card from a CSV or QIF.
+6. A **line with no description** (12) is accepted empty. How to treat it is a decision for a person, asked before it's settled and recorded in `docs/domain.md`.
+
+No migrations. Each fix moves its case out of `known_gaps` and updates the "Known gaps" list in the ofx-edge README.
+
+Done when: `known_gaps` is gone or empty, the README's "Known gaps" says "None", `make check` passes, and fixtures 25 (truncated) and 20 (bank error) are each refused in the upload screen with a message a business owner could act on.
+
 ## M18 — Every upload reconciles, or says why
 Status: not started. Planned 2026-11-03. Builds on M10's per-file balance check (`Statement::balance_check`) and duplicate keys, and on the bank reconciliation already in `crates/server/src/reconcile.rs` (M15).
 
