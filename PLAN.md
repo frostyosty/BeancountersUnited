@@ -364,6 +364,40 @@ Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only p
 
 Done when: a test shows an overseer acting as staff sees only what that staff user sees (including owner edits hidden by the owner's sign-off setting), can't finalise, reopen or file, and that every command and the start and end of the session appear in the log with both identities.
 
+## M20 — Try it on the home page, no sign-up
+Status: not started. Planned 2026-11-04. The three example statements are written: `fixtures/landing/` (see its README for what each one covers). The agent prompts are in `M20-PROMPTS.md` (seven agents, four waves). M19 has ADR 013 and migration 0013 reserved, so M20 takes ADR 014 and migration 0014.
+
+A visitor sees the product work before they sign up. They drop a bank statement (one of ours, or their own) onto "Upload bank statements" in "From bank statement to IRD", and the steps below it fill in with their real figures: the tax to pay, Save tax cards they can answer, and File tax. With their own file they can go all the way to the File tax screen without signing up or signing in. Everything runs through the real parser, pipeline and tax engine; nothing on the page is a mock-up.
+
+**The home page (desktop).**
+- Beside the four-step flow, in the empty space to its right, a panel: "Drag and drop an example OFX", with three statement cards (Example 1–3). Each card looks like a small paper statement: the bank, the business, the period and its first few lines.
+- Clicking a card opens it full screen (`Modal`): the statement laid out like a bank statement, from the parsed lines, with a "Raw file" tab showing the OFX text, and a **Use this example** button. Escape or ✕ closes it.
+- A card can be dragged onto the Upload step, which highlights as a drop target. **Use this example** does the same for keyboard and touch users. The Upload step also takes a real file: dragged from the desktop, or through **Choose a file**.
+- Next to the drop zone, one line: what happens to an uploaded file and how long we keep it (ADR 014).
+
+**The home page (phone).** No panel. Under the Upload step's text, three links, "Example 1", "Example 2", "Example 3", each opening the same full-screen preview with **Use this example**.
+
+**What happens on a drop.**
+1. Upload: the file name, the bank, the period and the number of lines, or the parser's own plain-English error.
+2. See your tax: a loader for about two seconds, with steps ("Reading 27 transactions…", "Working out GST…", "Income tax…"), then the conservative figure with its line ("Counts every deposit as income and claims nothing."). The wait is a minimum display time, not fake work; with reduced motion, no animation.
+3. Save tax: fills in the same way with the top three cards from the real queue. Answering one sends the real command, and the figure and "saved so far" update. **See all** opens the full Save tax page for this business.
+4. File tax: lights up with **Review your return**, which opens the Submit screen for this business.
+
+**The hero ticket.** "Example: tax if you filed today" becomes a button. Clicking it loads Example 1 exactly as a drop would and scrolls to the flow. Its amount is Example 1's real conservative figure (served by the examples read), not a typed-in $4,820.
+
+**Guests (ADR 014 settles the details).** The starting position:
+- The first drop (not a page view) creates a guest: a `business_owner` user with no email or password, and a business, through a new `start_guest` command on a public route. The browser gets an ordinary session cookie. Using an example sends the example's number; the server imports its own copy of the file, so the browser never uploads it.
+- A guest can use the owner screens (`/businesses/{id}`, Save tax, Submit) with no sign-in. A banner offers **Save your work** (`claim_guest`: email, name, password), which turns the guest into an ordinary owner and keeps everything.
+- Filing with IRD (M14) needs a claimed account to hold the myIR authorisation and the filed record. Until M14 lands, Review your return ends at the Submit screen with Submit switched off, as today.
+- Guests aren't offered AI suggestions (ADR 009's opt-in) or inviting an accountant until they've claimed.
+- Unclaimed guests expire after a set time without use and their data is deleted, through the pipeline. ADR 014 says how that squares with an append-only `command_log`.
+- Abuse limits: guests started per IP per hour, upload size, statements per guest, and guests alive at once.
+- A guest's changes appear in their own Changes (M13) as "You (not saved yet)".
+
+**The example statements** (`fixtures/landing/`, written 2026-11-04): a GST-registered coffee cart (OFX 1.02 SGML, one month), a freelance designer who isn't GST registered (OFX 2.2 XML, UTF-8 with macrons, NZ time zones across the daylight-saving change, two months), and a GST-registered electrician who buys a van (SGML with CRLF and closed tags, a cheque, a quarter). Each gives Save tax something different to find: a family loan, money from a partner, a transfer from savings, a GST refund, income tax already paid, and an asset. Edit them through `fixtures/landing/generate.py`, which keeps the balances exact.
+
+Done when: `crates/server/tests/m20.rs` (`m20_is_done`) shows that, with no sign-in, each example gives its pinned conservative figure and answering its top three Save tax cards lowers it by pinned amounts; a real-shaped OFX from `fixtures/bank-statements/` goes from upload through Save tax to the Submit screen; claiming keeps every line and answer; one guest can't read another's business; an unclaimed guest expires and its statements, lines and files are gone; and the rate limit refuses the next guest from the same IP. The web tests cover dragging a card, **Use this example**, a real file, the phone links, the preview, the loader and the hero ticket. Then a browser check on a desktop and a phone.
+
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
