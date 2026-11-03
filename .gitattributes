@@ -9,3 +9,6 @@ crates/store/migrations/*.sql text eol=lf
 
 # OFX edge-case fixtures hold deliberate CR-only, CRLF and Windows-1252 bytes: never convert them.
 fixtures/bank-statements/ofx-edge/* -text
+
+# Landing examples (M20) show both LF and CRLF downloads on purpose: never convert them.
+fixtures/landing/*.ofx -text
