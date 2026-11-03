@@ -389,6 +389,12 @@ A visitor sees the product work before they sign up. They drop a bank statement 
 - The first drop (not a page view) creates a guest: a `business_owner` user with no email or password, and a business, through a new `start_guest` command on a public route. The browser gets an ordinary session cookie. Using an example sends the example's number; the server imports its own copy of the file, so the browser never uploads it.
 - A guest can use the owner screens (`/businesses/{id}`, Save tax, Submit) with no sign-in. A banner offers **Save your work** (`claim_guest`: email, name, password), which turns the guest into an ordinary owner and keeps everything.
 - Filing with IRD (M14) needs a claimed account to hold the myIR authorisation and the filed record. Until M14 lands, Review your return ends at the Submit screen with Submit switched off, as today.
+- **GST registration (decided 2026-11-04).** Detect it, otherwise assume registered, and ask late:
+  - A GST refund from IRD, or an IRD payment whose reference says GST, proves registration, so the business is treated as registered with the reason shown ("We spotted a GST payment to IRD on 22 Oct…"). The payment dates give the filing frequency where they can.
+  - Statements can't prove someone isn't registered. Without proof, assume registered ("Assumed GST registered · change"): with the same deposits it gives the higher figure unless the business makes a loss, so the figure stays conservative and saying "not registered" only brings it down. Deposits over $60,000 a year add a warning that registration is compulsory.
+  - There's no up-front question. "Are you GST registered?" is a Save tax card, ranked by its saving like the others. While it's only assumed, GST-only questions (GST codes, supplier information over $200) are held back.
+  - At Submit, if still unconfirmed, IRD's filing obligations settle it once M14 is built, and IRD's answer wins. Before then, Submit asks "We couldn't tell if you're GST registered. Are you?" When the figure changes there, the screen says why.
+  - Examples 1 and 3 come out detected; Example 2 comes out assumed.
 - Guests aren't offered AI suggestions (ADR 009's opt-in) or inviting an accountant until they've claimed.
 - Unclaimed guests expire after a set time without use and their data is deleted, through the pipeline. ADR 014 says how that squares with an append-only `command_log`.
 - Abuse limits: guests started per IP per hour, upload size, statements per guest, and guests alive at once.
