@@ -30,7 +30,7 @@ data in fixtures or tests (1).
 
 ## Wave 1: start now
 
-### Agent 1: the ADR
+### Agent 1: the ADR (Opus, high thinking)
 ```
 Read CLAUDE.md (Roles, and hard rule 6), PLAN.md (M19), docs/decisions/007-online-service.md, docs/security.md, crates/server/src/access.rs, crates/server/src/auth.rs (CurrentUser, Me), crates/server/src/pipeline.rs (Actor), crates/store/src/log.rs, crates/server/src/history.rs (and the history sharing setting), and apps/web/src/lib/viewAs.tsx.
 You own:
@@ -52,7 +52,7 @@ Don't commit. Stop after the ADR and give me the DECISIONS FOR ME as a short lis
 
 ## Wave 2: after you've accepted the ADR
 
-### Agent 2: the server side
+### Agent 2: the server side (Opus, high thinking)
 ```
 Read CLAUDE.md, PLAN.md (M19), docs/decisions/013-impersonation.md (accepted; follow it where it differs from PLAN.md), crates/server/src/auth.rs, crates/server/src/access.rs, crates/server/src/pipeline.rs, crates/server/src/commands.rs, crates/store/src/sessions.rs (or wherever sessions are read and written), crates/store/src/log.rs and crates/server/tests/tenancy.rs.
 You own:
@@ -77,7 +77,7 @@ Don't commit.
 
 ## Wave 3: after Agent 2 has landed (both at once)
 
-### Agent 3: audit and history
+### Agent 3: audit and history (Sonnet, medium thinking)
 ```
 Read CLAUDE.md, PLAN.md (M19 Audit), docs/decisions/013-impersonation.md, crates/store/src/log.rs, crates/server/src/pipeline.rs (Actor, as Agent 2 left it), crates/server/src/history.rs and its tests, crates/server/src/presence.rs and crates/server/tests/m13.rs.
 You own:
@@ -96,7 +96,7 @@ Run `make check`.
 Don't commit.
 ```
 
-### Agent 4: the web app
+### Agent 4: the web app (Sonnet, medium thinking)
 ```
 Read CLAUDE.md (Icons and emoji), apps/web/src/ui/README.md, PLAN.md (M19), docs/decisions/013-impersonation.md, apps/web/src/lib/viewAs.tsx, apps/web/src/components/Layout.tsx, apps/web/src/pages/SettingsLayout.tsx, apps/web/src/pages/OverviewPage.tsx, apps/web/src/App.tsx and apps/web/src/auth.tsx, and the new `acting_as` on Me (packages/types, after `make types`).
 You own:
@@ -116,7 +116,7 @@ Don't commit.
 
 ## Wave 4: after Agents 3 and 4 have landed
 
-### Agent 5: the done check
+### Agent 5: the done check (Sonnet, medium thinking)
 ```
 Read CLAUDE.md, PLAN.md (M19 "Done when"), docs/decisions/013-impersonation.md, crates/server/tests/impersonation.rs, crates/server/tests/tenancy.rs and crates/server/tests/m13.rs.
 You own:

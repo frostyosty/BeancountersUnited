@@ -3,4 +3,4 @@
 /**
  * Which kind of card.
  */
-export type CardKind = "question" | "transfer" | "ird_payment" | "duplicate" | "gap" | "supply_info" | "categorise";
+export type CardKind = "question" | "transfer" | "ird_payment" | "duplicate" | "gap" | "supply_info" | "categorise" | "reconcile";

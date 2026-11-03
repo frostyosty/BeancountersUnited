@@ -49,6 +49,12 @@ pub enum Via {
         model: String,
         suggestion_ids: Vec<String>,
     },
+    /// The user sent a fix a reconciliation finding suggested (M18), so Changes says the command
+    /// was "fixed from a reconciliation finding". It vouches for nothing: the command is checked
+    /// as usual.
+    Finding {
+        finding: acct_core::reconcile::FindingKind,
+    },
 }
 
 /// One line to code, in `code_bank_line` or `code_bank_lines`.
@@ -375,7 +381,9 @@ pub enum Command {
         bank_account_id: Option<String>,
     },
     /// The owner's balance for a bank account on the start date, when its first statement starts
-    /// later. Posts the opening-balance journal; set once.
+    /// later. Posts the opening-balance journal. When the account already has one, it's a
+    /// correction (M18): the old opening journal is reversed and the new one posted, in one
+    /// command, and it's refused if the opening balance's year is finalised.
     SetOpeningBalance {
         bank_account_id: String,
         balance: Money,
@@ -571,6 +579,12 @@ pub enum Command {
     /// from `/api/invoices/images/{id}`. Uploading the same image again returns the same id.
     /// Personal; the log keeps only a hash of the image.
     AddInvoiceImage { content_base64: String },
+    /// Takes an uploaded statement out (M18): a file uploaded twice, read with its signs the wrong
+    /// way, or uploaded to the wrong account. Reverses the live journal of each of its lines, then
+    /// deletes the statement, its lines and its kept file, in one command; `command_log` keeps the
+    /// record. Refused when a line is in a confirmed transfer or bought an asset (undo those
+    /// first), and when any of its journals is in a finalised year.
+    RemoveStatement { statement_id: String },
 }
 
 impl Command {
@@ -648,6 +662,7 @@ impl Command {
             Command::SaveInvoiceTemplate { .. } => "save_invoice_template",
             Command::DeleteInvoiceTemplate { .. } => "delete_invoice_template",
             Command::AddInvoiceImage { .. } => "add_invoice_image",
+            Command::RemoveStatement { .. } => "remove_statement",
         }
     }
 
@@ -680,6 +695,15 @@ impl Command {
                 }
             }
         }
+        // An uploaded statement is kept in `statement_files` (M18), so the log keeps only the
+        // file's SHA-256, still as a string so the entry reads back as a command for history.
+        if let Command::ImportStatement { content_base64, .. } = self {
+            let sha256 = crate::business::decode_base64(content_base64).map_or_else(
+                || crate::invoices::sha256_hex(content_base64.as_bytes()),
+                |bytes| crate::invoices::sha256_hex(&bytes),
+            );
+            payload["content_base64"] = format!("sha256:{sha256}").into();
+        }
         payload
     }
 }
@@ -710,4 +734,8 @@ pub struct Accepted {
     pub seq: i64,
     /// The id of the entity the command created, if it created one.
     pub entity_id: Option<String>,
+    /// For `import_statement` (M18): Bank vs books for the account it touched.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub upload: Option<crate::business::UploadCheck>,
 }

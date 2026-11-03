@@ -398,6 +398,43 @@ fn samples() -> Vec<Sample> {
             json!({ "bank_account_id": "b1", "balance": 123456 }),
             "Sam set a bank account's opening balance to $1,234.56.",
         ),
+        // A correction (M18): the account had an opening balance before.
+        s(
+            "set_opening_balance",
+            json!({ "bank_account_id": "b1", "balance": 326485 }),
+            "Sam changed the opening balance of Business cheque from $3,000 to $3,264.85.",
+        )
+        .changed(changes(vec![change(
+            "Business cheque",
+            "opening balance",
+            Some("$3,000 on 1 Apr 2025"),
+            Some("$3,264.85 on 1 Apr 2025"),
+        )])),
+        s(
+            "remove_statement",
+            json!({ "statement_id": "s1" }),
+            "Ana removed the statement aug-again.csv, taking out 25 transactions. \
+             Tax to pay went down $1,200.",
+        )
+        .by(Some("u-ana"))
+        .changed(with_tax(
+            changes(vec![
+                change(
+                    "aug-again.csv",
+                    "statement",
+                    Some("1 Aug 2025 to 31 Aug 2025"),
+                    None,
+                ),
+                change("bank statements", "transactions", Some("35"), Some("10")),
+            ]),
+            120000,
+            0,
+        )),
+        s(
+            "remove_statement",
+            json!({ "statement_id": "s1" }),
+            "Sam removed a statement.",
+        ),
         s(
             "code_bank_line",
             json!({ "bank_line_id": "l1",
@@ -668,6 +705,32 @@ fn accepted_ai_suggestions_say_so() {
     assert_eq!(
         got,
         "Ana accepted 2 AI suggestions: marked 2 COUNTDOWN transactions as personal."
+    );
+}
+
+#[test]
+fn a_fix_from_a_reconciliation_finding_says_so() {
+    let e = entry(
+        "resolve_duplicate",
+        &json!({ "bank_line_id": "l1", "is_duplicate": true }),
+        Some("u-ana"),
+        Some(json!({ "kind": "finding", "finding": "duplicate" })),
+    );
+    let line = "COUNTDOWN AUCKLAND on 3 Mar 2026 (-$45.20)";
+    let got = describe(
+        &e,
+        Some(&changes(vec![change(
+            line,
+            "duplicate",
+            Some("not answered"),
+            Some("a duplicate"),
+        )])),
+        &users(),
+    );
+    assert_eq!(
+        got,
+        "Ana marked COUNTDOWN AUCKLAND on 3 Mar 2026 (-$45.20) as a duplicate, fixed from a \
+         reconciliation finding."
     );
 }
 

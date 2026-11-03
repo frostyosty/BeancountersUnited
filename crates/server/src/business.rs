@@ -5,26 +5,40 @@
 //! arithmetic (`acct_core::bank`); this module decides which journals to post and keeps the
 //! store's record of where they came from.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use acct_core::bank::{Coverage, Gap, HoldingAccounts, gaps, unsorted_lines};
 use acct_core::coding::CodingSettings;
+use acct_core::reconcile::suspects::{SuspectInput, look_all};
+use acct_core::reconcile::{
+    BalanceKind, Diagnosis, EvidenceRef, FindingKind, LedgerJournal, Proof, ReconcileAccountKind,
+    diagnose, movements, proof, walk,
+};
+use acct_store::coding::{self as coding_store, LineState};
+use axum::Json;
+use axum::extract::rejection::QueryRejection;
+use axum::extract::{Path, Query, State};
+
+use crate::AppState;
+use crate::auth::CurrentUser;
+use crate::reconcile;
 use acct_core::tax::gst::GstFrequency;
 use acct_core::tax::income_tax::IncomeYear;
 use acct_core::{
     Account, AccountCode, AccountType, Chart, ClientYear, Journal, JournalLine, Money,
 };
 use acct_import::bank::{
-    Statement, StatementKind, duplicate_keys, normalise_account, normalise_card, read_statement,
+    SourceSpan, Statement, StatementError, StatementKind, duplicate_keys, kept_copy,
+    normalise_account, normalise_card, read_statement,
 };
 use acct_store::bank::{
-    self as bank_store, AccountKind, BankAccount, BankLine, Business, GapJournal, GstSetting,
-    StoredStatement,
+    self as bank_store, AccountKind, BalanceSpan, BankAccount, BankLine, Business, GapJournal,
+    GstSetting, StatementFile, StoredStatement,
 };
 use acct_store::clients::Client;
 use acct_store::journals::{JournalKind, StoredJournal};
 use acct_store::years::{BooksSource, StoredYear, YearStatus};
-use acct_store::{SqliteConnection, clients, journals, new_id, templates, years};
+use acct_store::{SqliteConnection, clients, journals, new_id, templates, tenancy, years};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -345,6 +359,24 @@ pub fn coverage(s: &Statement) -> Option<Coverage> {
     })
 }
 
+/// What's wrong with a file, for the upload screen. A file a parser recognised gives one entry per
+/// problem: its fields (`code`, `row` and so on) plus `message`, the problem in plain words, which
+/// the web app lists under the error. A file nobody recognised keeps its formats, which the
+/// error's own message already lists.
+fn unreadable_details(e: &StatementError) -> serde_json::Value {
+    match e {
+        StatementError::Invalid { problems, .. } => problems
+            .iter()
+            .map(|p| {
+                let mut v = serde_json::to_value(p).expect("serialises");
+                v["message"] = p.to_string().into();
+                v
+            })
+            .collect(),
+        StatementError::NotRecognised { .. } => serde_json::to_value(e).expect("serialises"),
+    }
+}
+
 /// Uploads one statement file. Every new line posts as its own journal; lines already imported
 /// from an overlapping statement are skipped, so uploading the same file twice changes nothing.
 #[allow(clippy::too_many_arguments)]
@@ -362,7 +394,7 @@ pub async fn import_statement(
         CommandError::invalid_with(
             "statement_unreadable",
             e.to_string(),
-            serde_json::to_value(&e).expect("serialises"),
+            unreadable_details(&e),
         )
     })?;
     let Some(cover) = coverage(&statement) else {
@@ -527,6 +559,7 @@ pub async fn import_statement(
 
     let gst_from = business.gst.map(|g| g.registered_from);
     let mut new_line_ids = BTreeSet::new();
+    let mut running_spans = Vec::new();
     for (line, occurrence) in new_lines {
         let year = ensure_year(tx, &mut year_list, seq, client_id, start, line.date).await?;
         let lines = unsorted_lines(
@@ -562,6 +595,9 @@ pub async fn import_statement(
         };
         let line_id = new_id();
         new_line_ids.insert(line_id.clone());
+        if let Some(span) = line.balance_span {
+            running_spans.push((line_id.clone(), span));
+        }
         bank_store::insert_bank_line(
             tx,
             &BankLine {
@@ -581,6 +617,15 @@ pub async fn import_statement(
         .await?;
         outcome.lines_added += 1;
     }
+    keep_file(
+        tx,
+        &account.id,
+        &statement_id,
+        &statement,
+        bytes,
+        running_spans,
+    )
+    .await?;
 
     // The opening balance, the first time a statement reaches back to the start date.
     if account.opening.is_none()
@@ -614,6 +659,75 @@ pub async fn import_statement(
     Ok(outcome)
 }
 
+/// Keeps the uploaded file and where each balance sits in it (M18), as evidence for the owner:
+/// the bank's own words beside the books. A card statement's full card number, if the file has
+/// one, is masked in the copy kept (`acct_import::bank::kept_copy`); `sha256` is of that copy.
+/// The same file uploaded to this account before isn't kept again: this statement points at it. The command's log entry holds
+/// only the SHA-256 of the file as it arrived (`Command::logged_payload`).
+async fn keep_file(
+    tx: &mut SqliteConnection,
+    bank_account_id: &str,
+    statement_id: &str,
+    statement: &Statement,
+    bytes: &[u8],
+    running_spans: Vec<(String, SourceSpan)>,
+) -> Result<(), CommandError> {
+    let kept = kept_copy(bytes, statement);
+    let sha256 = crate::invoices::sha256_hex(&kept);
+    match bank_store::kept_file(tx, bank_account_id, &sha256).await? {
+        // Kept already: point at it, and still record this statement's spans, which index the
+        // same text, so its stated balances keep their place as checkpoints.
+        Some(earlier) => {
+            bank_store::insert_statement_file_same_as(tx, statement_id, &earlier).await?;
+        }
+        None => {
+            bank_store::insert_statement_file(
+                tx,
+                &StatementFile {
+                    statement_id: statement_id.to_owned(),
+                    sha256,
+                    media_type: media_type(&statement.parser).to_owned(),
+                    bytes: kept,
+                },
+            )
+            .await?;
+        }
+    }
+    let stated = [
+        (BalanceKind::Opening, statement.opening),
+        (BalanceKind::Closing, statement.closing),
+    ];
+    let stated = stated
+        .into_iter()
+        .filter_map(|(kind, b)| Some((kind, b?.span?)));
+    let running = running_spans
+        .into_iter()
+        .map(|(bank_line_id, span)| (BalanceKind::Running { bank_line_id }, span));
+    for (balance, span) in stated.chain(running) {
+        bank_store::insert_balance_span(
+            tx,
+            &BalanceSpan {
+                statement_id: statement_id.to_owned(),
+                balance,
+                span,
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// The media type of a file one of our parsers read, by the parser's family.
+pub fn media_type(parser: &str) -> &'static str {
+    if parser.starts_with("ofx") {
+        "application/x-ofx"
+    } else if parser.starts_with("qif") {
+        "application/qif"
+    } else {
+        "text/csv"
+    }
+}
+
 fn kind_of(statement: &Statement) -> AccountKind {
     match statement.kind {
         StatementKind::Bank => AccountKind::Bank,
@@ -621,7 +735,388 @@ fn kind_of(statement: &Statement) -> AccountKind {
     }
 }
 
-/// Records a bank account's balance on the start date and posts the opening-balance journal.
+/// Bank vs books for one account on one date (M18): `GET /api/bank-accounts/{id}/proof`, and
+/// each part of an upload's [`UploadCheck`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AccountProof {
+    pub business_name: String,
+    pub bank_account_id: String,
+    pub code: String,
+    pub name: String,
+    pub kind: ReconcileAccountKind,
+    pub account_number: Option<String>,
+    /// The file the bank's balance comes from, if there is one.
+    pub statement_file: Option<String>,
+    pub proof: Proof,
+    /// What might explain a difference, when the bank gives a balance (M18, Agent 6). A zero
+    /// difference still carries the findings that explain nothing, such as a gap the server
+    /// filled, for the card's notes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub findings: Option<AccountFindings>,
+}
+
+/// What an upload found when it checked itself (M18): Bank vs books at the end of the statement,
+/// and at the balance date (31 March) when the statement runs past it. Worked out inside the
+/// upload's transaction, after it applied, without writing anything.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UploadCheck {
+    pub bank_account_id: String,
+    /// The statement the upload stored; `None` when the file added nothing (it had all been
+    /// uploaded before), in which case the check is at the account's latest statement.
+    pub statement_id: Option<String>,
+    pub at_end: AccountProof,
+    pub at_balance_date: Option<AccountProof>,
+}
+
+/// The read-only check after `import_statement` applies, for the command's result. `seq` is the
+/// upload's; `bank_account_id` the account it touched. `None` if the account has no statements.
+pub async fn upload_check(
+    conn: &mut SqliteConnection,
+    seq: i64,
+    bank_account_id: &str,
+) -> Result<Option<UploadCheck>, CommandError> {
+    let statements = bank_store::statements(conn, bank_account_id).await?;
+    let uploaded = statements.iter().find(|s| s.imported_seq == seq);
+    let Some(statement) = uploaded.or_else(|| {
+        statements
+            .iter()
+            .max_by_key(|s| (s.end_date, s.imported_seq))
+    }) else {
+        return Ok(None);
+    };
+    let at_end = account_proof(
+        conn,
+        bank_account_id,
+        statement.end_date,
+        Some(&statement.id),
+    )
+    .await?;
+    // The latest 31 March the statement runs past (one ending on it is `at_end` already).
+    let balance_date = IncomeYear::containing(statement.end_date)
+        .start()
+        .pred_opt()
+        .filter(|d| statement.start_date <= *d);
+    let at_balance_date = match balance_date {
+        Some(d) => Some(account_proof(conn, bank_account_id, d, Some(&statement.id)).await?),
+        None => None,
+    };
+    // Only after an upload, so each file is logged once rather than on every look at the card.
+    log_amount_read_wrong(conn, &at_end).await?;
+    Ok(Some(UploadCheck {
+        bank_account_id: bank_account_id.to_owned(),
+        statement_id: uploaded.map(|s| s.id.clone()),
+        at_end,
+        at_balance_date,
+    }))
+}
+
+/// Loads an account's statements, lines and ledger, and works out Bank vs books at the end of
+/// `date` (`acct_core::reconcile::proof`), preferring `statement`'s closing balance, with what
+/// might explain a difference (M18, Agent 6).
+///
+/// The checkpoints are the suspects' own ([`reconcile::suspect_input`]), so the card and its
+/// findings always see the same books. The findings are as at the proof's balance: the suspects
+/// look only at the checkpoints up to it, so their difference is the card's.
+pub async fn account_proof(
+    conn: &mut SqliteConnection,
+    bank_account_id: &str,
+    date: NaiveDate,
+    statement: Option<&str>,
+) -> Result<AccountProof, CommandError> {
+    let account = bank_store::bank_account(conn, bank_account_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("bank account", bank_account_id))?;
+    let client = clients::get(conn, &account.client_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("business", &account.client_id))?;
+    let year_list = years::for_client(conn, &account.client_id).await?;
+    let mut all: Vec<StoredJournal> = Vec::new();
+    for y in &year_list {
+        all.extend(journals::for_year(conn, &y.id).await?);
+    }
+    let ledger: Vec<LedgerJournal<'_>> = all.iter().map(reconcile::ledger_journal).collect();
+    let stored = bank_store::statements(conn, &account.id).await?;
+    let mut input = reconcile::suspect_input(conn, &account.client_id, &account.id).await?;
+    let facts = reconcile::account_facts(&account);
+    let movements = movements(&facts, &ledger);
+    let proof = proof(
+        date,
+        statement,
+        &input.checkpoints,
+        &movements,
+        &account.code,
+        account.opening_journal_id.as_deref(),
+        &ledger,
+    );
+    let statement_file = proof.bank.as_ref().and_then(|b| {
+        stored
+            .iter()
+            .find(|s| s.id == b.checkpoint.source.statement_id)
+            .map(|s| s.file_name.clone())
+    });
+    let findings = match &proof.bank {
+        Some(bank) => {
+            if let Some(i) = input.checkpoints.iter().position(|c| c == &bank.checkpoint) {
+                input.checkpoints.truncate(i + 1);
+                input.compared.truncate(i + 1);
+                input.window = walk(&input.checkpoints, &movements).window;
+            }
+            let diagnosis = diagnose(&input.window, look_all(&input));
+            let has_accountant = tenancy::has_accountant(conn, &account.client_id).await?;
+            Some(account_findings(
+                &account,
+                &input,
+                diagnosis,
+                has_accountant,
+            ))
+        }
+        None => None,
+    };
+    Ok(AccountProof {
+        business_name: client.name,
+        bank_account_id: account.id.clone(),
+        code: account.code.to_string(),
+        name: account.name.clone(),
+        kind: facts.kind,
+        account_number: account.account_number.clone(),
+        statement_file,
+        proof,
+        findings,
+    })
+}
+
+/// What might explain a difference on the card (M18, Agent 6): the diagnosis, with the lines,
+/// journals and statements its findings point at, so the card can name them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AccountFindings {
+    pub client_id: String,
+    pub diagnosis: Diagnosis,
+    /// Every bank line a finding points at, by date.
+    pub lines: Vec<EvidenceLine>,
+    /// Every journal a finding points at, by date.
+    pub journals: Vec<EvidenceJournal>,
+    /// Every statement a finding points at, and each of `lines`' own, by start date.
+    pub statements: Vec<EvidenceStatement>,
+    /// The opening balance entered for the account, for a fix that corrects it.
+    pub opening: Option<Money>,
+    /// An accountant has accepted the owner's invite (M12), so the owner can ask them.
+    pub has_accountant: bool,
+}
+
+/// A bank line a finding points at.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct EvidenceLine {
+    pub bank_line_id: String,
+    pub statement_id: String,
+    #[ts(type = "string")]
+    pub date: NaiveDate,
+    pub description: String,
+    pub amount: Money,
+}
+
+/// A journal a finding points at.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct EvidenceJournal {
+    pub journal_id: String,
+    #[ts(type = "string")]
+    pub date: NaiveDate,
+    pub narration: String,
+    /// What it puts on the account: debit +, credit −.
+    pub amount: Money,
+}
+
+/// A statement a finding points at.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct EvidenceStatement {
+    pub statement_id: String,
+    pub file_name: String,
+    #[ts(type = "string")]
+    pub start: NaiveDate,
+    #[ts(type = "string")]
+    pub end: NaiveDate,
+    /// What its lines put on the account.
+    pub net: Money,
+}
+
+fn account_findings(
+    account: &BankAccount,
+    input: &SuspectInput,
+    diagnosis: Diagnosis,
+    has_accountant: bool,
+) -> AccountFindings {
+    let mut line_ids = BTreeSet::new();
+    let mut journal_ids = BTreeSet::new();
+    let mut statement_ids = BTreeSet::new();
+    for f in diagnosis
+        .explained_by
+        .iter()
+        .chain(&diagnosis.other_findings)
+    {
+        for e in &f.evidence {
+            match e {
+                EvidenceRef::BankLine { bank_line_id } => {
+                    line_ids.insert(bank_line_id.as_str());
+                }
+                EvidenceRef::Journal { journal_id } => {
+                    journal_ids.insert(journal_id.as_str());
+                }
+                EvidenceRef::Statement { statement_id } => {
+                    statement_ids.insert(statement_id.as_str());
+                }
+                EvidenceRef::Gap { .. } => {}
+            }
+        }
+    }
+    let mut lines: Vec<EvidenceLine> = input
+        .lines
+        .iter()
+        .filter(|l| line_ids.contains(l.id.as_str()))
+        .map(|l| EvidenceLine {
+            bank_line_id: l.id.clone(),
+            statement_id: l.statement_id.clone(),
+            date: l.date,
+            description: l.description.clone(),
+            amount: l.amount,
+        })
+        .collect();
+    lines.sort_by(|a, b| (a.date, &a.bank_line_id).cmp(&(b.date, &b.bank_line_id)));
+    // The file each line came in, so two copies of one line can be told apart.
+    statement_ids.extend(lines.iter().map(|l| l.statement_id.as_str()));
+    let mut journals: Vec<EvidenceJournal> = input
+        .journals
+        .iter()
+        .filter(|j| journal_ids.contains(j.id.as_str()))
+        .map(|j| EvidenceJournal {
+            journal_id: j.id.clone(),
+            date: j.date,
+            narration: j.narration.clone(),
+            amount: j.amount,
+        })
+        .collect();
+    journals.sort_by(|a, b| (a.date, &a.journal_id).cmp(&(b.date, &b.journal_id)));
+    let mut statements: Vec<EvidenceStatement> = input
+        .statements
+        .iter()
+        .filter(|s| statement_ids.contains(s.id.as_str()))
+        .map(|s| EvidenceStatement {
+            statement_id: s.id.clone(),
+            file_name: s.file_name.clone(),
+            start: s.start,
+            end: s.end,
+            net: input
+                .lines
+                .iter()
+                .filter(|l| l.statement_id == s.id && l.posts())
+                .map(|l| l.amount)
+                .sum(),
+        })
+        .collect();
+    statements.sort_by(|a, b| (a.start, &a.statement_id).cmp(&(b.start, &b.statement_id)));
+    AccountFindings {
+        client_id: account.client_id.clone(),
+        diagnosis,
+        lines,
+        journals,
+        statements,
+        opening: account.opening.map(|(_, m)| m),
+        has_accountant,
+    }
+}
+
+/// The line the server logs for us when a finding says an amount may have been read wrong (M18,
+/// suspect 9): the parser and the row of the file, so we can look at the parser. Never anything
+/// from the file itself: no amounts, descriptions or account numbers.
+pub fn amount_read_wrong_log(parser: &str, row: Option<u32>) -> String {
+    match row {
+        Some(row) => format!("reconcile: an amount may be read wrong, parser {parser}, row {row}"),
+        None => format!("reconcile: an amount may be read wrong, parser {parser}, row unknown"),
+    }
+}
+
+/// Logs each Amount read wrong finding on the card (see [`amount_read_wrong_log`]). The row is
+/// the file line of the line's running balance, where the file gives one.
+async fn log_amount_read_wrong(
+    conn: &mut SqliteConnection,
+    proof: &AccountProof,
+) -> Result<(), CommandError> {
+    let Some(findings) = &proof.findings else {
+        return Ok(());
+    };
+    let d = &findings.diagnosis;
+    for f in d.explained_by.iter().chain(&d.other_findings) {
+        if f.kind != FindingKind::AmountReadWrong {
+            continue;
+        }
+        for e in &f.evidence {
+            let EvidenceRef::BankLine { bank_line_id } = e else {
+                continue;
+            };
+            let Some(line) = findings
+                .lines
+                .iter()
+                .find(|l| &l.bank_line_id == bank_line_id)
+            else {
+                continue;
+            };
+            let Some(statement) = bank_store::statement(conn, &line.statement_id).await? else {
+                continue;
+            };
+            let running = BalanceKind::Running {
+                bank_line_id: bank_line_id.clone(),
+            };
+            let row = bank_store::balance_spans(conn, &statement.id)
+                .await?
+                .into_iter()
+                .find(|s| s.balance == running)
+                .map(|s| s.span.line);
+            tracing::warn!("{}", amount_read_wrong_log(&statement.parser, row));
+        }
+    }
+    Ok(())
+}
+
+/// `?date=2026-03-31`; without it, the end of the account's latest statement.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ProofQuery {
+    pub date: Option<NaiveDate>,
+}
+
+/// `GET /api/bank-accounts/{id}/proof`. The access layer has already checked the account, as for
+/// reading its business (`access::RouteRule::BankAccount`).
+pub async fn get_proof(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    Path(id): Path<String>,
+    query: Result<Query<ProofQuery>, QueryRejection>,
+) -> Result<Json<AccountProof>, CommandError> {
+    let Query(q) = query.map_err(|e| CommandError::Malformed(e.body_text()))?;
+    let mut conn = state.store.reader().await?;
+    let date = match q.date {
+        Some(d) => d,
+        None => bank_store::statements(&mut conn, &id)
+            .await?
+            .iter()
+            .map(|s| s.end_date)
+            .max()
+            .ok_or_else(|| {
+                CommandError::invalid(
+                    "no_statement",
+                    "This account has no statements yet, so there's nothing to check.",
+                )
+            })?,
+    };
+    Ok(Json(account_proof(&mut conn, &id, date, None).await?))
+}
+
+/// Records a bank account's balance on the start date and posts the opening-balance journal, or
+/// corrects one already set (M18): the old journal is reversed and the new one posted.
 pub async fn set_opening_balance(
     tx: &mut SqliteConnection,
     seq: i64,
@@ -631,21 +1126,117 @@ pub async fn set_opening_balance(
     let account = bank_store::bank_account(tx, bank_account_id)
         .await?
         .ok_or_else(|| CommandError::not_found("bank account", bank_account_id))?;
-    if account.opening.is_some() {
-        return Err(CommandError::invalid(
-            "opening_balance_set",
-            "This account's opening balance is already set.",
-        ));
-    }
     let business = business(tx, &account.client_id).await?;
     let mut year_list = years::for_client(tx, &account.client_id).await?;
     let start = year_list
         .first()
         .map_or(business.start_date, |y| y.year.start());
-    set_opening(tx, &mut year_list, seq, &business, &account, start, balance).await?;
+    // A correction (M18): reverse the old opening journal, then post the new one on the same
+    // date. Reversing refuses a finalised year, so a signed-off year keeps its opening balance.
+    let date = match account.opening {
+        Some((date, old)) => {
+            if old == balance {
+                return Err(CommandError::invalid(
+                    "opening_balance_same",
+                    "That's the opening balance already.",
+                ));
+            }
+            if let Some(journal_id) = &account.opening_journal_id {
+                save_tax::reverse(tx, seq, journal_id).await?;
+            }
+            date
+        }
+        None => start,
+    };
+    set_opening(tx, &mut year_list, seq, &business, &account, date, balance).await?;
     let account = bank_store::bank_account(tx, &account.id)
         .await?
         .expect("just used");
+    regenerate_gaps(tx, &mut year_list, seq, &business, &account, start).await?;
+    Ok(account.client_id)
+}
+
+/// `remove_statement` (M18): takes an uploaded statement out. Each of its lines' live journals is
+/// reversed (so posted journals never change), then the statement, its lines and its kept file are
+/// deleted (`bank_store::delete_statement`), and the account's gap journals are brought in line
+/// with what's left. Returns the business's id.
+///
+/// Refused when one of its lines is half of a confirmed transfer or bought an asset: undoing
+/// those touches another line or the asset register, so the owner sorts that line another way
+/// first. Reversing refuses a finalised year, so a signed-off year keeps its lines.
+pub async fn remove_statement(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    statement_id: &str,
+) -> Result<String, CommandError> {
+    let statement = bank_store::statement(tx, statement_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("statement", statement_id))?;
+    let account = bank_store::bank_account(tx, &statement.bank_account_id)
+        .await?
+        .ok_or_else(|| CommandError::not_found("bank account", &statement.bank_account_id))?;
+    let business = business(tx, &account.client_id).await?;
+    let lines: Vec<BankLine> = bank_store::bank_lines(tx, &account.client_id)
+        .await?
+        .into_iter()
+        .filter(|l| l.statement_id == statement.id)
+        .collect();
+    let states: BTreeMap<String, LineState> = coding_store::line_states(tx, &account.client_id)
+        .await?
+        .into_iter()
+        .map(|s| (s.bank_line_id.clone(), s))
+        .collect();
+    let live: BTreeSet<&str> = lines
+        .iter()
+        .filter_map(|l| reconcile::line_facts(l, states.get(&l.id)).journal_id)
+        .collect();
+    // The lock first, so a finalised year is the reason given whatever else is in the way.
+    for journal_id in &live {
+        let j = journals::get(tx, journal_id)
+            .await?
+            .ok_or_else(|| CommandError::not_found("journal", journal_id))?;
+        open_year(tx, &j.client_year_id).await?;
+    }
+    for l in &lines {
+        let Some(state) = states.get(&l.id) else {
+            continue;
+        };
+        let what = format!(
+            "{} on {} ({})",
+            l.description.trim(),
+            l.date,
+            crate::history::dollars(l.amount)
+        );
+        if state.pair_line_id.is_some() {
+            return Err(CommandError::invalid_with(
+                "statement_line_in_transfer",
+                format!(
+                    "{what} is half of a transfer you confirmed. Sort it another way first, \
+                     then remove the statement."
+                ),
+                json!({ "bank_line_id": l.id }),
+            ));
+        }
+        if state.asset_id.is_some() {
+            return Err(CommandError::invalid_with(
+                "statement_line_bought_asset",
+                format!(
+                    "{what} added an asset to the register. Sort it another way first, then \
+                     remove the statement."
+                ),
+                json!({ "bank_line_id": l.id }),
+            ));
+        }
+    }
+    for journal_id in live {
+        save_tax::reverse(tx, seq, journal_id).await?;
+    }
+    bank_store::delete_statement(tx, &statement.id).await?;
+
+    let mut year_list = years::for_client(tx, &account.client_id).await?;
+    let start = year_list
+        .first()
+        .map_or(business.start_date, |y| y.year.start());
     regenerate_gaps(tx, &mut year_list, seq, &business, &account, start).await?;
     Ok(account.client_id)
 }

@@ -316,7 +316,11 @@ pub async fn accept_via(
     let Via::Suggestion {
         model,
         suggestion_ids,
-    } = via;
+    } = via
+    else {
+        // A finding's fix (M18) accepts no suggestion.
+        return Ok(());
+    };
     let lines: &[LineCoding] = match command {
         Command::CodeBankLine { line } => std::slice::from_ref(line),
         Command::CodeBankLines { lines } => lines,

@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?OFX OFXHEADER="200" VERSION="220" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
+      <DTSERVER>20250701000000</DTSERVER>
+      <LANGUAGE>ENG</LANGUAGE>
+      <FI><ORG>Harbourlight Bank (SYNTHETIC)</ORG><FID>0099</FID></FI>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <CREDITCARDMSGSRSV1>
+    <CCSTMTTRNRS>
+      <TRNUID>0</TRNUID>
+      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
+      <CCSTMTRS>
+        <CURDEF>NZD</CURDEF>
+        <CCACCTFROM>
+          <ACCTID>XXXXXXXXXXXX5290</ACCTID>
+        </CCACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART>20250401</DTSTART>
+          <DTEND>20250630</DTEND>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250402</DTPOSTED>
+            <TRNAMT>-48.90</TRNAMT>
+            <FITID>HLV20250402001</FITID>
+            <NAME>WAXWING SUPPLIES LTD</NAME>
+            <MEMO>AUCKLAND</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250407</DTPOSTED>
+            <TRNAMT>-23.75</TRNAMT>
+            <FITID>HLV20250407001</FITID>
+            <NAME>CLOUDFORGE HOSTING</NAME>
+            <MEMO>USD 14.20</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>FEE</TRNTYPE>
+            <DTPOSTED>20250407</DTPOSTED>
+            <TRNAMT>-0.59</TRNAMT>
+            <FITID>HLV20250407002</FITID>
+            <NAME>OVERSEAS TRANSACTION FEE</NAME>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250411</DTPOSTED>
+            <TRNAMT>-71.35</TRNAMT>
+            <FITID>HLV20250411001</FITID>
+            <NAME>KAURI PETROL</NAME>
+            <MEMO>NELSON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250416</DTPOSTED>
+            <TRNAMT>-129.00</TRNAMT>
+            <FITID>HLV20250416001</FITID>
+            <NAME>GLIMMER WICK CO</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250424</DTPOSTED>
+            <TRNAMT>318.60</TRNAMT>
+            <FITID>HLV20250424001</FITID>
+            <NAME>PAYMENT RECEIVED</NAME>
+            <MEMO>THANK YOU</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250426</DTPOSTED>
+            <TRNAMT>-38.00</TRNAMT>
+            <FITID>HLV20250426001</FITID>
+            <NAME>BRIGHTPOST COURIERS</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250428</DTPOSTED>
+            <TRNAMT>-56.20</TRNAMT>
+            <FITID>HLV20250428001</FITID>
+            <NAME>GREENBARROW GROCERS</NAME>
+            <MEMO>WELLINGTON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250502</DTPOSTED>
+            <TRNAMT>-52.00</TRNAMT>
+            <FITID>HLV20250502001</FITID>
+            <NAME>WAXWING SUPPLIES LTD</NAME>
+            <MEMO>AUCKLAND</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250507</DTPOSTED>
+            <TRNAMT>-23.75</TRNAMT>
+            <FITID>HLV20250507001</FITID>
+            <NAME>CLOUDFORGE HOSTING</NAME>
+            <MEMO>USD 14.20</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>FEE</TRNTYPE>
+            <DTPOSTED>20250507</DTPOSTED>
+            <TRNAMT>-0.59</TRNAMT>
+            <FITID>HLV20250507002</FITID>
+            <NAME>OVERSEAS TRANSACTION FEE</NAME>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250511</DTPOSTED>
+            <TRNAMT>-77.55</TRNAMT>
+            <FITID>HLV20250511001</FITID>
+            <NAME>KAURI PETROL</NAME>
+            <MEMO>NELSON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250516</DTPOSTED>
+            <TRNAMT>-133.50</TRNAMT>
+            <FITID>HLV20250516001</FITID>
+            <NAME>GLIMMER WICK CO</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250524</DTPOSTED>
+            <TRNAMT>367.79</TRNAMT>
+            <FITID>HLV20250524001</FITID>
+            <NAME>PAYMENT RECEIVED</NAME>
+            <MEMO>THANK YOU</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250526</DTPOSTED>
+            <TRNAMT>-44.00</TRNAMT>
+            <FITID>HLV20250526001</FITID>
+            <NAME>BRIGHTPOST COURIERS</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250528</DTPOSTED>
+            <TRNAMT>-58.90</TRNAMT>
+            <FITID>HLV20250528001</FITID>
+            <NAME>GREENBARROW GROCERS</NAME>
+            <MEMO>WELLINGTON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250602</DTPOSTED>
+            <TRNAMT>-55.10</TRNAMT>
+            <FITID>HLV20250602001</FITID>
+            <NAME>WAXWING SUPPLIES LTD</NAME>
+            <MEMO>AUCKLAND</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250607</DTPOSTED>
+            <TRNAMT>-23.75</TRNAMT>
+            <FITID>HLV20250607001</FITID>
+            <NAME>CLOUDFORGE HOSTING</NAME>
+            <MEMO>USD 14.20</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>FEE</TRNTYPE>
+            <DTPOSTED>20250607</DTPOSTED>
+            <TRNAMT>-0.59</TRNAMT>
+            <FITID>HLV20250607002</FITID>
+            <NAME>OVERSEAS TRANSACTION FEE</NAME>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250611</DTPOSTED>
+            <TRNAMT>-83.75</TRNAMT>
+            <FITID>HLV20250611001</FITID>
+            <NAME>KAURI PETROL</NAME>
+            <MEMO>NELSON</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250616</DTPOSTED>
+            <TRNAMT>-138.00</TRNAMT>
+            <FITID>HLV20250616001</FITID>
+            <NAME>GLIMMER WICK CO</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250624</DTPOSTED>
+            <TRNAMT>390.29</TRNAMT>
+            <FITID>HLV20250624001</FITID>
+            <NAME>PAYMENT RECEIVED</NAME>
+            <MEMO>THANK YOU</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250626</DTPOSTED>
+            <TRNAMT>-38.00</TRNAMT>
+            <FITID>HLV20250626001</FITID>
+            <NAME>BRIGHTPOST COURIERS</NAME>
+            <MEMO>ONLINE</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250628</DTPOSTED>
+            <TRNAMT>-61.60</TRNAMT>
+            <FITID>HLV20250628001</FITID>
+            <NAME>GREENBARROW GROCERS</NAME>
+            <MEMO>WELLINGTON</MEMO>
+          </STMTTRN>
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>-400.79</BALAMT>
+          <DTASOF>20250630</DTASOF>
+        </LEDGERBAL>
+      </CCSTMTRS>
+    </CCSTMTTRNRS>
+  </CREDITCARDMSGSRSV1>
+</OFX>

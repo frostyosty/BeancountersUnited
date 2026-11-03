@@ -1,13 +1,18 @@
+import type { AccountProof } from "@acct/types/AccountProof";
 import type { AccountReconciliation } from "@acct/types/AccountReconciliation";
 import type { ReconcileStatus } from "@acct/types/ReconcileStatus";
 import type { UnmatchedReason } from "@acct/types/UnmatchedReason";
 import type { YearReconciliation } from "@acct/types/YearReconciliation";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { BankVsBooksForAccount, findingText } from "../components/BankVsBooks";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { getJson } from "../lib/api";
 import { formatDate } from "../lib/dates";
 import { Emoji, Icon } from "../lib/icons";
+import { lineDescription } from "../lib/lines";
 import { formatMoney } from "../lib/money";
+import { Button } from "../ui";
 import styles from "./ReconcileTab.module.css";
 import { useYearContext } from "./YearLayout";
 
@@ -68,6 +73,7 @@ const reasonText: Record<UnmatchedReason, string> = {
 
 function AccountCard({ account: a }: { account: AccountReconciliation }) {
   const title = `${a.code} ${a.name}`;
+  const [proofOpen, setProofOpen] = useState(false);
   return (
     <section className={styles.card} aria-label={title}>
       <h2>
@@ -78,6 +84,20 @@ function AccountCard({ account: a }: { account: AccountReconciliation }) {
       <p className={`${styles.status} ${styles[a.status]}`} role="status">
         <Emoji>{statusEmoji[a.status]}</Emoji> {statusText[a.status]}
       </p>
+      {a.date && (
+        <>
+          <Button variant="secondary" size="sm" onClick={() => setProofOpen(true)}>
+            <Icon name="proof.open" fallback="⚖️" /> Bank vs books
+          </Button>
+          <BankVsBooksForAccount
+            open={proofOpen}
+            onClose={() => setProofOpen(false)}
+            bankAccountId={a.bank_account_id}
+            date={a.date}
+          />
+          {a.difference !== null && a.difference !== 0 && <FindingsSummary bankAccountId={a.bank_account_id} date={a.date} onOpen={() => setProofOpen(true)} />}
+        </>
+      )}
       {a.date && (
         <table className={styles.table} aria-label={`Balances for ${title}`}>
           <tbody>
@@ -113,7 +133,7 @@ function AccountCard({ account: a }: { account: AccountReconciliation }) {
             <tr key={l.bank_line_id}>
               <td>{formatDate(l.date)}</td>
               <td>
-                {l.description}
+                {lineDescription(l.description)}
                 <div className="muted">{reasonText[l.reason]}</div>
               </td>
               <td className="num">{formatMoney(l.amount)}</td>
@@ -154,6 +174,47 @@ function AccountCard({ account: a }: { account: AccountReconciliation }) {
           </p>
         ))}
     </section>
+  );
+}
+
+/**
+ * What the reconciliation findings (M18) make of a difference, in a line each: the same proof Bank
+ * vs books opens with, so its fixes are one click away.
+ */
+function FindingsSummary({ bankAccountId, date, onOpen }: { bankAccountId: string; date: string; onOpen: () => void }) {
+  const proof = useQuery({
+    queryKey: ["bank-account", bankAccountId, "proof", date],
+    queryFn: () => getJson<AccountProof>(`/api/bank-accounts/${encodeURIComponent(bankAccountId)}/proof?date=${date}`),
+  });
+  const x = proof.data?.findings;
+  if (!x || x.diagnosis.difference === 0) {
+    return null;
+  }
+  const d = x.diagnosis;
+  return (
+    <div className={styles.findings} aria-label="What might explain it">
+      <h3>
+        <Icon name="proof.findings" fallback="🔎" /> What might explain it
+      </h3>
+      {d.explained_by.length > 0 ? (
+        <ul>
+          {d.explained_by.map((f, i) => (
+            <li key={i}>{findingText(f, x).headline}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">We couldn't work out why.</p>
+      )}
+      {d.remainder !== 0 && d.explained_by.length > 0 && (
+        <p className="muted">That leaves ${formatMoney(Math.abs(d.remainder))} unexplained.</p>
+      )}
+      {d.other_findings.some((f) => f.explains !== 0) && (
+        <p className="muted">{d.other_findings.filter((f) => f.explains !== 0).length} other things we noticed are in Bank vs books.</p>
+      )}
+      <Button variant="secondary" size="sm" onClick={onOpen}>
+        <Icon name="proof.fix" fallback="🛠️" /> See the details and fix it
+      </Button>
+    </div>
   );
 }
 

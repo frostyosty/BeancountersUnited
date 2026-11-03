@@ -6,6 +6,11 @@
 //! refused ([`Problem::Truncated`]). Tags and the header are read in any case. Text decodes the
 //! XML entities and numeric references, reads CDATA literally and drops comments.
 //!
+//! A bank that couldn't give us a statement says so in a `STATUS` (in the sign-on `SONRS`, or a
+//! statement's `STMTTRNRS`): an error there is passed on as [`Problem::BankError`]. A file with no
+//! bank or card statement says what it holds instead ([`Problem::UnsupportedSection`] for an
+//! investment statement, say, or [`Problem::NoStatement`]).
+//!
 //! One statement for one NZD account is read: a bank statement (`STMTRS` in `BANKMSGSRSV1`,
 //! account in `BANKACCTFROM`) or a credit card statement (`CCSTMTRS` in `CREDITCARDMSGSRSV1`,
 //! card in `CCACCTFROM`). A card's `ACCTID` is masked to its last four digits (see
@@ -18,8 +23,10 @@
 
 use chrono::NaiveDate;
 
-use super::text::{normalise_account, normalise_card, normalise_description, parse_amount};
-use super::{Balance, ParserInfo, Problem, Statement, StatementKind, StatementLine};
+use super::text::{
+    LineStarts, normalise_account, normalise_card, normalise_description, parse_amount,
+};
+use super::{Balance, ParserInfo, Problem, SourceSpan, Statement, StatementKind, StatementLine};
 
 pub const SGML: ParserInfo = ParserInfo {
     id: "ofx-sgml-1",
@@ -71,11 +78,14 @@ fn find_root(s: &str) -> Option<usize> {
 }
 
 enum Token {
-    /// `<TAG>` followed by text: a value, already decoded.
+    /// `<TAG>` followed by text: a value, already decoded. `start..end` is where its text sits
+    /// in the file, trimmed.
     Value {
         tag: String,
         text: String,
         row: u32,
+        start: usize,
+        end: usize,
     },
     /// `<TAG>` followed directly by another tag: an aggregate opening (or an empty value).
     Open {
@@ -161,10 +171,14 @@ fn tokens(text: &str) -> Vec<Token> {
         if value.is_empty() {
             out.push(Token::Open { tag, row });
         } else {
+            let raw = &rest[..used];
+            let start = text.len() - rest.len() + (raw.len() - raw.trim_start().len());
             out.push(Token::Value {
                 tag,
                 text: value,
                 row,
+                start,
+                end: start + raw.trim().len(),
             });
         }
         row += count_newlines(&rest[..used]);
@@ -242,6 +256,66 @@ fn parse_date(raw: &str) -> Option<NaiveDate> {
     NaiveDate::parse_from_str(digits, "%Y%m%d").ok()
 }
 
+/// A `STATUS` aggregate: `CODE` 0 is success; `SEVERITY` is `INFO`, `WARN` or `ERROR`.
+#[derive(Default)]
+struct Status {
+    row: u32,
+    /// In the sign-on response, rather than a statement's.
+    signon: bool,
+    code: Option<String>,
+    severity: Option<String>,
+    message: Option<String>,
+}
+
+impl Status {
+    fn is_error(&self) -> bool {
+        self.severity
+            .as_deref()
+            .is_some_and(|s| s.eq_ignore_ascii_case("ERROR"))
+    }
+
+    fn is_not_success(&self) -> bool {
+        self.is_error()
+            || self
+                .code
+                .as_deref()
+                .is_some_and(|c| !c.trim().trim_start_matches('0').is_empty())
+    }
+
+    fn into_problem(self) -> Problem {
+        Problem::BankError {
+            row: self.row,
+            bank_code: self.code.unwrap_or_default(),
+            message: self.message,
+        }
+    }
+}
+
+/// Message sets that hold a bank or card statement, or nothing (sign-on). Any other `…MSGSRSV1`
+/// (investments, bill pay, sign-up) holds something we don't read.
+const READ_MESSAGE_SETS: &[&str] = &["SIGNONMSGSRSV1", "BANKMSGSRSV1", "CREDITCARDMSGSRSV1"];
+
+/// Whether `tag` is an aggregate we track. Text straight after one (a CDATA section, say) doesn't
+/// turn it into a value: it still opens.
+fn is_aggregate(tag: &str) -> bool {
+    tag.ends_with("MSGSRSV1")
+        || matches!(
+            tag,
+            "SONRS"
+                | "STATUS"
+                | "STMTTRNRS"
+                | "CCSTMTTRNRS"
+                | "STMTRS"
+                | "CCSTMTRS"
+                | "BANKACCTFROM"
+                | "CCACCTFROM"
+                | "BANKTRANLIST"
+                | "STMTTRN"
+                | "LEDGERBAL"
+                | "PAYEE"
+        )
+}
+
 #[derive(Default)]
 struct Txn {
     row: u32,
@@ -263,6 +337,8 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut period_end = None;
     let mut closing_amount = None;
     let mut closing_date = None;
+    let mut closing_span: Option<SourceSpan> = None;
+    let line_starts = LineStarts::new(text);
     let mut lines = Vec::new();
 
     let mut in_acct = false;
@@ -271,6 +347,10 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut txn: Option<Txn> = None;
     let mut root_closed = false;
     let mut last_complete: Option<(u32, Option<NaiveDate>)> = None;
+    let mut in_signon = false;
+    let mut status: Option<Status> = None;
+    let mut statuses: Vec<Status> = Vec::new();
+    let mut other_section: Option<(u32, String)> = None;
 
     let date_value = |raw: &str, row: u32, problems: &mut Vec<Problem>| {
         let d = parse_date(raw);
@@ -284,6 +364,10 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     };
 
     for token in tokens(text) {
+        let token = match token {
+            Token::Value { tag, row, .. } if is_aggregate(&tag) => Token::Open { tag, row },
+            t => t,
+        };
         match token {
             Token::Open { tag, row } => match tag.as_str() {
                 "STMTRS" => {
@@ -303,12 +387,28 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                         ..Txn::default()
                     });
                 }
+                "SONRS" => in_signon = true,
+                "STATUS" => {
+                    status = Some(Status {
+                        row,
+                        signon: in_signon,
+                        ..Status::default()
+                    });
+                }
+                t if t.ends_with("MSGSRSV1")
+                    && !READ_MESSAGE_SETS.contains(&t)
+                    && other_section.is_none() =>
+                {
+                    other_section = Some((row, tag));
+                }
                 _ => {}
             },
             Token::Close { tag } => match tag.as_str() {
                 "BANKACCTFROM" | "CCACCTFROM" => in_acct = false,
                 "LEDGERBAL" => in_ledgerbal = false,
                 "PAYEE" => in_payee = false,
+                "SONRS" => in_signon = false,
+                "STATUS" => statuses.extend(status.take()),
                 "STMTTRN" => {
                     if let Some(t) = txn.take() {
                         let date = t.date.as_ref().and_then(|(raw, _)| parse_date(raw));
@@ -326,7 +426,18 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 tag,
                 text: value,
                 row,
+                start,
+                end,
             } => {
+                if let Some(s) = status.as_mut() {
+                    match tag.as_str() {
+                        "CODE" => s.code = Some(value),
+                        "SEVERITY" => s.severity = Some(value),
+                        "MESSAGE" => s.message = Some(value),
+                        _ => {}
+                    }
+                    continue;
+                }
                 if let Some(t) = txn.as_mut() {
                     match tag.as_str() {
                         "DTPOSTED" => t.date = Some((value, row)),
@@ -345,7 +456,10 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                     "DTSTART" => period_start = date_value(&value, row, &mut problems),
                     "DTEND" => period_end = date_value(&value, row, &mut problems),
                     "BALAMT" if in_ledgerbal => match parse_amount(&value) {
-                        Ok(m) => closing_amount = Some(m),
+                        Ok(m) => {
+                            closing_amount = Some(m);
+                            closing_span = Some(line_starts.span(text, start, end));
+                        }
                         Err(message) => problems.push(Problem::BadAmount {
                             row,
                             value,
@@ -371,6 +485,22 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         }]);
     }
 
+    // The bank refused: a failed sign-on means nothing after it can be trusted, and a statement
+    // that isn't there may say why in its own status. A warning beside a statement is read as usual.
+    let refused = statuses
+        .iter()
+        .position(|s| s.signon && s.is_error())
+        .or_else(|| (statements == 0).then(|| statuses.iter().position(Status::is_not_success))?);
+    if let Some(i) = refused {
+        return Err(vec![statuses.swap_remove(i).into_problem()]);
+    }
+    if statements == 0 {
+        return Err(vec![match other_section {
+            Some((row, section)) => Problem::UnsupportedSection { row, section },
+            None => Problem::NoStatement,
+        }]);
+    }
+
     if statements > 1 {
         problems.push(Problem::SeveralStatements);
     }
@@ -393,7 +523,11 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         StatementKind::Bank => normalise_account(&raw),
     });
     let closing = match (closing_amount, closing_date.or(period_end)) {
-        (Some(amount), Some(date)) => Some(Balance { date, amount }),
+        (Some(amount), Some(date)) => Some(Balance {
+            date,
+            amount,
+            span: closing_span,
+        }),
         _ => None,
     };
     Ok(Statement {
@@ -445,6 +579,7 @@ fn finish(t: Txn, problems: &mut Vec<Problem>) -> Option<StatementLine> {
         description: normalise_description([name, t.memo.as_deref().unwrap_or("")]),
         bank_id: t.fitid,
         balance: None,
+        balance_span: None,
     })
 }
 
@@ -505,6 +640,20 @@ mod tests {
 </BANKTRANLIST><LEDGERBAL><BALAMT>-12.00<DTASOF>20250831</LEDGERBAL>
 </CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>
 ";
+
+    #[test]
+    fn the_closing_balance_knows_where_it_was_read() {
+        let s = parse(XML_FILE).unwrap();
+        let span = s.closing.unwrap().span.unwrap();
+        let line = XML_FILE.lines().nth(span.line as usize - 1).unwrap();
+        assert_eq!(&line[span.start as usize..span.end as usize], "100.00");
+        assert!(line.contains("<LEDGERBAL>"), "not AVAILBAL's: {line}");
+        // SGML leaves the value open to the end of its line.
+        let s = parse(CARD_FILE).unwrap();
+        let span = s.closing.unwrap().span.unwrap();
+        let line = CARD_FILE.lines().nth(span.line as usize - 1).unwrap();
+        assert_eq!(&line[span.start as usize..span.end as usize], "-12.00");
+    }
 
     #[test]
     fn reads_a_card_statement_and_masks_the_card() {
@@ -579,6 +728,66 @@ mod tests {
                 ..
             }]
         ));
+    }
+
+    const SIGNON_OK: &str = "<SIGNONMSGSRSV1><SONRS><STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>\
+                             </SONRS></SIGNONMSGSRSV1>";
+
+    #[test]
+    fn a_failed_sign_on_is_the_banks_error() {
+        let signon = SIGNON_OK.replace("<CODE>0", "<CODE>15500").replace(
+            "INFO</SEVERITY>",
+            "ERROR</SEVERITY><MESSAGE> Signon &amp; invalid </MESSAGE>",
+        );
+        // Even with a statement after it, nothing from a failed sign-on is used.
+        let file = XML_FILE.replace("<OFX>", &format!("<OFX>{signon}"));
+        assert_eq!(
+            parse(&file).unwrap_err(),
+            [Problem::BankError {
+                row: 3,
+                bank_code: "15500".to_owned(),
+                message: Some("Signon & invalid".to_owned()),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_statement_that_is_not_there_passes_on_its_status() {
+        let missing = "OFXHEADER:100\n\n<OFX>\n<BANKMSGSRSV1><STMTTRNRS><TRNUID>1\n\
+                       <STATUS><CODE>2003<SEVERITY>ERROR</STATUS>\n\
+                       </STMTTRNRS></BANKMSGSRSV1></OFX>\n";
+        assert_eq!(
+            parse(missing).unwrap_err(),
+            [Problem::BankError {
+                row: 5,
+                bank_code: "2003".to_owned(),
+                message: None,
+            }]
+        );
+    }
+
+    #[test]
+    fn a_warning_beside_a_statement_is_read_as_usual() {
+        let warn = SIGNON_OK
+            .replace("<CODE>0", "<CODE>15000")
+            .replace("INFO", "WARN");
+        let file = XML_FILE.replace("<OFX>", &format!("<OFX>{warn}"));
+        assert_eq!(parse(&file).unwrap().lines.len(), 2);
+    }
+
+    #[test]
+    fn a_file_with_no_statement_says_so() {
+        let empty = format!("<?xml version=\"1.0\"?><OFX>{SIGNON_OK}</OFX>");
+        assert_eq!(parse(&empty).unwrap_err(), [Problem::NoStatement]);
+        let bills =
+            format!("OFXHEADER:100\n\n<OFX>{SIGNON_OK}\n<BILLPAYMSGSRSV1></BILLPAYMSGSRSV1></OFX>");
+        assert_eq!(
+            parse(&bills).unwrap_err(),
+            [Problem::UnsupportedSection {
+                row: 4,
+                section: "BILLPAYMSGSRSV1".to_owned(),
+            }]
+        );
     }
 
     #[test]

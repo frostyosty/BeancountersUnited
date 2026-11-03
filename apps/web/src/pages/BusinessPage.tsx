@@ -1,19 +1,22 @@
+import type { AccountProof } from "@acct/types/AccountProof";
 import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type DragEvent, type FormEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
+import { BankVsBooks, BankVsBooksForAccount } from "../components/BankVsBooks";
 import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate } from "../lib/dates";
 import { fileToBase64 } from "../lib/files";
 import { newToken } from "../lib/id";
 import { Icon } from "../lib/icons";
+import { lineDescription } from "../lib/lines";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useBusiness, useTax } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
-import { Field, PageHeader } from "../ui";
+import { Button, Field, PageHeader } from "../ui";
 import styles from "./BusinessPage.module.css";
 import { Walkthrough } from "./Walkthrough";
 
@@ -150,6 +153,8 @@ function Upload({ clientId }: { clientId: string }) {
   const [results, setResults] = useState<UploadResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
+  // Bank vs books for each account the upload touched (M18), shown one after another.
+  const [proofs, setProofs] = useState<AccountProof[][]>([]);
 
   const onPicked = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -171,19 +176,26 @@ function Upload({ clientId }: { clientId: string }) {
     }
     setBusy(true);
     const done: UploadResult[] = [];
+    // The latest check for each account, in the order the accounts were first touched.
+    const checks = new Map<string, AccountProof[]>();
     // One at a time, so each file sees the accounts and lines the one before it added.
     for (const file of files) {
       try {
-        await upload.mutateAsync({
+        const accepted = await upload.mutateAsync({
           kind: "import_statement",
           payload: { client_id: clientId, file_name: file.name, content_base64: await fileToBase64(file) },
         });
+        const check = accepted.upload;
+        if (check) {
+          checks.set(check.bank_account_id, check.at_balance_date ? [check.at_end, check.at_balance_date] : [check.at_end]);
+        }
         done.push({ name: file.name, ok: true });
       } catch (error) {
         done.push({ name: file.name, ok: false, error: error as Error });
       }
     }
     setResults(done);
+    setProofs([...checks.values()]);
     setBusy(false);
   };
 
@@ -227,6 +239,14 @@ function Upload({ clientId }: { clientId: string }) {
             ),
           )}
         </ul>
+      )}
+      {proofs.length > 0 && (
+        <BankVsBooks
+          key={proofs[0][0].bank_account_id}
+          open
+          onClose={() => setProofs((ps) => ps.slice(1))}
+          proofs={proofs[0]}
+        />
       )}
     </>
   );
@@ -323,14 +343,28 @@ function whenCanFile(from: string, soFar: boolean): string {
 
 function BankAccount({ account: a, clientId, canEdit }: { account: BankAccountView; clientId: string; canEdit: boolean }) {
   const rec = a.reconciliation;
+  const [proofOpen, setProofOpen] = useState(false);
   return (
     <section className={styles.account}>
       <h3>
         {a.name} <span className="muted">{a.account_number ?? ""}</span>
       </h3>
+      {a.statements.length > 0 && (
+        <>
+          <Button variant="secondary" size="sm" onClick={() => setProofOpen(true)}>
+            <Icon name="proof.open" fallback="⚖️" /> Bank vs books
+          </Button>
+          <BankVsBooksForAccount
+            open={proofOpen}
+            onClose={() => setProofOpen(false)}
+            bankAccountId={a.id}
+            date={rec?.date ?? null}
+          />
+        </>
+      )}
       <ul>
         {a.statements.map((s, i) => (
-          <li key={i}>
+          <li key={i} id={`statement-${s.id}`}>
             {s.file_name}: {formatDate(s.start)} to {formatDate(s.end)}, {s.lines_added} of {s.lines_in_file} lines new
           </li>
         ))}
@@ -399,7 +433,7 @@ function Detected({ transfers, ird, duplicates }: { transfers: [DetectedLine, De
   if (transfers.length + ird.length + duplicates.length === 0) {
     return null;
   }
-  const line = (l: DetectedLine) => `${formatDate(l.date)} ${l.description} $${formatMoney(l.amount)}`;
+  const line = (l: DetectedLine) => `${formatDate(l.date)} ${lineDescription(l.description)} $${formatMoney(l.amount)}`;
   return (
     <>
       <h2>

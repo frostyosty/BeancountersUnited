@@ -15,6 +15,7 @@ pub mod ledger;
 pub mod mapping;
 pub mod money;
 pub mod notes;
+pub mod reconcile;
 pub mod reportdoc;
 pub mod tax;
 pub mod template;

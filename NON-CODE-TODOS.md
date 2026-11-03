@@ -122,8 +122,13 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       recorded in `docs/domain.md` first.
 - [ ] M18 keeps each uploaded statement file as evidence. Decide how long it's kept, and confirm that
       deleting a business deletes its files too (`PLAN.md`, M18 Agent 2; record it in `docs/security.md`).
+      (Decided 2026-11-03: a full card number in a card file is masked to its last four digits in the
+      copy kept.)
 - [ ] M18 suspect thresholds: is 3 days right for "same amount, nearby date" duplicates, and for date
       cut-offs, with the NZ banks' posting delays?
+- [ ] M18 gap journals: when no statement covers some days, should the Bank vs books card say "Agrees"
+      with a note about the estimated entry, or "Out by" until the missing statement is uploaded?
+      Agent 8 asks this before building (`M18-PROMPTS.md`, Agent 8, task 2); record it in `docs/domain.md`.
 
 ## M12 security (`docs/security.md`): before real data goes in
 - [ ] Offshore storage: production and staging run in Fly.io's Sydney region (`fly.toml`), and backups go

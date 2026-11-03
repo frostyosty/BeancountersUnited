@@ -109,6 +109,7 @@ struct Victim {
     owner: Owner,
     year_id: String,
     bank_account_id: String,
+    statement_id: String,
     lines: Vec<String>,
     rule_id: String,
     journal_id: String,
@@ -129,6 +130,7 @@ impl Victim {
             &self.owner.business_id,
             &self.year_id,
             &self.bank_account_id,
+            &self.statement_id,
             &self.rule_id,
             &self.journal_id,
             &self.asset_id,
@@ -212,6 +214,10 @@ async fn setup() -> (Server, Victim, Owner) {
         .get_json(&format!("/api/businesses/{biz}"), &a.cookie)
         .await;
     let bank_account_id = business["bank_accounts"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let statement_id = business["bank_accounts"][0]["statements"][0]["id"]
         .as_str()
         .unwrap()
         .to_owned();
@@ -329,6 +335,7 @@ async fn setup() -> (Server, Victim, Owner) {
         owner: a,
         year_id,
         bank_account_id,
+        statement_id,
         lines,
         rule_id,
         journal_id,
@@ -368,6 +375,8 @@ fn param(path: &str, name: &str, v: &Victim) -> String {
         "id" if path.starts_with("/api/mappings/") => v.mapping_id.clone(),
         "id" if path.starts_with("/api/invoices/templates/") => v.invoice_template_id.clone(),
         "id" if path.starts_with("/api/invoices/images/") => v.invoice_image_id.clone(),
+        "id" if path.starts_with("/api/statements/") => v.statement_id.clone(),
+        "id" if path.starts_with("/api/bank-accounts/") => v.bank_account_id.clone(),
         "id" => v.owner.business_id.clone(),
         "class_id" => v.class_id.clone(),
         "entity_type" => "sole_trader".to_owned(),
@@ -634,6 +643,7 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "confirm_ird_payment" => json!({ "bank_line_id": line, "payment": { "kind": "gst" } }),
         "resolve_duplicate" => json!({ "bank_line_id": line, "is_duplicate": true }),
         "confirm_supply_info" => json!({ "bank_line_id": line }),
+        "remove_statement" => json!({ "statement_id": v.statement_id }),
         "set_coding_settings" => json!({ "client_id": biz, "settings": v.coding_settings }),
         "set_ai_suggestions" => json!({ "client_id": biz, "enabled": false }),
         "set_history_sharing" => json!({ "client_id": biz, "share_owner_edits": true }),
@@ -719,6 +729,7 @@ async fn an_owner_can_submit_no_command_against_another_owners_business() {
         "import_statement",
         "record_suggestions",
         "remove_rule",
+        "remove_statement",
         "resolve_duplicate",
         "set_ai_suggestions",
         "set_history_sharing",

@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { sam, val } from "../test/data";
-import { renderApp, stubApi } from "../test/render";
+import { jsonResponse, renderApp, stubApi } from "../test/render";
 import { formatPercent, incomeYearOf, parsePercentBp } from "./SaveTaxCategorise";
 import { acceptBatches } from "./SaveTaxPage";
 
@@ -85,6 +85,7 @@ function routes(save: () => SaveTaxQueue, me = sam) {
     "GET /api/businesses/b1/save-tax": save,
     "GET /api/businesses/b1/ai-suggestions": () => ({ available: false, provider: null, model: null, enabled: true, activity: null, private_names: [], suggestions: [] }),
     "GET /api/clients/b1/chart": () => chart,
+    "GET /api/bank-accounts/a1/proof": () => jsonResponse(422, { code: "no_statement", message: "This account has no statements yet." }),
     "POST /api/commands": () => ({ seq: 20, entity_id: null }),
   });
 }
@@ -102,6 +103,32 @@ describe("save tax", () => {
     renderApp(<App />, "/businesses/b1");
     await userEvent.setup().click(await screen.findByRole("button", { name: /Save tax/ }));
     expect(await screen.findByText(/Was this business your only income/)).toBeTruthy();
+  });
+
+  it("puts an account that disagrees with the bank first, and opens Bank vs books from it", async () => {
+    const out = card({
+      id: "reconcile:a1",
+      kind: "reconcile",
+      saving: 0,
+      reconcile: {
+        bank_account_id: "a1",
+        account_name: "Kauri cheque",
+        date: "2026-03-31",
+        difference: -9960,
+        explained_by: ["duplicate"],
+        remainder: 0,
+      },
+    });
+    const calls = routes(() => queue([out, onlyIncome]));
+    renderApp(<App />, "/businesses/b1/save-tax");
+    expect(await screen.findByText("Your books and your bank don't agree")).toBeTruthy();
+    expect(screen.getByText("Check this first")).toBeTruthy();
+    expect(screen.getByText(/Kauri cheque is out by \$99.60 at the end of 31 Mar 2026/)).toBeTruthy();
+    expect(screen.getByText("We think it's lines uploaded twice.")).toBeTruthy();
+    await userEvent.setup().click(screen.getByRole("button", { name: /See why and fix it/ }));
+    expect(await screen.findByRole("dialog", { name: /Bank vs books/ })).toBeTruthy();
+    expect(calls.map((c) => c.path)).toContain("/api/bank-accounts/a1/proof");
+    expect(posts(calls)).toEqual([]);
   });
 
   it("shows one card at a time, biggest saving first, and refetches after each answer", async () => {

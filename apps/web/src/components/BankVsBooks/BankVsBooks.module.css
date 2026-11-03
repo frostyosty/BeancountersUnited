@@ -1,0 +1,249 @@
+/* Bank vs books (M18). Colours only from tokens. */
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.printHead p {
+  margin: 0;
+}
+
+.business {
+  font-weight: 600;
+  font-size: var(--text-lg);
+}
+
+.printOnly {
+  display: none;
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.nearest {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--warn-soft);
+  color: var(--text);
+}
+
+/* Stacked on a phone; side by side, with the verdict between, above 720px. */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+@media (min-width: 720px) {
+  .compare {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+}
+
+/* A cutout: a piece of paper clipped from somewhere, with a dashed edge. */
+.cutout {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.cutout h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.cutout p {
+  margin: var(--space-1) 0;
+}
+
+.figure {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.excerpt {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.excerptLine {
+  display: block;
+}
+
+.lineNo {
+  display: inline-block;
+  min-width: 3ch;
+  margin-right: 1ch;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.mark {
+  padding: 0 0.15em;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+  outline: 2px solid var(--accent);
+  font-weight: 700;
+}
+
+.noFile {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.file {
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+}
+
+.verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  text-align: center;
+}
+
+.verdictText {
+  font-size: var(--text-lg);
+}
+
+.agrees {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.out {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.unknown {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.findings {
+  font-weight: 400;
+}
+
+.recent {
+  width: 100%;
+  font-size: var(--text-sm);
+}
+
+.when {
+  white-space: nowrap;
+}
+
+/*
+ * Print: one A4 page holding only the card. Everything else on the page (the app's chrome, the
+ * modal's own header and buttons) is hidden, and so is every icon, so no emoji reaches paper.
+ */
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+@media print {
+  :global(body) * {
+    visibility: hidden;
+  }
+
+  :global(dialog):has(.sheet) {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    background: none;
+    animation: none;
+  }
+
+  :global(dialog):has(.sheet)::backdrop {
+    display: none;
+  }
+
+  .sheet,
+  .sheet * {
+    visibility: visible;
+  }
+
+  .sheet {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    color: black;
+    background: white;
+    font-size: 10pt;
+  }
+
+  .sheet [aria-hidden="true"],
+  .sheet button,
+  .dates,
+  .findings {
+    display: none !important;
+  }
+
+  .printOnly {
+    display: block;
+  }
+
+  .compare {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    break-inside: avoid;
+  }
+
+  .cutout {
+    border-color: black;
+    background: white;
+  }
+
+  .excerpt {
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border-color: black;
+    background: white;
+  }
+
+  .mark {
+    background: none;
+    outline: 1.5px solid black;
+  }
+
+  .verdict,
+  .nearest {
+    border: 1px solid black;
+    background: none;
+    color: black;
+  }
+}

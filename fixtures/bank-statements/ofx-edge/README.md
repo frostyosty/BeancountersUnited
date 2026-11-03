@@ -34,11 +34,12 @@ deliberately CR-only, CRLF or Windows-1252. They were produced by a throwaway sh
 
 ## Known gaps
 
-`known_gaps` in the test pins these as they behave today. Fixing one makes that test fail on purpose.
+None. M17 fixed the six these files found; how each was fixed is kept below. A new gap gets a `known_gaps`
+test in `ofx_edge.rs` that pins today's behaviour, and a line here.
 
 1. ~~**Lower-case root tag** (04)~~: fixed in M17. Detection ignores case for the root and the header keywords (04b, 04c).
 2. ~~**Truncated download** (25)~~: fixed in M17. A file that ends before `</OFX>` or inside a `STMTTRN` is refused as `truncated`, with the row it stops on and the last whole transaction, and nothing is imported (25b–g).
 3. ~~**CDATA and numeric references** (32)~~: fixed in M17. CDATA is read as literal text, `&#201;` and `&#xC9;` are decoded, text after a comment is kept, and a bad reference is left as written (32b).
-4. **Sign-on error / investment-only** (20, 21): refused as "ACCTID missing", which doesn't say what's wrong.
+4. ~~**Sign-on error / investment-only** (20, 21)~~: fixed in M17. A `STATUS` error is refused as `bank_error` with the bank's code and words; a file with no bank or card statement says what it holds (`unsupported_section`) or that it has none (`no_statement`).
 5. ~~**Card with last four only** (16b)~~: fixed in M17. A card statement's four-digit `ACCTID` is masked to `XXXX-XXXX-XXXX-9999`; a bank statement's (16j) is left alone.
-6. **Lines with no description** (12): accepted with an empty description.
+6. ~~**Lines with no description** (12)~~: decided in M17 (docs/domain.md): kept, with an empty description. The web app shows it as "(no description)".

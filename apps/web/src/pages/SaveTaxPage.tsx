@@ -10,6 +10,7 @@ import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { getJson } from "../lib/api";
 import { Icon } from "../lib/icons";
+import { lineDescription } from "../lib/lines";
 import { formatMoney } from "../lib/money";
 import { keys, useBusiness, useChart } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
@@ -136,10 +137,16 @@ function CardFrame({
 }) {
   return (
     <section className={styles.card} aria-label="Save tax card">
-      <p className={styles.saving}>
-        <Icon name="business.save_saving" fallback="💸" />{" "}
-        {card.best_case ? `Could save up to $${formatMoney(card.saving)}` : `Saves $${formatMoney(card.saving)}`}
-      </p>
+      {card.kind === "reconcile" ? (
+        <p className={styles.saving}>
+          <Icon name="proof.findings" fallback="🔎" /> Check this first
+        </p>
+      ) : (
+        <p className={styles.saving}>
+          <Icon name="business.save_saving" fallback="💸" />{" "}
+          {card.best_case ? `Could save up to $${formatMoney(card.saving)}` : `Saves $${formatMoney(card.saving)}`}
+        </p>
+      )}
       <CardBody card={card} clientId={clientId} banks={banks} gstRegistered={gstRegistered} canEdit={canEdit} />
       <div className={styles.skip}>
         <button type="button" onClick={onSkip}>
@@ -182,7 +189,7 @@ function AcceptAll({ cards, clientId, banks }: { cards: SaveTaxCard[]; clientId:
         <ul>
           {suggested.map((c) => (
             <li key={c.id}>
-              {c.lines[0]!.description}, ${formatMoney(Math.abs(c.lines[0]!.amount))}: {describeCoding(c.suggestion!.coding, chart.data, banks)}
+              {lineDescription(c.lines[0]!.description)}, ${formatMoney(Math.abs(c.lines[0]!.amount))}: {describeCoding(c.suggestion!.coding, chart.data, banks)}
             </li>
           ))}
         </ul>

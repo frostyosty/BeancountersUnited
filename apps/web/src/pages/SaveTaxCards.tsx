@@ -6,12 +6,15 @@ import type { Suggestion } from "@acct/types/Suggestion";
 import type { Via } from "@acct/types/Via";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router";
+import { BankVsBooksForAccount, findingKindWords } from "../components/BankVsBooks";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { formatDate } from "../lib/dates";
 import { Icon } from "../lib/icons";
+import { lineDescription } from "../lib/lines";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useChart } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { Button } from "../ui";
 import { CategoriseForm, describeCoding, incomeYearOf } from "./SaveTaxCategorise";
 import styles from "./SaveTax.module.css";
 
@@ -40,6 +43,8 @@ export function CardBody(props: CardProps) {
       return <SupplyInfoCard {...props} />;
     case "categorise":
       return <CategoriseCard {...props} />;
+    case "reconcile":
+      return <ReconcileCardBody {...props} />;
   }
 }
 
@@ -64,7 +69,7 @@ function Lines({ lines }: { lines: CardLine[] }) {
         <li key={l.bank_line_id}>
           <span className={styles.lineDate}>{formatDate(l.date)}</span>
           <span className={styles.lineDesc}>
-            {l.description}
+            {lineDescription(l.description)}
             <br />
             <span className="muted">{l.account_name}</span>
           </span>
@@ -399,6 +404,36 @@ function GapCard({ card, clientId, banks }: CardProps) {
       <Link to={`/businesses/${clientId}`}>
         <Icon name="business.upload" fallback="📤" /> Upload the missing statement
       </Link>
+    </>
+  );
+}
+
+/** An account whose books and bank disagree (M18): Bank vs books says why, and fixes it. */
+function ReconcileCardBody({ card }: CardProps) {
+  const [open, setOpen] = useState(false);
+  const r = card.reconcile;
+  if (!r) {
+    return null;
+  }
+  const kinds = [...new Set(r.explained_by)].map(findingKindWords);
+  return (
+    <>
+      <Heading icon="proof.out" fallback="⚠️">
+        Your books and your bank don't agree
+      </Heading>
+      <p>
+        {r.account_name} is out by ${formatMoney(Math.abs(r.difference))} at the end of {formatDate(r.date)}. Until it agrees, the tax figure could be
+        off too, so it's worth sorting first.
+      </p>
+      <p className="muted">
+        {kinds.length > 0
+          ? `We think it's ${kinds.join(" and ")}${r.remainder !== 0 ? `, with $${formatMoney(Math.abs(r.remainder))} we can't explain` : ""}.`
+          : "We couldn't work out why, but Bank vs books shows where it starts."}
+      </p>
+      <Button onClick={() => setOpen(true)}>
+        <Icon name="proof.open" fallback="⚖️" /> See why and fix it
+      </Button>
+      <BankVsBooksForAccount open={open} onClose={() => setOpen(false)} bankAccountId={r.bank_account_id} date={r.date} />
     </>
   );
 }

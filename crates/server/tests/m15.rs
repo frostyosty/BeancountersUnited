@@ -566,6 +566,16 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         }
         "resolve_duplicate" => Refused(json!({ "bank_line_id": duplicate, "is_duplicate": true })),
         "confirm_supply_info" => Refused(json!({ "bank_line_id": out_line })),
+        "remove_statement" => {
+            let statement = b
+                .bank_lines()
+                .await
+                .into_iter()
+                .find(|l| l.id == out_line)
+                .unwrap()
+                .statement_id;
+            Refused(json!({ "statement_id": statement }))
+        }
         "create_client_year" => Refused(json!({
             "client_id": biz, "start": "2024-08-01", "end": "2025-07-31",
         })),

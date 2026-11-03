@@ -1,27 +1,28 @@
 //! Bank reconciliation for a client-year (M15): for each bank account and card, the statement's
 //! closing balance against the ledger's balance on that date, and the items that don't match.
 //!
-//! The date is the end of the latest statement that ends inside the year. Balances are the
-//! ledger's running totals across every year, because a bank account's balance carries forward.
-//!
-//! An item is unmatched when:
-//! - a bank line has no live journal putting exactly its amount on the account (a line the owner
-//!   marked as a duplicate is listed too, but it isn't a reconciling item: the bank counted it
-//!   once, under the line it duplicates);
-//! - a live journal touches the account but isn't any line's journal, the opening balance or a
-//!   gap journal (a journal an accountant posted to the bank account by hand, say).
-//!
-//! Gap journals are listed on their own. They're matched in the sense that the next statement's
-//! opening balance already includes them, but each one stands for lines nobody has seen.
-//!
-//! So: ledger − journals without a line + lines without a journal = statement, and whatever
-//! doesn't fit that is `unexplained`. Nothing here is stored; it's worked out on each read.
+//! The arithmetic is in `acct_core::reconcile`; this loads the data and serves it. Nothing here is
+//! stored; it's worked out on each read.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
-use acct_core::bank::Gap;
-use acct_core::{ClientYear, Money};
-use acct_store::bank::{self as bank_store, AccountKind, BankAccount, BankLine, StoredStatement};
+use acct_core::Money;
+use acct_core::reconcile::suspects::{
+    AccountSide, BalanceBreak, JournalOrigin, OpeningFacts, OtherStatement, SuspectInput,
+    SuspectJournal, SuspectLine, SuspectStatement,
+};
+use acct_core::reconcile::{
+    AccountFacts, AccountInputs, BalanceKind, BankLineFacts, GapJournalFacts, LedgerJournal,
+    StatementFacts, checkpoints, movements, reconcile_account, walk,
+};
+pub use acct_core::reconcile::{
+    AccountReconciliation, GapItem, GapJournalItem, ReconcileAccountKind, ReconcileStatus,
+    UnmatchedJournal, UnmatchedLine, UnmatchedReason,
+};
+use acct_import::bank::{Balance, BalanceCheck, Statement, duplicate_keys, read_statement};
+use acct_store::bank::{
+    self as bank_store, AccountKind, BalanceSpan, BankAccount, BankLine, StoredStatement,
+};
 use acct_store::coding::{self as coding_store, LineState, LineStateKind};
 use acct_store::journals::StoredJournal;
 use acct_store::{SqliteConnection, journals, years};
@@ -46,309 +47,121 @@ pub struct YearReconciliation {
     pub accounts: Vec<AccountReconciliation>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export, rename_all = "snake_case")]
-pub enum ReconcileAccountKind {
-    Bank,
-    CreditCard,
-}
-
-/// Where an account's reconciliation stands.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export, rename_all = "snake_case")]
-pub enum ReconcileStatus {
-    /// The ledger equals the statement, with nothing unmatched.
-    Agrees,
-    /// The ledger differs from the statement, but the unmatched items account for all of it.
-    Explained,
-    /// Some of the difference isn't accounted for by any item.
-    Differs,
-    /// The statements give no closing balance, so it can't be checked.
-    NoBalance,
-    /// No statement ends inside this year.
-    NoStatement,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct AccountReconciliation {
-    pub bank_account_id: String,
-    pub code: String,
-    pub name: String,
-    pub kind: ReconcileAccountKind,
-    pub account_number: Option<String>,
-    pub status: ReconcileStatus,
-    /// The date it's reconciled at: the end of the latest statement that ends inside the year.
-    #[ts(type = "string | null")]
-    pub date: Option<NaiveDate>,
-    /// The statement that date comes from.
-    pub statement_file: Option<String>,
-    pub statement_balance: Option<Money>,
-    /// The ledger's balance on the account at the end of `date`. Positive is money held; a card
-    /// owing money is negative.
-    pub ledger_balance: Option<Money>,
-    /// Ledger less statement.
-    pub difference: Option<Money>,
-    /// The part of `difference` the unmatched items don't account for.
-    pub unexplained: Option<Money>,
-    pub lines_without_journal: Vec<UnmatchedLine>,
-    pub journals_without_line: Vec<UnmatchedJournal>,
-    pub gap_journals: Vec<GapJournalItem>,
-    /// Runs of days no statement covers, up to `date`, whether or not anything was posted.
-    pub gaps: Vec<GapItem>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(export, rename_all = "snake_case")]
-pub enum UnmatchedReason {
-    /// The owner said it's a duplicate, so it posts nothing. Not a reconciling item.
-    Duplicate,
-    /// Its journal was reversed with nothing posted in its place.
-    NoJournal,
-    /// Its journal doesn't put the line's amount on this account.
-    JournalDiffers,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct UnmatchedLine {
-    pub bank_line_id: String,
-    #[ts(type = "string")]
-    pub date: NaiveDate,
-    pub description: String,
-    pub amount: Money,
-    pub reason: UnmatchedReason,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct UnmatchedJournal {
-    pub journal_id: String,
-    #[ts(type = "string")]
-    pub date: NaiveDate,
-    pub narration: String,
-    /// What it puts on this account.
-    pub amount: Money,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct GapJournalItem {
-    pub journal_id: String,
-    #[ts(type = "string")]
-    pub start: NaiveDate,
-    #[ts(type = "string")]
-    pub end: NaiveDate,
-    pub amount: Money,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-#[ts(export)]
-pub struct GapItem {
-    #[ts(type = "string")]
-    pub start: NaiveDate,
-    #[ts(type = "string")]
-    pub end: NaiveDate,
-    /// The change posted for it, or `None` when the balance at one end isn't known.
-    pub change: Option<Money>,
-}
-
-/// One bank line with the journal that's live for it now (`None` if it posts nothing).
-#[derive(Debug, Clone)]
-pub struct LineWithJournal<'a> {
-    pub line: &'a BankLine,
-    pub journal_id: Option<&'a str>,
-    pub duplicate: bool,
-}
-
-/// Everything one account's reconciliation needs, already loaded.
-pub struct AccountInputs<'a> {
-    pub account: &'a BankAccount,
-    pub statements: &'a [StoredStatement],
-    pub lines: Vec<LineWithJournal<'a>>,
-    /// Every journal of the client, in every year.
-    pub journals: &'a [StoredJournal],
-    /// The account's gap journals that haven't been reversed.
-    pub gap_journals: &'a [bank_store::GapJournal],
-    pub gaps: &'a [Gap],
-}
-
-/// Reconciles one account at the end of the latest statement inside `year`. Pure.
-pub fn reconcile_account(year: &ClientYear, input: &AccountInputs<'_>) -> AccountReconciliation {
-    let account = input.account;
-    let latest = input
-        .statements
-        .iter()
-        .filter(|s| year.contains(s.end_date))
-        .max_by_key(|s| (s.end_date, s.imported_seq));
-    let mut out = AccountReconciliation {
-        bank_account_id: account.id.clone(),
-        code: account.code.to_string(),
-        name: account.name.clone(),
+/// The account as core needs it.
+pub fn account_facts(account: &BankAccount) -> AccountFacts<'_> {
+    AccountFacts {
+        id: &account.id,
+        code: &account.code,
+        name: &account.name,
         kind: match account.kind {
             AccountKind::Bank => ReconcileAccountKind::Bank,
             AccountKind::CreditCard => ReconcileAccountKind::CreditCard,
         },
-        account_number: account.account_number.clone(),
-        status: ReconcileStatus::NoStatement,
-        date: None,
-        statement_file: None,
-        statement_balance: None,
-        ledger_balance: None,
-        difference: None,
-        unexplained: None,
-        lines_without_journal: Vec::new(),
-        journals_without_line: Vec::new(),
-        gap_journals: Vec::new(),
-        gaps: Vec::new(),
-    };
-    let Some(latest) = latest else {
-        return out;
-    };
-    let date = latest.end_date;
-
-    // Journals in force: neither a reversal nor reversed.
-    let reversed: BTreeSet<&str> = input
-        .journals
-        .iter()
-        .filter_map(|j| j.reverses_journal_id.as_deref())
-        .collect();
-    let live: BTreeMap<&str, &StoredJournal> = input
-        .journals
-        .iter()
-        .filter(|j| j.reverses_journal_id.is_none() && !reversed.contains(j.id.as_str()))
-        .map(|j| (j.id.as_str(), j))
-        .collect();
-    let on_account = |j: &StoredJournal| -> Money {
-        j.journal
-            .lines
-            .iter()
-            .filter(|l| l.account == account.code)
-            .map(|l| l.amount)
-            .sum()
-    };
-
-    let ledger: Money = input
-        .journals
-        .iter()
-        .filter(|j| j.journal.date <= date)
-        .map(on_account)
-        .sum();
-
-    // Bank lines and the journals that match them.
-    let mut matched: BTreeSet<&str> = BTreeSet::new();
-    if let Some(id) = account.opening_journal_id.as_deref() {
-        matched.insert(id);
+        account_number: account.account_number.as_deref(),
+        opening_journal_id: account.opening_journal_id.as_deref(),
     }
-    let gap_ids: BTreeSet<&str> = input
-        .gap_journals
-        .iter()
-        .map(|g| g.journal_id.as_str())
-        .collect();
-    matched.extend(&gap_ids);
-    let mut lines: Vec<&LineWithJournal<'_>> = input
-        .lines
-        .iter()
-        .filter(|l| l.line.bank_account_id == account.id && l.line.date <= date)
-        .collect();
-    lines.sort_by_key(|l| (l.line.date, &l.line.description, l.line.occurrence));
-    for l in lines {
-        let reason = if l.duplicate {
-            Some(UnmatchedReason::Duplicate)
-        } else {
-            match l.journal_id.and_then(|id| live.get(id)) {
-                None => Some(UnmatchedReason::NoJournal),
-                Some(j) if on_account(j) != l.line.amount => Some(UnmatchedReason::JournalDiffers),
-                Some(j) => {
-                    matched.insert(j.id.as_str());
-                    None
-                }
-            }
-        };
-        if let Some(reason) = reason {
-            out.lines_without_journal.push(UnmatchedLine {
-                bank_line_id: l.line.id.clone(),
-                date: l.line.date,
-                description: l.line.description.clone(),
-                amount: l.line.amount,
-                reason,
-            });
+}
+
+/// Each statement's kept file (M18), read again with the parser that read it on upload: statement
+/// id → what the file says. A statement uploaded before M18 has no file kept, so it isn't here.
+/// Nor is a file that no longer reads (a parser changed since), which then counts as not kept.
+pub async fn kept_statements(
+    conn: &mut SqliteConnection,
+    stored: &[StoredStatement],
+) -> Result<BTreeMap<String, Statement>, CommandError> {
+    let mut out = BTreeMap::new();
+    for s in stored {
+        if let Some(file) = bank_store::statement_file(conn, &s.id).await?
+            && let Ok(parsed) = read_statement(&file.bytes)
+        {
+            out.insert(s.id.clone(), parsed);
         }
     }
+    Ok(out)
+}
 
-    // Live journals on the account that nothing above matched.
-    let mut stray: Vec<&StoredJournal> = live
-        .values()
-        .copied()
-        .filter(|j| j.journal.date <= date && !matched.contains(j.id.as_str()))
-        .filter(|j| !on_account(j).is_zero())
-        .collect();
-    stray.sort_by_key(|j| (j.journal.date, j.posted_seq));
-    out.journals_without_line = stray
-        .into_iter()
-        .map(|j| UnmatchedJournal {
-            journal_id: j.id.clone(),
-            date: j.journal.date,
-            narration: j.journal.narration.clone(),
-            amount: on_account(j),
-        })
-        .collect();
-
-    out.gap_journals = input
-        .gap_journals
-        .iter()
-        .filter(|g| g.end_date <= date)
-        .filter_map(|g| {
-            let j = live.get(g.journal_id.as_str())?;
-            Some(GapJournalItem {
-                journal_id: g.journal_id.clone(),
-                start: g.start_date,
-                end: g.end_date,
-                amount: on_account(j),
-            })
-        })
-        .collect();
-    out.gaps = input
-        .gaps
-        .iter()
-        .filter(|g| g.start <= date)
-        .map(|g| GapItem {
-            start: g.start,
-            end: g.end,
-            change: g.change,
-        })
-        .collect();
-
-    out.date = Some(date);
-    out.statement_file = Some(latest.file_name.clone());
-    out.ledger_balance = Some(ledger);
-    let Some(statement) = latest.closing_balance.map(Money::from_cents) else {
-        out.status = ReconcileStatus::NoBalance;
-        return out;
+/// A stored statement as core needs it. `kept` is its file read again ([`kept_statements`]);
+/// `spans` are the account's balance spans, or just this statement's.
+///
+/// Checkpoints count only balances the bank states, on the dates it states them (`docs/domain.md`,
+/// "Bank vs books"). M10 stores the statement's coverage (its period widened to take in every
+/// line) and both ends' balances, working out the one the file doesn't state. So the stated
+/// balances and their dates come from the kept file, not from the stored row. A statement uploaded
+/// before M18 has no file kept: which of its balances were stated isn't known, so both stored
+/// balances count, at the ends of its coverage, as they did before. `stored_closing` is always
+/// M10's figure, for M15's reconciliation.
+pub fn statement_facts<'a>(
+    s: &'a StoredStatement,
+    kept: Option<&Statement>,
+    spans: &[BalanceSpan],
+) -> StatementFacts<'a> {
+    let span_of = |kind: BalanceKind| {
+        spans
+            .iter()
+            .find(|b| b.statement_id == s.id && b.balance == kind)
+            .map(|b| b.span)
     };
-    let lines_total: Money = out
-        .lines_without_journal
-        .iter()
-        .filter(|l| l.reason != UnmatchedReason::Duplicate)
-        .map(|l| l.amount)
-        .sum();
-    let journals_total: Money = out.journals_without_line.iter().map(|j| j.amount).sum();
-    let difference = ledger - statement;
-    let unexplained = difference - journals_total + lines_total;
-    out.statement_balance = Some(statement);
-    out.difference = Some(difference);
-    out.unexplained = Some(unexplained);
-    out.status = if !unexplained.is_zero() {
-        ReconcileStatus::Differs
-    } else if difference.is_zero() && lines_total.is_zero() && journals_total.is_zero() {
-        ReconcileStatus::Agrees
-    } else {
-        ReconcileStatus::Explained
+    let stored = |cents: Option<i64>, date: NaiveDate| (cents.map(Money::from_cents), date, None);
+    let stated = |b: Option<Balance>, kind: BalanceKind, otherwise: NaiveDate| match b {
+        Some(b) => (Some(b.amount), b.date, span_of(kind).or(b.span)),
+        None => (None, otherwise, None),
     };
-    out
+    let ((opening, opening_date, opening_span), (closing, closing_date, closing_span)) = match kept
+    {
+        Some(file) => (
+            stated(file.opening, BalanceKind::Opening, s.start_date),
+            stated(file.closing, BalanceKind::Closing, s.end_date),
+        ),
+        None => (
+            stored(s.opening_balance, s.start_date),
+            stored(s.closing_balance, s.end_date),
+        ),
+    };
+    StatementFacts {
+        id: &s.id,
+        file_name: &s.file_name,
+        start: s.start_date,
+        end: s.end_date,
+        opening,
+        opening_date,
+        closing,
+        closing_date,
+        stored_closing: s.closing_balance.map(Money::from_cents),
+        imported_seq: s.imported_seq,
+        opening_span,
+        closing_span,
+    }
+}
+
+/// A stored line with the journal live for it now (`None` if it posts nothing). Lines are stored
+/// in file order with UUIDv7 ids, so sorting a statement's lines by id gives the file's order.
+pub fn line_facts<'a>(line: &'a BankLine, state: Option<&'a LineState>) -> BankLineFacts<'a> {
+    let (journal_id, duplicate) = match state {
+        None => (Some(line.journal_id.as_str()), false),
+        Some(s) => (s.journal_id.as_deref(), s.state == LineStateKind::Duplicate),
+    };
+    BankLineFacts {
+        id: &line.id,
+        statement_id: &line.statement_id,
+        date: line.date,
+        amount: line.amount,
+        description: &line.description,
+        occurrence: line.occurrence,
+        balance: line.balance,
+        balance_span: None,
+        journal_id,
+        duplicate,
+    }
+}
+
+/// A stored journal as core needs it.
+pub fn ledger_journal(j: &StoredJournal) -> LedgerJournal<'_> {
+    LedgerJournal {
+        id: &j.id,
+        reverses_journal_id: j.reverses_journal_id.as_deref(),
+        posted_seq: j.posted_seq,
+        journal: &j.journal,
+    }
 }
 
 /// Loads a client-year's bank accounts and reconciles each one.
@@ -371,47 +184,49 @@ pub async fn year_reconciliation(
     for y in &year_list {
         all.extend(journals::for_year(conn, &y.id).await?);
     }
+    let ledger: Vec<LedgerJournal<'_>> = all.iter().map(ledger_journal).collect();
     let start = year_list
         .first()
         .map_or(year.year.start(), |y| y.year.start());
-    let lines = bank_store::bank_lines(conn, &year.client_id).await?;
+    let mut lines = bank_store::bank_lines(conn, &year.client_id).await?;
+    lines.sort_by(|a, b| (&a.statement_id, &a.id).cmp(&(&b.statement_id, &b.id)));
     let states: BTreeMap<String, LineState> = coding_store::line_states(conn, &year.client_id)
         .await?
         .into_iter()
         .map(|s| (s.bank_line_id.clone(), s))
         .collect();
-    let with_journals: Vec<LineWithJournal<'_>> = lines
-        .iter()
-        .map(|l| match states.get(&l.id) {
-            None => LineWithJournal {
-                line: l,
-                journal_id: Some(l.journal_id.as_str()),
-                duplicate: false,
-            },
-            Some(s) => LineWithJournal {
-                line: l,
-                journal_id: s.journal_id.as_deref(),
-                duplicate: s.state == LineStateKind::Duplicate,
-            },
-        })
-        .collect();
 
     let mut out = Vec::new();
     for account in &accounts {
         let statements = bank_store::statements(conn, &account.id).await?;
+        let spans = bank_store::balance_spans_for_account(conn, &account.id).await?;
+        let kept = kept_statements(conn, &statements).await?;
+        let statements: Vec<StatementFacts<'_>> = statements
+            .iter()
+            .map(|s| statement_facts(s, kept.get(&s.id), &spans))
+            .collect();
         let gap_journals = bank_store::live_gap_journals(conn, &account.id).await?;
+        let gap_journals: Vec<GapJournalFacts<'_>> = gap_journals
+            .iter()
+            .map(|g| GapJournalFacts {
+                journal_id: &g.journal_id,
+                start: g.start_date,
+                end: g.end_date,
+            })
+            .collect();
         let gaps = business::account_gaps(conn, account, start).await?;
+        let account_lines: Vec<BankLineFacts<'_>> = lines
+            .iter()
+            .filter(|l| l.bank_account_id == account.id)
+            .map(|l| line_facts(l, states.get(&l.id)))
+            .collect();
         out.push(reconcile_account(
             &year.year,
             &AccountInputs {
-                account,
+                account: account_facts(account),
                 statements: &statements,
-                lines: with_journals
-                    .iter()
-                    .filter(|l| l.line.bank_account_id == account.id)
-                    .cloned()
-                    .collect(),
-                journals: &all,
+                lines: &account_lines,
+                journals: &ledger,
                 gap_journals: &gap_journals,
                 gaps: &gaps,
             },
@@ -422,6 +237,251 @@ pub async fn year_reconciliation(
     Ok(YearReconciliation {
         client_year_id: client_year_id.to_owned(),
         accounts: out,
+    })
+}
+
+/// What the suspects (M18, `acct_core::reconcile::suspects`) look at for one bank account: its
+/// checkpoints walked against the ledger, its stored lines with M10's flag and the owner's answer,
+/// the live journals on it and where each came from, its statements with what their kept files
+/// state, its gaps, and the business's other accounts' statements. Read only.
+///
+/// The books are the app's own: gap journals are in the ledger like any other journal
+/// (`docs/domain.md`, "Bank vs books"), and checkpoints are the balances the files state, on
+/// their own dates.
+pub async fn suspect_input(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    bank_account_id: &str,
+) -> Result<SuspectInput, CommandError> {
+    let account = bank_store::bank_account(conn, bank_account_id)
+        .await?
+        .filter(|a| a.client_id == client_id)
+        .ok_or_else(|| CommandError::not_found("bank account", bank_account_id))?;
+    let business = business::business(conn, client_id).await?;
+    let year_list = years::for_client(conn, client_id).await?;
+    let start = year_list
+        .first()
+        .map_or(business.start_date, |y| y.year.start());
+
+    // The ledger: every journal of the client, and the live ones on this account.
+    let mut all: Vec<StoredJournal> = Vec::new();
+    for y in &year_list {
+        all.extend(journals::for_year(conn, &y.id).await?);
+    }
+    let ledger: Vec<LedgerJournal<'_>> = all.iter().map(ledger_journal).collect();
+    let facts = account_facts(&account);
+    let reversed: std::collections::BTreeSet<&str> = all
+        .iter()
+        .filter_map(|j| j.reverses_journal_id.as_deref())
+        .collect();
+
+    // The account's statements, lines and what the owner said about them.
+    let stored = bank_store::statements(conn, &account.id).await?;
+    let spans = bank_store::balance_spans_for_account(conn, &account.id).await?;
+    let kept = kept_statements(conn, &stored).await?;
+    let all_lines = bank_store::bank_lines(conn, client_id).await?;
+    let states: BTreeMap<String, LineState> = coding_store::line_states(conn, client_id)
+        .await?
+        .into_iter()
+        .map(|s| (s.bank_line_id.clone(), s))
+        .collect();
+    let answers: BTreeMap<String, bool> = coding_store::duplicate_answers(conn, client_id)
+        .await?
+        .into_iter()
+        .collect();
+    let suspect_line = |l: &BankLine| {
+        let f = line_facts(l, states.get(&l.id));
+        SuspectLine {
+            id: l.id.clone(),
+            statement_id: l.statement_id.clone(),
+            bank_id: l.bank_id.clone(),
+            date: l.date,
+            amount: l.amount,
+            description: l.description.clone(),
+            balance: l.balance,
+            journal_id: f.journal_id.map(str::to_owned),
+            possible_duplicate: l.possible_duplicate,
+            duplicate_answer: answers.get(&l.id).copied(),
+        }
+    };
+    let mut lines: Vec<&BankLine> = all_lines
+        .iter()
+        .filter(|l| l.bank_account_id == account.id)
+        .collect();
+    // Each statement's lines in file order (UUIDv7 ids are in the order stored).
+    lines.sort_by(|a, b| (&a.statement_id, &a.id).cmp(&(&b.statement_id, &b.id)));
+
+    // The checkpoints, walked.
+    let statement_facts: Vec<StatementFacts<'_>> = stored
+        .iter()
+        .map(|s| statement_facts(s, kept.get(&s.id), &spans))
+        .collect();
+    let line_facts_: Vec<BankLineFacts<'_>> = lines
+        .iter()
+        .map(|l| BankLineFacts {
+            balance_span: spans
+                .iter()
+                .find(|b| {
+                    b.statement_id == l.statement_id
+                        && matches!(&b.balance, BalanceKind::Running { bank_line_id } if bank_line_id == &l.id)
+                })
+                .map(|b| b.span),
+            ..line_facts(l, states.get(&l.id))
+        })
+        .collect();
+    let checkpoints = checkpoints(
+        &statement_facts,
+        &line_facts_,
+        year_list.first().map(|_| start),
+    );
+    let walked = walk(&checkpoints, &movements(&facts, &ledger));
+
+    // Where each live journal on the account came from.
+    let gap_journals = bank_store::live_gap_journals(conn, &account.id).await?;
+    let line_of_journal: BTreeMap<&str, &str> = line_facts_
+        .iter()
+        .filter_map(|l| Some((l.journal_id?, l.id)))
+        .collect();
+    let journals: Vec<SuspectJournal> = all
+        .iter()
+        .filter(|j| j.reverses_journal_id.is_none() && !reversed.contains(j.id.as_str()))
+        .filter(|j| j.journal.lines.iter().any(|l| l.account == account.code))
+        .map(|j| {
+            let origin = if account.opening_journal_id.as_deref() == Some(j.id.as_str()) {
+                JournalOrigin::Opening
+            } else if let Some(g) = gap_journals.iter().find(|g| g.journal_id == j.id) {
+                JournalOrigin::Gap {
+                    start: g.start_date,
+                    end: g.end_date,
+                }
+            } else if let Some(line) = line_of_journal.get(j.id.as_str()) {
+                JournalOrigin::BankLine {
+                    bank_line_id: (*line).to_owned(),
+                }
+            } else {
+                JournalOrigin::ByHand
+            };
+            SuspectJournal {
+                id: j.id.clone(),
+                date: j.journal.date,
+                narration: j.journal.narration.clone(),
+                amount: ledger_journal(j).on_account(&account.code),
+                origin,
+            }
+        })
+        .collect();
+
+    // The statements: what each file states, and where its own balances break.
+    let key_account = account
+        .account_number
+        .clone()
+        .unwrap_or_else(|| account.id.clone());
+    let statements: Vec<SuspectStatement> = stored
+        .iter()
+        .zip(&statement_facts)
+        .map(|(s, f)| {
+            let file = kept.get(&s.id);
+            SuspectStatement {
+                id: s.id.clone(),
+                file_name: s.file_name.clone(),
+                start: s.start_date,
+                end: s.end_date,
+                imported_seq: s.imported_seq,
+                account_number: file.and_then(|p| p.account.clone()),
+                stated_opening: f.opening,
+                stated_closing: f.closing,
+                balance_break: file.and_then(|p| balance_break(p, &key_account, &s.id, &lines)),
+            }
+        })
+        .collect();
+
+    // The business's other accounts' statements, and what their lines put on those accounts.
+    let mut other_accounts = Vec::new();
+    for other in bank_store::bank_accounts(conn, client_id).await? {
+        if other.id == account.id {
+            continue;
+        }
+        for s in bank_store::statements(conn, &other.id).await? {
+            let net = all_lines
+                .iter()
+                .filter(|l| l.statement_id == s.id)
+                .map(&suspect_line)
+                .filter(SuspectLine::posts)
+                .map(|l| l.amount)
+                .sum();
+            other_accounts.push(OtherStatement {
+                bank_account_id: other.id.clone(),
+                statement_id: s.id,
+                start: s.start_date,
+                end: s.end_date,
+                net,
+            });
+        }
+    }
+
+    let opening = match (&account.opening, &account.opening_journal_id) {
+        (Some((date, amount)), Some(journal_id)) => Some(OpeningFacts {
+            journal_id: journal_id.clone(),
+            date: *date,
+            amount: *amount,
+        }),
+        _ => None,
+    };
+    Ok(SuspectInput {
+        account: AccountSide {
+            bank_account_id: account.id.clone(),
+            kind: facts.kind,
+            account_number: account.account_number.clone(),
+            start,
+        },
+        opening,
+        checkpoints,
+        compared: walked.compared,
+        window: walked.window,
+        lines: lines.iter().map(|l| suspect_line(l)).collect(),
+        journals,
+        statements,
+        gaps: business::account_gaps(conn, &account, start).await?,
+        other_accounts: Some(other_accounts),
+    })
+}
+
+/// Where a kept file's own balances first disagree with its lines (`Statement::balance_check`),
+/// with the stored line for the row that breaks, found by its duplicate key (date, amount,
+/// description, occurrence) among `statement_id`'s lines. A row that wasn't stored with this
+/// statement (it was already imported) gives no line.
+fn balance_break(
+    file: &Statement,
+    key_account: &str,
+    statement_id: &str,
+    lines: &[&BankLine],
+) -> Option<BalanceBreak> {
+    let BalanceCheck::Fails {
+        row,
+        expected,
+        stated,
+    } = file.balance_check()
+    else {
+        return None;
+    };
+    let bank_line_id = row.and_then(|row| {
+        let keys = duplicate_keys(key_account, &file.lines);
+        let (line, key) = file.lines.iter().zip(keys).find(|(l, _)| l.row == row)?;
+        lines
+            .iter()
+            .find(|l| {
+                l.statement_id == statement_id
+                    && l.date == line.date
+                    && l.amount == line.amount
+                    && l.description == line.description
+                    && l.occurrence == key.occurrence
+            })
+            .map(|l| l.id.clone())
+    });
+    Some(BalanceBreak {
+        bank_line_id,
+        expected,
+        stated,
     })
 }
 
@@ -438,271 +498,93 @@ pub async fn get_reconciliation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use acct_core::{AccountCode, Journal, JournalLine};
-    use acct_store::journals::JournalKind;
+    use acct_core::reconcile::SourceSpan;
 
-    fn d(s: &str) -> NaiveDate {
-        s.parse().unwrap()
-    }
-
-    fn m(s: &str) -> Money {
-        s.parse().unwrap()
-    }
-
-    fn code(s: &str) -> AccountCode {
-        s.parse().unwrap()
-    }
-
-    fn year() -> ClientYear {
-        ClientYear::new(d("2025-08-01"), d("2026-03-31")).unwrap()
-    }
-
-    fn account() -> BankAccount {
-        BankAccount {
-            id: "a1".into(),
-            client_id: "c1".into(),
-            kind: AccountKind::Bank,
-            code: code("600.01"),
-            name: "Cheque".into(),
-            account_number: Some("99-1001-0000123-00".into()),
-            opening: Some((d("2025-08-01"), m("100.00"))),
-            opening_journal_id: Some("j-open".into()),
-            created_seq: 1,
-        }
-    }
-
-    fn journal(
-        id: &str,
-        date: &str,
-        bank: &str,
-        other: &str,
-        reverses: Option<&str>,
-    ) -> StoredJournal {
-        StoredJournal {
-            id: id.into(),
-            client_year_id: "y1".into(),
-            kind: JournalKind::BankLine,
-            reverses_journal_id: reverses.map(Into::into),
-            posted_seq: 1,
-            journal: Journal {
-                date: d(date),
-                narration: id.into(),
-                lines: vec![
-                    JournalLine {
-                        account: code("600.01"),
-                        amount: m(bank),
-                    },
-                    JournalLine {
-                        account: code(other),
-                        amount: -m(bank),
-                    },
-                ],
-            },
-        }
-    }
-
-    fn line(id: &str, date: &str, amount: &str, journal_id: &str) -> BankLine {
-        BankLine {
-            id: id.into(),
-            bank_account_id: "a1".into(),
-            statement_id: "s1".into(),
-            date: d(date),
-            amount: m(amount),
-            description: id.to_uppercase(),
-            occurrence: 1,
-            bank_id: None,
-            balance: None,
-            journal_id: journal_id.into(),
-            possible_duplicate: false,
-        }
-    }
-
-    fn statement(end: &str, closing: Option<&str>) -> StoredStatement {
+    fn statement() -> StoredStatement {
+        let d = |s: &str| s.parse().unwrap();
         StoredStatement {
             id: "s1".into(),
             bank_account_id: "a1".into(),
-            parser: "ofx".into(),
-            file_name: format!("to-{end}.ofx"),
-            start_date: d("2025-08-01"),
-            end_date: d(end),
-            opening_balance: Some(10_000),
-            closing_balance: closing.map(|c| m(c).cents()),
-            lines_in_file: 2,
-            lines_added: 2,
+            parser: "qif".into(),
+            file_name: "visa.qif".into(),
+            start_date: d("2025-07-01"),
+            end_date: d("2025-09-28"),
+            opening_balance: Some(-10_000),
+            closing_balance: Some(-25_000),
+            lines_in_file: 3,
+            lines_added: 3,
             imported_seq: 1,
         }
     }
 
-    fn run(
-        statements: &[StoredStatement],
-        lines: &[BankLine],
-        dupes: &[&str],
-        journals: &[StoredJournal],
-    ) -> AccountReconciliation {
-        let account = account();
-        reconcile_account(
-            &year(),
-            &AccountInputs {
-                account: &account,
-                statements,
-                lines: lines
-                    .iter()
-                    .map(|l| LineWithJournal {
-                        line: l,
-                        journal_id: (!dupes.contains(&l.id.as_str()))
-                            .then_some(l.journal_id.as_str()),
-                        duplicate: dupes.contains(&l.id.as_str()),
-                    })
-                    .collect(),
-                journals,
-                gap_journals: &[],
-                gaps: &[],
+    fn span(statement_id: &str, balance: BalanceKind) -> BalanceSpan {
+        BalanceSpan {
+            statement_id: statement_id.into(),
+            balance,
+            span: SourceSpan {
+                line: 2,
+                start: 1,
+                end: 8,
             },
-        )
+        }
     }
 
-    fn base() -> (Vec<BankLine>, Vec<StoredJournal>) {
-        (
-            vec![
-                line("l1", "2025-08-05", "50.00", "j1"),
-                line("l2", "2025-08-20", "-30.00", "j2"),
-            ],
-            vec![
-                journal("j-open", "2025-08-01", "100.00", "950", None),
-                journal("j1", "2025-08-05", "50.00", "140", None),
-                journal("j2", "2025-08-20", "-30.00", "965", None),
-            ],
-        )
+    fn file(opening: Option<(&str, i64)>, closing: Option<(&str, i64)>) -> Statement {
+        let balance = |(date, cents): (&str, i64)| Balance {
+            date: date.parse().unwrap(),
+            amount: Money::from_cents(cents),
+            span: None,
+        };
+        Statement {
+            parser: "qif".into(),
+            kind: acct_import::bank::StatementKind::CreditCard,
+            account: None,
+            period_start: None,
+            period_end: None,
+            opening: opening.map(balance),
+            closing: closing.map(balance),
+            lines: Vec::new(),
+        }
     }
 
+    /// A QIF states only its opening balance: the closing M10 worked out isn't a checkpoint, but
+    /// M15 still reconciles against it.
     #[test]
-    fn agrees_when_every_line_has_its_journal() {
-        let (lines, journals) = base();
-        let r = run(
-            &[statement("2025-08-31", Some("120.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::Agrees);
-        assert_eq!(r.ledger_balance, Some(m("120.00")));
-        assert_eq!(r.difference, Some(Money::ZERO));
-        assert!(r.lines_without_journal.is_empty() && r.journals_without_line.is_empty());
+    fn only_balances_the_file_states_reach_the_checkpoints() {
+        let s = statement();
+        let spans = [
+            span("s1", BalanceKind::Opening),
+            span("other", BalanceKind::Closing),
+        ];
+        let kept = file(Some(("2025-07-01", -10_000)), None);
+        let f = statement_facts(&s, Some(&kept), &spans);
+        assert_eq!(f.opening, Some(Money::from_cents(-10_000)));
+        assert!(f.opening_span.is_some());
+        assert_eq!((f.closing, f.closing_span), (None, None));
+        assert_eq!(f.stored_closing, Some(Money::from_cents(-25_000)));
     }
 
-    /// A recode reverses and reposts: the reversal pair is neither unmatched nor counted twice.
+    /// A stated balance sits on the date the file gives it, not at the end of the days the
+    /// statement covers (the coverage takes in a line dated after the closing balance).
     #[test]
-    fn recoded_lines_still_match() {
-        let (mut lines, mut journals) = base();
-        journals.push(journal("j2r", "2025-08-20", "30.00", "965", Some("j2")));
-        journals.push(journal("j2b", "2025-08-20", "-30.00", "960", None));
-        lines[1].journal_id = "j2b".into();
-        let r = run(
-            &[statement("2025-08-31", Some("120.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::Agrees);
+    fn a_stated_balance_keeps_its_own_date() {
+        let s = statement();
+        let kept = file(None, Some(("2025-09-27", -25_000)));
+        let f = statement_facts(&s, Some(&kept), &[]);
+        assert_eq!(f.opening, None);
+        assert_eq!(f.closing, Some(Money::from_cents(-25_000)));
+        assert_eq!(f.closing_date, "2025-09-27".parse::<NaiveDate>().unwrap());
+        assert_eq!(f.end, "2025-09-28".parse::<NaiveDate>().unwrap());
     }
 
+    /// Uploaded before M18 kept files: which balances were stated isn't known, so both count, at
+    /// the ends of the statement's coverage.
     #[test]
-    fn a_hand_journal_on_the_bank_is_listed_and_explains_the_difference() {
-        let (lines, mut journals) = base();
-        let mut manual = journal("jm", "2025-08-25", "7.00", "290", None);
-        manual.kind = JournalKind::Manual;
-        journals.push(manual);
-        let r = run(
-            &[statement("2025-08-31", Some("120.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::Explained);
-        assert_eq!(r.difference, Some(m("7.00")));
-        assert_eq!(r.unexplained, Some(Money::ZERO));
-        assert_eq!(r.journals_without_line.len(), 1);
-        assert_eq!(r.journals_without_line[0].amount, m("7.00"));
-    }
-
-    #[test]
-    fn a_line_with_no_journal_is_listed_and_a_duplicate_isnt_a_reconciling_item() {
-        let (mut lines, journals) = base();
-        // l3 is on the statement but its journal was reversed with nothing in its place.
-        lines.push(line("l3", "2025-08-21", "-5.00", "j3"));
-        let mut journals = journals;
-        journals.push(journal("j3", "2025-08-21", "-5.00", "965", None));
-        journals.push(journal("j3r", "2025-08-21", "5.00", "965", Some("j3")));
-        // l4 is a duplicate of l1: the bank counted it once, under l1.
-        lines.push(line("l4", "2025-08-05", "50.00", "j4"));
-        let r = run(
-            &[statement("2025-08-31", Some("115.00"))],
-            &lines,
-            &["l4"],
-            &journals,
-        );
-        let reasons: Vec<_> = r
-            .lines_without_journal
-            .iter()
-            .map(|l| (l.bank_line_id.as_str(), l.reason))
-            .collect();
-        assert_eq!(
-            reasons,
-            vec![
-                ("l4", UnmatchedReason::Duplicate),
-                ("l3", UnmatchedReason::NoJournal)
-            ]
-        );
-        assert_eq!(r.difference, Some(m("5.00")));
-        assert_eq!(r.unexplained, Some(Money::ZERO));
-        assert_eq!(r.status, ReconcileStatus::Explained);
-    }
-
-    #[test]
-    fn a_difference_nothing_explains() {
-        let (lines, journals) = base();
-        let r = run(
-            &[statement("2025-08-31", Some("121.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::Differs);
-        assert_eq!(r.unexplained, Some(m("-1.00")));
-    }
-
-    #[test]
-    fn no_balance_and_no_statement() {
-        let (lines, journals) = base();
-        let r = run(&[statement("2025-08-31", None)], &lines, &[], &journals);
-        assert_eq!(r.status, ReconcileStatus::NoBalance);
-        assert_eq!(r.ledger_balance, Some(m("120.00")));
-        // A statement ending after the year isn't used.
-        let r = run(
-            &[statement("2026-04-30", Some("120.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::NoStatement);
-        assert_eq!(r.date, None);
-    }
-
-    /// Items after the reconciliation date aren't in it.
-    #[test]
-    fn only_items_up_to_the_date() {
-        let (mut lines, mut journals) = base();
-        lines.push(line("l5", "2025-09-02", "9.00", "j5"));
-        journals.push(journal("j5", "2025-09-02", "9.00", "140", None));
-        let mut manual = journal("jm", "2025-09-03", "1.00", "290", None);
-        manual.kind = JournalKind::Manual;
-        journals.push(manual);
-        let r = run(
-            &[statement("2025-08-31", Some("120.00"))],
-            &lines,
-            &[],
-            &journals,
-        );
-        assert_eq!(r.status, ReconcileStatus::Agrees);
+    fn a_statement_without_a_kept_file_keeps_both_balances() {
+        let s = statement();
+        let f = statement_facts(&s, None, &[span("other", BalanceKind::Opening)]);
+        assert_eq!(f.opening, Some(Money::from_cents(-10_000)));
+        assert_eq!(f.closing, Some(Money::from_cents(-25_000)));
+        assert_eq!((f.opening_date, f.closing_date), (s.start_date, s.end_date));
     }
 }

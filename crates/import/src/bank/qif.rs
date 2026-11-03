@@ -15,7 +15,7 @@
 use chrono::NaiveDate;
 
 use super::text::{find_account, find_card, normalise_description, parse_amount};
-use super::{Balance, ParserInfo, Problem, Statement, StatementKind, StatementLine};
+use super::{Balance, ParserInfo, Problem, SourceSpan, Statement, StatementKind, StatementLine};
 
 pub const BANK: ParserInfo = ParserInfo {
     id: "qif-bank-1",
@@ -62,6 +62,8 @@ struct Record {
     row: u32,
     date: Option<String>,
     amount: Option<String>,
+    /// Where the amount is written, for an opening-balance entry (M18).
+    amount_span: Option<SourceSpan>,
     payee: Option<String>,
     memo: Option<String>,
     category: Option<String>,
@@ -123,8 +125,15 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
             current = Record::default();
             continue;
         }
-        let (code, value) = line.split_at(line.chars().next().map_or(0, char::len_utf8));
-        let value = value.trim();
+        let (code, rest) = line.split_at(line.chars().next().map_or(0, char::len_utf8));
+        let value = rest.trim();
+        let value_start = code.len() + (rest.len() - rest.trim_start().len());
+        let n = |x: usize| u32::try_from(x).unwrap_or(u32::MAX);
+        let span = SourceSpan {
+            line: row,
+            start: n(value_start),
+            end: n(value_start + value.len()),
+        };
         match section {
             Section::Account => {
                 if code == "N" {
@@ -145,8 +154,10 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 let field = Some(value.to_owned());
                 match code {
                     "D" => current.date = field,
-                    "T" => current.amount = field,
-                    "U" if current.amount.is_none() => current.amount = field,
+                    "T" => (current.amount, current.amount_span) = (field, Some(span)),
+                    "U" if current.amount.is_none() => {
+                        (current.amount, current.amount_span) = (field, Some(span));
+                    }
                     "P" => current.payee = field,
                     "M" => current.memo = field,
                     "L" => current.category = field,
@@ -235,7 +246,11 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 .as_deref()
                 .is_some_and(|p| p.trim().eq_ignore_ascii_case("opening balance"));
         if is_opening {
-            opening = Some(Balance { date, amount });
+            opening = Some(Balance {
+                date,
+                amount,
+                span: r.amount_span,
+            });
             if account.is_none() {
                 account = r.category.as_deref().and_then(find_number);
             }
@@ -251,6 +266,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
             ]),
             bank_id: None,
             balance: None,
+            balance_span: None,
         });
     }
 
@@ -379,7 +395,12 @@ mod tests {
             s.opening,
             Some(Balance {
                 date: d("2025-08-01"),
-                amount: Money::from_cents(1000)
+                amount: Money::from_cents(1000),
+                span: Some(SourceSpan {
+                    line: 3,
+                    start: 1,
+                    end: 6
+                }),
             })
         );
         assert!(s.lines.is_empty());

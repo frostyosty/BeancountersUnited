@@ -255,6 +255,8 @@ async fn position_of(
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub struct StatementView {
+    /// For its excerpt (`GET /api/statements/{id}/excerpt`, M18).
+    pub id: String,
     pub file_name: String,
     pub parser: String,
     #[ts(type = "string")]
@@ -396,6 +398,7 @@ pub async fn business_view(
             statements: statements
                 .iter()
                 .map(|s| StatementView {
+                    id: s.id.clone(),
                     file_name: s.file_name.clone(),
                     parser: s.parser.clone(),
                     start: s.start_date,

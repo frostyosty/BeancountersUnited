@@ -101,6 +101,34 @@ pub fn formats() -> Vec<ParserInfo> {
 pub struct Balance {
     pub date: NaiveDate,
     pub amount: Money,
+    /// Where the file states it (M18), for showing the owner the bank's own words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub span: Option<SourceSpan>,
+}
+
+/// Where a figure sits in the file: its 1-based line, and the byte range within that line
+/// (`start` inclusive, `end` exclusive) of the text as [`decode`] gives it.
+pub use acct_core::reconcile::SourceSpan;
+
+/// A statement file's text exactly as the parsers read it, so a [`SourceSpan`] indexes into it.
+pub fn decode(bytes: &[u8]) -> String {
+    text::decode(bytes)
+}
+
+/// The copy of an uploaded file we keep (M18). A bank statement is kept as it arrived. A card
+/// statement has any full card number in it masked to the last four digits, as everything we
+/// read from it already is, so the server never stores a full card number. Masking keeps the
+/// length, so the statement's spans still hold.
+pub fn kept_copy(bytes: &[u8], statement: &Statement) -> Vec<u8> {
+    let last4 = match (statement.kind, statement.account.as_deref()) {
+        (StatementKind::CreditCard, Some(card)) => card.rsplit('-').next().unwrap_or(card),
+        _ => return bytes.to_vec(),
+    };
+    if last4.len() == 4 && last4.bytes().all(|b| b.is_ascii_digit()) {
+        text::mask_card_numbers(bytes, last4)
+    } else {
+        bytes.to_vec()
+    }
 }
 
 /// One transaction from the file.
@@ -120,6 +148,9 @@ pub struct StatementLine {
     /// The running balance after this line, where the file has one. Signed like `amount`, so a
     /// balance owed on a card is negative.
     pub balance: Option<Money>,
+    /// Where the file states `balance` (M18).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub balance_span: Option<SourceSpan>,
 }
 
 /// What kind of account a statement is for.
@@ -287,7 +318,8 @@ pub enum Problem {
     ForeignCurrency {
         currency: String,
     },
-    /// A QIF section other than `!Type:Bank` or `!Type:CCard`, such as `!Type:Invst`.
+    /// A QIF section other than `!Type:Bank` or `!Type:CCard`, such as `!Type:Invst`, or an OFX
+    /// message set other than bank, card and sign-on, such as `INVSTMTMSGSRSV1`.
     UnsupportedSection {
         row: u32,
         section: String,
@@ -303,6 +335,127 @@ pub enum Problem {
         /// That transaction's date, where it had a readable one.
         last_complete_date: Option<NaiveDate>,
     },
+    /// The bank sent an error instead of a statement: an OFX `STATUS` whose `CODE` isn't 0 or whose
+    /// `SEVERITY` is `ERROR`, such as a failed sign-on. `message` is the bank's own words.
+    BankError {
+        /// Where the `STATUS` starts.
+        row: u32,
+        /// The bank's status code, as written.
+        bank_code: String,
+        message: Option<String>,
+    },
+    /// The file holds no bank or credit card statement, and nothing else we can name.
+    NoStatement,
+}
+
+/// What a section we don't read holds, in words.
+fn describe_section(section: &str) -> String {
+    if section.to_ascii_uppercase().contains("INV") {
+        "an investment statement".to_owned()
+    } else {
+        format!("a \"{section}\" section")
+    }
+}
+
+/// The problem in plain words for the owner, starting "Row N:" when it's about one row.
+impl fmt::Display for Problem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Problem::Unreadable {
+                row: Some(row),
+                message,
+            } => write!(
+                f,
+                "Row {row}: we couldn't split this row into columns ({message})."
+            ),
+            Problem::Unreadable { row: None, message } => {
+                write!(f, "We couldn't split this file into columns ({message}).")
+            }
+            Problem::BadDate { row, value } => {
+                write!(f, "Row {row}: \"{value}\" isn't a date we can read.")
+            }
+            Problem::BadAmount {
+                row,
+                value,
+                message,
+            } => write!(
+                f,
+                "Row {row}: \"{value}\" isn't an amount we can read ({message})."
+            ),
+            Problem::MonthFirstDates { row, value } => write!(
+                f,
+                "Row {row}: \"{value}\" only makes sense with the month first. Export the file \
+                 with day-first dates (DD/MM/YYYY) and upload it again."
+            ),
+            Problem::MissingField { row, field } => {
+                write!(f, "Row {row}: this line has no {field}.")
+            }
+            Problem::DebitAndCredit { row } => write!(
+                f,
+                "Row {row}: this line has an amount in both Debit and Credit, or in neither."
+            ),
+            Problem::Missing { field } => {
+                write!(f, "The file doesn't have the {field} we need.")
+            }
+            Problem::SeveralAccounts { row, account } => write!(
+                f,
+                "Row {row}: this line is for account {account}, but the file started with a \
+                 different one. Upload one account per file."
+            ),
+            Problem::SeveralStatements => f.write_str(
+                "This file holds more than one statement. Download each account on its own and \
+                 upload them one at a time.",
+            ),
+            Problem::ForeignCurrency { currency } => write!(
+                f,
+                "This statement is in {currency}. We only read New Zealand dollar (NZD) accounts."
+            ),
+            Problem::UnsupportedSection { row, section } => write!(
+                f,
+                "Row {row}: this file holds {}, not a bank or credit card statement. We only \
+                 read bank and credit card statements.",
+                describe_section(section)
+            ),
+            Problem::Truncated {
+                row,
+                last_complete_row,
+                last_complete_date,
+            } => {
+                write!(
+                    f,
+                    "The file stops part-way, at row {row}, so the download looks cut off."
+                )?;
+                match (last_complete_row, last_complete_date) {
+                    (Some(r), Some(d)) => write!(
+                        f,
+                        " The last whole transaction is on {} (row {r}).",
+                        d.format("%-d %B %Y")
+                    )?,
+                    (Some(r), None) => write!(f, " The last whole transaction starts at row {r}.")?,
+                    (None, _) => f.write_str(" It has no whole transactions.")?,
+                }
+                f.write_str(
+                    " We haven't used any of it. Download it again and upload the new file.",
+                )
+            }
+            Problem::BankError {
+                row,
+                bank_code: code,
+                message,
+            } => {
+                f.write_str("Your bank sent an error instead of a statement")?;
+                match message {
+                    Some(m) => write!(f, ": '{m}' (code {code}, row {row}).")?,
+                    None => write!(f, " (code {code}, row {row}).")?,
+                }
+                f.write_str(" Try downloading it again.")
+            }
+            Problem::NoStatement => f.write_str(
+                "This file has no bank or credit card statement in it. Try downloading it again, \
+                 choosing the account and the dates.",
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -326,11 +479,13 @@ impl fmt::Display for StatementError {
                  (sometimes called Money or Microsoft Money format) from internet banking.",
                 formats.join("; ")
             ),
-            StatementError::Invalid { parser, problems } => write!(
-                f,
-                "This looks like a {parser} file, but {} problem(s) stop us reading it",
-                problems.len()
-            ),
+            StatementError::Invalid { parser, .. } => {
+                let label = PARSERS
+                    .iter()
+                    .find(|p| p.info.id == parser)
+                    .map_or(parser.as_str(), |p| p.info.label);
+                write!(f, "We read this file as {label}, but can't use it:")
+            }
         }
     }
 }
@@ -370,6 +525,7 @@ mod tests {
             description: description.to_owned(),
             bank_id: None,
             balance: None,
+            balance_span: None,
         }
     }
 
@@ -403,6 +559,121 @@ mod tests {
     }
 
     #[test]
+    fn problems_read_as_plain_words_with_their_row() {
+        let bank = Problem::BankError {
+            row: 14,
+            bank_code: "15500".to_owned(),
+            message: Some("Signon invalid".to_owned()),
+        };
+        assert_eq!(
+            bank.to_string(),
+            "Your bank sent an error instead of a statement: 'Signon invalid' (code 15500, row 14). \
+             Try downloading it again."
+        );
+        let bare = Problem::BankError {
+            row: 3,
+            bank_code: "2000".to_owned(),
+            message: None,
+        };
+        assert_eq!(
+            bare.to_string(),
+            "Your bank sent an error instead of a statement (code 2000, row 3). Try downloading it again."
+        );
+        assert_eq!(
+            Problem::UnsupportedSection {
+                row: 12,
+                section: "INVSTMTMSGSRSV1".to_owned()
+            }
+            .to_string(),
+            "Row 12: this file holds an investment statement, not a bank or credit card statement. \
+             We only read bank and credit card statements."
+        );
+        assert!(
+            Problem::UnsupportedSection {
+                row: 1,
+                section: "!Type:Cat".to_owned()
+            }
+            .to_string()
+            .contains("a \"!Type:Cat\" section")
+        );
+        assert_eq!(
+            Problem::NoStatement.to_string(),
+            "This file has no bank or credit card statement in it. Try downloading it again, \
+             choosing the account and the dates."
+        );
+        assert_eq!(
+            Problem::Truncated {
+                row: 50,
+                last_complete_row: Some(40),
+                last_complete_date: Some("2025-08-05".parse().unwrap()),
+            }
+            .to_string(),
+            "The file stops part-way, at row 50, so the download looks cut off. The last whole \
+             transaction is on 5 August 2025 (row 40). We haven't used any of it. Download it again \
+             and upload the new file."
+        );
+        assert_eq!(
+            Problem::BadDate {
+                row: 7,
+                value: "20251301".to_owned()
+            }
+            .to_string(),
+            "Row 7: \"20251301\" isn't a date we can read."
+        );
+    }
+
+    /// Decided in M17 (docs/domain.md, "Bank statement formats"): every parser keeps a line with
+    /// no text, with an empty description. Nothing is made up; the web app shows "(no description)".
+    #[test]
+    fn a_line_with_no_text_is_kept_with_an_empty_description() {
+        let files: [&[u8]; 4] = [
+            b"!Type:Bank\nD02/08/2025\nT-5.00\n^\n",
+            b"Kowhai Co-operative Bank - Account statement\n\
+              Account number,99-5501-0000456-00\n\
+              Statement period,01/08/2025,31/08/2025\n\
+              Opening balance,10.00\nClosing balance,5.00\n\n\
+              Date,Description,Debit,Credit,Balance\n\
+              02/08/2025,,5.00,,5.00\nEnd of statement\n",
+            b"Account,Posted,Type,Payee,Particulars,Reference,Amount\n\
+              99-7702-0000789-00,2025-08-29,INT,,,,1.00\n",
+            b"Pohutukawa Card Services - Card statement\n\
+              Card number,XXXX XXXX XXXX 8802\n\
+              Statement period,15/08/2025,14/09/2025\n\
+              Opening balance,10.00\nClosing balance,15.00\n\n\
+              Processed,Transaction date,Details,Amount\n\
+              16/08/2025,15/08/2025,,5.00\nEnd of statement\n",
+        ];
+        let mut parsers = Vec::new();
+        for file in files {
+            let s = read_statement(file).unwrap_or_else(|e| panic!("{e:?}"));
+            assert_eq!(s.lines.len(), 1, "{}", s.parser);
+            assert_eq!(s.lines[0].description, "", "{}", s.parser);
+            parsers.push(s.parser);
+        }
+        assert_eq!(
+            parsers,
+            [
+                "qif-bank-1",
+                "kowhai-csv-1",
+                "rimu-csv-1",
+                "pohutukawa-card-csv-1"
+            ]
+        );
+    }
+
+    #[test]
+    fn an_invalid_file_names_its_format_in_words() {
+        let err = StatementError::Invalid {
+            parser: "ofx-sgml-1".to_owned(),
+            problems: vec![Problem::NoStatement],
+        };
+        assert_eq!(
+            err.to_string(),
+            "We read this file as OFX 1.x (SGML), but can't use it:"
+        );
+    }
+
+    #[test]
     fn balance_check_skips_without_both_ends() {
         let mut s = Statement {
             parser: String::new(),
@@ -414,6 +685,7 @@ mod tests {
             closing: Some(Balance {
                 date: "2025-08-31".parse().unwrap(),
                 amount: Money::from_cents(100),
+                span: None,
             }),
             lines: vec![line("2025-08-02", 100, "X")],
         };
@@ -421,6 +693,7 @@ mod tests {
         s.opening = Some(Balance {
             date: "2025-08-01".parse().unwrap(),
             amount: Money::ZERO,
+            span: None,
         });
         assert_eq!(s.balance_check(), BalanceCheck::Passes);
         s.lines[0].balance = Some(Money::from_cents(99));

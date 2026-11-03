@@ -254,7 +254,8 @@ export function CategoriseForm({
   const choices = direction === "in" ? IN_CHOICES : OUT_CHOICES;
   const spending = direction === "out" && ["expense", "part_private", "asset_purchase"].includes(s.choice);
   const showInvoice = gstRegistered && spending && s.gst === "standard" && -line.amount > SUPPLY_INFO_THRESHOLD;
-  const canRule = s.choice !== "asset_purchase";
+  // A line with no text gives a rule nothing to match on.
+  const canRule = s.choice !== "asset_purchase" && line.description.trim() !== "";
 
   const pickAccount = (code: string) => {
     const account = chart.data?.find((a) => a.code === code);

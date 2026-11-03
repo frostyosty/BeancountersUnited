@@ -95,6 +95,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 ]),
                 bank_id: None,
                 balance: None,
+                balance_span: None,
             });
         }
     }

@@ -71,3 +71,19 @@
 .unexplained td {
   font-weight: 600;
 }
+
+/* What the reconciliation findings make of a difference (M18). */
+.findings {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.findings h3 {
+  margin: 0 0 var(--space-1);
+}
+
+.findings ul {
+  margin: 0 0 var(--space-2);
+}

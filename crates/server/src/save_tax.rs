@@ -267,7 +267,7 @@ async fn line_year(
 }
 
 /// Posts the reversal of a journal, in the journal's own year.
-async fn reverse(
+pub(crate) async fn reverse(
     tx: &mut SqliteConnection,
     seq: i64,
     journal_id: &str,
@@ -1364,6 +1364,27 @@ pub enum CardKind {
     SupplyInfo,
     /// A line to categorise: `code_bank_line`, or `add_rule` for "always do this".
     Categorise,
+    /// A bank account whose books don't agree with the bank (M18): open Bank vs books to see why
+    /// and fix it. It saves nothing by itself, so it comes first: until the books agree, the
+    /// figure isn't to be trusted.
+    Reconcile,
+}
+
+/// Why a [`CardKind::Reconcile`] card is there: the account's Bank vs books at the end of its
+/// latest statement, and what the findings make of it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct ReconcileCard {
+    pub bank_account_id: String,
+    pub account_name: String,
+    #[ts(type = "string")]
+    pub date: NaiveDate,
+    /// The books less the bank.
+    pub difference: Money,
+    /// The kinds of finding that explain it, best first; empty when none does.
+    pub explained_by: Vec<acct_core::reconcile::FindingKind>,
+    /// What they leave unexplained.
+    pub remainder: Money,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -1453,6 +1474,10 @@ pub struct SaveTaxCard {
     /// `saving` is the most the card could save, because the answer isn't known yet: a deposit
     /// that turns out not to be income, spending that's all business, a gap with no income.
     pub best_case: bool,
+    /// For a reconcile card (M18).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub reconcile: Option<ReconcileCard>,
 }
 
 /// `GET /api/businesses/{id}/save-tax`.
@@ -1510,6 +1535,7 @@ fn card(id: String, kind: CardKind, saving: Money) -> SaveTaxCard {
         gap: None,
         saving,
         best_case: false,
+        reconcile: None,
     }
 }
 
@@ -1905,12 +1931,59 @@ pub async fn queue(
 
     let mut cards = b.cards;
     cards.sort_by(|x, y| y.saving.cmp(&x.saving).then_with(|| x.id.cmp(&y.id)));
+    // Accounts whose books and bank disagree come first (M18).
+    let mut out_of_step = reconcile_cards(conn, client_id).await?;
+    out_of_step.append(&mut cards);
+    let cards = out_of_step;
     Ok(SaveTaxQueue {
         total,
         conservative_total,
         saved_so_far: conservative_total - total,
         cards,
     })
+}
+
+/// A card for each bank account whose books, at the end of its latest statement, don't agree with
+/// what the bank says there (M18), in the order the accounts were added.
+async fn reconcile_cards(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+) -> Result<Vec<SaveTaxCard>, CommandError> {
+    let mut out = Vec::new();
+    for account in bank_store::bank_accounts(conn, client_id).await? {
+        let Some(latest) = bank_store::statements(conn, &account.id)
+            .await?
+            .iter()
+            .map(|s| s.end_date)
+            .max()
+        else {
+            continue;
+        };
+        let proof = business::account_proof(conn, &account.id, latest, None).await?;
+        let Some(findings) = &proof.findings else {
+            continue;
+        };
+        let d = &findings.diagnosis;
+        if d.difference.is_zero() {
+            continue;
+        }
+        out.push(SaveTaxCard {
+            reconcile: Some(ReconcileCard {
+                bank_account_id: account.id.clone(),
+                account_name: account.name.clone(),
+                date: proof.proof.date,
+                difference: d.difference,
+                explained_by: d.explained_by.iter().map(|f| f.kind).collect(),
+                remainder: d.remainder,
+            }),
+            ..card(
+                format!("reconcile:{}", account.id),
+                CardKind::Reconcile,
+                Money::ZERO,
+            )
+        });
+    }
+    Ok(out)
 }
 
 /// `GET /api/businesses/{id}/save-tax`: the queue, biggest saving first.

@@ -4,7 +4,7 @@
 use acct_core::Money;
 use chrono::NaiveDate;
 
-use super::Problem;
+use super::{Problem, SourceSpan};
 
 /// The file as text. UTF-8 (with or without a BOM) is read as is; anything else is read as
 /// Windows-1252. Line endings become `\n`.
@@ -212,6 +212,126 @@ pub fn csv_records(text: &str) -> Result<Vec<(u32, Vec<String>)>, Problem> {
     Ok(out)
 }
 
+/// `bytes` with every full card number ending in `last4` masked (M18): each run of 12 to 19
+/// digits, with single spaces or dashes allowed between them, whose last four digits are `last4`
+/// keeps those four and has every other digit replaced by `X`. The length never changes, so
+/// every [`SourceSpan`] still points at the same text. Digits are ASCII in UTF-8 and
+/// Windows-1252 alike, so the raw bytes are masked as they are.
+pub fn mask_card_numbers(bytes: &[u8], last4: &str) -> Vec<u8> {
+    let mut out = bytes.to_vec();
+    let mut i = 0;
+    while i < out.len() {
+        if !out[i].is_ascii_digit() {
+            i += 1;
+            continue;
+        }
+        let mut digits = Vec::new();
+        let mut j = i;
+        while j < out.len() {
+            if out[j].is_ascii_digit() {
+                digits.push(j);
+                j += 1;
+            } else if matches!(out[j], b' ' | b'-')
+                && out.get(j + 1).is_some_and(u8::is_ascii_digit)
+            {
+                j += 1;
+            } else {
+                break;
+            }
+        }
+        let n = digits.len();
+        let ends_in = |d: &[usize]| d.iter().map(|&k| char::from(out[k])).collect::<String>();
+        if (12..=19).contains(&n) && ends_in(&digits[n - 4..]) == last4 {
+            for &k in &digits[..n - 4] {
+                out[k] = b'X';
+            }
+        }
+        i = j;
+    }
+    out
+}
+
+/// Where each line of a file's text starts, to turn a byte range into a [`SourceSpan`] (M18).
+pub struct LineStarts(Vec<usize>);
+
+impl LineStarts {
+    pub fn new(text: &str) -> LineStarts {
+        let mut starts = vec![0];
+        starts.extend(
+            text.bytes()
+                .enumerate()
+                .filter(|&(_, b)| b == b'\n')
+                .map(|(i, _)| i + 1),
+        );
+        LineStarts(starts)
+    }
+
+    /// The span of `text[start..end]`, on the line `start` is in. A range that runs past the end
+    /// of that line is cut there.
+    pub fn span(&self, text: &str, start: usize, end: usize) -> SourceSpan {
+        let index = self.0.partition_point(|&s| s <= start).saturating_sub(1);
+        let line_start = self.0[index];
+        let line_end = text[line_start..]
+            .find('\n')
+            .map_or(text.len(), |i| line_start + i);
+        let n = |x: usize| u32::try_from(x).unwrap_or(u32::MAX);
+        SourceSpan {
+            line: n(index + 1),
+            start: n(start - line_start),
+            end: n(end.min(line_end).max(start) - line_start),
+        }
+    }
+
+    /// The span of field `index` (from 0) of the CSV record that starts on 1-based line `row`:
+    /// the field's text inside any quotes, trimmed, as `csv_records` reads it.
+    pub fn csv_field(&self, text: &str, row: u32, index: usize) -> Option<SourceSpan> {
+        let line_start = *self.0.get(usize::try_from(row).ok()?.checked_sub(1)?)?;
+        let line = text[line_start..].split('\n').next().unwrap_or_default();
+        let (start, end) = csv_field_range(line, index)?;
+        Some(self.span(text, line_start + start, line_start + end))
+    }
+}
+
+/// The byte range of field `index` in one CSV line: inside its quotes if it has them, with
+/// surrounding whitespace trimmed. `None` if the line has fewer fields.
+fn csv_field_range(line: &str, index: usize) -> Option<(usize, usize)> {
+    let mut in_quotes = false;
+    let mut field = 0;
+    let mut field_start = 0;
+    let mut bounds = None;
+    for (i, b) in line.bytes().enumerate() {
+        match b {
+            b'"' => in_quotes = !in_quotes,
+            b',' if !in_quotes => {
+                if field == index {
+                    bounds = Some((field_start, i));
+                    break;
+                }
+                field += 1;
+                field_start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    let (mut start, mut end) = match bounds {
+        Some(b) => b,
+        None if field == index => (field_start, line.len()),
+        None => return None,
+    };
+    let trim = |start: &mut usize, end: &mut usize| {
+        let s = &line[*start..*end];
+        *start += s.len() - s.trim_start().len();
+        *end = *start + s.trim().len();
+    };
+    trim(&mut start, &mut end);
+    if end - start >= 2 && line[start..end].starts_with('"') && line[start..end].ends_with('"') {
+        start += 1;
+        end -= 1;
+        trim(&mut start, &mut end);
+    }
+    Some((start, end))
+}
+
 /// Whether a record is exactly these header names, ignoring case.
 pub fn is_header(fields: &[String], names: &[&str]) -> bool {
     fields.len() == names.len()
@@ -347,6 +467,57 @@ mod tests {
         assert_eq!(parse_amount("-86.4000"), Ok(Money::from_cents(-8640)));
         assert!(parse_amount("-86.401").is_err());
         assert!(parse_amount("").is_err());
+    }
+
+    #[test]
+    fn csv_fields_are_found_inside_quotes_and_trimmed() {
+        let line = r#"a, "b,c" ,  12.50 ,"#;
+        let field = |i| csv_field_range(line, i).map(|(s, e)| &line[s..e]);
+        assert_eq!(field(0), Some("a"));
+        assert_eq!(field(1), Some("b,c"));
+        assert_eq!(field(2), Some("12.50"));
+        assert_eq!(field(3), Some(""));
+        assert_eq!(field(4), None);
+    }
+
+    #[test]
+    fn full_card_numbers_are_masked_in_place() {
+        let file = b"<ACCTID>4000-1234-5678-9010\nN4000 1234 5678 9010\n\
+                     Other 4000123456789011\nDate 20250831235959\nAmount 9010.00\n";
+        let masked = mask_card_numbers(file, "9010");
+        assert_eq!(masked.len(), file.len());
+        assert_eq!(
+            String::from_utf8(masked).unwrap(),
+            "<ACCTID>XXXX-XXXX-XXXX-9010\nNXXXX XXXX XXXX 9010\n\
+             Other 4000123456789011\nDate 20250831235959\nAmount 9010.00\n"
+        );
+        // Already masked, or too short to be a card: unchanged.
+        let short = b"XXXX-XXXX-XXXX-9010 ****9010 99-1001-0000123-00";
+        assert_eq!(mask_card_numbers(short, "9010"), short);
+    }
+
+    #[test]
+    fn spans_count_lines_and_bytes_within_them() {
+        let text = "one\ntwo,2.00\nthree";
+        let lines = LineStarts::new(text);
+        assert_eq!(
+            lines.csv_field(text, 2, 1),
+            Some(SourceSpan {
+                line: 2,
+                start: 4,
+                end: 8
+            })
+        );
+        assert_eq!(lines.csv_field(text, 9, 0), None);
+        // A range running past its line is cut at the line's end.
+        assert_eq!(
+            lines.span(text, 15, 99),
+            SourceSpan {
+                line: 3,
+                start: 2,
+                end: 5
+            }
+        );
     }
 
     #[test]

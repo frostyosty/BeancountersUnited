@@ -4,4 +4,8 @@ import type { Money } from "./Money";
 /**
  * A statement as uploaded.
  */
-export type StatementView = { file_name: string, parser: string, start: string, end: string, opening_balance: Money | null, closing_balance: Money | null, lines_in_file: number, lines_added: number, };
+export type StatementView = { 
+/**
+ * For its excerpt (`GET /api/statements/{id}/excerpt`, M18).
+ */
+id: string, file_name: string, parser: string, start: string, end: string, opening_balance: Money | null, closing_balance: Money | null, lines_in_file: number, lines_added: number, };

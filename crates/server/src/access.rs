@@ -432,6 +432,11 @@ async fn command_targets(
             Need::Owner,
             vec![bank_line_target(conn, bank_line_id).await?],
         ),
+        // Undoing an upload is the uploader's work.
+        C::RemoveStatement { statement_id } => (
+            Need::Owner,
+            vec![statement_target(conn, statement_id).await?],
+        ),
     })
 }
 
@@ -476,6 +481,15 @@ async fn bank_line_target(conn: &mut SqliteConnection, id: &str) -> Result<Targe
     Ok(named(&a.client_id, "bank line", id))
 }
 
+async fn statement_target(conn: &mut SqliteConnection, id: &str) -> Result<Target, CommandError> {
+    let not_found = || CommandError::not_found("statement", id);
+    let statement = bank::statement(conn, id).await?.ok_or_else(not_found)?;
+    let a = bank::bank_account(conn, &statement.bank_account_id)
+        .await?
+        .ok_or_else(not_found)?;
+    Ok(named(&a.client_id, "statement", id))
+}
+
 /// What a route touches, by the path it was registered with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RouteRule {
@@ -491,6 +505,10 @@ pub enum RouteRule {
     InvoiceTemplate,
     /// The `{id}` parameter is one of the user's own invoice images.
     InvoiceImage,
+    /// The `{id}` parameter is an uploaded statement: its bank account's business (M18).
+    Statement(Need),
+    /// The `{id}` parameter is a bank account or card: its business (M18).
+    BankAccount(Need),
 }
 
 /// The rule for each route in [`crate::api_routes`]. `None` means the route is refused for
@@ -554,6 +572,8 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
             R::Year(Need::Read)
         }
         "/api/years/{id}/tb-import/preview" if post => R::Year(Need::Accounting),
+        "/api/statements/{id}/excerpt" if get => R::Statement(Need::Read),
+        "/api/bank-accounts/{id}/proof" if get => R::BankAccount(Need::Read),
         _ => return None,
     })
 }
@@ -607,6 +627,8 @@ async fn check_route(
             (invoice_template_target(&mut conn, id()?).await?, Need::Read)
         }
         RouteRule::InvoiceImage => (invoice_image_target(&mut conn, id()?).await?, Need::Read),
+        RouteRule::Statement(need) => (statement_target(&mut conn, id()?).await?, need),
+        RouteRule::BankAccount(need) => (bank_account_target(&mut conn, id()?).await?, need),
     };
     check(&mut conn, actor, &target, need).await
 }

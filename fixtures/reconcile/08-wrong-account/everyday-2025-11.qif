@@ -1,0 +1,30 @@
+!Account
+NEveryday
+TBank
+^
+!Type:Bank
+D01/11/2025
+T512.30
+POpening Balance
+L[Everyday]
+^
+D04/11/2025
+T-84.60
+PGreenbarrow Grocers
+MWellington
+^
+D13/11/2025
+T-62.15
+PKauri Petrol
+MNelson
+^
+D19/11/2025
+T-18.40
+PPikorua Cafe
+MWellington
+^
+D22/11/2025
+T-22.73
+PLantern Books
+MWellington
+^

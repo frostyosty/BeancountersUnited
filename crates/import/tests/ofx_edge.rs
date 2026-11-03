@@ -1,7 +1,8 @@
 //! The OFX parser against the awkward files in `fixtures/bank-statements/ofx-edge` (see its README).
 //!
-//! `known_gaps` pins behaviour we think is wrong. When one is fixed, that test fails: move the
-//! case to the right place above it and update the README.
+//! M17 fixed the six gaps these files found, and the `known_gaps` test that pinned them is gone.
+//! If a new file turns up behaviour we think is wrong, pin it in a `known_gaps` test again and list
+//! it in the README.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -270,6 +271,9 @@ fn description_comes_from_name_then_memo_then_payee() {
             "",
         ]
     );
+    // A line with no text at all is kept, with an empty description (docs/domain.md, "Bank
+    // statement formats"). The web app shows it as "(no description)"; nothing is made up.
+    assert_eq!(s.lines[4].bank_id.as_deref(), Some("M5"));
 }
 
 #[test]
@@ -433,6 +437,23 @@ fn files_we_will_not_take() {
             field: "ACCTID".to_owned()
         }]
     );
+    // The bank sent an error instead of a statement: its code and words are passed on.
+    assert_eq!(
+        problems("20-signon-error-no-statement.ofx"),
+        [Problem::BankError {
+            row: 14,
+            bank_code: "15500".to_owned(),
+            message: Some("Signon invalid".to_owned()),
+        }]
+    );
+    // An investment statement says what it is, even though it holds a `STMTTRN`.
+    assert_eq!(
+        problems("21-investment-statement-only.ofx"),
+        [Problem::UnsupportedSection {
+            row: 12,
+            section: "INVSTMTMSGSRSV1".to_owned(),
+        }]
+    );
     // Currency spelling: case doesn't matter, and a missing currency is taken as NZD.
     ok("24b-currency-lower-case.ofx");
     ok("24c-currency-empty.ofx");
@@ -486,31 +507,6 @@ fn an_ordinary_month_reads_fully() {
         s.closing.unwrap().amount.cents(),
         "this file opens at zero, so the lines add up to the closing balance"
     );
-}
-
-/// Behaviour we believe is wrong, pinned so it can't change unnoticed. See the README.
-#[test]
-fn known_gaps() {
-    // Gaps 1, 2, 3 and 5 are fixed (M17); their cases moved to the tests above.
-
-    // 4. A sign-on error or an investment-only file is refused as "ACCTID missing", which tells
-    //    the user nothing about what is actually wrong with the file.
-    for name in [
-        "20-signon-error-no-statement.ofx",
-        "21-investment-statement-only.ofx",
-    ] {
-        assert_eq!(
-            problems(name),
-            [Problem::Missing {
-                field: "ACCTID".to_owned()
-            }],
-            "{name}"
-        );
-    }
-
-    // 6. A line with no description at all is accepted with an empty description.
-    let s = ok("12-name-memo-payee-shapes.ofx");
-    assert_eq!(s.lines[4].description, "");
 }
 
 #[test]

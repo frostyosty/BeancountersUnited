@@ -18,7 +18,7 @@
 
 use acct_core::Money;
 
-use super::text::{csv_records, is_header, normalise_card, normalise_description};
+use super::text::{LineStarts, csv_records, is_header, normalise_card, normalise_description};
 use super::text::{parse_amount, parse_dmy};
 use super::{Balance, ParserInfo, Problem, Statement, StatementKind, StatementLine};
 
@@ -70,6 +70,11 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     let mut opening = None;
     let mut closing = None;
     let mut lines = Vec::new();
+    // Where each balance is written (M18): the value in the "Opening balance" and "Closing
+    // balance" rows, `CR` and all. This layout has no running balance.
+    let line_starts = LineStarts::new(text);
+    let mut opening_span = None;
+    let mut closing_span = None;
 
     let amount = |row: u32, value: &str, problems: &mut Vec<Problem>| {
         card_amount(value)
@@ -105,8 +110,14 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                     value: format!("{},{}", value(1), value(2)),
                 }),
             },
-            "opening balance" => opening = amount(row, value(1), &mut problems),
-            "closing balance" => closing = amount(row, value(1), &mut problems),
+            "opening balance" => {
+                opening = amount(row, value(1), &mut problems);
+                opening_span = line_starts.csv_field(text, row, 1);
+            }
+            "closing balance" => {
+                closing = amount(row, value(1), &mut problems);
+                closing_span = line_starts.csv_field(text, row, 1);
+            }
             _ => {}
         }
     }
@@ -144,6 +155,7 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
                 description: normalise_description([fields[2].as_str()]),
                 bank_id: None,
                 balance: None,
+                balance_span: None,
             });
         }
     }
@@ -160,10 +172,11 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
     if !problems.is_empty() {
         return Err(problems);
     }
-    let at = |date: Option<chrono::NaiveDate>, amount: Option<Money>| {
+    let at = |date: Option<chrono::NaiveDate>, amount: Option<Money>, span| {
         Some(Balance {
             date: date?,
             amount: amount?,
+            span,
         })
     };
     Ok(Statement {
@@ -172,8 +185,8 @@ pub fn parse(text: &str) -> Result<Statement, Vec<Problem>> {
         account,
         period_start: period.map(|p| p.0),
         period_end: period.map(|p| p.1),
-        opening: at(period.map(|p| p.0), opening),
-        closing: at(period.map(|p| p.1), closing),
+        opening: at(period.map(|p| p.0), opening, opening_span),
+        closing: at(period.map(|p| p.1), closing, closing_span),
         lines,
     })
 }

@@ -24,6 +24,7 @@ pub mod reports;
 pub mod save_tax;
 pub mod signup;
 pub mod starter;
+pub mod statement_files;
 pub mod tax;
 pub mod tb_import;
 #[cfg(feature = "embed-web")]
@@ -248,6 +249,16 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::GET,
             "/api/invoices/images/{id}",
             get(invoices::get_image),
+        ),
+        (
+            Method::GET,
+            "/api/statements/{id}/excerpt",
+            get(statement_files::get_excerpt),
+        ),
+        (
+            Method::GET,
+            "/api/bank-accounts/{id}/proof",
+            get(business::get_proof),
         ),
     ]
 }

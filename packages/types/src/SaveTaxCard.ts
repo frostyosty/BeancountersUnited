@@ -4,6 +4,7 @@ import type { CardKind } from "./CardKind";
 import type { CardLine } from "./CardLine";
 import type { Money } from "./Money";
 import type { Question } from "./Question";
+import type { ReconcileCard } from "./ReconcileCard";
 import type { Suggestion } from "./Suggestion";
 
 /**
@@ -26,4 +27,8 @@ saving: Money,
  * `saving` is the most the card could save, because the answer isn't known yet: a deposit
  * that turns out not to be income, spending that's all business, a gap with no income.
  */
-best_case: boolean, };
+best_case: boolean, 
+/**
+ * For a reconcile card (M18).
+ */
+reconcile?: ReconcileCard, };

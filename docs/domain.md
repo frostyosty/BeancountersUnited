@@ -344,6 +344,65 @@ list is under "Open".
 - **Books source.** Every sole trader is bank-coded. A business moving from Xero part-way through a year is
   M16's question. It needs an ADR, because a cut-over TB plus bank lines bends the books-source rule.
 
+### Bank vs books (decided 2026-11-03, M18)
+- **The books side is the ledger.** The proof card and the reconciliation suspects compare the bank's
+  balances with the ledger's balance on the bank account, every journal included. That means gap
+  journals count: where no statement covers some days and the balances either side are known, the
+  gap journal puts the change in, so the books agree with the bank.
+  - The card says it agrees, with a note under it: "No statement for 1 Aug to 31 Aug. We put the
+    change, $419.18, in as one entry." The note offers to upload the missing statement, which reverses
+    the gap journal and posts the lines instead.
+  - The *missing lines* suspect reports such a gap as a finding that explains nothing (zero), so it's
+    shown as a note, never as part of an explanation. A gap with no gap journal (a balance unknown at
+    one end) is still a missing-lines finding in the usual way.
+  - A gap whose change is zero posts no gap journal and gets no note.
+- **The bank side is only what the bank states, on the date it states it.** A checkpoint is a
+  statement's opening balance (the start of the date the file gives it), its closing balance (the end of
+  the date the file gives it), or a line's running balance at the end of its day. M10 also stores a
+  statement's coverage (its stated period widened to take in every line) and works out an end balance
+  the file doesn't state; neither is a checkpoint. So an OFX whose `LEDGERBAL` is dated 31 March but
+  which lists a line dated 1 April gives a closing balance for the end of 31 March, and the line shows as
+  a cut-off. The stated balances and their dates are read again from the kept file.
+- **Statements uploaded before M18** have no file kept, so which balances the bank stated, and on which
+  dates, isn't known. They keep M10's stored opening and closing balances as checkpoints, at the start of
+  the first day and the end of the last day the statement covers, as M15's reconciliation always did. A
+  balance M10 worked out can then show up as a checkpoint. Uploading the same file again doesn't change
+  that, since a file that adds nothing stores no statement.
+- **Fixes from a finding (Agent 6).** The card leads with the findings that explain the whole
+  difference, each with a Fix it button that previews the balance afterwards (the books' balance less
+  what the finding explains) and sends nothing until the owner confirms. A command sent from a finding
+  carries `via: { kind: "finding", finding }`, beside its payload as ADR 009's AI attribution is, so
+  Changes says "…, fixed from a reconciliation finding." The server records it and checks the command as
+  usual; it vouches for nothing.
+  - **Removing a statement** (`remove_statement`; a file uploaded twice, read the wrong way round, or
+    uploaded to the wrong account). Each of its lines' live journals is reversed, then the statement,
+    its lines and what hangs off them (coding state, duplicate answer, supply-information
+    confirmation, AI suggestions for those lines), its balance spans and its kept file are deleted, and
+    the gap journals are regenerated. Journals are never deleted, and `command_log` keeps the upload and
+    the removal. Deleting the lines is what lets the same file be uploaded again, and stops a wrong
+    file's balances being checkpoints. If another upload of the same file points at its kept copy, the
+    copy moves to that upload. Refused when a line is half of a confirmed transfer or bought an asset
+    (sort that line another way first), and when any of its journals is in a finalised year.
+  - **Correcting an opening balance** (`set_opening_balance` on an account that has one; a wrong
+    opening balance, or two digits swapped). The old opening journal is reversed and the new one posted
+    on the same date, in one command. Refused on a finalised year, and when the amount is unchanged.
+    Changes says "changed the opening balance of Kowhai cheque from $3,000 to $3,264.85".
+  - **No button** where there's no command to send: a date cut-off, an amount read wrong, one line with
+    its sign the wrong way, a typo in a journal by hand, and a duplicate M10 didn't flag
+    (`resolve_duplicate` takes only flagged lines). The card says what happened and who can sort it: the
+    accountant, with a journal, or by accepting a timing difference. Reversing a journal by hand is the
+    accountant's work, so an owner is told their accountant can do it.
+  - **An amount read wrong** is logged for us with the parser and the file row of the line's running
+    balance, never anything from the file (no amounts, descriptions or account numbers). It's logged
+    once per upload, not on every look at the card.
+- **Nothing explains it.** The card says where the books and the bank part ways ("Between 3 Feb and 28
+  Feb your books and your bank go out by $412.50"). An owner with a linked accountant gets Ask your
+  accountant, which copies a ready message to paste into an email or text: there's no message channel in
+  the app yet (PLAN.md backlog).
+- **Save tax.** An account whose books disagree with the bank at the end of its latest statement is the
+  first card in the queue ("Check this first"), opening Bank vs books. It saves nothing by itself, but
+  until the books agree the figure isn't to be trusted.
+
 ### GST (decided 2026-10-19)
 - **Rate.** The rate is versioned data in core, keyed by date, not a practice setting: 1500 bp (15%) for
   dates from 1 October 2010. A date with no rate gets no GST figure, and the screen says why.
@@ -727,6 +786,19 @@ show are those copies with the client's fields filled in. Asked and answered on 
   - where the account number is
 - **OFX** 1.x in SGML (unclosed tags) and 2.x in XML: a bank statement (`BANKMSGSRSV1`) or a credit card
   statement (`CREDITCARDMSGSRSV1`), one per file.
+  - A file the bank sent instead of a statement (a `STATUS` with `SEVERITY` `ERROR` at sign-on, or a
+    non-zero `CODE` where the statement should be) is refused with the bank's code and words: "Your bank
+    sent an error instead of a statement: 'Signon invalid' … Try downloading it again." A warning beside
+    a statement is read as usual. (M17, 2026-11-03)
+  - A file with no bank or card statement says what it holds instead, such as an investment statement,
+    or that it holds none. It's never reported as a missing `ACCTID`. (M17)
+- **A line with no description (decided 2026-11-03, M17).** A line with no text (OFX with no `NAME`,
+  `MEMO` or `PAYEE`; QIF with no `P` or `M`; a CSV with its text columns empty) is imported, and its
+  description is stored empty. The web app shows it as "(no description)" wherever a line appears.
+  - Why not refuse the file: one blank field from the bank would block a whole statement.
+  - Why not store a placeholder: it would be made-up text in duplicate keys, bank rules and exports. An
+    empty description still dedupes on account, date, amount and occurrence.
+  - Save tax doesn't offer "Always do this" for such a line, since a rule would have nothing to match.
 - **QIF.** One `!Type:Bank` or `!Type:CCard` section, with day-first dates (dd/mm/yyyy, d/m/yy). A file
   whose dates only make sense month first is refused. A card file is read as `qif-ccard-1`.
 - **Statement kind.** Every statement is `bank` or `credit_card`, decided by the file (OFX message set,

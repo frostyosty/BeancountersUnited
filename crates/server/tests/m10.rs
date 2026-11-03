@@ -367,3 +367,67 @@ async fn a_line_after_today_is_refused() {
         .unwrap_err();
     assert_eq!(err["code"], "line_in_future");
 }
+
+/// M17: a file the bank sent instead of a statement, or one cut off, is refused in words an owner
+/// can act on, and each problem comes with its row and message for the upload screen.
+#[tokio::test]
+async fn a_refused_file_says_what_is_wrong_in_plain_words() {
+    let s = setup().await;
+    let client = s
+        .ok(Command::SetUpBusiness {
+            name: "Refused Co".into(),
+            start_date: d("2025-04-01"),
+            gst: None,
+        })
+        .await;
+    let refuse = |name: &'static str, bytes: &'static [u8]| {
+        let client = client.clone();
+        let s = &s;
+        async move {
+            s.run(Command::ImportStatement {
+                client_id: client,
+                file_name: name.into(),
+                content_base64: base64(bytes),
+                bank_account_id: None,
+            })
+            .await
+            .unwrap_err()
+        }
+    };
+
+    let err = refuse(
+        "20.ofx",
+        include_bytes!(
+            "../../../fixtures/bank-statements/ofx-edge/20-signon-error-no-statement.ofx"
+        ),
+    )
+    .await;
+    assert_eq!(err["code"], "statement_unreadable");
+    assert_eq!(
+        err["message"],
+        "We read this file as OFX 1.x (SGML), but can't use it:"
+    );
+    assert_eq!(err["details"][0]["code"], "bank_error");
+    assert_eq!(err["details"][0]["row"], 14);
+    assert_eq!(
+        err["details"][0]["message"],
+        "Your bank sent an error instead of a statement: 'Signon invalid' (code 15500, row 14). \
+         Try downloading it again."
+    );
+
+    let err = refuse(
+        "25.ofx",
+        include_bytes!(
+            "../../../fixtures/bank-statements/ofx-edge/25-truncated-mid-transaction.ofx"
+        ),
+    )
+    .await;
+    assert_eq!(err["details"][0]["code"], "truncated");
+    assert!(
+        err["details"][0]["message"]
+            .as_str()
+            .unwrap()
+            .starts_with("The file stops part-way, at row 50"),
+        "{err}"
+    );
+}

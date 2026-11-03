@@ -289,7 +289,7 @@ Every upload checks itself. The owner sees proof that the books agree with the b
 
 **How a difference is tracked down.** Testing the difference against every line comes second. First find *where* the books and the bank part ways. The bank states a balance at many points: each statement's opening and closing balance, and every running balance in files that have one. Walk those checkpoints in date order and compare the ledger's balance at each one. The last checkpoint that agrees and the first that doesn't bracket the fault, usually to one statement or a few days. The suspects then look only inside that window, so they run fast and give specific answers. Where a file states only a closing balance, the window is the whole statement. The shape also helps: a jump at one checkpoint points to one bad line, a constant difference from the very start points to the opening balance, and a difference that grows points to a pattern such as a sign or a cut-off.
 
-Work is split into agents, in four waves; the copy-paste prompts are in `M18-PROMPTS.md`. Agent 7 is split there: its fixtures come first (7a) and its done check last (7b).
+Work is split into agents, in four waves; the copy-paste prompts are in `M18-PROMPTS.md`. Agent 7 is split there: its fixtures come first (7a) and its done check last (7b). Agent 8 runs alongside Agent 5.
 
 ### Agent 1: checkpoints and the window (core, pure)
 - `acct_core::reconcile`: the checkpoints (date, the stated balance, and where it came from: the statement and the span in its file), the ledger's balance at each, and the window `{ last_agrees, first_differs, difference }`, plus how the difference moves from one checkpoint to the next.
@@ -336,6 +336,13 @@ Work is split into agents, in four waves; the copy-paste prompts are in `M18-PRO
 - The other findings are in an expandable list, each linking to its lines.
 - Findings join M11's Save tax queue as detected items and M15's Reconcile tab. M13's history records that a fix came from a finding.
 - When nothing explains it: "We couldn't work out why. Between 3 Feb and 28 Feb your books and bank go out by $412.50." Then **Ask your accountant**, for an owner with a linked accountant.
+
+### Agent 8: the books the suspects see are the books the app has
+Added after Agent 4 found that the fixtures and the server build different books.
+- Checkpoints come only from balances the bank states, on the dates it states them, not from a statement's coverage or worked-out balances.
+- Gap journals: ask whether the proof card counts them, then make the fixtures and the missing-lines suspect agree with the answer (recorded in `docs/domain.md`).
+- The fixtures' generator keeps a running balance only when core would; every fault.toml's fix is the one its suspect suggests.
+- `suspect_input` on the server loads the suspects' input, read only, and a test checks the server's books find what the fixtures' tests find.
 
 ### Agent 7: fixtures and the done check
 - `fixtures/reconcile/`: a clean set of synthetic statements, one variant per suspect with that fault put in, and one with two faults together.
@@ -386,3 +393,4 @@ Done when: a test shows an overseer acting as staff sees only what that staff us
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.
+- Messages between an owner and their accountant inside the app. M18's "Ask your accountant" copies a ready message for the owner to send themselves until there is one.

@@ -6,8 +6,13 @@ tracked down (checkpoints first, then suspects inside the window), and the "Done
 There are four waves.
 - **Wave 1:** three agents work at once: the checkpoints in core, keeping the original file, and the fixtures.
 - **Wave 2:** two agents: the proof card on upload, and the suspects. They need Wave 1.
-- **Wave 3:** one agent: explaining the whole difference. It needs the suspects.
-- **Wave 4:** two agents: showing the findings with their fixes, and the done check.
+- **Wave 3:** two agents at once: explaining the whole difference (5), and making the server, core and the
+  fixtures agree on the books the suspects see (8). Both need the suspects.
+- **Wave 4:** two agents: showing the findings with their fixes, and the done check. They need Wave 3.
+
+Agent 8 was added after Agent 4 found that the fixtures and the server build different books (Agent 4's report,
+2026-11-03): the server posts gap journals and stores worked-out balances on the wrong dates, so fixtures 02 and 07
+would show no difference in the app, and 04's expected window disagrees with core.
 
 Each prompt says which files that agent owns. Shared files (`crates/core/src/lib.rs`, `crates/server/src/lib.rs`,
 `crates/server/src/commands.rs`, `crates/import/src/bank/mod.rs`, `apps/web/src/App.tsx`,
@@ -110,7 +115,7 @@ Run cargo test, clippy -D warnings and fmt.
 Don't commit.
 ```
 
-## Wave 3: after Agent 4 has landed
+## Wave 3: after Agent 4 has landed (5 and 8 at once)
 
 ### Agent 5: explain the whole difference (core, pure)
 ```
@@ -128,33 +133,69 @@ Run cargo test, clippy -D warnings and fmt.
 Don't commit.
 ```
 
-## Wave 4: after Agent 5 has landed
-
-### Agent 6: tell the owner, with fixes
+### Agent 8: the books the suspects see are the books the app has
 ```
-Read CLAUDE.md, apps/web/src/ui/README.md, PLAN.md (M18 Agent 6), acct_core::reconcile (diagnose.rs, finding.rs), Agent 3's apps/web/src/components/BankVsBooks/ and its proof endpoint, crates/server/src/commands.rs (code_bank_line, set_opening_balance), crates/server/src/history.rs, and the M11 Save tax queue (grep "detected" in crates/server and apps/web).
+Read CLAUDE.md, PLAN.md (M18), crates/core/src/reconcile/ (checkpoints.rs, suspects/mod.rs and its module docs), crates/server/src/reconcile.rs, crates/server/src/business.rs (coverage, import_statement, regenerate_gaps, account_gaps), crates/server/src/statement_files.rs, crates/store/src/bank.rs (statements, bank_lines, balance_spans), the duplicate answers in crates/server/src/save_tax.rs (resolve_duplicate) and its coding store, fixtures/reconcile/ (generate.py, README.md), and crates/import/tests/reconcile_suspects.rs, which builds the books for the suspects the way this agent must make the server do.
 You own:
-- the diagnosis in the import_statement result and the proof endpoint (crates/server/src/business.rs, the part Agent 3 added)
-- apps/web/src/components/BankVsBooks/Findings*.tsx (new) and the prop Agent 3 left for it
-- a new `remove_statement` command if Wrong account needs one (reverse its lines' journals in one command; history text and tests per M13), in crates/server/src/commands.rs (append-only) and history.rs
-- the lines that add findings to the Save tax queue and to ReconcileTab.tsx
+- the loading in crates/server/src/reconcile.rs (statement_facts, line_facts and a new suspect_input)
+- new fields on StatementFacts in crates/core/src/reconcile/checkpoints.rs, and every place that builds one (Agent 3's proof code included: change only the constructor)
+- fixtures/reconcile/generate.py and the files it writes (run it; never hand-edit them)
+- in crates/import/tests/reconcile_suspects.rs, only the 04 exception and Agent 5's 01b exception (in each_difference_is_explained_by_its_faults; re-read the file just before editing)
+- crates/server/tests/m18_suspect_input.rs (new)
 Task:
-1. Return the Diagnosis alongside the window wherever Agent 3 returns the window.
-2. In the modal when out: the best explanation first, in plain English, one template per FindingKind (for example "These 3 lines look like they were uploaded twice. Removing them makes your books agree."), naming the lines with date, description and amount. A Fix it button per explained finding: it previews the balance afterwards (work it out from the finding's amount; don't send anything), and only on confirm sends the fix's command. Fixing the whole explanation is one button that sends each command in turn and stops at the first refusal.
-3. Other findings in an expandable list, each linking to its lines in the statement view.
-4. Nothing explains it: "We couldn't work out why. Between 3 Feb and 28 Feb your books and your bank go out by $412.50." and, for an owner with a linked accountant, Ask your accountant (whatever M12's invite link offers today; if there's no message channel yet, add it to PLAN.md's Backlog instead of building one).
-5. Findings appear in M11's Save tax queue as detected items and on the Reconcile tab. A command sent from a finding carries `from_finding: <FindingKind>` in its payload so M13's history says "fixed from a reconciliation finding"; the server ignores it for anything else and validates the command as usual.
-Testing Library tests for each FindingKind's text, the preview, and the confirm; server tests for remove_statement and its rejection on a finalised year.
+1. Checkpoints only from balances the bank states, on the date it states them. Today import_statement stores the statement's coverage (start = the earlier of the period start and the first line, end = the later of the period end and the last line) and a worked-out opening and closing when the file doesn't state one, and statement_facts passes those to core as if the bank stated them. So in fixture 07 the OFX LEDGERBAL dated 31 Mar becomes a closing balance on 1 Apr, which includes the 1 Apr line, and the cut-off disappears; and an OFX or QIF file gets checkpoints the bank never gave. Give StatementFacts the stated opening and closing with their own dates, kept apart from the coverage (gaps still use the coverage), and make the checkpoints use them. Check whether Agent 2's balance_spans or the kept file already holds what you need. If it needs a new column or table, that's migration 0013: stop and ask first. Say in docs/domain.md what a statement uploaded before M18 (no file kept) gets.
+2. Gap journals (fixture 02). When no statement covers some days and the balances either side are known, the server posts a gap journal for the change, so the books agree with the bank and the missing-lines suspect never sees a difference. The fixtures assume no gap journal. This is a presentation question: ask the user before building, then record the answer in docs/domain.md. The options as Agent 4 saw them:
+   a. Keep gap journals in the walk. The proof card says "Agrees", with a note under it: "No statement for 1 Aug to 31 Aug. We put the change, $419.18, in as one entry." The note offers the missing-lines fix (UploadMissing). Missing lines gets the gap as a finding that explains nothing (zero), shown as a note, not an explanation. Change fixture 02 so its expected difference is zero, and give its fault.toml a `note` instead of a fault.
+   b. Leave gap journals out of the walk, so the card says "Out by $419.18" and missing lines explains it. The card and the ledger then disagree about the balance, which needs explaining on the card.
+   Build whichever the user picks, through generate.py and the suspects (Agent 4 is finished: you may change suspects/missing_lines.rs for this).
+3. Fixture 04's window. Core keeps a running balance only when the file confirms it's the end of its day (checkpoints.rs, module docs). The swapped November file's running balances don't follow from its amounts, so core keeps only the last, and sees one jump at 28 Nov. generate.py keeps them all and expects a drift from 3 Nov. Core is right: make generate.py apply the same rule, regenerate, and remove the 04 exception from reconcile_suspects.rs.
+4. While regenerating: 01b's fault.toml fix should be the one the suspect suggests, `RemoveStatement` of the activity file (the whole file is duplicates), not two MarkDuplicates. Then remove the 01b exception Agent 5 left in reconcile_suspects.rs, so 01b is checked against its fault.toml like every other fixture. Check every fault.toml's `fix` against what the suspect suggests in reconcile_suspects.rs, and say in the README which fixes need Agent 6's new commands.
+5. suspect_input. `pub async fn suspect_input(conn, client_id, bank_account_id) -> Result<SuspectInput, _>` in crates/server/src/reconcile.rs: the server's side of what reconcile_suspects.rs's test builds. Lines with their bank id, M10's possible_duplicate flag and the owner's answer; the live journals on the account with their origin (opening, bank line, gap, by hand); the statements with their stated balances and account number; where each kept file's own balances break (re-read it with read_statement and balance_check, and find the stored line for a row by its duplicate key: date, amount, description, occurrence; a file not kept gives None); the gaps; and the other accounts' statements with their nets. Read only.
+Tests (m18_suspect_input.rs): upload the clean set and fixtures 02, 04, 07 and 11 through the command pipeline (replaying their fault.toml commands), call suspect_input, and check look_all finds what reconcile_suspects.rs finds for them: nothing on the clean set, each fault Likely with its exact amount. If Agent 7b's m18.rs exists by then, share its fixture loader rather than writing a second one.
 Run `make check`.
 Don't commit.
 ```
 
-### Agent 7b: the done check
+## Wave 4: after Agents 5 and 8 have landed
+
+### Agent 6: tell the owner, with fixes
 ```
-Read CLAUDE.md, PLAN.md (M18 "Done when"), fixtures/reconcile/ and crates/server/tests/m10.rs.
+Read CLAUDE.md, apps/web/src/ui/README.md, PLAN.md (M18 Agent 6), acct_core::reconcile (diagnose.rs, finding.rs, and the module docs of each file in suspects/: they say which fix each finding suggests, and when there's none), Agent 8's suspect_input in crates/server/src/reconcile.rs, Agent 3's apps/web/src/components/BankVsBooks/ and its proof endpoint, crates/server/src/commands.rs (code_bank_line, set_opening_balance, reverse_journal, resolve_duplicate), crates/server/src/history.rs, and the M11 Save tax queue (grep "detected" in crates/server and apps/web).
+You own:
+- the diagnosis in the import_statement result and the proof endpoint (crates/server/src/business.rs, the part Agent 3 added)
+- apps/web/src/components/BankVsBooks/Findings*.tsx (new) and the prop Agent 3 left for it
+- a new `remove_statement` command (reverse its lines' journals in one command; history text and tests per M13), in crates/server/src/commands.rs (append-only) and history.rs. Duplicates (a whole file uploaded twice: fixtures 01a, 01b), Sign the wrong way (04) and Wrong account (08) all suggest it.
+- whatever lets the owner correct an opening balance (see 6), in commands.rs (append-only), history.rs and the business code behind set_opening_balance
+- the lines that add findings to the Save tax queue and to ReconcileTab.tsx
+Task:
+1. Return the Diagnosis alongside the window wherever Agent 3 returns the window. Build the suspects' input with Agent 8's suspect_input; don't load it a second way.
+2. In the modal when out: the best explanation first, in plain English, one template per FindingKind (for example "These 3 lines look like they were uploaded twice. Removing them makes your books agree."), naming the lines with date, description and amount. A Fix it button per explained finding: it previews the balance afterwards (work it out from the finding's amount; don't send anything), and only on confirm sends the fix's command. Fixing the whole explanation is one button that sends each command in turn and stops at the first refusal.
+3. Other findings in an expandable list, each linking to its lines in the statement view.
+4. Nothing explains it: "We couldn't work out why. Between 3 Feb and 28 Feb your books and your bank go out by $412.50." and, for an owner with a linked accountant, Ask your accountant (whatever M12's invite link offers today; if there's no message channel yet, add it to PLAN.md's Backlog instead of building one).
+5. Findings appear in M11's Save tax queue as detected items and on the Reconcile tab. A command sent from a finding carries `from_finding: <FindingKind>` in its payload so M13's history says "fixed from a reconciliation finding"; the server ignores it for anything else and validates the command as usual.
+6. Make every suggested fix sendable. Agent 4 found these won't go through as things stand:
+   - SetOpeningBalance (Wrong opening balance, Transposed digits; fixtures 03, 10, 11): set_opening_balance can be set only once, and every one of these accounts already has an opening balance. Let the owner correct it: reverse the opening journal and post the new one in one command, open years only, refused on a finalised year, with M13 history text ("changed the opening balance from $3,000.00 to $3,264.85"). Extend set_opening_balance or add a command; say which in your report. If it touches a public type, propose it first.
+   - MarkDuplicate: resolve_duplicate refuses a line M10 didn't flag, so the suspect only suggests it for flagged lines. For an unflagged duplicate (fix: None) say what to do instead.
+   - ReverseJournal (Entries by hand, fixture 06): send reverse_journal with the journal's id.
+   - RemoveStatement for Sign the wrong way (04): after removing the file, tell the owner to upload it again. If the parser reads it the same wrong way, that's Amount read wrong's "log it for us" case below.
+7. Findings with no fix (Date cut-off 07, Amount read wrong 09, one line with its sign the wrong way, an unflagged duplicate): no Fix it button. Say plainly what happened and who can fix it (the accountant: a journal, or accept it as a timing difference). For Amount read wrong, the server logs the parser id and the file's row for us, and never the content (no amounts, descriptions or account numbers); add a test that the log line holds none of them.
+Testing Library tests for each FindingKind's text, the preview, the confirm, and a finding with no fix; server tests for remove_statement and the opening balance correction, each with its rejection on a finalised year.
+Run `make check`.
+Don't commit.
+```
+
+### Agent 7b: the done check (Sonnet, medium thinking)
+```
+Read CLAUDE.md, PLAN.md (M18 "Done when"), fixtures/reconcile/ (README.md and every fault.toml, as Agent 8 regenerated them, and the gap-journal decision in docs/domain.md), crates/server/tests/m10.rs, and Agent 8's crates/server/tests/m18_suspect_input.rs (reuse its fixture loader).
 You own:
 - crates/server/tests/m18.rs (new)
-Task: `m18_is_done`. For every fixture in fixtures/reconcile/: set up the business, upload its files (and replay any commands in fault.toml) through the command pipeline, and check the import result carries a proof with an excerpt from the uploaded file. The clean set agrees at every closing date and at 31 March. Each single-fault fixture's diagnosis names the fault from fault.toml as the first explanation with the exact amount; sending its suggested fix makes the proof agree. 11-two-faults is explained in full with remainder zero. Re-uploading any file stores no second copy.
+Task: `m18_is_done`. For every fixture in fixtures/reconcile/: set up the business, upload its files (and replay any commands in fault.toml) through the command pipeline, and check the import result carries a proof with an excerpt from the uploaded file. The clean set agrees at every closing date and at 31 March. Each single-fault fixture's diagnosis names the fault from fault.toml as the first explanation with the exact amount, and its window is the one fault.toml expects; sending its suggested fix makes the proof agree. 11-two-faults is explained in full with remainder zero. Re-uploading any file stores no second copy.
+Some fixtures need more than one step:
+- A fix may be several commands (04: remove the statement, then upload the clean file named in fault.toml). Send them in order.
+- Faults with no fix (fix = [], 07 and 09): check the diagnosis names them, and that the finding carries no fix, rather than that a fix makes the proof agree.
+- 02: check whatever the gap-journal decision in docs/domain.md says the card shows (a note with the upload fix, or a difference explained by missing lines), and that uploading the missing statement leaves no gap journal live.
+- 03, 10 and 11 correct an opening balance that's already set, with Agent 6's command.
+If any of these fails because the server and the fixtures still build different books, don't loosen the test: report which fixture and why.
 Run `make check`.
 Don't commit.
 ```

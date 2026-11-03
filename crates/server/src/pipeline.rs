@@ -114,9 +114,17 @@ pub async fn submit_via(
     let before = history::before(&mut tx, &command, &touched).await?;
     let effect = apply(&mut tx, actor, &command, seq, at.date_naive()).await?;
     let changes = history::after(&mut tx, &command, before, effect.client_id.as_deref()).await?;
+    // An upload checks itself against the books (M18): read-only, in the same transaction.
+    let upload = match (&command, effect.entity_id.as_deref()) {
+        (Command::ImportStatement { .. }, Some(account)) => {
+            business::upload_check(&mut tx, seq, account).await?
+        }
+        _ => None,
+    };
     let accepted = Accepted {
         seq,
         entity_id: effect.entity_id,
+        upload,
     };
     log::append(
         &mut tx,
@@ -156,6 +164,8 @@ fn check_via(via: &Via) -> Result<(), CommandError> {
             }
             Ok(())
         }
+        // Says only where the user came from; the command is validated as usual.
+        Via::Finding { .. } => Ok(()),
     }
 }
 
@@ -221,6 +231,11 @@ async fn apply(
                 client_id: Some(client_id.clone()),
                 client_year_id: None,
             })
+        }
+
+        Command::RemoveStatement { statement_id } => {
+            let client_id = business::remove_statement(tx, seq, statement_id).await?;
+            Ok(client_effect(&client_id))
         }
 
         Command::SetOpeningBalance {
@@ -2050,6 +2065,7 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::ConfirmIrdPayment { .. }
         | C::ResolveDuplicate { .. }
         | C::ConfirmSupplyInfo { .. }
+        | C::RemoveStatement { .. }
         // A finalised year's statements are its snapshot, and its layout is part of it.
         | C::MoveYearLayout { .. }
         // Adding a year before a finalised one would give it opening balances.

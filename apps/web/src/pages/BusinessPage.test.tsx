@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { sam } from "../test/data";
-import { renderApp, stubApi } from "../test/render";
+import { jsonResponse, renderApp, stubApi } from "../test/render";
 
 /** The worked example's position (docs/domain.md), as the server reports it. */
 const tax: TaxPosition = {
@@ -54,6 +54,7 @@ const business: BusinessView = {
       needs_opening_balance: true,
       statements: [
         {
+          id: "s1",
           file_name: "rimu.csv",
           parser: "rimu-csv-1",
           start: "2025-08-29",
@@ -111,6 +112,93 @@ describe("business screen", () => {
       kind: "import_statement",
       payload: { client_id: "b1", file_name: "rimu.csv", content_base64: "aGVsbG8=" },
     });
+  });
+
+  it("opens Bank vs books after an upload, from what the upload checked", async () => {
+    const atEnd = {
+      business_name: "Marsh Hollow Candles",
+      bank_account_id: "a3",
+      code: "600.03",
+      name: "Rimu savings",
+      kind: "bank",
+      account_number: "99-7702-0000789-00",
+      statement_file: "rimu.csv",
+      proof: {
+        date: "2025-09-30",
+        bank: {
+          checkpoint: { date: "2025-09-30", stated: 15376, source: { statement_id: "s1", balance: { kind: "closing" }, span: null } },
+          compared: { ledger: 15376, difference: 0, step: 0 },
+        },
+        at: "exact",
+        books_date: "2025-09-30",
+        ledger: 15376,
+        recent: [],
+        window: { shape: "constant", difference: 0, last_agrees: null, first_differs: null },
+      },
+    };
+    stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/businesses/b1": () => business,
+      "GET /api/businesses/b1/tax": () => tax,
+      "POST /api/commands": () => ({
+        seq: 9,
+        entity_id: "a3",
+        upload: { bank_account_id: "a3", statement_id: "s1", at_end: atEnd, at_balance_date: null },
+      }),
+      "GET /api/statements/s1/excerpt": () => ({
+        statement_id: "s1",
+        file_name: "rimu.csv",
+        kept: false,
+        sha256: null,
+        media_type: null,
+        stated: 15376,
+        date: "2025-09-30",
+        lines: [],
+        highlight: null,
+      }),
+    });
+    renderApp(<App />, "/businesses/b1");
+    const input = (await screen.findByLabelText(/Choose statement files/)) as HTMLInputElement;
+    await userEvent.setup().upload(input, new File(["hello"], "rimu.csv", { type: "text/csv" }));
+    const dialog = await screen.findByRole("dialog", { name: /Bank vs books/ });
+    expect(dialog.textContent).toContain("Agrees");
+    expect(await screen.findByText(/Original file not kept/)).toBeTruthy();
+  });
+
+  it("lists what's wrong with a file it can't use, row by row, in plain words", async () => {
+    // As the server sends it for fixture 20 (ofx-edge): the bank's error, with its row.
+    const bankError =
+      "Your bank sent an error instead of a statement: 'Signon invalid' (code 15500, row 14). Try downloading it again.";
+    stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/businesses/b1": () => business,
+      "GET /api/businesses/b1/tax": () => tax,
+      "POST /api/commands": () =>
+        jsonResponse(422, {
+          code: "statement_unreadable",
+          message: "We read this file as OFX 1.x (SGML), but can't use it:",
+          details: [{ code: "bank_error", row: 14, bank_code: "15500", message: bankError }],
+        }),
+    });
+    renderApp(<App />, "/businesses/b1");
+    const input = (await screen.findByLabelText(/Choose statement files/)) as HTMLInputElement;
+    await userEvent.setup().upload(input, new File(["x"], "bank.ofx"));
+    expect(await screen.findByText("We read this file as OFX 1.x (SGML), but can't use it:")).toBeTruthy();
+    expect(screen.getByText(bankError)).toBeTruthy();
+    expect(screen.queryByText(/read\. Lines already uploaded/)).toBeNull();
+  });
+
+  it("shows a bank line with no text as (no description)", async () => {
+    stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/businesses/b1": () => ({
+        ...business,
+        possible_duplicates: [{ bank_account_id: "a3", date: "2025-09-02", amount: -100, description: "" }],
+      }),
+      "GET /api/businesses/b1/tax": () => tax,
+    });
+    renderApp(<App />, "/businesses/b1");
+    expect(await screen.findByText(/\(no description\)/)).toBeTruthy();
   });
 
   it("asks for the opening balance when the first statement starts late", async () => {

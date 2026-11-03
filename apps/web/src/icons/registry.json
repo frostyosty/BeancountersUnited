@@ -856,5 +856,47 @@
       "type": "emoji",
       "value": "⏸️"
     }
+  },
+  "proof": {
+    "open": {
+      "type": "emoji",
+      "value": "⚖️"
+    },
+    "bank": {
+      "type": "emoji",
+      "value": "🏦"
+    },
+    "books": {
+      "type": "emoji",
+      "value": "📒"
+    },
+    "agrees": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "out": {
+      "type": "emoji",
+      "value": "⚠️"
+    },
+    "print": {
+      "type": "emoji",
+      "value": "🖨️"
+    },
+    "findings": {
+      "type": "emoji",
+      "value": "🔎"
+    },
+    "no_file": {
+      "type": "emoji",
+      "value": "📭"
+    },
+    "fix": {
+      "type": "emoji",
+      "value": "🛠️"
+    },
+    "ask": {
+      "type": "emoji",
+      "value": "💬"
+    }
   }
 }

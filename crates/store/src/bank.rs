@@ -1,6 +1,7 @@
 //! Businesses, bank accounts, uploaded statements, imported lines and gap journals (M10).
 
 use acct_core::bank::HoldingAccounts;
+use acct_core::reconcile::{BalanceKind, SourceSpan};
 use acct_core::tax::gst::GstFrequency;
 use acct_core::{AccountCode, Money};
 use chrono::NaiveDate;
@@ -420,4 +421,255 @@ pub async fn live_gap_journals(
     .bind(bank_account_id)
     .fetch_all(conn)
     .await?)
+}
+
+/// One statement.
+pub async fn statement(conn: &mut SqliteConnection, id: &str) -> Result<Option<StoredStatement>> {
+    Ok(sqlx::query_as("SELECT * FROM statements WHERE id = ?")
+        .bind(id)
+        .fetch_optional(conn)
+        .await?)
+}
+
+/// An uploaded statement's original file (M18). Statements uploaded before M18 have none.
+/// A file uploaded again is read through the statement that first kept it.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct StatementFile {
+    pub statement_id: String,
+    /// Of `bytes`, in lower-case hex.
+    pub sha256: String,
+    pub media_type: String,
+    pub bytes: Vec<u8>,
+}
+
+pub async fn insert_statement_file(conn: &mut SqliteConnection, f: &StatementFile) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO statement_files (statement_id, sha256, media_type, bytes)
+         VALUES (?, ?, ?, ?)",
+    )
+    .bind(&f.statement_id)
+    .bind(&f.sha256)
+    .bind(&f.media_type)
+    .bind(&f.bytes)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+/// Records that a statement's file is the one `same_as` already keeps (the same file uploaded
+/// again), without storing its bytes a second time.
+pub async fn insert_statement_file_same_as(
+    conn: &mut SqliteConnection,
+    statement_id: &str,
+    same_as: &StatementFile,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO statement_files (statement_id, sha256, media_type, same_as)
+         VALUES (?, ?, ?, ?)",
+    )
+    .bind(statement_id)
+    .bind(&same_as.sha256)
+    .bind(&same_as.media_type)
+    .bind(&same_as.statement_id)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+/// A statement's original file, if it was kept. `statement_id` of the result is the statement
+/// whose row holds the bytes.
+pub async fn statement_file(
+    conn: &mut SqliteConnection,
+    statement_id: &str,
+) -> Result<Option<StatementFile>> {
+    Ok(sqlx::query_as(
+        "SELECT o.statement_id, o.sha256, o.media_type, o.bytes
+         FROM statement_files f
+         JOIN statement_files o ON o.statement_id = COALESCE(f.same_as, f.statement_id)
+         WHERE f.statement_id = ?",
+    )
+    .bind(statement_id)
+    .fetch_optional(conn)
+    .await?)
+}
+
+/// The file with this SHA-256 that a bank account already keeps, from an earlier upload.
+pub async fn kept_file(
+    conn: &mut SqliteConnection,
+    bank_account_id: &str,
+    sha256: &str,
+) -> Result<Option<StatementFile>> {
+    Ok(sqlx::query_as(
+        "SELECT f.statement_id, f.sha256, f.media_type, f.bytes
+         FROM statement_files f JOIN statements s ON s.id = f.statement_id
+         WHERE s.bank_account_id = ? AND f.sha256 = ? AND f.bytes IS NOT NULL",
+    )
+    .bind(bank_account_id)
+    .bind(sha256)
+    .fetch_optional(conn)
+    .await?)
+}
+
+/// Where in its file a statement states one of its balances (M18).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BalanceSpan {
+    pub statement_id: String,
+    pub balance: BalanceKind,
+    pub span: SourceSpan,
+}
+
+#[derive(FromRow)]
+struct BalanceSpanRow {
+    statement_id: String,
+    kind: String,
+    bank_line_id: Option<String>,
+    span_line: i64,
+    span_start: i64,
+    span_end: i64,
+}
+
+impl TryFrom<BalanceSpanRow> for BalanceSpan {
+    type Error = crate::StoreError;
+    fn try_from(r: BalanceSpanRow) -> Result<BalanceSpan> {
+        let balance = match (r.kind.as_str(), r.bank_line_id) {
+            ("opening", None) => BalanceKind::Opening,
+            ("closing", None) => BalanceKind::Closing,
+            ("running", Some(bank_line_id)) => BalanceKind::Running { bank_line_id },
+            (kind, _) => {
+                return Err(crate::StoreError::Corrupt(format!(
+                    "balance span of kind {kind:?}"
+                )));
+            }
+        };
+        let n = |x: i64| {
+            u32::try_from(x).map_err(|_| crate::StoreError::Corrupt(format!("span offset {x}")))
+        };
+        Ok(BalanceSpan {
+            statement_id: r.statement_id,
+            balance,
+            span: SourceSpan {
+                line: n(r.span_line)?,
+                start: n(r.span_start)?,
+                end: n(r.span_end)?,
+            },
+        })
+    }
+}
+
+pub async fn insert_balance_span(conn: &mut SqliteConnection, s: &BalanceSpan) -> Result<()> {
+    let (kind, bank_line_id) = match &s.balance {
+        BalanceKind::Opening => ("opening", None),
+        BalanceKind::Closing => ("closing", None),
+        BalanceKind::Running { bank_line_id } => ("running", Some(bank_line_id.as_str())),
+    };
+    sqlx::query(
+        "INSERT INTO balance_spans
+             (statement_id, kind, bank_line_id, span_line, span_start, span_end)
+         VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&s.statement_id)
+    .bind(kind)
+    .bind(bank_line_id)
+    .bind(i64::from(s.span.line))
+    .bind(i64::from(s.span.start))
+    .bind(i64::from(s.span.end))
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+/// A statement's balance spans, in file order.
+pub async fn balance_spans(
+    conn: &mut SqliteConnection,
+    statement_id: &str,
+) -> Result<Vec<BalanceSpan>> {
+    let rows: Vec<BalanceSpanRow> = sqlx::query_as(
+        "SELECT * FROM balance_spans WHERE statement_id = ?
+         ORDER BY span_line, span_start, kind, bank_line_id",
+    )
+    .bind(statement_id)
+    .fetch_all(conn)
+    .await?;
+    rows.into_iter().map(BalanceSpan::try_from).collect()
+}
+
+/// Every balance span of a bank account's statements, by statement then file order.
+pub async fn balance_spans_for_account(
+    conn: &mut SqliteConnection,
+    bank_account_id: &str,
+) -> Result<Vec<BalanceSpan>> {
+    let rows: Vec<BalanceSpanRow> = sqlx::query_as(
+        "SELECT b.* FROM balance_spans b JOIN statements s ON s.id = b.statement_id
+         WHERE s.bank_account_id = ?
+         ORDER BY b.statement_id, b.span_line, b.span_start, b.kind, b.bank_line_id",
+    )
+    .bind(bank_account_id)
+    .fetch_all(conn)
+    .await?;
+    rows.into_iter().map(BalanceSpan::try_from).collect()
+}
+
+/// Deletes a statement, its lines and what hangs off each line (its coding state, the owner's
+/// duplicate answer and supply-information confirmation, and any AI suggestions for it), its
+/// balance spans and its kept file (M18, `remove_statement`). Journals are never deleted: the
+/// caller reverses each line's live journal first, and `command_log` keeps the record.
+///
+/// If the statement's row holds the bytes of a file that a later upload points at (`same_as`),
+/// the bytes move to the earliest such upload, and the others point at it instead.
+pub async fn delete_statement(conn: &mut SqliteConnection, statement_id: &str) -> Result<()> {
+    for sql in [
+        "DELETE FROM bank_line_states
+         WHERE bank_line_id IN (SELECT id FROM bank_lines WHERE statement_id = ?)",
+        "DELETE FROM duplicate_answers
+         WHERE bank_line_id IN (SELECT id FROM bank_lines WHERE statement_id = ?)",
+        "DELETE FROM supply_info_confirmations
+         WHERE bank_line_id IN (SELECT id FROM bank_lines WHERE statement_id = ?)",
+        "DELETE FROM ai_suggestions
+         WHERE bank_line_id IN (SELECT id FROM bank_lines WHERE statement_id = ?)",
+    ] {
+        sqlx::query(sql)
+            .bind(statement_id)
+            .execute(&mut *conn)
+            .await?;
+    }
+    sqlx::query("DELETE FROM balance_spans WHERE statement_id = ?")
+        .bind(statement_id)
+        .execute(&mut *conn)
+        .await?;
+
+    let heir: Option<(String,)> = sqlx::query_as(
+        "SELECT statement_id FROM statement_files WHERE same_as = ? ORDER BY statement_id LIMIT 1",
+    )
+    .bind(statement_id)
+    .fetch_optional(&mut *conn)
+    .await?;
+    if let Some((heir,)) = heir {
+        sqlx::query(
+            "UPDATE statement_files
+             SET bytes = (SELECT bytes FROM statement_files WHERE statement_id = ?), same_as = NULL
+             WHERE statement_id = ?",
+        )
+        .bind(statement_id)
+        .bind(&heir)
+        .execute(&mut *conn)
+        .await?;
+        sqlx::query("UPDATE statement_files SET same_as = ? WHERE same_as = ?")
+            .bind(&heir)
+            .bind(statement_id)
+            .execute(&mut *conn)
+            .await?;
+    }
+    sqlx::query("DELETE FROM statement_files WHERE statement_id = ?")
+        .bind(statement_id)
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query("DELETE FROM bank_lines WHERE statement_id = ?")
+        .bind(statement_id)
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query("DELETE FROM statements WHERE id = ?")
+        .bind(statement_id)
+        .execute(&mut *conn)
+        .await?;
+    Ok(())
 }

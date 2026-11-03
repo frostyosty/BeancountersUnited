@@ -121,6 +121,10 @@ pub struct FieldChange {
 const CATEGORY: &str = "category";
 /// The label of the number of a business's bank lines, which an upload changes.
 const LINE_COUNT: &str = "transactions";
+/// The label of an uploaded statement, which `remove_statement` takes out.
+const STATEMENT: &str = "statement";
+/// The label of a bank account's opening balance, as `$1,234.56 on 1 Apr 2025`.
+const OPENING: &str = "opening balance";
 
 /// One observed value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,6 +306,25 @@ async fn observe(
                 });
             }
         }
+        C::RemoveStatement { statement_id } => {
+            if let Some(st) = bank::statement(conn, statement_id).await? {
+                facts.push(Fact {
+                    key: format!("statement:{statement_id}"),
+                    subject: st.file_name.clone(),
+                    label: STATEMENT.into(),
+                    value: format!("{} to {}", day(st.start_date), day(st.end_date)),
+                });
+            }
+            if let Some(c) = client_id {
+                let n = bank::bank_lines(conn, c).await?.len();
+                facts.push(Fact {
+                    key: "line_count".into(),
+                    subject: "bank statements".into(),
+                    label: LINE_COUNT.into(),
+                    value: n.to_string(),
+                });
+            }
+        }
         C::SetOpeningBalance {
             bank_account_id, ..
         } => {
@@ -311,7 +334,7 @@ async fn observe(
                 facts.push(Fact {
                     key: format!("opening:{bank_account_id}"),
                     subject: a.name,
-                    label: "opening balance".into(),
+                    label: OPENING.into(),
                     value: format!("{} on {}", dollars(balance), day(date)),
                 });
             }
@@ -950,6 +973,9 @@ pub fn describe(
             "{who} accepted {}: {action}.",
             plural(suggestion_ids.len(), "AI suggestion", "AI suggestions")
         ),
+        Some(Via::Finding { .. }) => {
+            format!("{who} {action}, fixed from a reconciliation finding.")
+        }
         None => format!("{who} {action}."),
     };
     if let Some(t) = changes.and_then(|c| c.tax.as_ref())
@@ -1170,10 +1196,41 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
             }
         }
         C::SetOpeningBalance { balance, .. } => {
-            format!(
-                "set a bank account's opening balance to {}",
-                dollars(*balance)
-            )
+            // A correction (M18) had an opening balance before it.
+            let corrected = field(changes, OPENING).and_then(|f| {
+                let amount = |v: &Option<String>| {
+                    v.as_deref()
+                        .map(|t| t.split_once(" on ").map_or(t, |(a, _)| a).to_owned())
+                };
+                Some((f.subject.clone(), amount(&f.before)?))
+            });
+            match corrected {
+                Some((account, before)) => format!(
+                    "changed the opening balance of {account} from {before} to {}",
+                    dollars(*balance)
+                ),
+                None => format!(
+                    "set a bank account's opening balance to {}",
+                    dollars(*balance)
+                ),
+            }
+        }
+        C::RemoveStatement { .. } => {
+            let name = field(changes, STATEMENT).map_or_else(
+                || "a statement".to_owned(),
+                |f| format!("the statement {}", f.subject),
+            );
+            let removed = field(changes, LINE_COUNT).and_then(|f| {
+                let n = |v: &Option<String>| v.as_deref()?.parse::<usize>().ok();
+                n(&f.before)?.checked_sub(n(&f.after)?)
+            });
+            match removed {
+                Some(n) if n > 0 => format!(
+                    "removed {name}, taking out {}",
+                    plural(n, "transaction", "transactions")
+                ),
+                _ => format!("removed {name}"),
+            }
         }
         C::CodeBankLine { .. } => lines_phrase(changes, 1),
         C::CodeBankLines { lines } => lines_phrase(changes, lines.len()),
@@ -1440,6 +1497,7 @@ const LEDGER_KINDS: &[&str] = &[
     "confirm_ird_payment",
     "resolve_duplicate",
     "dispose_asset",
+    "remove_statement",
 ];
 
 const HISTORY_MAX: i64 = 200;
@@ -1641,14 +1699,15 @@ fn entry_view(
         .via
         .as_deref()
         .and_then(|v| serde_json::from_str::<Via>(v).ok())
-        .map(|v| match v {
+        .and_then(|v| match v {
             Via::Suggestion {
                 model,
                 suggestion_ids,
-            } => AiAttribution {
+            } => Some(AiAttribution {
                 model,
                 suggestions: suggestion_ids.len(),
-            },
+            }),
+            Via::Finding { .. } => None,
         });
     let tax_change = changes
         .as_ref()
