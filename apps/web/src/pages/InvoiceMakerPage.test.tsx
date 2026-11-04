@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, configure, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { sam, val } from "../test/data";
 import { renderApp, stubApi } from "../test/render";
+
+// The full suite runs ~45 jsdom workers at once, so the default 1s findBy timeout is too tight here.
+configure({ asyncUtilTimeout: 5000 });
 
 beforeEach(() => {
   sessionStorage.setItem("site-revealed", "1");
