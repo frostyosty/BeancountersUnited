@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Icon Studio setup</title>
+    <link rel="stylesheet" href="setup.css">
+</head>
+<body>
+    <main>
+        <h2>🎨 Icon Studio setup</h2>
+        <p class="hint" id="intro">Icon Studio makes icons for the emoji a codebase shows and keeps them in an icon registry. Tell it where this codebase keeps its icons. Nothing is changed until you press Save.</p>
+
+        <section>
+            <h3>1. The codebase</h3>
+            <div class="row">
+                <input id="codebase" placeholder="Folder of the codebase" autocomplete="off">
+                <button id="look-btn" onclick="look()">Look</button>
+            </div>
+            <div class="hint">The folder that holds the project's source. Icon Studio looks through it for a registry, an icons folder and the file types it contains.</div>
+        </section>
+
+        <div id="steps" hidden>
+            <section>
+                <h3>2. The icon registry</h3>
+                <div class="hint">A JS file that sets a variable to a JSON object of icons, e.g. <code>window.OS_ICON_REGISTRY = {"emoji": {}};</code>. Emoji the studio gives an image are saved in its "emoji" group.</div>
+                <select id="registry-pick" onchange="pickRegistry()"></select>
+                <div class="row">
+                    <label class="field">Registry file<input id="registry" placeholder="icon_registry.js" autocomplete="off"></label>
+                    <label class="field">Variable<input id="variable" placeholder="window.OS_ICON_REGISTRY" autocomplete="off"></label>
+                </div>
+                <label class="check"><input type="checkbox" id="create"> Make a new registry at that path</label>
+                <div class="row">
+                    <label class="field">Web root<input id="web-root" placeholder="." autocomplete="off"></label>
+                    <label class="field">Saved icons go in<input id="icons-dir" placeholder="assets/icons" autocomplete="off"></label>
+                </div>
+                <div class="hint">The web root is the folder the registry's image paths are relative to: the folder the pages are served from. The icons folder must be inside it.</div>
+            </section>
+
+            <section>
+                <h3>3. What to scan for emoji</h3>
+                <div class="hint">"Find emoji" reads these folders, in files of these types, and skips comments and logging.</div>
+                <div class="checks" id="dirs"></div>
+                <div class="checks" id="exts"></div>
+            </section>
+
+            <section>
+                <h3>4. Showing the images</h3>
+                <label class="check"><input type="checkbox" id="swap" checked> Copy <code>icon_swap.js</code> into the web root</label>
+                <div class="hint">A small script that shows the saved image wherever its emoji is text on a page. Leave it unticked if the codebase already swaps emoji for images itself.</div>
+            </section>
+
+            <button class="save" id="save-btn" onclick="saveSetup()">Save</button>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div id="done" hidden>
+            <h3>Saved</h3>
+            <div id="done-text"></div>
+            <pre id="tags" hidden></pre>
+            <a id="open" href="/" hidden>Open the studio</a>
+        </div>
+    </main>
+    <script src="js/setup.js"></script>
+</body>
+</html>

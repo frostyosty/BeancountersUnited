@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>logOS Icon Studio</title>
+    <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+    <div class="panel left">
+        <h2>🎨 Icon Studio</h2>
+        <div class="slot-row">
+            <div class="slot-preview" id="slot-preview"></div>
+            <input id="slot" list="slot-list" placeholder="Icon slot, e.g. taskbar.network" autocomplete="off">
+            <datalist id="slot-list"></datalist>
+        </div>
+        <div class="places" id="places" hidden></div>
+        <div class="row swap-row" id="swap-row" hidden>
+            <input id="swap-to" list="swap-list" placeholder="Emoji for the ticked places, e.g. 🎧" autocomplete="off">
+            <datalist id="swap-list"></datalist>
+            <button id="swap-btn" onclick="swapPlaces()" disabled>Change ticked</button>
+        </div>
+        <label class="check"><input type="checkbox" id="remove-bg" checked> Remove background</label>
+        <div class="candidates" id="candidates"></div>
+        <div class="hint">Drag and drop any number of image files here. They stay in the tray until you assign them.</div>
+        <div class="hint">Click an icon to pick it; Ctrl-click to pick several. Picked icons all go to the slot in one go: the first one you pick becomes the slot's icon, and all of them go in the slot's ▾ list so you can swap later.</div>
+        <div class="row">
+            <button id="save-btn" class="save" onclick="saveSelected()" disabled>Save selected</button>
+            <button id="discard-btn" class="secondary" title="Throw the picked icons out of the tray" onclick="discardPicked()" disabled>Discard</button>
+            <button class="secondary" title="Unpick the icons and the slot, so nothing is selected" onclick="clearPicks()">Clear</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="preview-pane" id="preview-pane">
+            <h3>Selected Icon</h3>
+            <div class="mini-toolbar" id="mini-toolbar"></div>
+            <div class="preview-wrap checker" id="preview-wrap">
+                <span class="preview-empty">Select a slot or pick an icon</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel right" id="registry-panel">
+        <div class="right-head">
+            <h2>📁 Icon Registry</h2>
+            <button id="scan-btn" onclick="scanEmoji()">🔍 Find emoji to replace</button>
+            <span class="hint">Click a slot to make icons for it. Hover and click ▾ to swap between its saved icons. The ▾ by a name lists where the code uses it. Drag one icon onto another to merge them.</span>
+        </div>
+        <div id="groups"></div>
+    </div>
+
+    <div class="variant-menu" id="variant-menu" hidden></div>
+    <div class="usage-menu" id="usage-menu" hidden></div>
+
+    <div id="merge-modal" class="modal" hidden>
+        <div class="modal-content">
+            <h3>Merge icons</h3>
+            <div id="merge-text"></div>
+            <div class="merge-choices" id="merge-choices"></div>
+            <button class="secondary" id="merge-cancel" style="flex: none;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="editor-modal" class="modal" hidden>
+        <div class="modal-content">
+            <h3>🖌️ Edit Icon</h3>
+            <div class="toolbar">
+                <span class="tool-buttons" id="tool-buttons"></span>
+                <label class="hint" style="margin-left:auto;" title="Or turn the mouse wheel over the icon">Zoom <input type="range" id="edit-zoom" min="100" max="1600" step="25" value="100"><input type="number" class="num" min="100" max="1600" value="100">%</label>
+                <button class="secondary" title="Copy the selected area, or the whole icon (Ctrl+C)" onclick="copySelection()">Copy</button>
+                <button id="edit-paste" class="secondary" title="Paste on top of the icon, to drag into place (Ctrl+V)" onclick="pasteClip()" disabled>Paste</button>
+                <button id="edit-undo" class="secondary" title="Undo (Ctrl+Z)" onclick="undoEdit()" disabled>↶ Undo</button>
+            </div>
+            <div class="toolbar" id="tool-options"></div>
+            <div class="hint" id="tool-hint"></div>
+            <div class="canvas-container checker" id="canvas-container">
+                <div class="canvas-stack" id="canvas-stack">
+                    <canvas id="edit-canvas"></canvas>
+                    <canvas id="edit-overlay"></canvas>
+                </div>
+            </div>
+            <div class="row">
+                <button class="save" id="edit-apply" onclick="saveEdit()">Apply Changes</button>
+                <button class="secondary" onclick="closeEditor()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classic scripts share one global scope, in this order. Each tool file adds its tools with defineTool (editor.js). -->
+    <script src="js/common.js"></script>
+    <script src="js/registry.js"></script>
+    <script src="js/tray.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/selection.js"></script>
+    <script src="js/transform.js"></script>
+    <script src="js/paint.js"></script>
+    <script src="js/keys.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

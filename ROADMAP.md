@@ -2,7 +2,10 @@
 
 ### General
 
-Do M17 its new
+Do M20 its new
+
+Do "copy over the good stuff from the Icon Studio folder ive just dropped at root from a superior lcode project, so our icon_studio is similarly kitted out"
+
 
 ### On comp
 
