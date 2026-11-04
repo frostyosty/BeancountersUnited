@@ -88,7 +88,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
       </div>
 
       <h2>
-        <Icon name="business.bank" fallback="🏦" /> Bank accounts
+        <Icon name="business.bank" fallback="🏛" /> Bank accounts
       </h2>
       {b.bank_accounts.length === 0 ? (
         <p className="muted">No statements yet. Upload one and its account is added for you.</p>

@@ -848,7 +848,9 @@ fn payload(kind: &str, w: &World) -> Value {
         }),
         "adopt_guest_business" => json!({ "token": token() }),
         "expire_guest" => json!({ "client_id": biz, "why": "by_you" }),
-        "set_gst_registration" => json!({ "client_id": biz, "registered": false, "source": "owner" }),
+        "set_gst_registration" => {
+            json!({ "client_id": biz, "registered": false, "source": "owner" })
+        }
         other => panic!("tests/impersonation.rs has no payload for the new command {other}"),
     }
 }

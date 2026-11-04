@@ -142,7 +142,10 @@ pub async fn guest_businesses(conn: &mut SqliteConnection) -> Result<Vec<GuestBu
 }
 
 /// The businesses one guest owns, oldest first.
-pub async fn businesses_of(conn: &mut SqliteConnection, user_id: &str) -> Result<Vec<GuestBusiness>> {
+pub async fn businesses_of(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+) -> Result<Vec<GuestBusiness>> {
     Ok(sqlx::query_as(
         "SELECT b.client_id, a.user_id, b.example, l.at AS created_at
          FROM businesses b
@@ -296,7 +299,10 @@ pub async fn delete_business(conn: &mut SqliteConnection, client_id: &str) -> Re
         "DELETE FROM clients WHERE id = ?1",
     ];
     for sql in STEPS {
-        sqlx::query(*sql).bind(client_id).execute(&mut *conn).await?;
+        sqlx::query(*sql)
+            .bind(client_id)
+            .execute(&mut *conn)
+            .await?;
     }
     Ok(Deleted { statements, lines })
 }

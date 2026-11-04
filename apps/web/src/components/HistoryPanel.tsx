@@ -66,7 +66,7 @@ export function HistoryPanel() {
     return (
       <aside className={`${styles.panel} ${styles.collapsed}`} aria-label="Who changed what">
         <button type="button" onClick={toggle} aria-expanded={false}>
-          <Icon name="history.changes" fallback="🕘" /> <span className={styles.tabLabel}>Show changes</span>
+          <Icon name="history.changes" fallback="🕑" /> <span className={styles.tabLabel}>Show changes</span>
         </button>
       </aside>
     );
@@ -134,7 +134,7 @@ function Changes({ business, people }: { business: string | null; people: [strin
   return (
     <section aria-labelledby="changes-heading" className={styles.changes}>
       <h2 id="changes-heading">
-        <Icon name="history.changes" fallback="🕘" /> Changes
+        <Icon name="history.changes" fallback="🕑" /> Changes
         <button
           type="button"
           className={styles.filterToggle}
@@ -149,7 +149,7 @@ function Changes({ business, people }: { business: string | null; people: [strin
       </h2>
       {figure && (
         <p className={styles.figure} role="status">
-          <Icon name="history.figure" fallback="🔎" /> What changed {figure.label}{" "}
+          <Icon name="business.detected" fallback="🔎" /> What changed {figure.label}{" "}
           <button type="button" onClick={clearFigure}>
             Show all changes
           </button>

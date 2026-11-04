@@ -295,7 +295,9 @@ pub fn detect_registration(lines: &[DetectLine<'_>]) -> GstDetection {
     GstDetection::Detected {
         line: first,
         evidence,
-        frequency: from_range.or_else(from_spacing).unwrap_or(DEFAULT_FREQUENCY),
+        frequency: from_range
+            .or_else(from_spacing)
+            .unwrap_or(DEFAULT_FREQUENCY),
     }
 }
 
@@ -336,7 +338,11 @@ mod tests {
             }
         );
         // Example 2: income tax only, so assumed.
-        let two = [line("2025-09-12", "-1500.00", "INLAND REVENUE INC TAX 2026")];
+        let two = [line(
+            "2025-09-12",
+            "-1500.00",
+            "INLAND REVENUE INC TAX 2026",
+        )];
         assert_eq!(
             detect_registration(&two),
             GstDetection::Assumed {

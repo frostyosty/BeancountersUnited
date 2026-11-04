@@ -210,7 +210,10 @@ fn months_in(description: &str) -> Option<(u32, u32)> {
         .collect();
     let first = words.iter().position(|w| month_of(w).is_some())?;
     let from = month_of(words[first])?;
-    let to = words.get(first + 1).and_then(|w| month_of(w)).unwrap_or(from);
+    let to = words
+        .get(first + 1)
+        .and_then(|w| month_of(w))
+        .unwrap_or(from);
     Some((from, to))
 }
 

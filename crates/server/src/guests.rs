@@ -111,7 +111,10 @@ pub const GUEST_REFUSED: &[(&str, &str)] = &[
     ("set_ai_suggestions", "use AI suggestions"),
     ("record_suggestions", "use AI suggestions"),
     ("change_own_password", "set a password"),
-    ("set_history_sharing", "share your changes with an accountant"),
+    (
+        "set_history_sharing",
+        "share your changes with an accountant",
+    ),
     ("set_coding_settings", "change how lines are sorted"),
     ("save_invoice_draft", "make invoices"),
     ("save_invoice_template", "make invoices"),
@@ -265,10 +268,7 @@ pub fn check_route(method: &Method, path: &str) -> Result<(), CommandError> {
 
 /// The guest user behind `actor`, if it's a guest: someone submitting as themselves, not the
 /// server and not an overseer viewing as someone (who can never view as a guest).
-async fn guest_of(
-    tx: &mut SqliteConnection,
-    actor: &Actor,
-) -> Result<Option<User>, CommandError> {
+async fn guest_of(tx: &mut SqliteConnection, actor: &Actor) -> Result<Option<User>, CommandError> {
     let Some(id) = actor.user_id.as_deref() else {
         return Ok(None);
     };
@@ -662,7 +662,10 @@ async fn new_business(
 /// changed. Proof upgrades `assumed` to `detected`; losing it (the statement was removed) goes
 /// back to `assumed`. The registration date doesn't change, so nothing is reposted: the frequency
 /// only decides how the same postings fall into periods.
-pub(crate) async fn redetect(tx: &mut SqliteConnection, client_id: &str) -> Result<(), CommandError> {
+pub(crate) async fn redetect(
+    tx: &mut SqliteConnection,
+    client_id: &str,
+) -> Result<(), CommandError> {
     let Some(flags) = store::flags(tx, client_id).await? else {
         return Ok(());
     };
@@ -989,11 +992,7 @@ impl Limits {
         if *n >= limit {
             let left = 3600 - now.timestamp().rem_euclid(3600);
             let minutes = (left + 59) / 60;
-            let what = if example {
-                "the examples"
-            } else {
-                "this"
-            };
+            let what = if example { "the examples" } else { "this" };
             return Err(CommandError::Limited {
                 code: "too_many_trials",
                 message: format!(
@@ -1020,8 +1019,7 @@ impl Limits {
             return Err(CommandError::Limited {
                 code: "slow_down",
                 message: "Slow down a little. Try that again in a moment.".to_owned(),
-                retry_after_secs: u64::try_from(60 - now.timestamp().rem_euclid(60))
-                    .unwrap_or(60),
+                retry_after_secs: u64::try_from(60 - now.timestamp().rem_euclid(60)).unwrap_or(60),
             });
         }
         *n += 1;
@@ -1034,7 +1032,14 @@ impl Limits {
 pub fn client_address(headers: &HeaderMap, extensions: &Extensions) -> String {
     let behind_fly = std::env::var_os("FLY_APP_NAME").is_some();
     let from_fly = behind_fly
-        .then(|| headers.get("fly-client-ip")?.to_str().ok()?.parse::<IpAddr>().ok())
+        .then(|| {
+            headers
+                .get("fly-client-ip")?
+                .to_str()
+                .ok()?
+                .parse::<IpAddr>()
+                .ok()
+        })
         .flatten();
     let peer = extensions
         .get::<ConnectInfo<SocketAddr>>()
@@ -1554,7 +1559,10 @@ mod tests {
             classify("create_invite"),
             ForGuests::Refused("invite your accountant")
         );
-        assert_eq!(classify("ird_file_return"), ForGuests::Refused("file with IRD"));
+        assert_eq!(
+            classify("ird_file_return"),
+            ForGuests::Refused("file with IRD")
+        );
         assert_eq!(classify("some_new_command"), ForGuests::Refused("do this"));
         assert_eq!(
             save_first("invite your accountant").body().message,
@@ -1566,8 +1574,14 @@ mod tests {
     fn routes_are_deny_by_default() {
         assert!(route_allowed(&Method::GET, "/api/businesses/{id}/save-tax"));
         assert!(route_allowed(&Method::POST, "/api/commands"));
-        assert!(!route_allowed(&Method::GET, "/api/businesses/{id}/ai-suggestions"));
-        assert!(!route_allowed(&Method::POST, "/api/businesses/{id}/ai-suggestions"));
+        assert!(!route_allowed(
+            &Method::GET,
+            "/api/businesses/{id}/ai-suggestions"
+        ));
+        assert!(!route_allowed(
+            &Method::POST,
+            "/api/businesses/{id}/ai-suggestions"
+        ));
         assert!(!route_allowed(&Method::GET, "/api/years/{id}"));
         assert!(!route_allowed(&Method::GET, "/api/invoices/draft"));
         assert!(!route_allowed(&Method::GET, "/api/users"));
@@ -1583,7 +1597,11 @@ mod tests {
         limits.take_trial("1.2.3.4", false, now).unwrap();
         let e = limits.take_trial("1.2.3.4", false, now).unwrap_err();
         assert_eq!(e.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
-        assert!(e.body().message.contains("about 20 minutes"), "{}", e.body().message);
+        assert!(
+            e.body().message.contains("about 20 minutes"),
+            "{}",
+            e.body().message
+        );
         // Examples have their own count, and another address its own.
         limits.take_trial("1.2.3.4", true, now).unwrap();
         limits.take_trial("5.6.7.8", false, now).unwrap();

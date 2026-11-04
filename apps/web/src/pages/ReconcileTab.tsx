@@ -36,7 +36,7 @@ export function ReconcileTab() {
   if (rec.data.accounts.length === 0) {
     return (
       <p className="muted">
-        <Emoji>🏦</Emoji> No bank accounts or cards. This client's books don't come from bank statements.
+        <Emoji>🏛</Emoji> No bank accounts or cards. This client's books don't come from bank statements.
       </p>
     );
   }
@@ -77,7 +77,7 @@ function AccountCard({ account: a }: { account: AccountReconciliation }) {
   return (
     <section className={styles.card} aria-label={title}>
       <h2>
-        <Icon name="year.reconcile" fallback="🏦" /> {title}
+        <Icon name="year.reconcile" fallback="🏛" /> {title}
         {a.kind === "credit_card" && <span className="muted"> (card)</span>}
       </h2>
       {a.account_number && <p className="muted">{a.account_number}</p>}

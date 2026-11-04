@@ -67,7 +67,7 @@ export function YearLayout() {
           <Icon name="year.notes" fallback="📝" /> Notes
         </Tab>
         <Tab to="reconcile">
-          <Icon name="year.reconcile" fallback="🏦" /> Reconcile
+          <Icon name="year.reconcile" fallback="🏛" /> Reconcile
         </Tab>
         <Tab to="gl">
           <Icon name="year.gl" fallback="📖" /> General ledger

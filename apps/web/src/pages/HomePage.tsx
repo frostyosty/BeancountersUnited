@@ -27,14 +27,14 @@ const steps = [
     next: "a few clicks",
   },
   {
-    icon: "home.save",
+    icon: "business.save",
     fallback: "✂️",
     title: "Save tax",
     body: "Step through your spending and categorise it properly to bring that figure down.",
     next: "one click",
   },
   {
-    icon: "home.file",
+    icon: "business.bank",
     fallback: "🏛️",
     title: "File tax",
     body: "No-nonsense direct submission to the IRD.",
@@ -50,7 +50,7 @@ const features = [
     body: "Every business-year has a proper ledger underneath, so your accountant can pick up where you left off.",
   },
   {
-    icon: "home.statements",
+    icon: "business.save_supply",
     fallback: "📑",
     title: "Statements that foot",
     body: "Whole-dollar statements with last year alongside, balanced to the dollar, drill down to any account.",

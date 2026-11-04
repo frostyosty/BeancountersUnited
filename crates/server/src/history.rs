@@ -612,7 +612,12 @@ async fn gst_fact(
         }
         None => "not registered".to_owned(),
     };
-    out.push(fact_keyed("gst_registration", "GST", GST_REGISTRATION, value));
+    out.push(fact_keyed(
+        "gst_registration",
+        "GST",
+        GST_REGISTRATION,
+        value,
+    ));
     Ok(())
 }
 
@@ -1517,9 +1522,8 @@ fn action(
         // Guests (M20, ADR 014, 10).
         C::StartGuest { source } | C::AddGuestBusiness { source } => {
             let starting = matches!(command, C::StartGuest { .. });
-            let added = field(changes, LINE_COUNT).and_then(|f| {
-                f.after.as_deref()?.parse::<usize>().ok()
-            });
+            let added =
+                field(changes, LINE_COUNT).and_then(|f| f.after.as_deref()?.parse::<usize>().ok());
             let with = match source {
                 crate::commands::GuestSource::Example(n) if starting => {
                     format!("started a trial with Example {n}")

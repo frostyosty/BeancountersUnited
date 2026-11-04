@@ -45,7 +45,10 @@ impl Example {
         })
         .await;
         e.client = e
-            .run_as(Role::BusinessOwner, examples::start_command(number).unwrap())
+            .run_as(
+                Role::BusinessOwner,
+                examples::start_command(number).unwrap(),
+            )
             .await
             .unwrap();
         e

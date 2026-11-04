@@ -686,7 +686,9 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         // data (a guest's own trial; `tests/guests.rs` covers them).
         "start_guest" => json!({ "source": { "example": 1 } }),
         "expire_guest" => json!({ "client_id": biz, "why": "by_you" }),
-        "set_gst_registration" => json!({ "client_id": biz, "registered": false, "source": "owner" }),
+        "set_gst_registration" => {
+            json!({ "client_id": biz, "registered": false, "source": "owner" })
+        }
         "add_guest_business" | "claim_guest" | "adopt_guest_business" => return None,
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })

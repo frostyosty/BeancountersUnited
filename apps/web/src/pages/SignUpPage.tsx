@@ -59,7 +59,7 @@ export function SignUpPage() {
   return (
     <main className="page">
       <h1>
-        <Icon name="signup.title" fallback="🌱" /> Start your books
+        <Icon name="history.empty" fallback="🌱" /> Start your books
       </h1>
       <p className="muted">
         For sole traders. Upload your bank statements and see the tax you'd pay, then bring it down.

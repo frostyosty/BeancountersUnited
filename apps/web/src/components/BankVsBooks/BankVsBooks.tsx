@@ -114,7 +114,7 @@ export function BankVsBooks({ open, onClose, proofs }: BankVsBooksProps) {
         <div className={styles.compare}>
           <section className={styles.cutout} aria-labelledby={`${id}-bank`}>
             <h3 id={`${id}-bank`}>
-              <Icon name="proof.bank" fallback="🏦" /> Your bank's file says
+              <Icon name="proof.bank" fallback="🏛" /> Your bank's file says
             </h3>
             {bank ? (
               <BankSide proof={p} checkpoint={bank.checkpoint} />

@@ -20,7 +20,7 @@ export function ClientsPage() {
         actions={
           can(me, "staff") && (
             <ButtonLink to="/businesses/new" variant="primary">
-              <Icon name="business.new" fallback="🧾" /> Set up a business
+              <Icon name="business.save_supply" fallback="🧾" /> Set up a business
             </ButtonLink>
           )
         }

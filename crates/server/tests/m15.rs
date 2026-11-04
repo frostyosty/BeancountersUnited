@@ -707,9 +707,7 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         "allow_impersonation_changes" => Allowed(json!({ "reason": "X" })),
         // Guests (M20): a trial is a new business nobody else sees, so it has no finalised year.
         // Not submitted here; `tests/guests.rs` covers them.
-        "start_guest" | "add_guest_business" => {
-            NotSubmitted(json!({ "source": { "example": 1 } }))
-        }
+        "start_guest" | "add_guest_business" => NotSubmitted(json!({ "source": { "example": 1 } })),
         "claim_guest" => NotSubmitted(json!({
             "email": "x@example.nz", "display_name": "X", "password": "correct horse battery",
         })),

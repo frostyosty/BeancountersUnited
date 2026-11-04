@@ -27,7 +27,7 @@ const IN_CHOICES: [InChoice, string, string][] = [
   ["income", "💵", "Money the business earned"],
   ["transfer", "🔁", "Moved from another of my accounts"],
   ["owner_funds", "🙋", "Money I put in myself"],
-  ["loan", "🏦", "A loan"],
+  ["loan", "🏛", "A loan"],
   ["gst_refund", "🏛️", "A GST refund from IRD"],
   ["paye_wages", "💼", "Wages from a job (tax already taken off)"],
   ["personal_sale", "🏷️", "I sold something personal"],

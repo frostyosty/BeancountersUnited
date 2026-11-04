@@ -16,9 +16,12 @@ def load_registry():
 
 
 def save_registry(registry):
-    # Same layout as utilities/icon_manage.sh (JSON.stringify(..., null, 4)).
-    with open(REGISTRY_FILE, 'w', encoding='utf-8') as f:
-        f.write(REGISTRY_VARIABLE + ' = ' + json.dumps(registry, indent=4, ensure_ascii=False) + ';\n')
+    with open(REGISTRY_FILE, 'w', encoding='utf-8', newline='\n') as f:
+        if REGISTRY_FILE.endswith('.json'):
+            f.write(json.dumps(registry, indent=2, ensure_ascii=False) + '\n')
+        else:
+            # Same layout as JSON.stringify(x, null, 4).
+            f.write(REGISTRY_VARIABLE + ' = ' + json.dumps(registry, indent=4, ensure_ascii=False) + ';\n')
 
 
 def parse_key(key):

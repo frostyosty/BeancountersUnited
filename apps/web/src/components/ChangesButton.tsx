@@ -13,7 +13,7 @@ export function ChangesButton({ figure }: { figure: FigureFilter }) {
       aria-label={`What changed ${figure.label}`}
       title={`What changed ${figure.label}`}
     >
-      <Icon name="history.figure" fallback="🔎" /> Changes
+      <Icon name="business.detected" fallback="🔎" /> Changes
     </button>
   );
 }

@@ -52,7 +52,7 @@ export function NewBusinessPage() {
     <>
       <PageHeader
         crumbs={[{ to: "/", label: "Clients" }]}
-        icon={<Icon name="business.new" fallback="🧾" />}
+        icon={<Icon name="business.save_supply" fallback="🧾" />}
         title="Set up a business"
         subtitle="A sole trader, with a 31 March year end."
       />

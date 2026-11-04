@@ -298,7 +298,7 @@ function IrdCard({ card, clientId, banks, gstRegistered, canEdit }: CardProps) {
   if (line.amount > 0) {
     return (
       <>
-        <Heading icon="business.save_ird" fallback="🏛️">
+        <Heading icon="business.bank" fallback="🏛️">
           Is this a GST refund from IRD?
         </Heading>
         <p className="muted">A refund of GST isn't income, so it shouldn't be taxed.</p>
@@ -317,7 +317,7 @@ function IrdCard({ card, clientId, banks, gstRegistered, canEdit }: CardProps) {
   }
   return (
     <>
-      <Heading icon="business.save_ird" fallback="🏛️">
+      <Heading icon="business.bank" fallback="🏛️">
         Is this a payment to IRD?
       </Heading>
       <p className="muted">Tax you've already paid comes off what you owe, so tell us what it was for.</p>

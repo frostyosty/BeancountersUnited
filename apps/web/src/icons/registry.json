@@ -2,7 +2,7 @@
   "nav": {
     "clients": {
       "type": "image",
-      "value": "icons/home_books_1_icon.png",
+      "value": "icons/nav_clients_2_icon.png",
       "variants": [
         {
           "type": "emoji",
@@ -15,12 +15,20 @@
         {
           "type": "image",
           "value": "icons/home_books_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_clients_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_clients_2_icon.png"
         }
       ]
     },
     "settings": {
       "type": "image",
-      "value": "icons/nav_settings_1_icon.png",
+      "value": "icons/nav_settings_2_icon.png",
       "variants": [
         {
           "type": "emoji",
@@ -29,6 +37,10 @@
         {
           "type": "image",
           "value": "icons/nav_settings_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_settings_2_icon.png"
         }
       ]
     },
@@ -89,6 +101,10 @@
         {
           "type": "image",
           "value": "icons/home_brand_1_icon.png"
+        },
+        {
+          "type": "emoji",
+          "value": "⚖️"
         }
       ]
     },
@@ -128,28 +144,6 @@
         }
       ]
     },
-    "file": {
-      "type": "image",
-      "value": "icons/home_file_3_icon.png",
-      "variants": [
-        {
-          "type": "emoji",
-          "value": "🏛️"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_file_1_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_file_2_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_file_3_icon.png"
-        }
-      ]
-    },
     "tax": {
       "type": "image",
       "value": "icons/home_tax_2_icon.png",
@@ -165,50 +159,6 @@
         {
           "type": "image",
           "value": "icons/home_tax_2_icon.png"
-        }
-      ]
-    },
-    "save": {
-      "type": "image",
-      "value": "icons/home_save_4_icon.png",
-      "variants": [
-        {
-          "type": "emoji",
-          "value": "✂️"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_save_1_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_save_2_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_save_3_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_save_4_icon.png"
-        }
-      ]
-    },
-    "statements": {
-      "type": "image",
-      "value": "icons/home_statements_1_icon.png",
-      "variants": [
-        {
-          "type": "emoji",
-          "value": "📑"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_statements_1_icon.png"
-        },
-        {
-          "type": "image",
-          "value": "icons/home_statements_2_icon.png"
         }
       ]
     },
@@ -231,8 +181,18 @@
       ]
     },
     "journals": {
-      "type": "emoji",
-      "value": "✍️"
+      "type": "image",
+      "value": "icons/emoji_270d_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "✍️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_270d_1_icon.png"
+        }
+      ]
     },
     "assets": {
       "type": "image",
@@ -263,6 +223,10 @@
         {
           "type": "image",
           "value": "icons/home_finalise_1_icon.png"
+        },
+        {
+          "type": "emoji",
+          "value": "🔏"
         }
       ]
     },
@@ -299,6 +263,10 @@
         {
           "type": "image",
           "value": "icons/home_history_2_icon.png"
+        },
+        {
+          "type": "emoji",
+          "value": "🕘"
         }
       ]
     },
@@ -365,8 +333,22 @@
       ]
     },
     "product": {
-      "type": "emoji",
-      "value": "🧭"
+      "type": "image",
+      "value": "icons/home_product_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🧭"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_product_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_product_2_icon.png"
+        }
+      ]
     }
   },
   "emoji": {
@@ -419,13 +401,217 @@
           "value": "icons/home_brand_1_icon.png"
         }
       ]
+    },
+    "1f331": {
+      "type": "image",
+      "value": "icons/emoji_1f331_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🌱"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_2_icon.png"
+        }
+      ]
+    },
+    "270d": {
+      "type": "image",
+      "value": "icons/emoji_270d_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "✍️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_270d_1_icon.png"
+        }
+      ]
+    },
+    "2696": {
+      "type": "image",
+      "value": "icons/home_brand_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚖️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_brand_1_icon.png"
+        }
+      ]
+    },
+    "1f91d": {
+      "type": "image",
+      "value": "icons/business_invite_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🤝"
+        },
+        {
+          "type": "image",
+          "value": "icons/business_invite_1_icon.png"
+        }
+      ]
+    },
+    "1f4b0": {
+      "type": "image",
+      "value": "icons/home_tax_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "💰"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_tax_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_tax_2_icon.png"
+        }
+      ]
+    },
+    "2699": {
+      "type": "image",
+      "value": "icons/nav_settings_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚙️"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_settings_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/nav_settings_2_icon.png"
+        }
+      ]
+    },
+    "1f3db": {
+      "type": "image",
+      "value": "icons/home_file_3_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🏛"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_3_icon.png"
+        }
+      ]
+    },
+    "1f551": {
+      "type": "image",
+      "value": "icons/home_history_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🕑"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_2_icon.png"
+        }
+      ]
+    },
+    "1f50e": {
+      "type": "image",
+      "value": "icons/emoji_1f50e_4_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔎"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_4_icon.png"
+        }
+      ]
+    },
+    "1f4de": {
+      "type": "image",
+      "value": "icons/home_phone_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📞"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_phone_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_phone_2_icon.png"
+        }
+      ]
+    },
+    "1f512": {
+      "type": "image",
+      "value": "icons/home_finalise_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔒"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_finalise_1_icon.png"
+        }
+      ]
+    },
+    "1f50f": {
+      "type": "image",
+      "value": "icons/home_finalise_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔏"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_finalise_1_icon.png"
+        }
+      ]
     }
   },
   "business": {
-    "new": {
-      "type": "emoji",
-      "value": "🧾"
-    },
     "upload": {
       "type": "emoji",
       "value": "📤"
@@ -435,16 +621,60 @@
       "value": "💰"
     },
     "save": {
-      "type": "emoji",
-      "value": "✂️"
+      "type": "image",
+      "value": "icons/home_save_4_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "✂️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_save_4_icon.png"
+        }
+      ]
     },
     "submit": {
       "type": "emoji",
       "value": "📨"
     },
     "bank": {
-      "type": "emoji",
-      "value": "🏦"
+      "type": "image",
+      "value": "icons/home_file_3_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🏦"
+        },
+        {
+          "type": "emoji",
+          "value": "🏛️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_file_3_icon.png"
+        }
+      ]
     },
     "gap": {
       "type": "emoji",
@@ -459,8 +689,30 @@
       "value": "ℹ️"
     },
     "detected": {
-      "type": "emoji",
-      "value": "🔎"
+      "type": "image",
+      "value": "icons/emoji_1f50e_4_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔎"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_4_icon.png"
+        }
+      ]
     },
     "save_saved": {
       "type": "emoji",
@@ -478,10 +730,6 @@
       "type": "emoji",
       "value": "🔁"
     },
-    "save_ird": {
-      "type": "emoji",
-      "value": "🏛️"
-    },
     "save_duplicate": {
       "type": "emoji",
       "value": "👯"
@@ -491,8 +739,26 @@
       "value": "📭"
     },
     "save_supply": {
-      "type": "emoji",
-      "value": "🧾"
+      "type": "image",
+      "value": "icons/home_statements_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🧾"
+        },
+        {
+          "type": "emoji",
+          "value": "📑"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_statements_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_statements_2_icon.png"
+        }
+      ]
     },
     "save_categorise": {
       "type": "emoji",
@@ -535,8 +801,18 @@
       "value": "🚫"
     },
     "invite": {
-      "type": "emoji",
-      "value": "🤝"
+      "type": "image",
+      "value": "icons/business_invite_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🤝"
+        },
+        {
+          "type": "image",
+          "value": "icons/business_invite_1_icon.png"
+        }
+      ]
     },
     "home": {
       "type": "emoji",
@@ -544,10 +820,6 @@
     }
   },
   "signup": {
-    "title": {
-      "type": "emoji",
-      "value": "🌱"
-    },
     "invite": {
       "type": "emoji",
       "value": "🤝"
@@ -559,12 +831,26 @@
       "value": "👥"
     },
     "changes": {
-      "type": "emoji",
-      "value": "🕘"
-    },
-    "figure": {
-      "type": "emoji",
-      "value": "🔎"
+      "type": "image",
+      "value": "icons/home_history_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🕘"
+        },
+        {
+          "type": "emoji",
+          "value": "🕑"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_history_2_icon.png"
+        }
+      ]
     },
     "ai": {
       "type": "emoji",
@@ -579,8 +865,22 @@
       "value": "📉"
     },
     "empty": {
-      "type": "emoji",
-      "value": "🌱"
+      "type": "image",
+      "value": "icons/emoji_1f331_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🌱"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_2_icon.png"
+        }
+      ]
     }
   },
   "year": {
@@ -655,8 +955,22 @@
       "value": "➕"
     },
     "edit": {
-      "type": "emoji",
-      "value": "✏️"
+      "type": "image",
+      "value": "icons/emoji_270d_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "✏️"
+        },
+        {
+          "type": "emoji",
+          "value": "✍️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_270d_1_icon.png"
+        }
+      ]
     },
     "push": {
       "type": "emoji",
@@ -701,8 +1015,22 @@
       "value": "➕"
     },
     "none_yet": {
-      "type": "emoji",
-      "value": "🌱"
+      "type": "image",
+      "value": "icons/emoji_1f331_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🌱"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f331_2_icon.png"
+        }
+      ]
     },
     "ranges": {
       "type": "emoji",
@@ -859,8 +1187,18 @@
   },
   "proof": {
     "open": {
-      "type": "emoji",
-      "value": "⚖️"
+      "type": "image",
+      "value": "icons/home_brand_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚖️"
+        },
+        {
+          "type": "image",
+          "value": "icons/home_brand_1_icon.png"
+        }
+      ]
     },
     "bank": {
       "type": "emoji",
@@ -883,8 +1221,30 @@
       "value": "🖨️"
     },
     "findings": {
-      "type": "emoji",
-      "value": "🔎"
+      "type": "image",
+      "value": "icons/emoji_1f50e_4_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🔎"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_2_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_3_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f50e_4_icon.png"
+        }
+      ]
     },
     "no_file": {
       "type": "emoji",

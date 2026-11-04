@@ -506,9 +506,7 @@ pub(crate) async fn slide_guest_session(
     let lasts = Duration::days(crate::guests::GUEST_DAYS);
     let current = {
         let mut conn = state.store.reader().await?;
-        sessions::get(&mut conn, &hash)
-            .await?
-            .map(|s| s.expires_at)
+        sessions::get(&mut conn, &hash).await?.map(|s| s.expires_at)
     };
     let Some(current) = current else {
         return Ok(session_cookie("", 0));

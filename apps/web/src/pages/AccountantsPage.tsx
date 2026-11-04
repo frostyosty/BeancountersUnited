@@ -16,7 +16,7 @@ const tools = [
     body: "Balanced journals, trial balance import, and GST splits for GST-exclusive ledgers. Posted journals never change; corrections are reversing journals.",
   },
   {
-    icon: "home.statements",
+    icon: "business.save_supply",
     fallback: "📑",
     title: "Statements that foot",
     body: "Whole-dollar statements with prior-year comparatives, rounding lines so every column foots, and drill-down from any line to its accounts.",

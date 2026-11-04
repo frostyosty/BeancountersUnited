@@ -154,9 +154,8 @@ impl CommandError {
                 message,
                 details,
             } => (*code, message.clone(), details.clone()),
-            CommandError::Impersonating { code, message } | CommandError::Guest { code, message } => {
-                (*code, message.clone(), Value::Null)
-            }
+            CommandError::Impersonating { code, message }
+            | CommandError::Guest { code, message } => (*code, message.clone(), Value::Null),
             CommandError::Limited {
                 code,
                 message,

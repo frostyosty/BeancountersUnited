@@ -33,7 +33,7 @@ function Preview({ e, onClose, onUse }: { e: ExampleStatement; onClose: () => vo
       open
       size="lg"
       onClose={onClose}
-      icon={<Icon name="tryit.statement" fallback="🏦" />}
+      icon={<Icon name="tryit.statement" fallback="🏛" />}
       title={`${e.title}: ${e.business}`}
       footer={
         <>

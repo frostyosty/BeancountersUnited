@@ -1394,7 +1394,13 @@ fn not_registered(snap: &Snapshot) -> TaxInputs {
         let Some(account) = books.accounts.iter().find(|a| a.id == g.bank_account_id) else {
             continue;
         };
-        let after = unsorted_lines(&account.code, g.end, g.change, None, &books.business.holding);
+        let after = unsorted_lines(
+            &account.code,
+            g.end,
+            g.change,
+            None,
+            &books.business.holding,
+        );
         moved(
             &mut inputs,
             g.end,

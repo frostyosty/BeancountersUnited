@@ -23,7 +23,7 @@ export function ProductPage() {
           <ul className={styles.grid}>
             <li className={styles.mock}>
               <h3>
-                <Icon name="home.save" fallback="✂️" /> Save tax
+                <Icon name="business.save" fallback="✂️" /> Save tax
               </h3>
               {rows([
                 ["Tax if you filed today", "$4,820"],
@@ -37,7 +37,7 @@ export function ProductPage() {
             </li>
             <li className={styles.mock}>
               <h3>
-                <Icon name="home.statements" fallback="📑" /> Statements
+                <Icon name="business.save_supply" fallback="📑" /> Statements
               </h3>
               {rows([
                 ["Income", "$98,400"],
