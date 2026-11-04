@@ -8,4 +8,10 @@ export type PresentUser = { user_id: string, display_name: string, role: Role,
 /**
  * The business they're looking at, if the viewer can see it too.
  */
-business_id: string | null, business_name: string | null, last_seen: string, is_you: boolean, };
+business_id: string | null, business_name: string | null, last_seen: string, is_you: boolean, 
+/**
+ * The person an overseer is viewing as (M19), by name. Then `display_name` reads "Olive
+ * (Overseer, as Sam Staff)", and `role` and `user_id` are still the overseer's. Always sent;
+ * optional in the type only so code that builds one needn't name it.
+ */
+acting_as?: string | null, };

@@ -515,7 +515,10 @@ async fn observe(
         | C::SaveInvoiceDraft { .. }
         | C::SaveInvoiceTemplate { .. }
         | C::DeleteInvoiceTemplate { .. }
-        | C::AddInvoiceImage { .. } => {}
+        | C::AddInvoiceImage { .. }
+        | C::StartImpersonation { .. }
+        | C::EndImpersonation { .. }
+        | C::AllowImpersonationChanges { .. } => {}
         C::PickNotes { client_year_id, .. } => {
             let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
             let titles: Vec<&str> = notes.iter().map(|n| n.paragraph.title.trim()).collect();
@@ -945,6 +948,16 @@ pub fn describe(
         Some(id) => users.get(id).cloned().unwrap_or_else(|| "Someone".into()),
         None => "The system".into(),
     };
+    // While an overseer viewed as someone (M19), both names show: "Olive (as Sam Staff)". The
+    // three session commands say whose view in their own words instead.
+    let person: Option<String> = entry
+        .acting_as
+        .as_deref()
+        .map(|id| users.get(id).cloned().unwrap_or_else(|| "a user".into()));
+    let who = match &person {
+        Some(p) if !is_session_kind(&entry.kind) => format!("{who} (as {p})"),
+        _ => who,
+    };
     let Ok(command) = parsed else {
         // The log keeps a hash in place of an invoice's page or image, so these don't parse back.
         let personal = match entry.kind.as_str() {
@@ -959,7 +972,7 @@ pub fn describe(
         };
     };
     let user = |id: &str| users.get(id).cloned().unwrap_or_else(|| "a user".into());
-    let action = action(&command, changes, &user);
+    let action = action(&command, changes, &user, person.as_deref());
     let who = match &command {
         Command::SignUp { display_name, .. } if entry.user_id.is_none() => display_name.clone(),
         _ => who,
@@ -992,7 +1005,12 @@ pub fn describe(
 }
 
 /// What a command did, as a phrase that follows its actor's name.
-fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> String) -> String {
+fn action(
+    command: &Command,
+    changes: Option<&Changes>,
+    user: &dyn Fn(&str) -> String,
+    acting: Option<&str>,
+) -> String {
     use Command as C;
     let named = |what: &str| subject(changes).map_or_else(|| what.to_owned(), str::to_owned);
     match command {
@@ -1389,7 +1407,66 @@ fn action(command: &Command, changes: Option<&Changes>, user: &dyn Fn(&str) -> S
         C::SaveInvoiceTemplate { .. } => "saved an invoice template".into(),
         C::DeleteInvoiceTemplate { .. } => "deleted an invoice template".into(),
         C::AddInvoiceImage { .. } => "added an image to their invoices".into(),
+        // Viewing as someone (M19). `acting` is the person from `command_log.acting_as`.
+        C::StartImpersonation { user_id, reason } => {
+            format!("started viewing as {}: {}", user(user_id), reason.trim())
+        }
+        C::AllowImpersonationChanges { reason } => format!(
+            "turned on changes while viewing as {}: {}",
+            acting.unwrap_or("someone"),
+            reason.trim()
+        ),
+        C::EndImpersonation { reason, ended, .. } => {
+            use crate::impersonation::Ended;
+            let p = acting.unwrap_or("someone");
+            let how = match ended {
+                None => format!("stopped viewing as {p}"),
+                Some(Ended::SignedOut) => format!("stopped viewing as {p} by signing out"),
+                Some(Ended::TimedOut) => {
+                    format!("ended the view as {p}, as its 30 minutes were up")
+                }
+                Some(Ended::PersonChanged) => {
+                    format!("ended the view as {p}, as their account changed")
+                }
+                Some(Ended::SessionGone) => {
+                    format!("ended the view as {p}, as the sign-in it belonged to ended")
+                }
+            };
+            match reason.as_deref().map(str::trim).filter(|r| !r.is_empty()) {
+                Some(r) => format!("{how}: {r}"),
+                None => how,
+            }
+        }
     }
+}
+
+/// The commands that start, change or end a view as someone. Their rows are for the overseers and
+/// the person viewed as, not the rest of the practice (ADR 013, 6).
+pub(crate) fn is_session_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "start_impersonation" | "allow_impersonation_changes" | "end_impersonation"
+    )
+}
+
+/// Whether `viewer` sees this log row in Changes or the sync feed.
+///
+/// - Every row made as the viewer, or about their viewed-as session, shows, whatever their business
+///   or the owner's sharing setting says, so a person always sees everything done in their name.
+/// - The start, allow and end rows show only to that person and to overseers.
+/// - Anything else shows by the usual rule for its business.
+pub(crate) fn row_shown(
+    e: &LoggedCommand,
+    viewer: crate::pipeline::Identity<'_>,
+    visible: &access::Visible,
+) -> bool {
+    if e.acting_as.is_some() && e.acting_as.as_deref() == viewer.user_id {
+        return true;
+    }
+    if is_session_kind(&e.kind) {
+        return viewer.role == Role::Overseer;
+    }
+    visible.shows(e.client_id.as_deref())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1470,6 +1547,19 @@ pub struct HistoryEntry {
     pub tax_change: Option<Money>,
     /// Set when it accepted AI suggestions. `who` accepted them.
     pub ai: Option<AiAttribution>,
+    /// Set when an overseer made it (or started, changed or ended the view) while viewing as this
+    /// person (M19). `user_id` and `who` stay the overseer. Always sent; optional in the type only
+    /// so code that builds an entry needn't name it.
+    #[ts(optional = nullable)]
+    pub acting_as: Option<HistoryActingAs>,
+}
+
+/// The person an overseer was viewing as: [`HistoryEntry::acting_as`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct HistoryActingAs {
+    pub user_id: String,
+    pub name: String,
 }
 
 /// The response of `GET /api/history`: newest first.
@@ -1555,7 +1645,9 @@ pub async fn get_history(
         .map(|u| (u.id, u.role))
         .collect();
     // Owners' own edits are theirs to share: the practice sees them only where the owner allows it.
-    let hides_owners = actor.role.is_practice();
+    // As the person being viewed as, if the overseer is viewing as someone (M19).
+    let effective = actor.effective();
+    let hides_owners = effective.role.is_practice();
     let sharing: BTreeSet<String> = tenancy::sharing_clients(&mut conn)
         .await?
         .into_iter()
@@ -1590,15 +1682,23 @@ pub async fn get_history(
                 break;
             }
             // A user's own invoices are no one else's business, and too frequent to be news.
-            if !visible.shows(e.client_id.as_deref()) || crate::commands::is_personal_kind(&e.kind)
-            {
+            if !row_shown(&e, effective, &visible) || crate::commands::is_personal_kind(&e.kind) {
                 continue;
             }
             // Signing up is logged with no user (the account didn't exist yet), but it's the owner's.
-            let author = e.user_id.as_ref().and_then(|u| roles.get(u)).copied();
+            // A change an overseer made while viewing as someone counts as that person's (ADR 013),
+            // so the owner's sharing rule stays one rule.
+            let author = e
+                .acting_as
+                .as_ref()
+                .or(e.user_id.as_ref())
+                .and_then(|u| roles.get(u))
+                .copied();
             let by_owner = author == Some(Role::BusinessOwner) || e.kind == "sign_up";
+            let mine = e.acting_as.is_some() && e.acting_as.as_deref() == effective.user_id;
             if hides_owners
                 && by_owner
+                && !mine
                 && !e.client_id.as_ref().is_some_and(|c| sharing.contains(c))
             {
                 continue;
@@ -1718,6 +1818,10 @@ fn entry_view(
         Some(id) => names.get(id).cloned().unwrap_or_else(|| "Someone".into()),
         None => "The system".into(),
     };
+    let acting_as = e.acting_as.as_ref().map(|id| HistoryActingAs {
+        user_id: id.clone(),
+        name: names.get(id).cloned().unwrap_or_else(|| "a user".into()),
+    });
     HistoryEntry {
         seq: e.seq,
         at: e.at,
@@ -1733,6 +1837,7 @@ fn entry_view(
         changes,
         tax_change,
         ai,
+        acting_as,
     }
 }
 

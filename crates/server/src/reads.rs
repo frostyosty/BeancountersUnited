@@ -397,7 +397,9 @@ pub async fn sync(
     let Query(q) = query.map_err(|e| CommandError::Malformed(e.body_text()))?;
     let limit = q.limit.unwrap_or(SYNC_MAX).clamp(1, SYNC_MAX);
     let mut conn = state.store.reader().await?;
-    let visible = access::visible(&mut conn, &user.actor()).await?;
+    let actor = user.actor();
+    let visible = access::visible(&mut conn, &actor).await?;
+    let viewer = actor.effective();
     let entries = log::after(&mut conn, q.after, limit).await?;
     // `last_seq` still moves past entries the user can't see, so paging never stalls.
     let last_seq = entries.last().map_or(q.after, |e| e.seq);
@@ -406,7 +408,8 @@ pub async fn sync(
     Ok(Json(SyncFeed {
         changes: entries
             .into_iter()
-            .filter(|e| visible.shows(e.client_id.as_deref()))
+            // Rows about a view as someone are for the overseers and the person (ADR 013, 6).
+            .filter(|e| crate::history::row_shown(e, viewer, &visible))
             // A user's own invoices show only in their own feed.
             .filter(|e| {
                 !crate::commands::is_personal_kind(&e.kind)

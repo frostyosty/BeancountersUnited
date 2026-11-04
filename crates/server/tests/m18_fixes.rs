@@ -145,6 +145,7 @@ struct Books {
 const OWNER: Actor = Actor {
     user_id: None,
     role: Role::PracticeAdmin,
+    acting_as: None,
 };
 
 impl Books {
@@ -423,6 +424,7 @@ impl Books {
         let actor = Actor {
             user_id: Some(admin),
             role: Role::PracticeAdmin,
+            acting_as: None,
         };
         let envelope = CommandEnvelope {
             id: uuid::Uuid::now_v7().to_string(),

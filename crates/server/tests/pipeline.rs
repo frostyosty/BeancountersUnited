@@ -42,6 +42,7 @@ fn master() -> Actor {
     Actor {
         user_id: None,
         role: Role::PracticeAdmin,
+        acting_as: None,
     }
 }
 
@@ -49,6 +50,7 @@ fn as_role(role: Role) -> Actor {
     Actor {
         user_id: None,
         role,
+        acting_as: None,
     }
 }
 
@@ -117,6 +119,7 @@ impl Harness {
         let admin = Actor {
             user_id: Some(user_id),
             role: Role::PracticeAdmin,
+            acting_as: None,
         };
         let command = Command::FinaliseYear {
             client_year_id: year_id.into(),
@@ -930,6 +933,7 @@ async fn the_last_active_practice_admin_stays_active() {
     let system = Actor {
         user_id: None,
         role: Role::PracticeAdmin,
+        acting_as: None,
     };
     let boss = h
         .run_as(

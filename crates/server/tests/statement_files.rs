@@ -58,6 +58,7 @@ impl Setup {
         let actor = Actor {
             user_id: None,
             role: Role::PracticeAdmin,
+            acting_as: None,
         };
         let at = Utc.with_ymd_and_hms(2026, 10, 23, 0, 0, 0).unwrap();
         match submit(&self.store, &actor, envelope, at).await {

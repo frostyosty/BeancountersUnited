@@ -112,6 +112,7 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
         actor: Actor {
             user_id: None,
             role: Role::PracticeAdmin,
+            acting_as: None,
         },
     };
 
@@ -126,6 +127,7 @@ pub async fn load(store: &Store) -> Result<Loaded, BoxError> {
     loader.actor = Actor {
         user_id: Some(admin),
         role: Role::PracticeAdmin,
+        acting_as: None,
     };
     for (username, role) in &DEV_USERS[1..] {
         loader

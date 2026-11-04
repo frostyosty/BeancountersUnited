@@ -227,6 +227,7 @@ async fn command_log_appends_finds_and_feeds() {
         at: Utc.with_ymd_and_hms(2026, 9, 23, 1, 2, 3).unwrap(),
         via: None,
         changes: None,
+        acting_as: None,
     };
     log::append(&mut w, &entry(1, "a")).await.unwrap();
     log::append(&mut w, &entry(2, "b")).await.unwrap();
@@ -563,12 +564,8 @@ async fn sessions_round_trip_and_expire() {
     };
     users::insert(&mut w, &user).await.unwrap();
     let at = |h: u32| Utc.with_ymd_and_hms(2026, 9, 23, h, 0, 0).unwrap();
-    let session = |hash: &str, expires: u32| Session {
-        token_hash: hash.into(),
-        user_id: user.id.clone(),
-        created_at: at(0),
-        expires_at: at(expires),
-    };
+    let session =
+        |hash: &str, expires: u32| Session::new(hash.into(), user.id.clone(), at(0), at(expires));
     sessions::insert(&mut w, &session("old", 5)).await.unwrap();
     sessions::insert(&mut w, &session("new", 20)).await.unwrap();
     assert_eq!(

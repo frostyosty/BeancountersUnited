@@ -10,6 +10,7 @@ pub mod error;
 pub mod finalise;
 pub mod fixtures;
 pub mod history;
+pub mod impersonation;
 pub mod invoices;
 pub mod layouts;
 pub mod ledger;
@@ -298,9 +299,14 @@ pub async fn serve(
     state: AppState,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> std::io::Result<()> {
-    axum::serve(listener, app(state))
+    // Logs the end of every view-as session that ran out (M19, ADR 013): at startup, then once a
+    // minute, for as long as the server runs.
+    let sweep = impersonation::spawn_sweep(state.store.clone());
+    let served = axum::serve(listener, app(state))
         .with_graceful_shutdown(shutdown)
-        .await
+        .await;
+    sweep.abort();
+    served
 }
 
 async fn health() -> Json<Health> {
@@ -317,9 +323,11 @@ async fn submit_command(
     body: Result<Json<CommandRequest>, JsonRejection>,
 ) -> Result<Json<Accepted>, CommandError> {
     let Json(request) = body.map_err(|e| CommandError::Malformed(e.body_text()))?;
-    let accepted = pipeline::submit_via(
+    // In the session, so starting to view as someone (M19) knows which session it's for.
+    let accepted = pipeline::submit_in_session(
         &state.store,
         &user.actor(),
+        user.session(),
         request.envelope,
         request.via,
         chrono::Utc::now(),

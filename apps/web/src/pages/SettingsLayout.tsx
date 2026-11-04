@@ -1,23 +1,15 @@
-import type { Role } from "@acct/types/Role";
-import { Navigate, Outlet } from "react-router";
+import { useState } from "react";
+import { Navigate, Outlet, useNavigate } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { useHistorySharing } from "../lib/historySharing";
 import { Icon } from "../lib/icons";
-import { keys, useClients } from "../lib/queries";
+import { keys, useClients, useUsers } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
-import { useViewAs } from "../lib/viewAs";
-import { ButtonLink, Card, Notice, PageHeader, Tab, Tabs } from "../ui";
+import { ROLE_LABEL, useActingCommands, useViewAs } from "../lib/viewAs";
+import { Button, ButtonLink, Card, Field, Notice, PageHeader, Tab, Tabs } from "../ui";
 import { AccountPage } from "./AccountPage";
 import { SettingsPage } from "./SettingsPage";
-
-const ROLE_LABEL: Record<Role, string> = {
-  overseer: "Overseer",
-  practice_admin: "Practice admin",
-  staff: "Staff",
-  viewer: "Viewer",
-  business_owner: "Business owner",
-};
 
 /** Settings: one place, with a tab for each thing the signed-in user can change. */
 export function SettingsLayout() {
@@ -32,7 +24,7 @@ export function SettingsLayout() {
             <Icon name="settings.practice" fallback="🏢" /> Practice
           </Tab>
         )}
-        {can(real, "practice_admin") && !isOwner(real) && (
+        {real.role === "overseer" && (
           <Tab to="/settings/admin">
             <Icon name="settings.admin" fallback="🛠️" /> Admin
           </Tab>
@@ -55,38 +47,70 @@ export function SettingsHome() {
   return can(me, "practice_admin") && !isOwner(me) ? <SettingsPage /> : <Navigate to="/settings/account" replace />;
 }
 
-/** Admin tab: what only an admin needs. For now, previewing the site as another role. */
+/** Admin tab: what only an overseer needs. For now, viewing the site as another user (ADR 013). */
 export function AdminSettingsTab() {
-  const { real, as, options, setAs } = useViewAs();
-  if (!can(real, "practice_admin") || isOwner(real)) {
+  const { real, acting } = useViewAs();
+  if (real.role !== "overseer") {
     return <Navigate to="/settings/account" replace />;
   }
   return (
     <section>
       <h2>
-        <Icon name="settings.view_as" fallback="👁️" /> View the site as
+        <Icon name="settings.view_as" fallback="👁️" /> View as someone
       </h2>
       <p className="muted">
-        See the screens another role gets. This only changes what's shown to you: the server still checks everything
-        as you, so you can't do anything you couldn't already.
+        See exactly what one person sees, to help with a question or a problem. It's read-only unless you allow changes,
+        it ends after 30 minutes, and the person can read it in their Changes, with your reason.
       </p>
-      <label className="field">
-        <span>Viewing as</span>
-        <select value={as ?? real.role} onChange={(e) => setAs(e.target.value === real.role ? null : (e.target.value as Role))}>
-          <option value={real.role}>Myself ({ROLE_LABEL[real.role]})</option>
-          {options.map((r) => (
-            <option key={r} value={r}>
-              {ROLE_LABEL[r]}
+      {acting ? (
+        <Notice tone="info">
+          You're viewing as {acting.name}. Use the bar at the top of any page to end it before starting another.
+        </Notice>
+      ) : (
+        <StartViewing realId={real.id} />
+      )}
+    </section>
+  );
+}
+
+function StartViewing({ realId }: { realId: string }) {
+  const users = useUsers();
+  const { start } = useActingCommands();
+  const navigate = useNavigate();
+  const [userId, setUserId] = useState("");
+  const [reason, setReason] = useState("");
+  const people = (users.data ?? []).filter((u) => u.active && u.role !== "overseer" && u.id !== realId);
+  return (
+    <form
+      className="card form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start.mutate({ userId, reason: reason.trim() }, { onSuccess: () => navigate("/") });
+      }}
+    >
+      <Field label="Person">
+        <select value={userId} onChange={(e) => setUserId(e.target.value)}>
+          <option value="">Choose someone…</option>
+          {people.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.display_name} · {ROLE_LABEL[u.role]}
             </option>
           ))}
         </select>
-      </label>
-      {as && (
-        <Notice tone="info">
-          You're viewing as {ROLE_LABEL[as].toLowerCase()}. Use the bar at the top of any page to stop.
-        </Notice>
-      )}
-    </section>
+      </Field>
+      <p className="muted">
+        A business owner sees their own business. A business with no owner user can be opened as yourself.
+      </p>
+      <Field label="Why are you viewing as them?" hint="They can read this in their Changes.">
+        <textarea value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+      </Field>
+      <div>
+        <Button type="submit" variant="primary" busy={start.isPending} disabled={!userId || !reason.trim()}>
+          <Icon name="acting.banner" fallback="👁️" /> Start viewing
+        </Button>
+      </div>
+      <ErrorMessage error={start.error ?? users.error} />
+    </form>
   );
 }
 

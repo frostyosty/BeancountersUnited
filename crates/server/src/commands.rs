@@ -585,6 +585,29 @@ pub enum Command {
     /// record. Refused when a line is in a confirmed transfer or bought an asset (undo those
     /// first), and when any of its journals is in a finalised year.
     RemoveStatement { statement_id: String },
+    /// An overseer starts viewing as `user_id` (M19, ADR 013): this login session then answers
+    /// every read as that person, read-only, for 30 minutes. Overseers only, as an active user
+    /// below them, and not while already viewing as someone. `reason` is required; the person can
+    /// read it in their own Changes. Returns the acting session's id.
+    StartImpersonation { user_id: String, reason: String },
+    /// Ends this session's viewing as someone, with an optional `reason`. The server ends one that
+    /// ran out (or whose session went) itself, naming it by `acting_id` and saying how it `ended`;
+    /// a browser sends neither. Returns the acting session's id.
+    EndImpersonation {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        reason: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        acting_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        ended: Option<crate::impersonation::Ended>,
+    },
+    /// Turns changes on while viewing as someone, until it ends, with a required `reason`. Signing
+    /// off, users, invites, the owner's own choices, invoices and anything to do with IRD stay
+    /// refused.
+    AllowImpersonationChanges { reason: String },
 }
 
 impl Command {
@@ -663,6 +686,9 @@ impl Command {
             Command::DeleteInvoiceTemplate { .. } => "delete_invoice_template",
             Command::AddInvoiceImage { .. } => "add_invoice_image",
             Command::RemoveStatement { .. } => "remove_statement",
+            Command::StartImpersonation { .. } => "start_impersonation",
+            Command::EndImpersonation { .. } => "end_impersonation",
+            Command::AllowImpersonationChanges { .. } => "allow_impersonation_changes",
         }
     }
 

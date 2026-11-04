@@ -41,7 +41,13 @@ fn users() -> BTreeMap<String, String> {
         .collect()
 }
 
-fn entry(kind: &str, payload: &Value, user: Option<&str>, via: Option<Value>) -> LoggedCommand {
+fn entry(
+    kind: &str,
+    payload: &Value,
+    user: Option<&str>,
+    acting_as: Option<&str>,
+    via: Option<Value>,
+) -> LoggedCommand {
     // Through the real command, so a payload that doesn't parse fails here, not as a fallback.
     let command: Command = serde_json::from_value(json!({ "kind": kind, "payload": payload }))
         .unwrap_or_else(|e| panic!("{kind}: {e}"));
@@ -58,6 +64,7 @@ fn entry(kind: &str, payload: &Value, user: Option<&str>, via: Option<Value>) ->
         at: Utc.with_ymd_and_hms(2026, 10, 24, 1, 2, 3).unwrap(),
         via: via.map(|v| v.to_string()),
         changes: None,
+        acting_as: acting_as.map(str::to_owned),
     }
 }
 
@@ -92,6 +99,7 @@ struct Sample {
     kind: &'static str,
     payload: Value,
     user: Option<&'static str>,
+    acting_as: Option<&'static str>,
     via: Option<Value>,
     changes: Option<Changes>,
     expect: &'static str,
@@ -102,6 +110,7 @@ fn s(kind: &'static str, payload: Value, expect: &'static str) -> Sample {
         kind,
         payload,
         user: Some("u-sam"),
+        acting_as: None,
         via: None,
         changes: None,
         expect,
@@ -115,6 +124,11 @@ impl Sample {
     }
     fn by(mut self, user: Option<&'static str>) -> Sample {
         self.user = user;
+        self
+    }
+    /// Made by an overseer while viewing as this person.
+    fn viewing_as(mut self, person: &'static str) -> Sample {
+        self.acting_as = Some(person);
         self
     }
 }
@@ -663,6 +677,34 @@ fn samples() -> Vec<Sample> {
             json!({ "content_base64": "iVBORw0KGgo=" }),
             "Sam added an image to their invoices.",
         ),
+        s(
+            "start_impersonation",
+            json!({ "user_id": "u-ana", "reason": "Ana says the tax figure won't load" }),
+            "Bo started viewing as Ana: Ana says the tax figure won't load.",
+        )
+        .by(Some("u-bo"))
+        .viewing_as("u-ana"),
+        s(
+            "allow_impersonation_changes",
+            json!({ "reason": "To recode the line Ana asked about" }),
+            "Bo turned on changes while viewing as Ana: To recode the line Ana asked about.",
+        )
+        .by(Some("u-bo"))
+        .viewing_as("u-ana"),
+        s(
+            "end_impersonation",
+            json!({ "reason": "Sorted" }),
+            "Bo stopped viewing as Ana: Sorted.",
+        )
+        .by(Some("u-bo"))
+        .viewing_as("u-ana"),
+        s(
+            "end_impersonation",
+            json!({ "acting_id": "a1", "ended": "timed_out" }),
+            "The system ended the view as Ana, as its 30 minutes were up.",
+        )
+        .by(None)
+        .viewing_as("u-ana"),
     ]
 }
 
@@ -683,6 +725,7 @@ fn every_command_kind_reads_as_plain_english() {
             sample.kind,
             &sample.payload,
             sample.user,
+            sample.acting_as,
             sample.via.clone(),
         );
         let got = describe(&e, sample.changes.as_ref(), &users());
@@ -698,6 +741,7 @@ fn accepted_ai_suggestions_say_so() {
         &json!({ "lines": [{ "bank_line_id": "l1", "coding": personal },
                            { "bank_line_id": "l2", "coding": personal }] }),
         Some("u-ana"),
+        None,
         Some(json!({ "kind": "suggestion", "model": "claude-haiku-5-5",
                      "suggestion_ids": ["s1", "s2"] })),
     );
@@ -714,6 +758,7 @@ fn a_fix_from_a_reconciliation_finding_says_so() {
         "resolve_duplicate",
         &json!({ "bank_line_id": "l1", "is_duplicate": true }),
         Some("u-ana"),
+        None,
         Some(json!({ "kind": "finding", "finding": "duplicate" })),
     );
     let line = "COUNTDOWN AUCKLAND on 3 Mar 2026 (-$45.20)";
@@ -739,7 +784,7 @@ fn mixed_recodes_and_no_ops_read_sensibly() {
     let personal = json!({ "direction": "out", "kind": "personal" });
     let payload = json!({ "lines": [{ "bank_line_id": "l1", "coding": personal },
                                     { "bank_line_id": "l2", "coding": personal }] });
-    let e = entry("code_bank_lines", &payload, Some("u-sam"), None);
+    let e = entry("code_bank_lines", &payload, Some("u-sam"), None, None);
     let mixed = changes(vec![
         change(
             "COUNTDOWN on 1 Mar 2026 (-$7)",
@@ -765,11 +810,79 @@ fn mixed_recodes_and_no_ops_read_sensibly() {
 }
 
 #[test]
+fn a_change_made_while_viewing_as_someone_names_both() {
+    let personal = json!({ "direction": "out", "kind": "personal" });
+    let payload = json!({ "lines": [{ "bank_line_id": "l1", "coding": personal },
+                                    { "bank_line_id": "l2", "coding": personal }] });
+    // Bo is the overseer, viewing as Ana.
+    let e = entry(
+        "code_bank_lines",
+        &payload,
+        Some("u-bo"),
+        Some("u-ana"),
+        None,
+    );
+    assert_eq!(
+        describe(&e, Some(&changes(countdown(2))), &users()),
+        "Bo (as Ana) marked 2 COUNTDOWN transactions as personal."
+    );
+    // Through an AI suggestion, the names still lead.
+    let e = entry(
+        "code_bank_lines",
+        &payload,
+        Some("u-bo"),
+        Some("u-ana"),
+        Some(json!({ "kind": "suggestion", "model": "m", "suggestion_ids": ["s1"] })),
+    );
+    assert!(
+        describe(&e, Some(&changes(countdown(2))), &users())
+            .starts_with("Bo (as Ana) accepted 1 AI suggestion:")
+    );
+    // A kind the log can't parse back still names both.
+    let mut e = entry(
+        "reverse_journal",
+        &json!({ "journal_id": "j" }),
+        Some("u-bo"),
+        Some("u-ana"),
+        None,
+    );
+    e.kind = "retired_kind".into();
+    assert_eq!(
+        describe(&e, None, &users()),
+        "Bo (as Ana) made a change (retired kind)."
+    );
+}
+
+#[test]
+fn a_view_that_ended_other_ways_says_how() {
+    let say = |payload: Value| {
+        describe(
+            &entry("end_impersonation", &payload, None, Some("u-ana"), None),
+            None,
+            &users(),
+        )
+    };
+    assert_eq!(
+        say(json!({ "ended": "signed_out" })),
+        "The system stopped viewing as Ana by signing out."
+    );
+    assert_eq!(
+        say(json!({ "ended": "person_changed" })),
+        "The system ended the view as Ana, as their account changed."
+    );
+    assert_eq!(
+        say(json!({ "ended": "session_gone" })),
+        "The system ended the view as Ana, as the sign-in it belonged to ended."
+    );
+}
+
+#[test]
 fn an_entry_that_no_longer_parses_still_reads() {
     let mut e = entry(
         "reverse_journal",
         &json!({ "journal_id": "j1" }),
         Some("u-gone"),
+        None,
         None,
     );
     e.kind = "retired_kind".into();

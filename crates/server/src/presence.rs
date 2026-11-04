@@ -29,7 +29,12 @@ pub const HERE_FOR_SECS: i64 = 15;
 struct Seen {
     at: DateTime<Utc>,
     business_id: Option<String>,
+    /// The person an overseer is viewing as from this browser (M19), if they are.
+    acting_as: Option<String>,
 }
+
+/// One browser heard from recently: when, on which business, and who it's viewing as.
+type Here = (DateTime<Utc>, Option<String>, Option<String>);
 
 /// When each user's browser was last heard from, and on which business.
 #[derive(Debug, Default)]
@@ -38,26 +43,33 @@ pub struct Presence {
 }
 
 impl Presence {
-    /// Records that `user_id` is here now, looking at `business_id`, and returns everyone who's
-    /// here, forgetting anyone who's gone quiet.
+    /// Records that `user_id` is here now, looking at `business_id` (as `acting_as`, if an overseer
+    /// is viewing as someone), and returns everyone who's here, forgetting anyone who's gone quiet.
     fn beat(
         &self,
         user_id: &str,
         business_id: Option<String>,
+        acting_as: Option<String>,
         now: DateTime<Utc>,
-    ) -> BTreeMap<String, (DateTime<Utc>, Option<String>)> {
+    ) -> BTreeMap<String, Here> {
         let mut seen = self.seen.lock().unwrap_or_else(|e| e.into_inner());
         seen.insert(
             user_id.to_owned(),
             Seen {
                 at: now,
                 business_id,
+                acting_as,
             },
         );
         let cutoff = now - TimeDelta::seconds(HERE_FOR_SECS);
         seen.retain(|_, s| s.at > cutoff);
         seen.iter()
-            .map(|(id, s)| (id.clone(), (s.at, s.business_id.clone())))
+            .map(|(id, s)| {
+                (
+                    id.clone(),
+                    (s.at, s.business_id.clone(), s.acting_as.clone()),
+                )
+            })
             .collect()
     }
 
@@ -91,6 +103,11 @@ pub struct PresentUser {
     #[ts(type = "string")]
     pub last_seen: DateTime<Utc>,
     pub is_you: bool,
+    /// The person an overseer is viewing as (M19), by name. Then `display_name` reads "Olive
+    /// (Overseer, as Sam Staff)", and `role` and `user_id` are still the overseer's. Always sent;
+    /// optional in the type only so code that builds one needn't name it.
+    #[ts(optional = nullable)]
+    pub acting_as: Option<String>,
 }
 
 /// `POST /api/presence`: "I'm here, on this business", answered with who's here.
@@ -111,22 +128,33 @@ pub async fn post_presence(
     {
         return Err(CommandError::not_found("business", b));
     }
+    // The overseer's own entry, even while viewing as someone: the beat is theirs, and Sam shows
+    // as present only if Sam is signed in too (ADR 013, 7).
+    let real = user.real();
+    let acting_as = user.acting().map(|_| user.0.id.clone());
     let here = state
         .presence
-        .beat(&user.0.id, beat.business_id, Utc::now());
+        .beat(&real.id, beat.business_id, acting_as, Utc::now());
 
+    // What the viewer sees is decided as the user they answer as (`visible` above), so an entry
+    // viewing as Sam is shown to whoever could see Sam there, and to every overseer.
     let everyone = user.0.role == Role::Overseer;
     let mut out = Vec::new();
-    for (id, (at, business_id)) in here {
+    for (id, (at, business_id, acting)) in here {
         let Some(u) = users::get(&mut conn, &id).await?.filter(|u| u.active) else {
             continue;
         };
-        let is_you = u.id == user.0.id;
+        let person = match &acting {
+            Some(p) => users::get(&mut conn, p).await?,
+            None => None,
+        };
+        let is_you = u.id == real.id;
         let business_id = business_id.filter(|b| visible.shows(Some(b)));
+        let subject_role = person.as_ref().map_or(u.role, |p| p.role);
         let shown = is_you
             || everyone
             || business_id.is_some()
-            || (user.0.role.is_practice() && u.role.is_practice());
+            || (user.0.role.is_practice() && subject_role.is_practice());
         if !shown {
             continue;
         }
@@ -134,14 +162,24 @@ pub async fn post_presence(
             Some(b) => clients::get(&mut conn, b).await?.map(|c| c.name),
             None => None,
         };
+        let display_name = match &person {
+            Some(p) => format!(
+                "{} ({}, as {})",
+                u.display_name,
+                role_name(u.role),
+                p.display_name
+            ),
+            None => u.display_name,
+        };
         out.push(PresentUser {
             user_id: u.id,
-            display_name: u.display_name,
+            display_name,
             role: u.role,
             business_id,
             business_name,
             last_seen: at,
             is_you,
+            acting_as: person.map(|p| p.display_name),
         });
     }
     out.sort_by(|a, b| {
@@ -150,4 +188,15 @@ pub async fn post_presence(
             .then_with(|| a.display_name.cmp(&b.display_name))
     });
     Ok(Json(out))
+}
+
+/// A role as it reads in "Olive (Overseer, as Sam Staff)".
+fn role_name(role: Role) -> &'static str {
+    match role {
+        Role::Overseer => "Overseer",
+        Role::PracticeAdmin => "Practice admin",
+        Role::Staff => "Staff",
+        Role::Viewer => "Viewer",
+        Role::BusinessOwner => "Business owner",
+    }
 }

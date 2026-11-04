@@ -134,9 +134,3 @@
   }
 }
 
-.viewing {
-  padding: var(--space-2) var(--space-5);
-  background: var(--warn-soft);
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-}

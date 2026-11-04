@@ -898,5 +898,23 @@
       "type": "emoji",
       "value": "💬"
     }
+  },
+  "acting": {
+    "banner": {
+      "type": "emoji",
+      "value": "👁️"
+    },
+    "end": {
+      "type": "emoji",
+      "value": "↩️"
+    },
+    "allow": {
+      "type": "emoji",
+      "value": "✏️"
+    },
+    "notice": {
+      "type": "emoji",
+      "value": "🔔"
+    }
   }
 }

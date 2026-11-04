@@ -7,7 +7,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { renderApp, stubApi } from "../test/render";
 
-const overseer: Me = { id: "u1", username: "olive", display_name: "Olive", role: "overseer" };
+/** Olive the overseer, viewing as Ana the business owner (ADR 013): the server answers as Ana. */
+const viewingAsAna: Me = {
+  id: "u9",
+  username: "ana",
+  display_name: "Ana",
+  role: "business_owner",
+  acting_as: {
+    user_id: "u9",
+    name: "Ana",
+    role: "business_owner",
+    since: "2026-11-04T00:00:00Z",
+    expires_at: "2999-01-01T00:30:00Z",
+    allow_changes: false,
+  },
+  real: { user_id: "u1", name: "Olive", role: "overseer" },
+};
 
 const business: BusinessView = {
   client_id: "b1",
@@ -30,10 +45,9 @@ afterEach(() => {
 });
 
 describe("OverviewPage", () => {
-  it("previewing as an owner skips clients that aren't businesses", async () => {
-    sessionStorage.setItem("view-as-role", "business_owner");
+  it("an owner view skips clients that aren't businesses", async () => {
     stubApi({
-      "GET /api/me": () => overseer,
+      "GET /api/me": () => viewingAsAna,
       "GET /api/clients": () => [
         { id: "c1", name: "Example Widgets Ltd", entity_type: "company", is_business: false },
         { id: "b1", name: "Ana's Gardens", entity_type: "sole_trader", is_business: true },
@@ -45,10 +59,9 @@ describe("OverviewPage", () => {
     expect(await screen.findByRole("heading", { name: "Ana's Gardens" })).toBeTruthy();
   });
 
-  it("offers to set up a business when there's none to preview", async () => {
-    sessionStorage.setItem("view-as-role", "business_owner");
+  it("offers to set up a business when there's none", async () => {
     stubApi({
-      "GET /api/me": () => overseer,
+      "GET /api/me": () => viewingAsAna,
       "GET /api/clients": () => [{ id: "c1", name: "Example Widgets Ltd", entity_type: "company", is_business: false }],
     });
     renderApp(<App />, "/");

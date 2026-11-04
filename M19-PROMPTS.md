@@ -91,7 +91,16 @@ Task:
 3. Visibility: the impersonated user sees the start, the end and every change made as them in their own Changes, whatever the history sharing setting says. Filtering by person matches either identity.
 4. Presence follows the ADR's answer.
 5. The redacted payload stored in command_log keeps the reason.
+6. HistoryEntry gains `acting_as` (the acted-as user's id and name, or null), so the web app can build the ADR's "someone viewed as you" notice from the person's own feed (Agent 4).
 Tests: the log rows carry both identities; the history text for each case; the impersonated user's own feed shows the session even when the owner's sharing setting would hide staff edits from them.
+Notes from Agent 2 (the server side, as it landed):
+- Record `command_log.acting_as` from `actor.acting_as` (`crate::pipeline::ActingAs { user_id, role, acting_id }`); `actor.user_id` stays the overseer. The sweep's ends are submitted by the server: `user_id` is None but `acting_as` is set, so they still carry the person.
+- `end_impersonation`'s payload is `{ reason?, acting_id?, ended? }`. `ended` is `crate::impersonation::Ended`: absent means the overseer pressed End; `signed_out`, `timed_out`, `person_changed` or `session_gone` otherwise. Start, allow and end all return the acting id as `entity_id`, so an end can be matched to its start.
+- history.rs has placeholder sentences for the three kinds ("started viewing as …", "turned on changes while viewing as someone …", "stopped viewing as someone …"), and history/tests.rs has four samples for them. Replace both with the real text. I also changed `hides_owners` in `get_history` to use `actor.effective().role`, so reads while acting hide owner edits as the person's role would; keep that.
+- The start, allow and end rows have `client_id` None, so today `Visible::shows(None)` lets every practice user see them in Changes and in the sync feed (`reads.rs`, kind and time only). The ADR says only overseers and the person; fix it in history, and decide whether the sync feed needs the same.
+- presence.rs still beats as `user.0.id`, which while acting is the person, so the overseer currently shows as Sam being present. Use `user.real()` (the overseer) and `user.acting()` for the "(Overseer, as Sam Staff)" label (ADR 7).
+- `CurrentUser.0` is the person while acting; `user.real()` is the overseer, `user.acting()` the acting state.
+- `backup::summarise_log` hashes a fixed column list without `acting_as`. If you add it, every existing backup's hash changes; say so in the commit.
 Run `make check`.
 Don't commit.
 ```
@@ -109,7 +118,15 @@ Task:
 2. A persistent banner on every page while acting: "Viewing as Sam Staff · read-only · 24 min left", an End button (asks for an optional reason), and "Allow changes" (asks for a reason, says what stays refused). It shows in every tab, because the state is per session; refetch Me on window focus so a tab notices when another ended it or it timed out.
 3. Write buttons stay visible. When the server refuses a command because of acting, show its message in the existing error style, not a crash.
 4. CurrentUser is the acting person while acting (the server's view), and useViewAs().real is the overseer, so the existing `real` checks in SettingsLayout and OverviewPage keep working. Remove PREVIEWABLE and the UI-only role swap entirely.
-Icons through <Icon> with text labels; colours from tokens. Testing Library tests: starting, the banner and its countdown, ending, a refused write's message, and that no sessionStorage key is read or written any more.
+5. The notice from the ADR's decision 6 (B): when someone has viewed as you, show a notice the next time you open the app, for example "Olive from support viewed your account as you on 4 Nov for 12 minutes: <reason>. See Changes." Build it from your own Changes entries (the start and end rows whose acting_as is you), with no new endpoint unless the history feed can't give you those rows. In that case stop and ask. Dismissing it is remembered in localStorage only, wrapped in try/catch, keyed by the last session's seq so a later session shows again. Never show it to the overseer while acting.
+Icons through <Icon> with text labels; colours from tokens. Testing Library tests: starting, the banner and its countdown, ending, a refused write's message, the notice showing and staying dismissed, and that no sessionStorage key is read or written any more.
+Notes from Agent 2 (the server side, as it landed):
+- `Me` now has `acting_as: { user_id, name, role, since, expires_at, allow_changes }` and `real: { user_id, name, role }`. The server always sends both (`null` when not acting), but the TS type marks them optional (`acting_as?: MeActingAs | null`) so existing test fixtures still compile. Treat missing and null alike.
+- Refusals while acting are HTTP 403 with code `impersonating` and a ready-to-show message naming the person, e.g. "You're viewing as sam, read-only. Turn on Allow changes to make this change." Code `impersonation_ended` means the view ended (timed out, or ended in another tab): refetch Me and clear the query cache.
+- Commands: `start_impersonation { user_id, reason }`, `allow_impersonation_changes { reason }`, `end_impersonation { reason? }` (send no other field; `acting_id` and `ended` are the server's). Reasons are required for start and allow, trimmed, at most 500 characters. Errors to handle: `reason_needed`, `reason_too_long`, `cannot_view_as` (an overseer), `user_inactive`, `already_allowed`, `not_impersonating` (it already ended: refetch Me).
+- While acting, the invoice maker's GET routes are refused (403 `impersonating`), and `POST /api/businesses/{id}/ai-suggestions` needs changes on.
+- `GET /api/users` as an overseer lists every user (with `role` and `active`), for the picker. It doesn't say which business an owner has; work that out from `/api/clients` or ask.
+- The 30 minutes count from `since`; `expires_at` is given, so count down to that. Signing out ends the view on the server first.
 Run `make check`.
 Don't commit.
 ```

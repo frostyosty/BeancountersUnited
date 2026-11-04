@@ -67,6 +67,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Roles | `overseer`, `practice_admin` (was `Master`), `staff`, `viewer`, and `business_owner`, who sees and changes only their own business. Every read and command checks the role. The rename is **planned (M12, Agent 3)**. | `crates/store/src/users.rs:11`; `CLAUDE.md`, "Roles" |
 | Tenancy | One owner can never read or change another's business; tests prove it. **Planned (M12, Agent 3)**; `crates/store/migrations/0007_tenancy.sql` reserves the migration. | |
 | Server re-validates everything | The UI is untrusted: every command is validated and recomputed in the pipeline (hard rule 4, 6). | `crates/server/src/pipeline.rs` |
+| Support viewing as a user | Only an overseer, and only as an active user below them, never another overseer. It needs a reason and lasts 30 minutes from the start. It's read-only unless the overseer turns on changes, which needs its own reason. Even then, signing off a year, anything about users, passwords, sessions or invites, the owner's sharing and AI choices, and anything to do with IRD stay refused. A user's own invoices stay hidden. The person sees the whole session in their own Changes. **Planned (M19).** | ADR 013 |
 
 ### Data protection
 
@@ -114,6 +115,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Event | Fields | Status |
 |---|---|---|
 | Every change | `command_log`: command kind, payload, result, user, business, time, `seq`. | Built |
+| Support viewing as a user | Start, allow changes and end are commands in `command_log`, with the reason, the overseer (`user_id`) and the person (`acting_as`). Every change made meanwhile records both. A session that times out is ended and logged by the server. | **Planned (M19)**, ADR 013 |
 | Sign-in | User, time, IP address, user agent, whether two-factor was used. | **Planned (M12, Agent 6)** |
 | Failed sign-in | Username tried, time, IP address, user agent, reason (unknown user, wrong password, wrong code, throttled). | **Planned (M12, Agent 6)** |
 | Sign-out, session expiry, two-factor set up or removed, password change | User, time, IP address. | **Planned (M12, Agent 6)** |

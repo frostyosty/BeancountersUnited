@@ -22,6 +22,10 @@ IRD's approval has its own review steps, so start early.
       terms at sign-up should be recorded as a command, so it's the evidence IR1269 4(h) and 4(i) ask for.
 - [ ] Have a privacy lawyer check ADR 011's reading: that a generalised AI request isn't personal
       information, so the privacy policy is enough and no consent screen is needed.
+- [ ] Customer terms and privacy policy: say that our support staff (overseers) may view an account as
+      its user to help them (ADR 013, M19). It's read-only unless changes are needed, at most 30 minutes
+      at a time, never used to sign off a year or deal with IRD, logged with a reason, and shown to the
+      user in their own Changes and in a notice the next time they open the app.
 
 ## AI suggestions (ADR 009, ADR 011): before real owners get them
 Development with synthetic data isn't affected. Suggestions are on by default with no consent screen

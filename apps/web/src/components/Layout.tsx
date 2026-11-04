@@ -1,15 +1,14 @@
 import { Link, NavLink, Outlet } from "react-router";
 import { isOwner, useCurrentUser, useSignOut } from "../auth";
-import { useViewAs } from "../lib/viewAs";
 import { HistoryProvider } from "../lib/history";
 import { Icon } from "../lib/icons";
 import { useLiveRefresh } from "../lib/sync";
+import { ActingBanner, ViewedAsNotice } from "./ActingBanner";
 import { HistoryPanel } from "./HistoryPanel";
 import styles from "./Layout.module.css";
 
 export function Layout() {
   const me = useCurrentUser();
-  const view = useViewAs();
   const signOut = useSignOut();
   useLiveRefresh();
   return (
@@ -41,15 +40,8 @@ export function Layout() {
             </button>
           </div>
         </header>
-        {view.as && (
-          <div className={styles.viewing} role="status">
-            <Icon name="nav.view_as" fallback="👁️" /> Viewing as {view.as.replace(/_/g, " ")}. This only changes what you
-            see here; you still have your own permissions.{" "}
-            <button type="button" onClick={() => view.setAs(null)}>
-              Stop viewing as {view.as.replace(/_/g, " ")}
-            </button>
-          </div>
-        )}
+        <ActingBanner />
+        <ViewedAsNotice />
         <div className={styles.body}>
           <HistoryPanel />
           <main className={styles.main}>

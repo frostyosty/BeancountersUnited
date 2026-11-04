@@ -69,6 +69,7 @@ impl Setup {
         let actor = Actor {
             user_id: None,
             role: Role::PracticeAdmin,
+            acting_as: None,
         };
         let envelope = CommandEnvelope {
             id: uuid::Uuid::now_v7().to_string(),

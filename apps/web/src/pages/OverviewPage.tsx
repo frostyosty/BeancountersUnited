@@ -25,8 +25,8 @@ export function OverviewPage() {
   if (!clients.data) {
     return <p className="muted">Loading…</p>;
   }
-  // An owner sees only their own business. Someone previewing as an owner sees every client, so
-  // skip the ones that aren't businesses (they have no statements or owner's screen).
+  // An owner sees only their own business, so this is it. Skip any client that isn't a business
+  // (those have no statements or owner's screen).
   const mine = clients.data.find((c) => c.is_business);
   if (!mine) {
     return (

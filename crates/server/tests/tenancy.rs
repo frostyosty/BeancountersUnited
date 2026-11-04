@@ -667,6 +667,10 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "edit_note" => json!({
             "client_year_id": v.year_id, "paragraph_id": new_id(), "title": "X", "body": "X",
         }),
+        // Viewing as someone is an overseer's alone (M19; tests/impersonation.rs covers more).
+        "start_impersonation" => json!({ "user_id": v.owner.user_id, "reason": "X" }),
+        "end_impersonation" => json!({}),
+        "allow_impersonation_changes" => json!({ "reason": "X" }),
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })
 }
@@ -896,6 +900,7 @@ async fn only_an_overseer_makes_an_overseer_and_it_sees_every_business() {
     let system = acct_server::pipeline::Actor {
         user_id: None,
         role: acct_store::users::Role::Overseer,
+        acting_as: None,
     };
     let envelope = acct_server::commands::CommandEnvelope {
         id: new_id(),

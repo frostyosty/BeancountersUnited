@@ -35,6 +35,7 @@ impl Server {
         let system = Actor {
             user_id: None,
             role: Role::PracticeAdmin,
+            acting_as: None,
         };
         let init = CommandEnvelope {
             id: new_id(),

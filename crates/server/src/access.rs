@@ -17,6 +17,12 @@
 //!
 //! Something a user can't see is reported as not found, the same as if it didn't exist, naming
 //! only the id they sent. Something they can see but their role can't do is forbidden.
+//!
+//! While an overseer views as someone (M19, ADR 013), every rule here runs as that person, the
+//! effective identity ([`Actor::effective`]), so the overseer sees exactly what they'd see. The
+//! three impersonation commands are the exception: they're about the overseer's own session, so
+//! they're checked as the real one. What may be done while acting is decided before any of this:
+//! commands in `crate::impersonation`, other routes in [`while_acting`].
 
 use std::collections::BTreeSet;
 
@@ -33,7 +39,7 @@ use crate::AppState;
 use crate::auth::CurrentUser;
 use crate::commands::Command;
 use crate::error::CommandError;
-use crate::pipeline::Actor;
+use crate::pipeline::{Actor, Identity};
 
 /// How much a request asks to do, lowest first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -82,6 +88,8 @@ pub enum Target {
     Invite,
     /// One of a user's own things, and who it belongs to (`None`: no such thing).
     Own(OwnRef),
+    /// Viewing as someone (M19): starting, allowing changes, ending. Overseers only.
+    Impersonation,
 }
 
 /// Something that belongs to one user, as the request named it.
@@ -132,15 +140,25 @@ impl ClientRef {
     }
 }
 
-/// The access check. Every read and every command ends here.
+/// The access check. Every read and every command ends here. It runs as the actor's effective
+/// identity: the person an overseer is viewing as, if they are.
 pub async fn check(
     conn: &mut SqliteConnection,
     actor: &Actor,
     target: &Target,
     need: Need,
 ) -> Result<(), CommandError> {
-    let role = actor.role;
-    let signed_in = actor.user_id.is_some();
+    check_as(conn, actor.effective(), target, need).await
+}
+
+async fn check_as(
+    conn: &mut SqliteConnection,
+    me: Identity<'_>,
+    target: &Target,
+    need: Need,
+) -> Result<(), CommandError> {
+    let role = me.role;
+    let signed_in = me.user_id.is_some();
     let within = need <= ceiling(role);
     let allowed = match target {
         Target::Public => true,
@@ -160,18 +178,20 @@ pub async fn check(
         },
         Target::Listing => true,
         Target::Invite => signed_in && role.is_practice(),
-        // Someone else's is reported as not found, the same as one that doesn't exist.
+        // Someone else's is reported as not found, the same as one that doesn't exist. Nobody
+        // reaches a user's own things by viewing as them, so those are not found too.
         Target::Own(o) => {
             if !signed_in {
                 return Err(CommandError::Unauthenticated);
             }
-            if o.owner.is_none() || o.owner != actor.user_id {
+            if me.acted_as || o.owner.is_none() || o.owner.as_deref() != me.user_id {
                 return Err(CommandError::not_found(o.entity, &o.id));
             }
             true
         }
+        Target::Impersonation => role == Role::Overseer,
         Target::Client(c) => {
-            if !can_see(conn, actor, &c.client_id).await? {
+            if !can_see(conn, me, &c.client_id).await? {
                 let (entity, id) = &c.named;
                 return Err(CommandError::not_found(entity, id));
             }
@@ -185,20 +205,20 @@ pub async fn check(
     }
 }
 
-/// Whether `actor` can see this client at all. A client that doesn't exist can't be seen.
+/// Whether `me` can see this client at all. A client that doesn't exist can't be seen.
 async fn can_see(
     conn: &mut SqliteConnection,
-    actor: &Actor,
+    me: Identity<'_>,
     client_id: &str,
 ) -> Result<bool, CommandError> {
     if clients::get(conn, client_id).await?.is_none() {
         return Ok(false);
     }
-    let row = match &actor.user_id {
+    let row = match me.user_id {
         Some(user_id) => tenancy::access(conn, client_id, user_id).await?,
         None => None,
     };
-    Ok(match actor.role {
+    Ok(match me.role {
         Role::Overseer => true,
         Role::BusinessOwner => row == Some(tenancy::Access::Owner),
         Role::PracticeAdmin | Role::Staff | Role::Viewer => {
@@ -229,14 +249,16 @@ impl Visible {
     }
 }
 
+/// Which clients `actor` can see, as its effective identity.
 pub async fn visible(conn: &mut SqliteConnection, actor: &Actor) -> Result<Visible, CommandError> {
-    let shared = match &actor.user_id {
+    let me = actor.effective();
+    let shared = match me.user_id {
         Some(id) => tenancy::clients_for_user(conn, id).await?,
         None => Vec::new(),
     };
-    let practice = actor.role.is_practice();
+    let practice = me.role.is_practice();
     Ok(Visible {
-        everything: actor.role == Role::Overseer,
+        everything: me.role == Role::Overseer,
         practice,
         hidden: if practice {
             tenancy::owned_clients(conn).await?.into_iter().collect()
@@ -255,19 +277,26 @@ pub async fn check_command(
     command: &Command,
 ) -> Result<Vec<String>, CommandError> {
     let (need, targets) = command_targets(conn, command).await?;
+    // Viewing as someone is about the overseer's own session, so it's checked as them. Everything
+    // else is checked as the person they're viewing as, if they are.
+    let me = if matches!(targets.as_slice(), [Target::Impersonation]) {
+        actor.real()
+    } else {
+        actor.effective()
+    };
     // Role first, so a refusal never depends on whether something exists.
-    if need > ceiling(actor.role) {
+    if need > ceiling(me.role) {
         return Err(CommandError::Forbidden);
     }
     // Who sees the owner's edits is the owner's call, not their accountants'.
     if matches!(command, Command::SetHistorySharing { .. })
-        && !matches!(actor.role, Role::BusinessOwner | Role::Overseer)
+        && !matches!(me.role, Role::BusinessOwner | Role::Overseer)
     {
         return Err(CommandError::Forbidden);
     }
     let mut clients: Vec<String> = Vec::new();
     for target in &targets {
-        check(conn, actor, target, need).await?;
+        check_as(conn, me, target, need).await?;
         if let Target::Client(c) = target
             && !clients.contains(&c.client_id)
         {
@@ -437,6 +466,12 @@ async fn command_targets(
             Need::Owner,
             vec![statement_target(conn, statement_id).await?],
         ),
+
+        // Overseers only (ADR 013, 1). Whom, and whether the session is acting, is checked when
+        // it's applied (`crate::impersonation`).
+        C::StartImpersonation { .. }
+        | C::EndImpersonation { .. }
+        | C::AllowImpersonationChanges { .. } => (Need::Read, vec![Target::Impersonation]),
     })
 }
 
@@ -495,6 +530,8 @@ async fn statement_target(conn: &mut SqliteConnection, id: &str) -> Result<Targe
 pub enum RouteRule {
     Public,
     SignedIn,
+    /// The signed-in user's own invoices, as a list: any signed-in user, for their own only.
+    OwnInvoices,
     Practice(Need),
     Listing,
     /// The `{id}` parameter is a client (or business) id.
@@ -520,7 +557,8 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
     Some(match path {
         "/api/health" if get => R::Public,
         "/api/login" | "/api/logout" | "/api/signup" if post => R::Public,
-        "/api/me" | "/api/invoices/draft" | "/api/invoices/templates" if get => R::SignedIn,
+        "/api/me" if get => R::SignedIn,
+        "/api/invoices/draft" | "/api/invoices/templates" if get => R::OwnInvoices,
         "/api/invoices/templates/{id}" if get => R::InvoiceTemplate,
         "/api/invoices/images/{id}" if get => R::InvoiceImage,
         "/api/commands" if post => R::SignedIn,
@@ -578,6 +616,67 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
     })
 }
 
+/// What a route may do while the session is viewing as someone (ADR 013, 3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WhileActing {
+    /// It runs as the person: every read, and requests that change nothing.
+    Allowed,
+    /// It changes something, so only once changes are turned on.
+    NeedsChanges,
+    /// Never while acting. The phrase finishes "Overseers can't … as someone else."
+    Refused(&'static str),
+}
+
+/// The rule for each route while acting. Deny by default: a new route that isn't a `GET` is
+/// refused while acting until it's given a rule here. Public routes (sign-in, sign-out, sign-up)
+/// aren't asked: they run before any session is read.
+pub fn while_acting(method: &Method, path: &str, rule: RouteRule) -> WhileActing {
+    use WhileActing as W;
+    // Every call to IRD uses the owner's own myIR authorisation, reads included (ADR 013, 4).
+    if path.starts_with("/api/ird/") {
+        return W::Refused("deal with IRD");
+    }
+    // A user's own invoices are theirs alone; neither theirs nor the overseer's show.
+    if matches!(
+        rule,
+        RouteRule::OwnInvoices | RouteRule::InvoiceTemplate | RouteRule::InvoiceImage
+    ) {
+        return W::Refused("open someone's invoices");
+    }
+    if *method == Method::GET {
+        return W::Allowed;
+    }
+    match path {
+        // `POST /api/commands` is decided command by command, in the pipeline.
+        "/api/commands"
+        | "/api/presence"
+        | "/api/mappings/check"
+        | "/api/years/{id}/tb-import/preview" => W::Allowed,
+        // Sends the business's lines to the AI provider and stores what comes back.
+        "/api/businesses/{id}/ai-suggestions" => W::NeedsChanges,
+        _ => W::Refused("do this"),
+    }
+}
+
+/// The refusal for a route the session can't use while viewing as someone, if it can't.
+fn check_while_acting(
+    method: &Method,
+    path: &str,
+    rule: RouteRule,
+    user: &CurrentUser,
+) -> Result<(), CommandError> {
+    let Some(acting) = user.acting() else {
+        return Ok(());
+    };
+    let name = &user.0.display_name;
+    match while_acting(method, path, rule) {
+        WhileActing::Allowed => Ok(()),
+        WhileActing::NeedsChanges if acting.allow_changes => Ok(()),
+        WhileActing::NeedsChanges => Err(crate::impersonation::read_only(name)),
+        WhileActing::Refused(what) => Err(crate::impersonation::never(name, what)),
+    }
+}
+
 /// The router's access layer: runs [`check`] for every API request before its handler.
 pub async fn guard(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let (mut parts, body) = request.into_parts();
@@ -586,7 +685,7 @@ pub async fn guard(State(state): State<AppState>, request: Request, next: Next) 
         .get::<MatchedPath>()
         .map(|p| p.as_str().to_owned());
     let rule = path.as_deref().and_then(|p| route_rule(&parts.method, p));
-    let Some(rule) = rule else {
+    let (Some(rule), Some(path)) = (rule, path) else {
         return CommandError::Forbidden.into_response();
     };
     if rule != RouteRule::Public {
@@ -594,6 +693,9 @@ pub async fn guard(State(state): State<AppState>, request: Request, next: Next) 
             Ok(u) => u,
             Err(e) => return e.into_response(),
         };
+        if let Err(e) = check_while_acting(&parts.method, &path, rule, &user) {
+            return e.into_response();
+        }
         let id = match RawPathParams::from_request_parts(&mut parts, &state).await {
             Ok(params) => params
                 .iter()
@@ -618,7 +720,7 @@ async fn check_route(
     let id = || id.ok_or_else(|| CommandError::Malformed("missing id".to_owned()));
     let (target, need) = match rule {
         RouteRule::Public => (Target::Public, Need::Read),
-        RouteRule::SignedIn => (Target::SignedIn, Need::Read),
+        RouteRule::SignedIn | RouteRule::OwnInvoices => (Target::SignedIn, Need::Read),
         RouteRule::Listing => (Target::Listing, Need::Read),
         RouteRule::Practice(need) => (Target::Practice, need),
         RouteRule::Client(need) => (Target::Client(ClientRef::direct(id()?)), need),

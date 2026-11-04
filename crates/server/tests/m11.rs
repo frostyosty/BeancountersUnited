@@ -116,6 +116,7 @@ impl Setup {
         let actor = Actor {
             user_id: None,
             role,
+            acting_as: None,
         };
         submit(&self.store, &actor, envelope(command), now())
             .await
@@ -789,6 +790,7 @@ async fn via_is_recorded_in_the_log() {
     let actor = Actor {
         user_id: None,
         role: Role::Staff,
+        acting_as: None,
     };
     // An AI suggestion waiting on the owner (ADR 009).
     s.ok(Command::SetAiSuggestions {
@@ -839,6 +841,7 @@ async fn via_is_recorded_in_the_log() {
         let actor = Actor {
             user_id: None,
             role: Role::Staff,
+            acting_as: None,
         };
         submit_via(
             &s.store,

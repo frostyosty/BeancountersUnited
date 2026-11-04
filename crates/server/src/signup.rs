@@ -206,6 +206,7 @@ pub async fn sign_up_route(
     let anonymous = Actor {
         user_id: None,
         role: Role::BusinessOwner,
+        acting_as: None,
     };
     let accepted = pipeline::submit(&state.store, &anonymous, envelope, chrono::Utc::now()).await?;
     let business_id = accepted

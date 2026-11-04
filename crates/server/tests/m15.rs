@@ -701,6 +701,10 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         "save_invoice_template" => Allowed(json!({ "name": "Plain", "html": "<p>Invoice</p>" })),
         "delete_invoice_template" => Allowed(json!({ "template_id": new_id() })),
         "add_invoice_image" => Allowed(json!({ "content_base64": "iVBORw0KGgo=" })),
+        // Who a session is viewing as (M19): login state, not any year's numbers.
+        "start_impersonation" => Allowed(json!({ "user_id": new_id(), "reason": "X" })),
+        "end_impersonation" => Allowed(json!({})),
+        "allow_impersonation_changes" => Allowed(json!({ "reason": "X" })),
         other => panic!("tests/m15.rs has no lock walk case for the new command {other}; add one"),
     }
 }
@@ -999,6 +1003,7 @@ async fn the_server_itself_cant_sign_a_year_off() {
     let system = acct_server::pipeline::Actor {
         user_id: None,
         role: acct_store::users::Role::PracticeAdmin,
+        acting_as: None,
     };
     let envelope = acct_server::commands::CommandEnvelope {
         id: new_id(),

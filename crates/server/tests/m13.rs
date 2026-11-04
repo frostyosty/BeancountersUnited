@@ -7,6 +7,9 @@
 
 mod common;
 
+use acct_server::commands::CommandEnvelope;
+use acct_server::pipeline::{Actor, submit};
+use acct_store::users::Role;
 use axum::http::{StatusCode, header};
 use common::{PASSWORD, Server, get, new_id, post_json, split};
 use serde_json::{Value, json};
@@ -472,4 +475,365 @@ async fn owner_edits_are_private_until_the_owner_shares_them() {
     .await;
     let page = server.get_json(&uri, &sam).await;
     assert_eq!(kinds(&page), ["accept_invite"], "{page}");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Viewing as someone (M19, ADR 013): the audit trail and who sees it.
+
+/// An overseer, which only the server can make.
+async fn add_overseer(server: &Server, username: &str) {
+    let system = Actor {
+        user_id: None,
+        role: Role::Overseer,
+        acting_as: None,
+    };
+    let envelope = CommandEnvelope {
+        id: new_id(),
+        command: serde_json::from_value(json!({
+            "kind": "create_user",
+            "payload": {
+                "username": username, "display_name": username,
+                "password": PASSWORD, "role": "overseer",
+            },
+        }))
+        .unwrap(),
+    };
+    submit(&server.state.store, &system, envelope, chrono::Utc::now())
+        .await
+        .unwrap();
+}
+
+fn kinds_of(page: &Value) -> Vec<String> {
+    page["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["kind"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+const SESSION_KINDS: [&str; 3] = [
+    "start_impersonation",
+    "allow_impersonation_changes",
+    "end_impersonation",
+];
+
+fn has_no_session_rows(page: &Value) -> bool {
+    kinds_of(page)
+        .iter()
+        .all(|k| !SESSION_KINDS.contains(&k.as_str()))
+}
+
+#[tokio::test]
+async fn viewing_as_someone_is_logged_with_both_names_and_the_person_sees_it() {
+    let (server, ana, sam, ben) = setup().await;
+    let biz = ana.business_id.clone();
+    add_overseer(&server, "olive").await;
+    let olive = server.login("olive").await;
+    let ana_id = server.get_json("/api/me", &ana.cookie).await["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let olive_id = server.get_json("/api/me", &olive).await["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // Olive views as Ana.
+    server
+        .ok(
+            &olive,
+            "start_impersonation",
+            json!({ "user_id": ana_id, "reason": "Ana can't find her tax figure" }),
+        )
+        .await;
+
+    // Presence: Olive shows by both names to whoever could see Ana there, and Ana isn't made to
+    // look present by it. Ben can't see Ana's business, so he sees none of it.
+    let here = presence(&server, &olive, Some(&biz)).await;
+    assert_eq!(names(&here), ["olive (Overseer, as ana)"], "{here:?}");
+    assert_eq!(here[0]["is_you"], true);
+    assert_eq!(here[0]["user_id"], olive_id);
+    assert_eq!(here[0]["role"], "overseer");
+    assert_eq!(here[0]["acting_as"], "ana");
+    let here = presence(&server, &ana.cookie, Some(&biz)).await;
+    assert_eq!(
+        names(&here),
+        ["ana", "olive (Overseer, as ana)"],
+        "{here:?}"
+    );
+    let here = presence(&server, &sam, Some(&biz)).await;
+    assert_eq!(
+        names(&here),
+        ["sam", "ana", "olive (Overseer, as ana)"],
+        "{here:?}"
+    );
+    let here = presence(&server, &ben.cookie, None).await;
+    assert_eq!(names(&here), ["ben"], "{here:?}");
+
+    // She turns changes on, recodes a line as Ana, and stops.
+    server
+        .ok(
+            &olive,
+            "allow_impersonation_changes",
+            json!({ "reason": "To sort the line Ana asked about" }),
+        )
+        .await;
+    let queue = server
+        .get_json(&format!("/api/businesses/{biz}/save-tax"), &olive)
+        .await;
+    let line = queue["cards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|c| c["kind"] == "categorise")
+        .flat_map(|c| c["lines"].as_array().unwrap().clone())
+        .find(|l| l["amount"].as_i64().unwrap() < 0)
+        .unwrap_or_else(|| panic!("a withdrawal to categorise: {queue}"));
+    done(
+        &server,
+        &olive,
+        "code_bank_line",
+        json!({
+            "bank_line_id": line["bank_line_id"],
+            "coding": { "direction": "out", "kind": "expense",
+                        "account": "150", "gst": "standard" },
+        }),
+    )
+    .await;
+    server
+        .ok(&olive, "end_impersonation", json!({ "reason": "Sorted" }))
+        .await;
+
+    // The log keeps both: `user_id` is Olive, `acting_as` is Ana, on all four rows.
+    let rows: Vec<_> = {
+        let mut conn = server.state.store.reader().await.unwrap();
+        acct_store::log::after(&mut conn, 0, 1000)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|r| r.acting_as.is_some())
+            .collect()
+    };
+    let logged: Vec<&str> = rows.iter().map(|r| r.kind.as_str()).collect();
+    assert_eq!(
+        logged,
+        [
+            "start_impersonation",
+            "allow_impersonation_changes",
+            "code_bank_line",
+            "end_impersonation"
+        ]
+    );
+    for r in &rows {
+        assert_eq!(r.user_id.as_deref(), Some(olive_id.as_str()), "{}", r.kind);
+        assert_eq!(r.acting_as.as_deref(), Some(ana_id.as_str()), "{}", r.kind);
+    }
+    // The reasons are kept in the stored payloads.
+    assert!(rows[0].payload.contains("Ana can't find her tax figure"));
+    assert!(rows[1].payload.contains("To sort the line Ana asked about"));
+    assert!(rows[3].payload.contains("Sorted"));
+    // Ana's own Changes shows the whole session, with both names, though her edits are private
+    // (sharing is off) and the start names no business.
+    let page = server.get_json("/api/history?limit=20", &ana.cookie).await;
+    let sessions: Vec<&Value> = page["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["acting_as"].is_object())
+        .collect();
+    let seen: Vec<&str> = sessions
+        .iter()
+        .map(|e| e["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        seen,
+        [
+            "end_impersonation",
+            "code_bank_line",
+            "allow_impersonation_changes",
+            "start_impersonation"
+        ],
+        "{page}"
+    );
+    for e in &sessions {
+        assert_eq!(e["user_id"], olive_id);
+        assert_eq!(e["who"], "olive");
+        assert_eq!(e["acting_as"]["user_id"], ana_id);
+        assert_eq!(e["acting_as"]["name"], "ana");
+    }
+    let text = |i: usize| sessions[i]["description"].as_str().unwrap();
+    assert_eq!(text(0), "olive stopped viewing as ana: Sorted.");
+    assert!(
+        text(1).starts_with("olive (as ana) marked ")
+            && text(1).contains(" as Purchases and materials. Tax to pay went down $"),
+        "{}",
+        text(1)
+    );
+    assert_eq!(
+        text(2),
+        "olive turned on changes while viewing as ana: To sort the line Ana asked about."
+    );
+    assert_eq!(
+        text(3),
+        "olive started viewing as ana: Ana can't find her tax figure."
+    );
+    assert!(sessions[3]["business_id"].is_null());
+    // The sync feed tells her tabs about the session too.
+    let feed = server.get_json("/api/sync?after=0", &ana.cookie).await;
+    let feed_kinds: Vec<&str> = feed["changes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["kind"].as_str().unwrap())
+        .collect();
+    for kind in SESSION_KINDS {
+        assert!(feed_kinds.contains(&kind), "{kind} in {feed_kinds:?}");
+    }
+
+    // Olive sees all of it in her own Changes, and finds it by her own name.
+    let page = server.get_json("/api/history?limit=20", &olive).await;
+    for kind in SESSION_KINDS {
+        assert!(kinds_of(&page).contains(&kind.to_owned()), "{page}");
+    }
+    let page = server
+        .get_json(&format!("/api/history?user={olive_id}"), &olive)
+        .await;
+    for kind in SESSION_KINDS {
+        assert!(kinds_of(&page).contains(&kind.to_owned()), "{page}");
+    }
+
+    // Sam is in the practice and sees none of the session rows. Ana's sharing is off, and a change
+    // made as her counts as hers, so the recoding is hidden from him too.
+    let page = server
+        .get_json(&format!("/api/history?business={biz}"), &sam)
+        .await;
+    assert_eq!(kinds_of(&page), ["accept_invite"], "{page}");
+    assert!(has_no_session_rows(
+        &server.get_json("/api/history?limit=20", &sam).await
+    ));
+    let feed = server.get_json("/api/sync?after=0", &sam).await;
+    assert!(
+        feed["changes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|c| !SESSION_KINDS.contains(&c["kind"].as_str().unwrap())),
+        "{feed}"
+    );
+
+    // Once Ana shares her edits, Sam sees the recoding with both names, still not the session
+    // rows, and picking Ana in the person filter finds it, as it was made as her.
+    done(
+        &server,
+        &ana.cookie,
+        "set_history_sharing",
+        json!({ "client_id": biz, "share_owner_edits": true }),
+    )
+    .await;
+    let last = {
+        let mut conn = server.state.store.reader().await.unwrap();
+        let head = acct_store::log::head_seq(&mut conn).await.unwrap();
+        acct_store::log::after(&mut conn, head - 1, 10)
+            .await
+            .unwrap()
+    };
+    assert_eq!(last[0].user_id.as_deref(), Some(ana_id.as_str()));
+    assert_eq!(
+        last[0].acting_as, None,
+        "what Ana does herself isn't as anyone"
+    );
+    let page = server
+        .get_json(&format!("/api/history?business={biz}"), &sam)
+        .await;
+    let recoding = page["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "code_bank_line")
+        .unwrap_or_else(|| panic!("{page}"));
+    assert_eq!(recoding["who"], "olive");
+    assert_eq!(recoding["acting_as"]["name"], "ana");
+    assert!(
+        recoding["description"]
+            .as_str()
+            .unwrap()
+            .starts_with("olive (as ana) marked ")
+    );
+    assert!(has_no_session_rows(&page));
+    let page = server
+        .get_json(&format!("/api/history?business={biz}&user={ana_id}"), &sam)
+        .await;
+    assert!(
+        kinds_of(&page).contains(&"code_bank_line".to_owned()),
+        "{page}"
+    );
+
+    // Ben, another owner, sees none of it.
+    let page = server.get_json("/api/history", &ben.cookie).await;
+    assert!(has_no_session_rows(&page), "{page}");
+    assert!(
+        page["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|e| e["acting_as"].is_null())
+    );
+}
+
+#[tokio::test]
+async fn a_view_as_staff_reads_changes_as_that_person_would() {
+    let (server, ana, sam, _ben) = setup().await;
+    let biz = ana.business_id.clone();
+    add_overseer(&server, "olive").await;
+    let olive = server.login("olive").await;
+    let sam_id = server.get_json("/api/me", &sam).await["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    // Ana's edits are private (sharing is off): Sam can't see them, so neither can Olive as Sam.
+    let uri = format!("/api/history?business={biz}");
+    assert_eq!(
+        kinds_of(&server.get_json(&uri, &sam).await),
+        ["accept_invite"]
+    );
+    let own = kinds_of(&server.get_json(&uri, &olive).await);
+    assert!(own.contains(&"import_statement".to_owned()), "{own:?}");
+
+    server
+        .ok(
+            &olive,
+            "start_impersonation",
+            json!({ "user_id": sam_id, "reason": "Sam can't load the TB" }),
+        )
+        .await;
+    let page = server.get_json("/api/history?limit=20", &olive).await;
+    let kinds = kinds_of(&page);
+    assert_eq!(kinds[0], "start_impersonation", "{page}");
+    assert!(
+        !kinds.contains(&"import_statement".to_owned())
+            && !kinds.contains(&"create_invite".to_owned()),
+        "as Sam, Ana's private edits stay hidden: {page}"
+    );
+    assert_eq!(page["entries"][0]["acting_as"]["name"], "sam");
+    // Olive shows by both names to Ana (and to herself), and Sam isn't made present by it.
+    let here = presence(&server, &olive, Some(&biz)).await;
+    assert_eq!(names(&here), ["olive (Overseer, as sam)"], "{here:?}");
+    let here = presence(&server, &ana.cookie, Some(&biz)).await;
+    assert_eq!(
+        names(&here),
+        ["ana", "olive (Overseer, as sam)"],
+        "{here:?}"
+    );
+
+    // Ending puts her back to her own view; Sam's own Changes keeps the session.
+    server.ok(&olive, "end_impersonation", json!({})).await;
+    let own = kinds_of(&server.get_json(&uri, &olive).await);
+    assert!(own.contains(&"import_statement".to_owned()), "{own:?}");
+    let sams = kinds_of(&server.get_json("/api/history?limit=20", &sam).await);
+    assert!(sams.contains(&"start_impersonation".to_owned()), "{sams:?}");
+    assert!(sams.contains(&"end_impersonation".to_owned()), "{sams:?}");
+    // Ana is in the same business but isn't the person viewed as, so she sees neither.
+    let anas = server.get_json("/api/history?limit=20", &ana.cookie).await;
+    assert!(has_no_session_rows(&anas), "{anas}");
 }

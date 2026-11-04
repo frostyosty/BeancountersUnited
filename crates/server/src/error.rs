@@ -44,6 +44,13 @@ pub enum CommandError {
         details: Value,
     },
     Store(StoreError),
+    /// Refused because the session is viewing as someone else (M19, ADR 013). `message` names
+    /// the person and says why. `code` is `impersonating`, or `impersonation_ended` once the
+    /// acting session is over.
+    Impersonating {
+        code: &'static str,
+        message: String,
+    },
 }
 
 impl From<StoreError> for CommandError {
@@ -92,7 +99,7 @@ impl CommandError {
             CommandError::Unauthenticated | CommandError::BadCredentials => {
                 StatusCode::UNAUTHORIZED
             }
-            CommandError::Forbidden => StatusCode::FORBIDDEN,
+            CommandError::Forbidden | CommandError::Impersonating { .. } => StatusCode::FORBIDDEN,
             CommandError::NotFound { .. } => StatusCode::NOT_FOUND,
             CommandError::IdReused(_) => StatusCode::CONFLICT,
             CommandError::Invalid { .. } => StatusCode::UNPROCESSABLE_ENTITY,
@@ -131,6 +138,7 @@ impl CommandError {
                 message,
                 details,
             } => (*code, message.clone(), details.clone()),
+            CommandError::Impersonating { code, message } => (*code, message.clone(), Value::Null),
             CommandError::Store(e) => {
                 tracing::error!("store error: {e}");
                 (

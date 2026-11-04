@@ -193,6 +193,7 @@ struct Books {
 const OWNER: Actor = Actor {
     user_id: None,
     role: Role::PracticeAdmin,
+    acting_as: None,
 };
 
 /// What one upload returned, by file name.

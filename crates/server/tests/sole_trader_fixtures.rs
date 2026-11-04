@@ -281,6 +281,7 @@ async fn pipeline_accepts_the_defaults() {
     let actor = Actor {
         user_id: None,
         role: Role::PracticeAdmin,
+        acting_as: None,
     };
     let run = async |command: Command| -> String {
         let kind = command.kind();

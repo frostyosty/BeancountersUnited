@@ -123,16 +123,13 @@ describe("practice settings", () => {
     expect(screen.queryByRole("link", { name: /Admin/ })).toBeNull();
   });
 
-  it("lets an admin preview the site as another role", async () => {
+  it("gives a practice admin no way to view as someone (overseers only, ADR 013)", async () => {
     stubApi({ "GET /api/me": () => boss, "GET /api/clients": () => [], "GET /api/practice": () => practice, "GET /api/users": () => users, "GET /api/asset-classes": () => [] });
     renderApp(<App />, "/settings/admin");
-    const user = userEvent.setup();
-    await user.selectOptions(await screen.findByLabelText("Viewing as"), "viewer");
-    expect(await screen.findByRole("button", { name: "Stop viewing as viewer" })).toBeTruthy();
-    // The admin tab stays, so they can switch back.
-    expect(screen.getByRole("link", { name: /Admin/ })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Stop viewing as viewer" }));
-    expect(screen.queryByRole("button", { name: "Stop viewing as viewer" })).toBeNull();
+    // Sent to My account; there is no Admin tab and no role picker.
+    expect(await screen.findByRole("heading", { name: "Change your password" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Admin/ })).toBeNull();
+    expect(screen.queryByLabelText("Viewing as")).toBeNull();
   });
 });
 

@@ -38,6 +38,7 @@ const coded: HistoryEntry = {
   },
   tax_change: 8400,
   ai: { model: "claude-haiku-5-5", suggestions: 12 },
+  acting_as: null,
 };
 
 const uploaded: HistoryEntry = {

@@ -200,6 +200,7 @@ async fn init(store: &Store) -> Result<(), BoxError> {
     let system = Actor {
         user_id: None,
         role: Role::PracticeAdmin,
+        acting_as: None,
     };
     match pipeline::submit(store, &system, envelope, chrono::Utc::now()).await {
         Ok(_) => {
@@ -232,6 +233,7 @@ async fn add_overseer(store: &Store) -> Result<(), BoxError> {
     let system = Actor {
         user_id: None,
         role: Role::Overseer,
+        acting_as: None,
     };
     match pipeline::submit(store, &system, envelope, chrono::Utc::now()).await {
         Ok(_) => {

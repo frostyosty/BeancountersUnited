@@ -78,9 +78,10 @@ pub struct LogSummary {
 /// The caller hashes the bytes (the server uses SHA-256).
 ///
 /// Each row is its `seq` as 8 little-endian bytes, then each column in schema order (`id`, `kind`,
-/// `payload`, `result`, `user_id`, `client_id`, `client_year_id`, `at`, `via`): `0` for NULL, or
-/// `1`, the length as 8 little-endian bytes, and the stored text. Lengths make the encoding
-/// unambiguous, and `at` is the stored text, so the hash covers exactly what's on disk.
+/// `payload`, `result`, `user_id`, `client_id`, `client_year_id`, `at`, `via`, `acting_as`): `0`
+/// for NULL, or `1`, the length as 8 little-endian bytes, and the stored text. Lengths make the
+/// encoding unambiguous, and `at` is the stored text, so the hash covers exactly what's on disk.
+/// `acting_as` (M19) joined the list last, so a hash taken before it differs from one taken now.
 /// A migration that adds a column to `command_log` must add it here too.
 pub async fn summarise_log(
     conn: &mut SqliteConnection,
@@ -96,7 +97,7 @@ pub async fn summarise_log(
     loop {
         let page: Vec<Row> = sqlx::query_as(
             "SELECT seq, id, kind, payload, result, user_id, client_id, client_year_id,
-                    CAST(at AS TEXT) AS at, via
+                    CAST(at AS TEXT) AS at, via, acting_as
              FROM command_log WHERE seq > ? ORDER BY seq LIMIT ?",
         )
         .bind(summary.head_seq)
@@ -115,6 +116,7 @@ pub async fn summarise_log(
                 row.client_year_id.as_ref(),
                 Some(&row.at),
                 row.via.as_ref(),
+                row.acting_as.as_ref(),
             ] {
                 match field {
                     None => sink(&[0]),
@@ -160,4 +162,5 @@ struct Row {
     client_year_id: Option<String>,
     at: String,
     via: Option<String>,
+    acting_as: Option<String>,
 }

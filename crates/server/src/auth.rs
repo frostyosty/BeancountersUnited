@@ -16,14 +16,15 @@ use axum::http::header::{COOKIE, SET_COOKIE};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Response};
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use ts_rs::TS;
 
 use crate::AppState;
 use crate::error::CommandError;
-use crate::pipeline::Actor;
+use crate::impersonation;
+use crate::pipeline::{ActingAs, Actor};
 
 pub const SESSION_COOKIE: &str = "acct_session";
 /// How long a login lasts. A working day, with room to spare.
@@ -92,15 +93,120 @@ fn token_from(headers: &HeaderMap) -> Option<String> {
 
 /// The logged-in user, taken from the session cookie. Handlers that take this reject requests
 /// without a valid session.
-pub struct CurrentUser(pub User);
+///
+/// `.0` is the user every read answers as. While an overseer views as someone (M19, ADR 013),
+/// that's the person they're viewing as, not the overseer, so a handler that reads `.0` already
+/// sees what that person would. `.1` is the login session: its token, and who's really signed in
+/// while acting ([`CurrentUser::real`]). Anything that records who did something uses the real
+/// one, through [`CurrentUser::actor`].
+pub struct CurrentUser(pub User, pub SessionState);
+
+/// The login session behind a [`CurrentUser`].
+pub struct SessionState {
+    /// The SHA-256 of the session's token, as `sessions` keeps it.
+    pub token_hash: String,
+    /// Set while this session is viewing as someone, and only while that's still live.
+    pub acting: Option<Acting>,
+}
+
+/// A session's live acting state (ADR 013).
+pub struct Acting {
+    /// The overseer who signed in.
+    pub real: User,
+    /// The `entity_id` of the `start_impersonation` that began it.
+    pub acting_id: String,
+    pub since: DateTime<Utc>,
+    pub allow_changes: bool,
+}
 
 impl CurrentUser {
+    /// Who's submitting a command: the real person, plus who they're acting as.
     pub fn actor(&self) -> Actor {
-        Actor {
-            user_id: Some(self.0.id.clone()),
-            role: self.0.role,
+        match &self.1.acting {
+            Some(a) => Actor {
+                user_id: Some(a.real.id.clone()),
+                role: a.real.role,
+                acting_as: Some(ActingAs {
+                    user_id: self.0.id.clone(),
+                    role: self.0.role,
+                    acting_id: a.acting_id.clone(),
+                }),
+            },
+            None => Actor {
+                user_id: Some(self.0.id.clone()),
+                role: self.0.role,
+                acting_as: None,
+            },
         }
     }
+
+    /// The acting state, while this session is viewing as someone.
+    pub fn acting(&self) -> Option<&Acting> {
+        self.1.acting.as_ref()
+    }
+
+    /// Who's really signed in: the overseer while acting, else the user.
+    pub fn real(&self) -> &User {
+        self.1.acting.as_ref().map_or(&self.0, |a| &a.real)
+    }
+
+    /// The session's token hash.
+    pub fn session(&self) -> &str {
+        &self.1.token_hash
+    }
+}
+
+/// The user behind a session token's hash at `now`, if the session is valid. An acting state
+/// whose 30 minutes are up, or whose person may no longer be acted as, is treated as already over,
+/// whether or not the sweep has logged its end yet (ADR 013, 5).
+pub(crate) async fn load(
+    conn: &mut acct_store::SqliteConnection,
+    token_hash: &str,
+    now: DateTime<Utc>,
+) -> Result<Option<CurrentUser>, CommandError> {
+    let Some(session) = sessions::get(conn, token_hash)
+        .await?
+        .filter(|s| s.expires_at > now)
+    else {
+        return Ok(None);
+    };
+    let Some(user) = users::get(conn, &session.user_id)
+        .await?
+        .filter(|u| u.active)
+    else {
+        return Ok(None);
+    };
+    let acting = match session.acting() {
+        Some((who, acting_id, since)) if impersonation::is_live(since, now) => {
+            users::get(conn, who)
+                .await?
+                .filter(|person| impersonation::may_act_as(&user, person))
+                .map(|person| (person, acting_id.to_owned(), since))
+        }
+        _ => None,
+    };
+    let token_hash = token_hash.to_owned();
+    Ok(Some(match acting {
+        Some((person, acting_id, since)) => CurrentUser(
+            person,
+            SessionState {
+                token_hash,
+                acting: Some(Acting {
+                    real: user,
+                    acting_id,
+                    since,
+                    allow_changes: session.allow_changes,
+                }),
+            },
+        ),
+        None => CurrentUser(
+            user,
+            SessionState {
+                token_hash,
+                acting: None,
+            },
+        ),
+    }))
 }
 
 impl FromRequestParts<AppState> for CurrentUser {
@@ -112,15 +218,9 @@ impl FromRequestParts<AppState> for CurrentUser {
     ) -> Result<CurrentUser, CommandError> {
         let token = token_from(&parts.headers).ok_or(CommandError::Unauthenticated)?;
         let mut conn = state.store.reader().await?;
-        let session = sessions::get(&mut conn, &token_hash(&token))
+        load(&mut conn, &token_hash(&token), Utc::now())
             .await?
-            .filter(|s| s.expires_at > Utc::now())
-            .ok_or(CommandError::Unauthenticated)?;
-        let user = users::get(&mut conn, &session.user_id)
-            .await?
-            .filter(|u| u.active)
-            .ok_or(CommandError::Unauthenticated)?;
-        Ok(CurrentUser(user))
+            .ok_or(CommandError::Unauthenticated)
     }
 }
 
@@ -131,13 +231,49 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-/// The logged-in user, as the UI sees them.
+/// The logged-in user, as the UI sees them. While an overseer views as someone (ADR 013), it's
+/// that person, with `acting_as` and `real` saying so.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Me {
     pub id: String,
     pub username: String,
     pub display_name: String,
+    pub role: Role,
+    /// Set while this session is viewing as this user: since when, until when, and whether
+    /// changes are on. `null` otherwise. The server always sends it; it's optional in the type
+    /// only so code that builds a `Me` (tests, sign-up) needn't name it.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub acting_as: Option<MeActingAs>,
+    /// The overseer really signed in, while viewing as this user. `null` otherwise, and always
+    /// sent, as `acting_as` is.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub real: Option<MeReal>,
+}
+
+/// [`Me::acting_as`]: the person being viewed as, and the acting session's limits.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MeActingAs {
+    pub user_id: String,
+    pub name: String,
+    pub role: Role,
+    #[ts(type = "string")]
+    pub since: DateTime<Utc>,
+    /// 30 minutes after `since`. It ends then, read-only or not.
+    #[ts(type = "string")]
+    pub expires_at: DateTime<Utc>,
+    pub allow_changes: bool,
+}
+
+/// [`Me::real`]: who's really signed in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MeReal {
+    pub user_id: String,
+    pub name: String,
     pub role: Role,
 }
 
@@ -148,7 +284,31 @@ impl From<&User> for Me {
             username: u.username.clone(),
             display_name: u.display_name.clone(),
             role: u.role,
+            acting_as: None,
+            real: None,
         }
+    }
+}
+
+impl From<&CurrentUser> for Me {
+    fn from(user: &CurrentUser) -> Me {
+        let mut me = Me::from(&user.0);
+        if let Some(a) = user.acting() {
+            me.acting_as = Some(MeActingAs {
+                user_id: user.0.id.clone(),
+                name: user.0.display_name.clone(),
+                role: user.0.role,
+                since: a.since,
+                expires_at: impersonation::expires_at(a.since),
+                allow_changes: a.allow_changes,
+            });
+            me.real = Some(MeReal {
+                user_id: a.real.id.clone(),
+                name: a.real.display_name.clone(),
+                role: a.real.role,
+            });
+        }
+        me
     }
 }
 
@@ -185,12 +345,12 @@ pub async fn login(
         sessions::delete_expired(&mut w, now).await?;
         sessions::insert(
             &mut w,
-            &Session {
-                token_hash: token_hash(&token),
-                user_id: user.id.clone(),
-                created_at: now,
-                expires_at: now + Duration::hours(SESSION_HOURS),
-            },
+            &Session::new(
+                token_hash(&token),
+                user.id.clone(),
+                now,
+                now + Duration::hours(SESSION_HOURS),
+            ),
         )
         .await?;
     }
@@ -201,12 +361,14 @@ pub async fn login(
     Ok(response)
 }
 
-/// `POST /api/logout`. Ends the session, if there is one, and clears the cookie.
+/// `POST /api/logout`. Ends the session, if there is one, and clears the cookie. A session
+/// viewing as someone ends that first, through the pipeline (ADR 013, 5).
 pub async fn logout(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Response, CommandError> {
     if let Some(token) = token_from(&headers) {
+        impersonation::end_on_sign_out(&state, &token_hash(&token)).await;
         let mut w = state.store.writer().await;
         if let Some(s) = sessions::get(&mut w, &token_hash(&token)).await? {
             state.presence.leave(&s.user_id);
@@ -220,9 +382,10 @@ pub async fn logout(
     Ok(response)
 }
 
-/// `GET /api/me`
+/// `GET /api/me`: the user every read answers as, and, while viewing as someone, who's really
+/// signed in.
 pub async fn me(user: CurrentUser) -> Json<Me> {
-    Json(Me::from(&user.0))
+    Json(Me::from(&user))
 }
 
 /// Starts a session for `user_id` and returns its `Set-Cookie` value. Sign-up (M12) uses this,
@@ -237,12 +400,12 @@ pub(crate) async fn start_session(
     sessions::delete_expired(&mut w, now).await?;
     sessions::insert(
         &mut w,
-        &Session {
-            token_hash: token_hash(&token),
-            user_id: user_id.to_owned(),
-            created_at: now,
-            expires_at: now + Duration::hours(SESSION_HOURS),
-        },
+        &Session::new(
+            token_hash(&token),
+            user_id.to_owned(),
+            now,
+            now + Duration::hours(SESSION_HOURS),
+        ),
     )
     .await?;
     Ok(session_cookie(&token, SESSION_HOURS * 3600))

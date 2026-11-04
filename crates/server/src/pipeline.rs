@@ -33,6 +33,7 @@ use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
 use crate::finalise;
 use crate::history;
+use crate::impersonation;
 use crate::invoices;
 use crate::layouts;
 use crate::ledger;
@@ -44,12 +45,59 @@ use crate::starter;
 use crate::tb_import;
 
 /// Who is submitting a command. `user_id` is `None` only for the server itself (`acctd init`, the
-/// fixture loader) and for the sign-up endpoint, which submits as a `BusinessOwner` with no user
-/// yet. `crate::access` tells these apart by role.
+/// fixture loader, the impersonation sweep) and for the sign-up endpoint, which submits as a
+/// `BusinessOwner` with no user yet. `crate::access` tells these apart by role.
+///
+/// While an overseer views as someone (M19, ADR 013), `user_id` and `role` stay the overseer: the
+/// real identity, which is what records who did something. `acting_as` is the person, and
+/// [`Actor::effective`] is what every access decision uses.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Actor {
     pub user_id: Option<String>,
     pub role: Role,
+    pub acting_as: Option<ActingAs>,
+}
+
+/// The person an overseer is acting as, and which acting session it is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActingAs {
+    pub user_id: String,
+    pub role: Role,
+    /// The `entity_id` of the `start_impersonation` that began it.
+    pub acting_id: String,
+}
+
+/// One identity an access decision is made for: the real one or the effective one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Identity<'a> {
+    pub user_id: Option<&'a str>,
+    pub role: Role,
+    /// Someone else is acting as this identity. A user's own things (the invoice maker's) stay
+    /// out of reach then, whoever owns them.
+    pub acted_as: bool,
+}
+
+impl Actor {
+    /// The identity access checks use: the person acted as, or else the actor.
+    pub fn effective(&self) -> Identity<'_> {
+        match &self.acting_as {
+            Some(a) => Identity {
+                user_id: Some(&a.user_id),
+                role: a.role,
+                acted_as: true,
+            },
+            None => self.real(),
+        }
+    }
+
+    /// The person who's really submitting, whoever they're acting as.
+    pub fn real(&self) -> Identity<'_> {
+        Identity {
+            user_id: self.user_id.as_deref(),
+            role: self.role,
+            acted_as: false,
+        }
+    }
 }
 
 /// What an applied command touched, for its response and the sync feed.
@@ -78,6 +126,30 @@ pub async fn submit_via(
     via: Option<Via>,
     at: DateTime<Utc>,
 ) -> Result<Accepted, CommandError> {
+    run(store, actor, None, envelope, via, at).await
+}
+
+/// [`submit_via`] from a signed-in login session, named by its token hash: `POST /api/commands`
+/// and sign-out. Starting to view as someone (M19) acts on that session, so it needs one.
+pub async fn submit_in_session(
+    store: &Store,
+    actor: &Actor,
+    session: &str,
+    envelope: CommandEnvelope,
+    via: Option<Via>,
+    at: DateTime<Utc>,
+) -> Result<Accepted, CommandError> {
+    run(store, actor, Some(session), envelope, via, at).await
+}
+
+async fn run(
+    store: &Store,
+    actor: &Actor,
+    session: Option<&str>,
+    envelope: CommandEnvelope,
+    via: Option<Via>,
+    at: DateTime<Utc>,
+) -> Result<Accepted, CommandError> {
     if let Some(v) = &via {
         check_via(v)?;
     }
@@ -90,6 +162,12 @@ pub async fn submit_via(
 
     let mut writer = store.writer().await;
     let mut tx = writer.begin().await?;
+
+    // While viewing as someone (M19, ADR 013), before anything else: refuse what can't be done in
+    // their name, and anything at all once the acting session has ended.
+    if let Some(acting) = &actor.acting_as {
+        impersonation::refuse_while_acting(&mut tx, actor, acting, &command, at).await?;
+    }
 
     // A resubmitted id gets the original result, as long as it's the same command.
     if let Some(prev) = log::find(&mut tx, &id).await? {
@@ -112,7 +190,10 @@ pub async fn submit_via(
     }
     // Who changed what (M13): what the command touches and the tax figure, before and after.
     let before = history::before(&mut tx, &command, &touched).await?;
-    let effect = apply(&mut tx, actor, &command, seq, at.date_naive()).await?;
+    let effect = match impersonation::apply(&mut tx, actor, session, &command, at).await? {
+        Some(effect) => effect,
+        None => apply(&mut tx, actor, &command, seq, at.date_naive()).await?,
+    };
     let changes = history::after(&mut tx, &command, before, effect.client_id.as_deref()).await?;
     // An upload checks itself against the books (M18): read-only, in the same transaction.
     let upload = match (&command, effect.entity_id.as_deref()) {
@@ -140,6 +221,12 @@ pub async fn submit_via(
             at,
             via: via.map(|v| serde_json::to_string(&v).expect("via serialises")),
             changes: Some(serde_json::to_string(&changes).expect("changes serialise")),
+            // The person an overseer viewed as (M19); `user_id` above stays the overseer. The
+            // start is logged as the person too, though the actor isn't acting until it lands.
+            acting_as: match &command {
+                Command::StartImpersonation { user_id, .. } => Some(user_id.clone()),
+                _ => actor.acting_as.as_ref().map(|a| a.user_id.clone()),
+            },
         },
     )
     .await?;
@@ -178,6 +265,12 @@ async fn apply(
     today: chrono::NaiveDate,
 ) -> Result<Effect, CommandError> {
     match command {
+        // `run` hands these to `crate::impersonation`, which knows the session and the time. They
+        // never come here, nor as part of another command.
+        Command::StartImpersonation { .. }
+        | Command::EndImpersonation { .. }
+        | Command::AllowImpersonationChanges { .. } => Err(CommandError::Forbidden),
+
         Command::SetUpBusiness {
             name,
             start_date,
@@ -2140,6 +2233,11 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::DeleteInvoiceTemplate { .. }
         | C::AddInvoiceImage { .. } => {
             Lock::Allowed("the user's own invoices, which aren't part of any business's books")
+        }
+        C::StartImpersonation { .. }
+        | C::EndImpersonation { .. }
+        | C::AllowImpersonationChanges { .. } => {
+            Lock::Allowed("who a login session is viewing as, not client data")
         }
     }
 }

@@ -211,6 +211,7 @@ async fn a_server_initialises_only_once() {
     let system = acct_server::pipeline::Actor {
         user_id: None,
         role: acct_store::users::Role::PracticeAdmin,
+        acting_as: None,
     };
     let again = acct_server::commands::CommandEnvelope {
         id: new_id(),
