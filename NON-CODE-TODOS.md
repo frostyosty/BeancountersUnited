@@ -157,3 +157,28 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
 - [ ] Decide where the "Sign up" link goes on the public home page (the page is at `/signup`).
 - [ ] The overseer's "toggle between all views" in the web app isn't built yet; today an overseer sees
       the practice screens plus every business.
+
+## M20 guests (ADR 014): before the home page takes real files
+- [ ] Decide ADR 014's three open points: a guest who signs in to an existing account instead (4), the
+      claim as the first step of Submit (5), and redacting an expired guest's `command_log` rows (6).
+      Then mark the ADR accepted for those points, before wave 2 of `M20-PROMPTS.md` starts.
+- [ ] Privacy policy: add a section on trials. What a trial collects (the statement file and what's
+      worked out from it), why (to show the visitor their tax), that nobody looks at it and nothing is
+      sent to the AI provider or anyone else, where it's processed and stored, that statements name other
+      people and those names are used only to sort the lines, how long it's kept (7 days from last use,
+      an example 24 hours, then up to 14 days in backups), "Delete it now", and that saving your work
+      keeps everything under the account's terms. The home page's line links to this section.
+- [ ] Have a privacy lawyer check ADR 014, 7: that the one line beside the drop zone, plus that section,
+      is enough notice under IPP 3 for a visitor with no account, and that no terms need accepting
+      before a trial upload (acceptance is recorded when they claim the account).
+- [ ] Tell IRD's relationship manager about trials (never filed, no gateway calls, deleted after 7 days)
+      and confirm IR1269 asks nothing more of them. Describe them in the OSF answers. Include trial data
+      in the offshore storage application if production stays in Sydney.
+- [ ] Check the home page's wording about IRD ("File tax", "From bank statement to IRD") against IRD's
+      rules for providers on naming IRD: no logo, and nothing that suggests IRD endorses us.
+- [ ] Agree the privacy line's place name with the hosting decision above: "in Australia" on Fly.io
+      Sydney, "in New Zealand" if production moves.
+- [ ] Tell anyone testing on staging not to drop a real statement there: examples or made-up files only
+      (hard rule 1). Staging shows a warning in place of the privacy line (`ACCT_GUEST_FILES=warn`).
+- [ ] Check the abuse limits (ADR 014, 8) against the production volume (1 GB, ADR 008) once trials are
+      live, and raise the volume and the caps together if they start refusing people.

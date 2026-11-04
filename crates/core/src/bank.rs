@@ -172,6 +172,83 @@ pub fn looks_like_ird(description: &str) -> bool {
     description.split_whitespace().any(|w| w == "IRD") || description.contains("INLAND REVENUE")
 }
 
+/// What an IRD line's description says it was for (ADR 014, 3). Detected only, from words in the
+/// reference; the owner still says what each one was when Save tax asks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum IrdKind {
+    /// GST, with the months the reference names, if it names any: "GST AUG-SEP" is
+    /// `Some((8, 9))`, "GST SEP" is `Some((9, 9))`.
+    Gst { months: Option<(u32, u32)> },
+    /// Income tax (terminal, provisional, IR3), with the income year if the reference names one.
+    IncomeTax { year: Option<i32> },
+    /// IRD, but the reference doesn't say what for.
+    Unknown,
+}
+
+/// The three-letter month names, January first, as banks abbreviate them.
+const MONTHS: [&str; 12] = [
+    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+];
+
+fn month_of(word: &str) -> Option<u32> {
+    let w = word.get(..3)?;
+    // "SEPT" and "SEPTEMBER" are September too, but "MARKET" isn't March.
+    let rest = &word[3..];
+    let full = [
+        "UARY", "RUARY", "CH", "IL", "", "E", "Y", "UST", "TEMBER", "OBER", "EMBER", "EMBER",
+    ];
+    let i = MONTHS.iter().position(|m| *m == w)?;
+    (rest.is_empty() || (rest == "T" && i == 8) || rest == full[i]).then_some(i as u32 + 1)
+}
+
+/// The month range a reference names: "AUG-SEP", "AUG/SEP", "AUG TO SEP", or one month alone.
+fn months_in(description: &str) -> Option<(u32, u32)> {
+    let words: Vec<&str> = description
+        .split(|c: char| c.is_whitespace() || c == '-' || c == '/')
+        .filter(|w| !w.is_empty() && *w != "TO")
+        .collect();
+    let first = words.iter().position(|w| month_of(w).is_some())?;
+    let from = month_of(words[first])?;
+    let to = words.get(first + 1).and_then(|w| month_of(w)).unwrap_or(from);
+    Some((from, to))
+}
+
+/// A four-digit year from 2000 to 2099 in the reference, such as "INC TAX 2026".
+fn year_in(description: &str) -> Option<i32> {
+    description
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|w| w.len() == 4 && w.starts_with("20"))
+        .find_map(|w| w.parse().ok())
+}
+
+/// What an IRD line was for, by its description; `None` if it isn't an IRD line at all.
+pub fn ird_kind(description: &str) -> Option<IrdKind> {
+    if !looks_like_ird(description) {
+        return None;
+    }
+    let words: Vec<&str> = description.split_whitespace().collect();
+    let has = |w: &str| words.contains(&w);
+    if has("GST") {
+        return Some(IrdKind::Gst {
+            months: months_in(description),
+        });
+    }
+    let income = description.contains("INC TAX")
+        || description.contains("INCOME TAX")
+        || description.contains("PROV TAX")
+        || description.contains("PROVISIONAL")
+        || description.contains("TERMINAL TAX")
+        || has("IR3")
+        || has("RIT");
+    if income {
+        return Some(IrdKind::IncomeTax {
+            year: year_in(description),
+        });
+    }
+    Some(IrdKind::Unknown)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -399,6 +476,57 @@ mod tests {
         assert!(looks_like_ird("IRD GST REFUND"));
         assert!(looks_like_ird("PAYMENT TO INLAND REVENUE DEPT"));
         assert!(!looks_like_ird("BIRDSEED SUPPLIES"));
+    }
+
+    #[test]
+    fn tells_gst_from_income_tax() {
+        // The three examples' IRD lines, as the OFX parser writes them (NAME then MEMO).
+        assert_eq!(
+            ird_kind("INLAND REVENUE GST AUG-SEP"),
+            Some(IrdKind::Gst {
+                months: Some((8, 9))
+            })
+        );
+        assert_eq!(
+            ird_kind("INLAND REVENUE GST MAY-JUN"),
+            Some(IrdKind::Gst {
+                months: Some((5, 6))
+            })
+        );
+        assert_eq!(
+            ird_kind("IRD GST REFUND JUL-AUG"),
+            Some(IrdKind::Gst {
+                months: Some((7, 8))
+            })
+        );
+        assert_eq!(
+            ird_kind("INLAND REVENUE INC TAX 2026"),
+            Some(IrdKind::IncomeTax { year: Some(2026) })
+        );
+        assert_eq!(
+            ird_kind("IRD GST SEPT"),
+            Some(IrdKind::Gst {
+                months: Some((9, 9))
+            })
+        );
+        assert_eq!(
+            ird_kind("IRD GST OCT TO MAR"),
+            Some(IrdKind::Gst {
+                months: Some((10, 3))
+            })
+        );
+        assert_eq!(ird_kind("IRD GST"), Some(IrdKind::Gst { months: None }));
+        assert_eq!(
+            ird_kind("IRD PROV TAX"),
+            Some(IrdKind::IncomeTax { year: None })
+        );
+        assert_eq!(ird_kind("IRD PAYMENT 123"), Some(IrdKind::Unknown));
+        assert_eq!(ird_kind("BIRDSEED GST SUPPLIES"), None);
+        // "MARKET" isn't March.
+        assert_eq!(
+            ird_kind("IRD GST MARKET"),
+            Some(IrdKind::Gst { months: None })
+        );
     }
 
     proptest! {

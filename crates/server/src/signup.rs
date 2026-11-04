@@ -123,7 +123,7 @@ pub async fn accept_invite(
 }
 
 /// An email address, trimmed and lowercased. Only its shape is checked; nothing is sent to it.
-fn check_email(email: &str) -> Result<String, CommandError> {
+pub(crate) fn check_email(email: &str) -> Result<String, CommandError> {
     let email = email.trim().to_lowercase();
     let ok = email.len() <= 254
         && !email.chars().any(char::is_whitespace)

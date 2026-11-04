@@ -65,6 +65,7 @@ fn entry(
         via: via.map(|v| v.to_string()),
         changes: None,
         acting_as: acting_as.map(str::to_owned),
+        redacted_seq: None,
     }
 }
 
@@ -705,6 +706,83 @@ fn samples() -> Vec<Sample> {
         )
         .by(None)
         .viewing_as("u-ana"),
+        // Guests (M20, ADR 014, 10). A guest's own Changes names them "You (not saved yet)";
+        // that's the name `get_history` gives them, so here they're Ana.
+        s(
+            "start_guest",
+            json!({ "source": { "file": { "file_name": "statement.ofx",
+                                          "content_base64": "T0ZY" } } }),
+            "Ana started a trial with statement.ofx: 27 transactions.",
+        )
+        .by(Some("u-ana"))
+        .changed(changes(vec![change(
+            "bank statements",
+            "transactions",
+            None,
+            Some("27"),
+        )])),
+        s(
+            "start_guest",
+            json!({ "source": { "example": 1 } }),
+            "Ana started a trial with Example 1.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "add_guest_business",
+            json!({ "source": { "example": 2 } }),
+            "Ana tried Example 2.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "add_guest_business",
+            json!({ "source": { "file": { "file_name": "mine.ofx", "content_base64": "T0ZY" } } }),
+            "Ana added their own statement, mine.ofx.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "claim_guest",
+            json!({ "email": "ana@example.nz", "display_name": "Ana Ngata", "password": "x" }),
+            "Ana saved their work as Ana Ngata.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "adopt_guest_business",
+            json!({ "token": "x" }),
+            "Ana moved a trial into their account.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "expire_guest",
+            json!({ "client_id": "biz", "why": "unused" }),
+            "The system deleted an unsaved trial after 7 days unused: 2 statements, 51 lines and \
+             14 earlier changes.",
+        )
+        .by(None)
+        .changed(changes(vec![
+            change("the trial", "statements", Some("2"), None),
+            change("the trial", "lines", Some("51"), None),
+            change("the trial", "earlier changes", Some("14"), None),
+        ])),
+        s(
+            "expire_guest",
+            json!({ "client_id": "biz", "why": "by_you" }),
+            "Ana deleted their trial: 0 statements, 0 lines and 0 earlier changes.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "set_gst_registration",
+            json!({ "client_id": "biz", "registered": false, "source": "owner" }),
+            "Ana said they're not GST registered.",
+        )
+        .by(Some("u-ana")),
+        s(
+            "set_gst_registration",
+            json!({ "client_id": "biz", "registered": true, "frequency": "two_monthly_odd",
+                    "source": "ird" }),
+            "The system recorded that IRD says GST registered, two-monthly, ending in odd \
+             months.",
+        )
+        .by(None),
     ]
 }
 

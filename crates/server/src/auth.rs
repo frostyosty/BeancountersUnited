@@ -64,7 +64,7 @@ fn new_token() -> String {
     hex(&bytes)
 }
 
-fn token_hash(token: &str) -> String {
+pub(crate) fn token_hash(token: &str) -> String {
     hex(&Sha256::digest(token.as_bytes()))
 }
 
@@ -73,21 +73,31 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn session_cookie(token: &str, max_age_secs: i64) -> HeaderValue {
+    named_cookie(SESSION_COOKIE, token, max_age_secs)
+}
+
+/// An HttpOnly, SameSite=Strict cookie for the whole site.
+pub(crate) fn named_cookie(name: &str, value: &str, max_age_secs: i64) -> HeaderValue {
     // No `Secure` flag: the office LAN is plain HTTP until M7.
     HeaderValue::from_str(&format!(
-        "{SESSION_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={max_age_secs}"
+        "{name}={value}; HttpOnly; SameSite=Strict; Path=/; Max-Age={max_age_secs}"
     ))
     .expect("the cookie is ASCII")
 }
 
-fn token_from(headers: &HeaderMap) -> Option<String> {
+pub(crate) fn token_from(headers: &HeaderMap) -> Option<String> {
+    cookie(headers, SESSION_COOKIE)
+}
+
+/// The value of the cookie `name`, if the request has one.
+pub(crate) fn cookie(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get_all(COOKIE)
         .iter()
         .filter_map(|v| v.to_str().ok())
         .flat_map(|v| v.split(';'))
         .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(name, _)| *name == SESSION_COOKIE)
+        .find(|(n, v)| *n == name && !v.is_empty())
         .map(|(_, value)| value.to_owned())
 }
 
@@ -251,6 +261,16 @@ pub struct Me {
     #[serde(default)]
     #[ts(optional = nullable)]
     pub real: Option<MeReal>,
+    /// Set for a guest who hasn't saved their work (M20, ADR 014): when the trial goes, and its
+    /// businesses. `null` for everyone else, and always sent, as `acting_as` is.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub guest: Option<crate::guests::MeGuest>,
+    /// Set for a signed-in owner whose browser was a guest just before signing in, with a trial
+    /// of their own they could move into this account (`POST /api/guest/adopt`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub moveable_trial: Option<crate::guests::MoveableTrial>,
 }
 
 /// [`Me::acting_as`]: the person being viewed as, and the acting session's limits.
@@ -281,11 +301,18 @@ impl From<&User> for Me {
     fn from(u: &User) -> Me {
         Me {
             id: u.id.clone(),
-            username: u.username.clone(),
+            // A guest's username is an internal placeholder, not something to show.
+            username: if u.is_guest() {
+                String::new()
+            } else {
+                u.username.clone()
+            },
             display_name: u.display_name.clone(),
             role: u.role,
             acting_as: None,
             real: None,
+            guest: None,
+            moveable_trial: None,
         }
     }
 }
@@ -316,9 +343,12 @@ impl From<&CurrentUser> for Me {
 /// time whether or not the user is real.
 static DUMMY_HASH: LazyLock<String> = LazyLock::new(|| hash_password("not a real password"));
 
-/// `POST /api/login`
+/// `POST /api/login`. A guest (M20) can't sign in: they have no password. If this browser was a
+/// guest with a business of their own, the guest's token is kept in a cookie of its own for a
+/// while, so the owner can move that trial into their account (ADR 014, 4).
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> Result<Response, CommandError> {
     let user = {
@@ -334,12 +364,21 @@ pub async fn login(
         .await
         .unwrap_or(false);
     let user = match user {
-        Some(u) if matches && u.active => u,
+        Some(u) if matches && u.active && !u.is_guest() => u,
         _ => return Err(CommandError::BadCredentials),
     };
 
     let token = new_token();
     let now = Utc::now();
+    let trial = match token_from(&headers) {
+        Some(guest_token) if user.role == Role::BusinessOwner => {
+            let mut conn = state.store.reader().await?;
+            crate::guests::moveable(&mut conn, &guest_token, now)
+                .await?
+                .map(|t| (guest_token, t))
+        }
+        _ => None,
+    };
     {
         let mut w = state.store.writer().await;
         sessions::delete_expired(&mut w, now).await?;
@@ -354,10 +393,22 @@ pub async fn login(
         )
         .await?;
     }
-    let mut response = Json(Me::from(&user)).into_response();
+    let mut me = Me::from(&user);
+    me.moveable_trial = trial.as_ref().map(|(_, t)| t.clone());
+    let mut response = Json(me).into_response();
     response
         .headers_mut()
-        .insert(SET_COOKIE, session_cookie(&token, SESSION_HOURS * 3600));
+        .append(SET_COOKIE, session_cookie(&token, SESSION_HOURS * 3600));
+    if let Some((guest_token, _)) = trial {
+        response.headers_mut().append(
+            SET_COOKIE,
+            named_cookie(
+                crate::guests::MOVE_COOKIE,
+                &guest_token,
+                crate::guests::GUEST_DAYS * 86_400,
+            ),
+        );
+    }
     Ok(response)
 }
 
@@ -383,9 +434,28 @@ pub async fn logout(
 }
 
 /// `GET /api/me`: the user every read answers as, and, while viewing as someone, who's really
-/// signed in.
-pub async fn me(user: CurrentUser) -> Json<Me> {
-    Json(Me::from(&user))
+/// signed in. For a guest, their trial; for an owner who was a guest in this browser a moment
+/// ago, the trial they could move in.
+pub async fn me(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    user: CurrentUser,
+) -> Result<Json<Me>, CommandError> {
+    let mut me = Me::from(&user);
+    let mut conn = state.store.reader().await?;
+    let now = Utc::now();
+    if user.0.is_guest() {
+        let expires = sessions::get(&mut conn, user.session())
+            .await?
+            .map_or(now, |s| s.expires_at);
+        me.guest = crate::guests::me_guest(&mut conn, &user.0, expires).await?;
+    } else if user.0.role == Role::BusinessOwner
+        && user.acting().is_none()
+        && let Some(token) = cookie(&headers, crate::guests::MOVE_COOKIE)
+    {
+        me.moveable_trial = crate::guests::moveable(&mut conn, &token, now).await?;
+    }
+    Ok(Json(me))
 }
 
 /// Starts a session for `user_id` and returns its `Set-Cookie` value. Sign-up (M12) uses this,
@@ -394,21 +464,71 @@ pub(crate) async fn start_session(
     state: &AppState,
     user_id: &str,
 ) -> Result<HeaderValue, CommandError> {
+    start_session_for(state, user_id, Duration::hours(SESSION_HOURS)).await
+}
+
+/// A guest's session (M20, ADR 014, 6): 7 days, moved on by their requests, so it's also the
+/// clock that ends an unused trial. Not the 12 hours a signed-in session gets, which would lock a
+/// guest out of their own trial overnight.
+pub(crate) async fn start_guest_session(
+    state: &AppState,
+    user_id: &str,
+) -> Result<HeaderValue, CommandError> {
+    start_session_for(state, user_id, Duration::days(crate::guests::GUEST_DAYS)).await
+}
+
+async fn start_session_for(
+    state: &AppState,
+    user_id: &str,
+    lasts: Duration,
+) -> Result<HeaderValue, CommandError> {
     let token = new_token();
     let now = Utc::now();
     let mut w = state.store.writer().await;
     sessions::delete_expired(&mut w, now).await?;
     sessions::insert(
         &mut w,
-        &Session::new(
-            token_hash(&token),
-            user_id.to_owned(),
-            now,
-            now + Duration::hours(SESSION_HOURS),
-        ),
+        &Session::new(token_hash(&token), user_id.to_owned(), now, now + lasts),
     )
     .await?;
-    Ok(session_cookie(&token, SESSION_HOURS * 3600))
+    Ok(session_cookie(&token, lasts.num_seconds()))
+}
+
+/// Moves a guest's session on to 7 days from `now`, and returns the cookie to send again so the
+/// browser keeps it as long. At most once an hour; between bumps the cookie is sent with what's
+/// left. Login state, so outside the pipeline (hard rule 6).
+pub(crate) async fn slide_guest_session(
+    state: &AppState,
+    token: &str,
+    now: chrono::DateTime<Utc>,
+) -> Result<HeaderValue, CommandError> {
+    let hash = token_hash(token);
+    let lasts = Duration::days(crate::guests::GUEST_DAYS);
+    let current = {
+        let mut conn = state.store.reader().await?;
+        sessions::get(&mut conn, &hash)
+            .await?
+            .map(|s| s.expires_at)
+    };
+    let Some(current) = current else {
+        return Ok(session_cookie("", 0));
+    };
+    let expires = if current < now + lasts - Duration::minutes(crate::guests::BUMP_EVERY_MINUTES) {
+        let mut w = state.store.writer().await;
+        acct_store::guests::extend_session(&mut w, &hash, now + lasts).await?;
+        now + lasts
+    } else {
+        current
+    };
+    Ok(session_cookie(token, (expires - now).num_seconds().max(0)))
+}
+
+/// When the last of a user's sessions ends.
+pub(crate) async fn latest_session_expiry(
+    conn: &mut acct_store::SqliteConnection,
+    user_id: &str,
+) -> Result<Option<chrono::DateTime<Utc>>, CommandError> {
+    Ok(acct_store::guests::latest_session_expiry(conn, user_id).await?)
 }
 
 #[cfg(test)]

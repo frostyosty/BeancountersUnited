@@ -102,6 +102,34 @@ pub enum IrdPayment {
     IncomeTax { income_year: i32 },
 }
 
+/// Where a guest's business comes from (M20, ADR 014): a file of the visitor's own, as
+/// `import_statement` takes it, or one of the three examples, which the server imports from its
+/// own copy so the browser never sends the bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
+pub enum GuestSource {
+    File {
+        file_name: String,
+        content_base64: String,
+    },
+    /// 1 to 3 (`GET /api/examples`).
+    Example(u8),
+}
+
+/// Why a guest's business was deleted (ADR 014, 6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export, rename_all = "snake_case")]
+pub enum ExpireWhy {
+    /// The guest hasn't been back for 7 days. The server's sweep.
+    Unused,
+    /// An example's 24 hours are up. The server's sweep.
+    ExampleFinished,
+    /// The guest pressed "Delete it now".
+    ByYou,
+}
+
 /// Every change to practice or client data (CLAUDE.md hard rule 6).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", content = "payload", rename_all = "snake_case")]
@@ -608,6 +636,59 @@ pub enum Command {
     /// off, users, invites, the owner's own choices, invoices and anything to do with IRD stay
     /// refused.
     AllowImpersonationChanges { reason: String },
+    /// A visitor starts a trial from the home page (M20, ADR 014): a guest user with no
+    /// credentials, and a business they own, set up from the file alone (named "Your business",
+    /// or the example's name; books from 1 April of the file's earliest income year; GST detected
+    /// from the lines, else assumed registered), with the file imported as `import_statement`
+    /// would. Only `POST /api/guest` submits it, before there's a session; it then starts a guest
+    /// session. Returns the business's id.
+    StartGuest { source: GuestSource },
+    /// A guest adds a business (ADR 014, 2): a fresh example, replacing the one they had, or
+    /// their first file of their own when they've only tried an example. Returns its id.
+    AddGuestBusiness { source: GuestSource },
+    /// A guest saves their work (ADR 014, 4): the same user gets `email` as its username, a name
+    /// and a password, and keeps every line, answer and log entry. `business_name` renames their
+    /// business from "Your business". Their example business, if any, is deleted. Only
+    /// `POST /api/guest/claim` submits it; it then starts an ordinary session. Returns the
+    /// business's id.
+    ClaimGuest {
+        email: String,
+        display_name: String,
+        password: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        business_name: Option<String>,
+    },
+    /// A signed-in owner who was a guest in this browser a moment ago moves that trial's business
+    /// into their account (ADR 014, 4). `token` is the guest session's, which `POST /api/guest/adopt`
+    /// reads from its cookie; it's redacted from the log. The guest user is retired and its
+    /// example business deleted. The business stays a business of its own, never merged into
+    /// another. Returns its id.
+    AdoptGuestBusiness { token: String },
+    /// Deletes an unsaved guest business and everything about it, and redacts its rows in the
+    /// log (ADR 014, 6). The server's sweep submits it for a guest who hasn't been back for 7 days
+    /// or an example whose 24 hours are up; a guest can for their own ("Delete it now"). When the
+    /// guest has no business left, their sessions end and their user is retired.
+    ExpireGuest { client_id: String, why: ExpireWhy },
+    /// Sets whether a business is GST registered, from when and how often it files (ADR 014, 3).
+    /// A browser sends `source: owner` only; `detected` and `assumed` are the server's own, set
+    /// inside the commands that set a guest's business up or import its statements, and `ird`
+    /// is IRD's (M14). An owner can't contradict IRD. Lines and gap journals whose posting
+    /// changes are reversed and reposted in the same command.
+    SetGstRegistration {
+        client_id: String,
+        registered: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional, type = "string")]
+        registered_from: Option<NaiveDate>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(
+            optional,
+            type = "\"monthly\" | \"two_monthly_odd\" | \"two_monthly_even\" | \"six_monthly\""
+        )]
+        frequency: Option<acct_core::tax::gst::GstFrequency>,
+        source: acct_store::guests::GstSource,
+    },
 }
 
 impl Command {
@@ -689,6 +770,12 @@ impl Command {
             Command::StartImpersonation { .. } => "start_impersonation",
             Command::EndImpersonation { .. } => "end_impersonation",
             Command::AllowImpersonationChanges { .. } => "allow_impersonation_changes",
+            Command::StartGuest { .. } => "start_guest",
+            Command::AddGuestBusiness { .. } => "add_guest_business",
+            Command::ClaimGuest { .. } => "claim_guest",
+            Command::AdoptGuestBusiness { .. } => "adopt_guest_business",
+            Command::ExpireGuest { .. } => "expire_guest",
+            Command::SetGstRegistration { .. } => "set_gst_registration",
         }
     }
 
@@ -729,6 +816,20 @@ impl Command {
                 |bytes| crate::invoices::sha256_hex(&bytes),
             );
             payload["content_base64"] = format!("sha256:{sha256}").into();
+        }
+        // A guest's own file, likewise (M20): the log never holds a visitor's bank statement.
+        if let Command::StartGuest {
+            source: GuestSource::File { content_base64, .. },
+        }
+        | Command::AddGuestBusiness {
+            source: GuestSource::File { content_base64, .. },
+        } = self
+        {
+            let sha256 = crate::business::decode_base64(content_base64).map_or_else(
+                || crate::invoices::sha256_hex(content_base64.as_bytes()),
+                |bytes| crate::invoices::sha256_hex(&bytes),
+            );
+            payload["source"]["file"]["content_base64"] = format!("sha256:{sha256}").into();
         }
         payload
     }

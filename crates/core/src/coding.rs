@@ -326,6 +326,23 @@ pub fn coded_lines(
     Ok(out.0)
 }
 
+/// `coding` with nothing claimed for GST: every purchase's GST code becomes `none` (ADR 014, 3).
+/// While a business's GST registration is only assumed, codings are posted this way, so the GST
+/// in every period is output tax only, never a refund, and assuming registration always gives a
+/// figure at least as high as not being registered. Deposits keep their codes.
+pub fn without_input_tax(coding: &Coding) -> Coding {
+    let mut c = coding.clone();
+    if let Coding::Out(
+        WithdrawalCoding::Expense { gst, .. }
+        | WithdrawalCoding::AssetPurchase { gst, .. }
+        | WithdrawalCoding::PartPrivate { gst, .. },
+    ) = &mut c
+    {
+        *gst = GstCode::None;
+    }
+    c
+}
+
 /// `amount × business_bp ÷ 10,000`, rounded half away from zero to cents. The private share is
 /// the rest, so the two always foot to the line.
 pub fn business_share(amount: Money, business_bp: u32) -> Result<Money, CodingError> {

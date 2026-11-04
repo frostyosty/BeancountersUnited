@@ -149,6 +149,10 @@ pub async fn post_presence(
             None => None,
         };
         let is_you = u.id == real.id;
+        // A guest (M20) shows to themselves and to nobody else.
+        if u.is_guest() && !is_you {
+            continue;
+        }
         let business_id = business_id.filter(|b| visible.shows(Some(b)));
         let subject_role = person.as_ref().map_or(u.role, |p| p.role);
         let shown = is_you

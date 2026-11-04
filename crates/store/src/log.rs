@@ -26,6 +26,11 @@ pub struct LoggedCommand {
     /// The person an overseer was viewing as when the command was made (M19, ADR 013). `user_id`
     /// stays the overseer. `None` for every command made as oneself.
     pub acting_as: Option<String>,
+    /// Set when the row was redacted because the unclaimed guest business it's about was deleted
+    /// (M20, ADR 014, 6): the `seq` of the command that deleted it. Its payload, result details
+    /// and changes are gone; Changes and the sync feed skip it.
+    #[sqlx(default)]
+    pub redacted_seq: Option<i64>,
 }
 
 /// The newest `seq` in the log, or 0 if it's empty.
@@ -124,4 +129,13 @@ pub async fn before(
     .bind(limit)
     .fetch_all(conn)
     .await?)
+}
+
+/// How many commands are about one client: what a deleted trial's entry counts (M20).
+pub async fn count_for_client(conn: &mut SqliteConnection, client_id: &str) -> Result<i64> {
+    let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM command_log WHERE client_id = ?")
+        .bind(client_id)
+        .fetch_one(conn)
+        .await?;
+    Ok(n)
 }

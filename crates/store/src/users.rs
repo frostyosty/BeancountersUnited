@@ -1,5 +1,6 @@
 //! Users. Their login sessions are in `sessions`.
 
+use chrono::{DateTime, Utc};
 use sqlx::{FromRow, SqliteConnection};
 
 use crate::{Result, parse_enum};
@@ -41,6 +42,19 @@ pub struct User {
     pub role: Role,
     pub active: bool,
     pub created_seq: i64,
+    /// When this user started as a guest (M20, ADR 014): someone trying it on the home page with
+    /// no sign-up. `None` for everyone who signed up or was added.
+    pub guest_since: Option<DateTime<Utc>>,
+    /// When a guest saved their work, giving the account an email and password.
+    pub claimed_at: Option<DateTime<Utc>>,
+}
+
+impl User {
+    /// A guest who hasn't saved their work yet: no credentials, and nobody else sees their
+    /// business.
+    pub fn is_guest(&self) -> bool {
+        self.guest_since.is_some() && self.claimed_at.is_none()
+    }
 }
 
 #[derive(FromRow)]
@@ -52,6 +66,10 @@ struct Row {
     role: String,
     active: bool,
     created_seq: i64,
+    #[sqlx(default)]
+    guest_since: Option<DateTime<Utc>>,
+    #[sqlx(default)]
+    claimed_at: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<Row> for User {
@@ -65,14 +83,17 @@ impl TryFrom<Row> for User {
             role: parse_enum(&r.role)?,
             active: r.active,
             created_seq: r.created_seq,
+            guest_since: r.guest_since,
+            claimed_at: r.claimed_at,
         })
     }
 }
 
 pub async fn insert(conn: &mut SqliteConnection, user: &User) -> Result<()> {
     sqlx::query(
-        "INSERT INTO users (id, username, display_name, password_hash, role, active, created_seq)
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (id, username, display_name, password_hash, role, active, created_seq,
+                            guest_since, claimed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&user.id)
     .bind(&user.username)
@@ -81,6 +102,8 @@ pub async fn insert(conn: &mut SqliteConnection, user: &User) -> Result<()> {
     .bind(crate::enum_text(&user.role))
     .bind(user.active)
     .bind(user.created_seq)
+    .bind(user.guest_since)
+    .bind(user.claimed_at)
     .execute(conn)
     .await?;
     Ok(())
@@ -147,4 +170,39 @@ pub async fn count_active(conn: &mut SqliteConnection, role: Role) -> Result<i64
         .fetch_one(conn)
         .await?;
     Ok(n)
+}
+
+/// A guest saves their work (M20, `claim_guest`): the same user gets an email as its username, a
+/// name, a password and `claimed_at`. The caller has checked the username is free.
+pub async fn claim(
+    conn: &mut SqliteConnection,
+    id: &str,
+    username: &str,
+    display_name: &str,
+    password_hash: &str,
+    at: DateTime<Utc>,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE users SET username = ?, display_name = ?, password_hash = ?, claimed_at = ?
+         WHERE id = ? AND guest_since IS NOT NULL AND claimed_at IS NULL",
+    )
+    .bind(username)
+    .bind(display_name)
+    .bind(password_hash)
+    .bind(at)
+    .bind(id)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+/// Every active guest who hasn't saved their work, oldest first.
+pub async fn guests(conn: &mut SqliteConnection) -> Result<Vec<User>> {
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT * FROM users WHERE guest_since IS NOT NULL AND claimed_at IS NULL AND active
+         ORDER BY created_seq, id",
+    )
+    .fetch_all(conn)
+    .await?;
+    rows.into_iter().map(User::try_from).collect()
 }

@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router";
 import { SiteHeader } from "../components/SiteHeader";
+import { ExampleLinks, ExamplesPanel } from "../components/TryIt/ExamplesPanel";
+import { StepPlaceholder, UploadResult } from "../components/TryIt/StepState";
+import { UploadDrop } from "../components/TryIt/UploadDrop";
+import { useExamples, useIsDesktop } from "../components/TryIt/useExamples";
+import { useTryIt } from "../components/TryIt/useTryIt";
 import { Icon } from "../lib/icons";
 import { LoginPage } from "./LoginPage";
 import styles from "./HomePage.module.css";
@@ -64,6 +69,16 @@ export function HomePage() {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
   }, [hash]);
 
+  const examples = useExamples();
+  const tryIt = useTryIt(examples);
+  const desktop = useIsDesktop();
+
+  // The hero ticket's click. Agent 5 swaps the amount for Example 1's real figure.
+  const loadHeroExample = () => {
+    tryIt.useExample(1);
+    document.getElementById("features")?.scrollIntoView?.({ behavior: "smooth" });
+  };
+
   return (
     <div className={styles.site}>
       <SiteHeader />
@@ -77,13 +92,13 @@ export function HomePage() {
               Upload your bank statements, see what you'd owe if you filed today, then cut it down. Your accountant gets
               proper books underneath.
             </p>
-            <div className={styles.ticket} aria-label="Example">
+            <button type="button" className={styles.ticket} onClick={loadHeroExample}>
               <span className={styles.ticketLabel}>Example: tax if you filed today</span>
               <span className={styles.ticketAmount}>$4,820</span>
               <span className={styles.ticketSave}>
                 <Icon name="home.tax" fallback="💰" /> Save tax could bring this down
               </span>
-            </div>
+            </button>
           </div>
           <div className={styles.heroCard}>
             <LoginPage id="signin" />
@@ -93,27 +108,39 @@ export function HomePage() {
         <section id="features" className={styles.section}>
           <h2 className={styles.sectionTitle}>From bank statement to IRD</h2>
           <p className={styles.sectionLede}>Four steps, hardly any clicking.</p>
-          <ol className={styles.flow}>
-            {steps.map((s) => (
-              <li key={s.title} className={styles.flowItem}>
-                <div className={styles.feature}>
-                  <span className={styles.featureIcon}>
-                    <Icon name={s.icon} fallback={s.fallback} />
-                  </span>
-                  <h3>{s.title}</h3>
-                  <p>{s.body}</p>
-                </div>
-                {s.next && (
-                  <div className={styles.arrow}>
-                    <span aria-hidden="true" className={styles.arrowGlyph}>
-                      ↓
+          <div className={styles.tryLayout}>
+            <ol className={styles.flow}>
+              {steps.map((s, i) => (
+                <li key={s.title} className={styles.flowItem}>
+                  <div className={styles.feature}>
+                    <span className={styles.featureIcon}>
+                      <Icon name={s.icon} fallback={s.fallback} />
                     </span>
-                    <span>{s.next}</span>
+                    <h3>{s.title}</h3>
+                    <p>{s.body}</p>
+                    {i === 0 ? (
+                      <>
+                        {!desktop && <ExampleLinks examples={examples} onUse={tryIt.useExample} />}
+                        <UploadDrop onExample={tryIt.useExample} onFile={tryIt.useFile} />
+                        <UploadResult state={tryIt.state} />
+                      </>
+                    ) : (
+                      <StepPlaceholder state={tryIt.state} />
+                    )}
                   </div>
-                )}
-              </li>
-            ))}
-          </ol>
+                  {s.next && (
+                    <div className={styles.arrow}>
+                      <span aria-hidden="true" className={styles.arrowGlyph}>
+                        ↓
+                      </span>
+                      <span>{s.next}</span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+            {desktop && examples.length > 0 && <ExamplesPanel examples={examples} onUse={tryIt.useExample} />}
+          </div>
         </section>
 
         <section id="accountants" className={styles.section}>

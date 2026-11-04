@@ -5,7 +5,7 @@ from config import REGISTRY_FILE, REGISTRY_VARIABLE, REPO_DIR, SCAN_DIRS, SCAN_E
 from registry import REGISTRY_LOCK, emoji_from_key, emoji_key, emoji_name, load_registry, parse_key, registry_response, save_registry
 
 # "Find emoji" scans SCAN_DIRS for emoji the UI shows. An image saved for one goes in the registry's
-# "emoji" group (emoji.1f4ac for 💬), and the codebase swaps it in (here icon_manager.js, on every page).
+# "emoji" group (emoji.1f4ac for 💬), and the codebase swaps it in (here <Emoji> in apps/web/src/lib/icons.tsx).
 # Colour-emoji characters (Emoji_Presentation) below U+10000; other symbols there (✕ ▾ ⚙) are
 # plain text glyphs unless U+FE0F follows them.
 _EMOJI_BMP = '⌚⌛⏩-⏬⏰⏳◽◾☔☕♈-♓♿⚓⚡⚪⚫⚽⚾⛄⛅⛎⛔⛪⛲⛳⛵⛺⛽✅✊✋✨❌❎❓-❕❗➕-➗➰➿⬛⬜⭐⭕'

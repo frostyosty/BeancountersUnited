@@ -24,6 +24,7 @@ pub mod bank;
 pub mod charts;
 pub mod clients;
 pub mod coding;
+pub mod guests;
 pub mod invoices;
 pub mod journals;
 pub mod log;
@@ -73,6 +74,11 @@ impl Store {
             .busy_timeout(Duration::from_secs(5));
         let mut writer = options.connect().await?;
         MIGRATOR.run(&mut writer).await?;
+        // Deleted rows are overwritten in the file, not left in free pages: an expired guest's
+        // statement is gone from the database, not just unlinked (ADR 014, 6).
+        sqlx::query("PRAGMA secure_delete = ON")
+            .execute(&mut writer)
+            .await?;
         let readers = SqlitePoolOptions::new()
             .max_connections(4)
             .connect_with(options.read_only(true))

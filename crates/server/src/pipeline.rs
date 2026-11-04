@@ -32,6 +32,7 @@ use crate::business;
 use crate::commands::{Accepted, Command, CommandEnvelope, Via};
 use crate::error::CommandError;
 use crate::finalise;
+use crate::guests;
 use crate::history;
 use crate::impersonation;
 use crate::invoices;
@@ -175,9 +176,16 @@ async fn run(
         if prev.kind != command.kind() || !same_payload {
             return Err(CommandError::IdReused(id));
         }
+        // A row redacted when its trial was deleted (M20) has no result left to give.
+        if prev.redacted_seq.is_some() {
+            return Err(CommandError::IdReused(id));
+        }
         return serde_json::from_str(&prev.result)
             .map_err(|e| CommandError::Store(acct_store::StoreError::Corrupt(e.to_string())));
     }
+
+    // A guest who hasn't saved their work (M20, ADR 014) may do only what `crate::guests` allows.
+    guests::refuse_for_guest(&mut tx, actor, &command).await?;
 
     // The one access check for commands (crate::access): role, and which businesses it touches.
     let touched = access::check_command(&mut tx, actor, &command).await?;
@@ -192,7 +200,17 @@ async fn run(
     let before = history::before(&mut tx, &command, &touched).await?;
     let effect = match impersonation::apply(&mut tx, actor, session, &command, at).await? {
         Some(effect) => effect,
-        None => apply(&mut tx, actor, &command, seq, at.date_naive()).await?,
+        None => match guests::apply(&mut tx, actor, &command, seq, at).await? {
+            Some(effect) => effect,
+            None => apply(&mut tx, actor, &command, seq, at.date_naive()).await?,
+        },
+    };
+    // GST detection from the statements, and the limits on what a guest holds (M20).
+    guests::after_apply(&mut tx, &command, &effect).await?;
+    // `start_guest` is the visitor's own doing, though there was no user until it ran.
+    let user_id = match guests::logged_user(&mut tx, &command, &effect).await? {
+        Some(id) => Some(id),
+        None => actor.user_id.clone(),
     };
     let changes = history::after(&mut tx, &command, before, effect.client_id.as_deref()).await?;
     // An upload checks itself against the books (M18): read-only, in the same transaction.
@@ -215,7 +233,7 @@ async fn run(
             kind: command.kind().to_owned(),
             payload: payload.to_string(),
             result: serde_json::to_string(&accepted).expect("results serialise"),
-            user_id: actor.user_id.clone(),
+            user_id,
             client_id: effect.client_id,
             client_year_id: effect.client_year_id,
             at,
@@ -227,6 +245,7 @@ async fn run(
                 Command::StartImpersonation { user_id, .. } => Some(user_id.clone()),
                 _ => actor.acting_as.as_ref().map(|a| a.user_id.clone()),
             },
+            redacted_seq: None,
         },
     )
     .await?;
@@ -270,6 +289,13 @@ async fn apply(
         Command::StartImpersonation { .. }
         | Command::EndImpersonation { .. }
         | Command::AllowImpersonationChanges { .. } => Err(CommandError::Forbidden),
+        // `run` hands these to `crate::guests` (M20).
+        Command::StartGuest { .. }
+        | Command::AddGuestBusiness { .. }
+        | Command::ClaimGuest { .. }
+        | Command::AdoptGuestBusiness { .. }
+        | Command::ExpireGuest { .. }
+        | Command::SetGstRegistration { .. } => Err(CommandError::Forbidden),
 
         Command::SetUpBusiness {
             name,
@@ -1839,6 +1865,8 @@ pub(crate) async fn insert_user(
             role,
             active: true,
             created_seq: seq,
+            guest_since: None,
+            claimed_at: None,
         },
     )
     .await?;
@@ -2159,6 +2187,8 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::ResolveDuplicate { .. }
         | C::ConfirmSupplyInfo { .. }
         | C::RemoveStatement { .. }
+        // Reposts deposits with or without their GST split (M20).
+        | C::SetGstRegistration { .. }
         // A finalised year's statements are its snapshot, and its layout is part of it.
         | C::MoveYearLayout { .. }
         // Adding a year before a finalised one would give it opening balances.
@@ -2239,5 +2269,12 @@ pub fn lock_rule(command: &Command) -> Lock {
         | C::AllowImpersonationChanges { .. } => {
             Lock::Allowed("who a login session is viewing as, not client data")
         }
+        C::StartGuest { .. } | C::AddGuestBusiness { .. } => Lock::Allowed(NEW_CLIENT),
+        C::ClaimGuest { .. } | C::AdoptGuestBusiness { .. } => {
+            Lock::Allowed("who owns a trial, not its figures")
+        }
+        C::ExpireGuest { .. } => Lock::Allowed(
+            "deletes an unsaved trial, which nobody else can see, so no year of it is finalised",
+        ),
     }
 }

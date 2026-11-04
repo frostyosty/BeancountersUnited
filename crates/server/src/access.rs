@@ -18,6 +18,11 @@
 //! Something a user can't see is reported as not found, the same as if it didn't exist, naming
 //! only the id they sent. Something they can see but their role can't do is forbidden.
 //!
+//! A guest who hasn't saved their work (M20, ADR 014) is a business owner like any other here, but
+//! their business is theirs alone: it's not found for anyone else, an overseer included, and it's
+//! left out of every listing. What a guest may do is decided before any of this, in
+//! `crate::guests`: commands in its refusal step, routes in [`guard`].
+//!
 //! While an overseer views as someone (M19, ADR 013), every rule here runs as that person, the
 //! effective identity ([`Actor::effective`]), so the overseer sees exactly what they'd see. The
 //! three impersonation commands are the exception: they're about the overseer's own session, so
@@ -90,6 +95,9 @@ pub enum Target {
     Own(OwnRef),
     /// Viewing as someone (M19): starting, allowing changes, ending. Overseers only.
     Impersonation,
+    /// The server itself (as [`Target::Server`]), or else, for a signed-in user, this client
+    /// (M20): ending a trial, setting GST registration.
+    ServerOrClient(ClientRef),
 }
 
 /// Something that belongs to one user, as the request named it.
@@ -190,7 +198,10 @@ async fn check_as(
             true
         }
         Target::Impersonation => role == Role::Overseer,
-        Target::Client(c) => {
+        Target::ServerOrClient(_) if !signed_in => {
+            matches!(role, Role::PracticeAdmin | Role::Overseer)
+        }
+        Target::ServerOrClient(c) | Target::Client(c) => {
             if !can_see(conn, me, &c.client_id).await? {
                 let (entity, id) = &c.named;
                 return Err(CommandError::not_found(entity, id));
@@ -214,6 +225,13 @@ async fn can_see(
     if clients::get(conn, client_id).await?.is_none() {
         return Ok(false);
     }
+    // An unsaved trial is its guest's alone (ADR 014, 1). The server's own work isn't a person's.
+    if let Some(guest) = acct_store::guests::guest_owner(conn, client_id).await? {
+        return Ok(match me.user_id {
+            Some(id) => id == guest && !me.acted_as,
+            None => matches!(me.role, Role::Overseer | Role::PracticeAdmin),
+        });
+    }
     let row = match me.user_id {
         Some(user_id) => tenancy::access(conn, client_id, user_id).await?,
         None => None,
@@ -233,11 +251,16 @@ pub struct Visible {
     practice: bool,
     hidden: BTreeSet<String>,
     shared: BTreeSet<String>,
+    /// Unsaved trials that aren't this user's (M20): hidden from everyone, overseers included.
+    trials: BTreeSet<String>,
 }
 
 impl Visible {
     /// Whether an entry about `client_id` (or about no client, such as a practice default) shows.
     pub fn shows(&self, client_id: Option<&str>) -> bool {
+        if client_id.is_some_and(|c| self.trials.contains(c)) {
+            return false;
+        }
         if self.everything {
             return true;
         }
@@ -257,7 +280,14 @@ pub async fn visible(conn: &mut SqliteConnection, actor: &Actor) -> Result<Visib
         None => Vec::new(),
     };
     let practice = me.role.is_practice();
+    let trials = acct_store::guests::guest_businesses(conn)
+        .await?
+        .into_iter()
+        .filter(|b| me.acted_as || me.user_id != Some(b.user_id.as_str()))
+        .map(|b| b.client_id)
+        .collect();
     Ok(Visible {
+        trials,
         everything: me.role == Role::Overseer,
         practice,
         hidden: if practice {
@@ -297,7 +327,7 @@ pub async fn check_command(
     let mut clients: Vec<String> = Vec::new();
     for target in &targets {
         check_as(conn, me, target, need).await?;
-        if let Target::Client(c) = target
+        if let Target::Client(c) | Target::ServerOrClient(c) = target
             && !clients.contains(&c.client_id)
         {
             clients.push(c.client_id.clone());
@@ -472,6 +502,17 @@ async fn command_targets(
         C::StartImpersonation { .. }
         | C::EndImpersonation { .. }
         | C::AllowImpersonationChanges { .. } => (Need::Read, vec![Target::Impersonation]),
+
+        // Guests (M20, ADR 014). Starting is like signing up: no user yet. The others need a
+        // guest, or the server, which `crate::guests` checks as it applies them.
+        C::StartGuest { .. } => (Need::Read, vec![Target::SignUp]),
+        C::AddGuestBusiness { .. } | C::ClaimGuest { .. } | C::AdoptGuestBusiness { .. } => {
+            (Need::Owner, vec![Target::SignedIn])
+        }
+        C::ExpireGuest { client_id, .. } | C::SetGstRegistration { client_id, .. } => (
+            Need::Owner,
+            vec![Target::ServerOrClient(ClientRef::direct(client_id))],
+        ),
     })
 }
 
@@ -555,8 +596,11 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
     let get = *method == Method::GET;
     let post = *method == Method::POST;
     Some(match path {
-        "/api/health" if get => R::Public,
+        "/api/health" | "/api/examples" if get => R::Public,
         "/api/login" | "/api/logout" | "/api/signup" if post => R::Public,
+        // Trying it with no sign-up (M20): starting is public; saving and moving need a session.
+        "/api/guest" if post => R::Public,
+        "/api/guest/claim" | "/api/guest/adopt" if post => R::SignedIn,
         "/api/me" if get => R::SignedIn,
         "/api/invoices/draft" | "/api/invoices/templates" if get => R::OwnInvoices,
         "/api/invoices/templates/{id}" if get => R::InvoiceTemplate,
@@ -654,6 +698,8 @@ pub fn while_acting(method: &Method, path: &str, rule: RouteRule) -> WhileActing
         | "/api/years/{id}/tb-import/preview" => W::Allowed,
         // Sends the business's lines to the AI provider and stores what comes back.
         "/api/businesses/{id}/ai-suggestions" => W::NeedsChanges,
+        // A visitor's own trial (M20): nobody views as a guest, and an owner moves theirs.
+        "/api/guest/claim" | "/api/guest/adopt" => W::Refused("save or move a trial"),
         _ => W::Refused("do this"),
     }
 }
@@ -696,6 +742,15 @@ pub async fn guard(State(state): State<AppState>, request: Request, next: Next) 
         if let Err(e) = check_while_acting(&parts.method, &path, rule, &user) {
             return e.into_response();
         }
+        // A guest (M20) uses only their trial's routes, and each request moves their 7 days on.
+        let guest_token = if user.0.is_guest() && user.acting().is_none() {
+            if let Err(e) = crate::guests::check_route(&parts.method, &path) {
+                return e.into_response();
+            }
+            crate::auth::token_from(&parts.headers)
+        } else {
+            None
+        };
         let id = match RawPathParams::from_request_parts(&mut parts, &state).await {
             Ok(params) => params
                 .iter()
@@ -705,6 +760,24 @@ pub async fn guard(State(state): State<AppState>, request: Request, next: Next) 
         };
         if let Err(e) = check_route(&state, &user.actor(), rule, id.as_deref()).await {
             return e.into_response();
+        }
+        if let Some(token) = guest_token {
+            let mut response = next.run(Request::from_parts(parts, body)).await;
+            match crate::auth::slide_guest_session(&state, &token, chrono::Utc::now()).await {
+                Ok(cookie) => {
+                    // Saving their work sends a new session's cookie; that one wins.
+                    if !response
+                        .headers()
+                        .contains_key(axum::http::header::SET_COOKIE)
+                    {
+                        response
+                            .headers_mut()
+                            .insert(axum::http::header::SET_COOKIE, cookie);
+                    }
+                }
+                Err(e) => return e.into_response(),
+            }
+            return response;
         }
     }
     next.run(Request::from_parts(parts, body)).await

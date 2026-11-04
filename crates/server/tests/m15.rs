@@ -705,6 +705,20 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         "start_impersonation" => Allowed(json!({ "user_id": new_id(), "reason": "X" })),
         "end_impersonation" => Allowed(json!({})),
         "allow_impersonation_changes" => Allowed(json!({ "reason": "X" })),
+        // Guests (M20): a trial is a new business nobody else sees, so it has no finalised year.
+        // Not submitted here; `tests/guests.rs` covers them.
+        "start_guest" | "add_guest_business" => {
+            NotSubmitted(json!({ "source": { "example": 1 } }))
+        }
+        "claim_guest" => NotSubmitted(json!({
+            "email": "x@example.nz", "display_name": "X", "password": "correct horse battery",
+        })),
+        "adopt_guest_business" => NotSubmitted(json!({ "token": "x" })),
+        "expire_guest" => NotSubmitted(json!({ "client_id": biz, "why": "by_you" })),
+        // Registering reposts the year's deposits with their GST split.
+        "set_gst_registration" => Refused(json!({
+            "client_id": biz, "registered": true, "source": "owner",
+        })),
         other => panic!("tests/m15.rs has no lock walk case for the new command {other}; add one"),
     }
 }

@@ -106,6 +106,8 @@ pub const ALLOWED: &[&str] = &[
     "resolve_duplicate",
     "confirm_supply_info",
     "record_suggestions",
+    // An owner's answer to "Are you GST registered?" (M20); refused for the server's sources.
+    "set_gst_registration",
 ];
 
 /// The two session commands, allowed while acting even with changes off.
@@ -158,6 +160,12 @@ pub const NEVER: &[(&str, &str)] = &[
     ("start_impersonation", "view as a second person"),
     ("initialise", "set up the server"),
     ("sign_up", "sign up"),
+    // Guests (M20, ADR 014): nobody views as a guest, and these are a visitor's own.
+    ("start_guest", "start a trial"),
+    ("add_guest_business", "start a trial"),
+    ("claim_guest", "save a trial"),
+    ("adopt_guest_business", "move a trial into an account"),
+    ("expire_guest", "delete a trial"),
 ];
 
 /// Where a command kind stands while acting.
@@ -201,13 +209,15 @@ pub fn is_live(since: DateTime<Utc>, now: DateTime<Utc>) -> bool {
 }
 
 /// Whether `real` may act as `person` (ADR 013, 1): an overseer, as an active user who isn't an
-/// overseer (so never themselves).
+/// overseer (so never themselves), nor a guest who hasn't saved their work (M20, ADR 014): nobody
+/// looks at a trial.
 pub fn may_act_as(real: &User, person: &User) -> bool {
     real.role == Role::Overseer
         && real.active
         && person.active
         && person.role != Role::Overseer
         && person.id != real.id
+        && !person.is_guest()
 }
 
 /// "You're viewing as Sam Staff, read-only": a write while changes are off.

@@ -51,6 +51,19 @@ pub enum CommandError {
         code: &'static str,
         message: String,
     },
+    /// Refused because the user is a guest who hasn't saved their work (M20, ADR 014): "Save your
+    /// work first to ...". `code` is `guest`, or `example` for something an example can't take.
+    Guest {
+        code: &'static str,
+        message: String,
+    },
+    /// Refused by an abuse limit (ADR 014, 8): try again after `retry_after_secs`, sent as
+    /// `Retry-After`.
+    Limited {
+        code: &'static str,
+        message: String,
+        retry_after_secs: u64,
+    },
 }
 
 impl From<StoreError> for CommandError {
@@ -99,7 +112,10 @@ impl CommandError {
             CommandError::Unauthenticated | CommandError::BadCredentials => {
                 StatusCode::UNAUTHORIZED
             }
-            CommandError::Forbidden | CommandError::Impersonating { .. } => StatusCode::FORBIDDEN,
+            CommandError::Forbidden
+            | CommandError::Impersonating { .. }
+            | CommandError::Guest { .. } => StatusCode::FORBIDDEN,
+            CommandError::Limited { .. } => StatusCode::TOO_MANY_REQUESTS,
             CommandError::NotFound { .. } => StatusCode::NOT_FOUND,
             CommandError::IdReused(_) => StatusCode::CONFLICT,
             CommandError::Invalid { .. } => StatusCode::UNPROCESSABLE_ENTITY,
@@ -138,7 +154,18 @@ impl CommandError {
                 message,
                 details,
             } => (*code, message.clone(), details.clone()),
-            CommandError::Impersonating { code, message } => (*code, message.clone(), Value::Null),
+            CommandError::Impersonating { code, message } | CommandError::Guest { code, message } => {
+                (*code, message.clone(), Value::Null)
+            }
+            CommandError::Limited {
+                code,
+                message,
+                retry_after_secs,
+            } => (
+                *code,
+                message.clone(),
+                json!({ "retry_after_secs": retry_after_secs }),
+            ),
             CommandError::Store(e) => {
                 tracing::error!("store error: {e}");
                 (
@@ -158,6 +185,16 @@ impl CommandError {
 
 impl IntoResponse for CommandError {
     fn into_response(self) -> Response {
-        (self.status(), Json(self.body())).into_response()
+        let mut response = (self.status(), Json(self.body())).into_response();
+        if let CommandError::Limited {
+            retry_after_secs, ..
+        } = self
+        {
+            response.headers_mut().insert(
+                axum::http::header::RETRY_AFTER,
+                axum::http::HeaderValue::from(retry_after_secs),
+            );
+        }
+        response
     }
 }

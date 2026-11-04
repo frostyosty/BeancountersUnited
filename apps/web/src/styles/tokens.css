@@ -80,6 +80,17 @@
     0 1px 3px light-dark(rgb(16 24 40 / 0.05), rgb(0 0 0 / 0.3)), 0 8px 24px light-dark(rgb(16 24 40 / 0.08), rgb(0 0 0 / 0.35));
   --shadow-3: 0 24px 64px light-dark(rgb(8 20 45 / 0.28), rgb(0 0 0 / 0.6));
   --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+
+  /* Paper: statements and example cards look the same in light and dark. */
+  --paper: #fffdf8;
+  --paper-text: #1d2433;
+  --paper-muted: #6b6f7a;
+  --paper-border: #d9d4c5;
+  --paper-rule: #e6e1d2;
+  --paper-in: #1a6b3c;
+  --paper-out: #a3302a;
+  --paper-tag: #e8efff;
+  --paper-tag-text: #28407a;
 }
 
 :root[data-theme="light"] {

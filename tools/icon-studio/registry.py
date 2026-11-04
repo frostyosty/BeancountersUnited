@@ -10,7 +10,9 @@ MAX_PICK = 24
 
 def load_registry():
     with open(REGISTRY_FILE, encoding='utf-8') as f:
-        return json.loads(f.read().split('=', 1)[1].strip().rstrip(';'))
+        text = f.read()
+    # A .json registry is plain JSON; a .js one sets REGISTRY_VARIABLE to a JSON object.
+    return json.loads(text if REGISTRY_FILE.endswith('.json') else text.split('=', 1)[1].strip().rstrip(';'))
 
 
 def save_registry(registry):
@@ -26,7 +28,7 @@ def parse_key(key):
 
 
 def emoji_key(emoji):
-    """The registry name for an emoji: its code points without U+FE0F, as icon_manager.js reads them."""
+    """The registry name for an emoji: its code points without U+FE0F, as icons.tsx reads them."""
     return '_'.join(f'{ord(c):x}' for c in emoji if c != '️')
 
 

@@ -916,5 +916,35 @@
       "type": "emoji",
       "value": "🔔"
     }
+  },
+  "tryit": {
+    "example": {
+      "type": "emoji",
+      "value": "🧾"
+    },
+    "drop": {
+      "type": "emoji",
+      "value": "📥"
+    },
+    "file": {
+      "type": "emoji",
+      "value": "📂"
+    },
+    "privacy": {
+      "type": "emoji",
+      "value": "🔒"
+    },
+    "use": {
+      "type": "emoji",
+      "value": "✅"
+    },
+    "raw": {
+      "type": "emoji",
+      "value": "📄"
+    },
+    "statement": {
+      "type": "emoji",
+      "value": "🏦"
+    }
   }
 }

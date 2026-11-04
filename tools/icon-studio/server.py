@@ -1,4 +1,7 @@
 """Icon Studio's server: the page in page/, the codebase's icons, and the routes that change them."""
+import sys
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"): _s.reconfigure(encoding="utf-8", errors="replace")
 import json, mimetypes, os, sys, urllib.parse
 sys.dont_write_bytecode = True  # no __pycache__ in a folder meant to be copied into other codebases
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -141,7 +144,7 @@ if __name__ == '__main__':
     else:
         print('First run: open the page to tell Icon Studio where your codebase keeps its icons.')
     server = ThreadingHTTPServer(('', PORT), StudioHandler)
-    print(f"🎨 logOS Icon Studio running at http://localhost:{PORT}")
+    print(f"🎨 acct Icon Studio running at http://localhost:{PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

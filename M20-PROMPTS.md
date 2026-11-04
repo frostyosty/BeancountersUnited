@@ -100,6 +100,26 @@ Run `make check`.
 Don't commit.
 ```
 
+**Agent 3 progress (paused 2026-11-05, uncommitted in the tree). A new session: read this, then carry on from "Left".**
+
+Done (compiles, clippy clean; the whole existing suite passed before the last small edit to `auth.rs` login):
+- `crates/store/migrations/0014_guests.sql`; `crates/store/src/guests.rs` (flags, `set_gst`, guest businesses, holding/totals, `delete_business`, `redact_log`, sessions helpers, `rename_client`, `move_owner`, `retire_guest`); `users.rs` gained `guest_since`, `claimed_at`, `is_guest()`, `claim`, `guests`; `log.rs` gained `redacted_seq` and `count_for_client`; `PRAGMA secure_delete = ON` on the writer.
+- Core: `bank::ird_kind`/`IrdKind`, `tax::gst::detect_registration` (+ `DetectLine`, `GstDetection`, `DEFAULT_FREQUENCY`), `coding::without_input_tax`, with unit tests.
+- `commands.rs`: `start_guest`, `add_guest_business`, `claim_guest`, `adopt_guest_business` (decision 4 B), `expire_guest`, `set_gst_registration`; `GuestSource`, `ExpireWhy`; file bytes hashed in the log. `error.rs`: `Guest` (403) and `Limited` (429 + `Retry-After`).
+- `crates/server/src/guests.rs`: the commands, `GUEST_ALLOWED`/`GUEST_REFUSED`, the refusal step, route allow-list, GST detection after uploads (`redetect`), per-guest limits, in-memory per-address/per-minute `Limits` (in `AppState.guest_limits`), the sweep (every 10 min), `MeGuest`/`MoveableTrial`, routes `POST /api/guest`, `/api/guest/claim`, `/api/guest/adopt`.
+- Wired: `pipeline.rs` (refusal step, apply chain, `after_apply`, `start_guest` logged as the guest, lock rules), `access.rs` (targets, `ServerOrClient`, trials hidden from everyone else incl. overseers, guard route check + 7-day sliding cookie), `auth.rs` (guest sessions, `Me.guest`, `Me.moveable_trial`, login refuses guests and keeps the guest token in `acct_guest`), `impersonation.rs` (lists, `may_act_as`), `presence.rs`, `history.rs` (descriptions, "You (not saved yet)", redacted rows hidden, `expire_guest` overseers only), `lib.rs` (routes, sweep, connect info).
+- Save tax: no input tax while assumed (`Books::claimable`), the "Are you GST registered?" card (`Question::GstRegistered`, priced by `not_registered`), `repost_all` + `business::regenerate_all_gaps` for `set_gst_registration`; the missing-opening-balance reconcile card is skipped for unsaved trials.
+- `examples.rs` now runs each example through `start_guest`; `tests/examples.rs` re-pinned: Examples 1 and 3 unchanged, Example 2 conservative $9,111.51 (assumed registered), then only income $3,520.36, GST registered: no $1,686.32, income tax paid $186.32.
+- Existing tests updated: `history/tests.rs` samples, `tests/impersonation.rs`, `tests/tenancy.rs`, `tests/m15.rs`, `common/mod.rs`.
+
+Left:
+1. `crates/server/tests/guests.rs`, as the task lists. Plan for expiry: dump every table before the guest exists, start a trial, sweep at now + 8 days, and expect every table except `command_log`, `users` and `sessions` byte-identical; check no row outside `command_log` mentions the trial's ids, and no log payload holds its file name or descriptions. Use `fixtures/bank-statements/harbourlight-cheque-2025-08.ofx` as the visitor's own file. Login's `Set-Cookie` puts the session cookie first.
+2. `make types`, then `make check` (fmt, clippy, tests, tsc). The web may need `Question` `gst_registered` handled.
+3. `fixtures/landing/README.md`: figures and setup paragraph for the guest setup (Example 2 above; books from 1 April).
+4. `docs/domain.md` "GST registration from statements" section; `docs/security.md` guest rows' status; `ACCT_GUEST_FILES=warn` in `fly.staging.toml` (not exposed to the web yet).
+
+Report to the user as decisions or gaps: "Claim the GST" cards after confirmation not built; the "refund after you said not registered" notice not built; capacity limits answer 422 (`trial_full`, `file_too_big`), rate limits 429; guests may also read `/api/clients/{id}`, `/chart` and `/coding-settings` (the Save tax page needs the chart); `Actor.guest` not added (the pipeline looks the guest up); the GST card ranks by saving (9th for Example 2 at first, 2nd after "only income"); the reconcile-card skip for trials.
+
 ### Agent 4: the home page's layout and drag and drop (Sonnet, medium thinking)
 ```
 Read CLAUDE.md (Icons and emoji, money rules), apps/web/src/ui/README.md, PLAN.md (M20 "The home page" sections), docs/decisions/014-guests.md (question 7's privacy line), apps/web/src/pages/HomePage.tsx and HomePage.module.css, apps/web/src/ui/Modal, apps/web/src/lib/files.ts, apps/web/src/lib/money.ts, and the ExampleStatement type from Agent 2 (packages/types).

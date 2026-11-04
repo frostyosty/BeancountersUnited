@@ -185,6 +185,120 @@ pub fn gst_return(period: GstPeriod, totals: &GstTotals) -> Result<GstReturn, Gs
     })
 }
 
+/// One bank line, as GST detection needs it.
+#[derive(Debug, Clone, Copy)]
+pub struct DetectLine<'a> {
+    pub date: NaiveDate,
+    /// Money in is positive.
+    pub amount: Money,
+    pub description: &'a str,
+}
+
+/// Which kind of line proved GST registration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GstEvidence {
+    /// A deposit from IRD whose reference says GST.
+    Refund,
+    /// A payment to IRD whose reference says GST.
+    Payment,
+}
+
+/// What a business's statements say about its GST registration (ADR 014, 3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum GstDetection {
+    /// A GST payment to IRD or a GST refund from IRD proves registration. `line` is the earliest
+    /// such line's index in what was given.
+    Detected {
+        line: usize,
+        evidence: GstEvidence,
+        frequency: GstFrequency,
+    },
+    /// Nothing proves it either way. Statements can never prove someone isn't registered, so the
+    /// business is treated as registered, filing on IRD's default for a 31 March balance date.
+    Assumed { frequency: GstFrequency },
+}
+
+/// IRD's default frequency for a 31 March balance date.
+pub const DEFAULT_FREQUENCY: GstFrequency = GstFrequency::TwoMonthlyOdd;
+
+/// Whether the statements prove GST registration, and how often the business files if they show
+/// it. The frequency comes from, in order:
+/// 1. the month range in a GST line's reference: one month is monthly; two ending in an odd month
+///    is two-monthly ending in odd months, in an even month even months; six ending in March or
+///    September is six-monthly;
+/// 2. else the spacing of two or more GST payments, about 1, 2 or 6 months apart, a two-monthly
+///    period ending in the month before the first payment;
+/// 3. else IRD's default, two-monthly ending in odd months.
+pub fn detect_registration(lines: &[DetectLine<'_>]) -> GstDetection {
+    use crate::bank::{IrdKind, ird_kind};
+    // Each GST line: its index, the line, and the months its reference names.
+    type Found<'a, 'b> = (usize, &'a DetectLine<'b>, Option<(u32, u32)>);
+    let mut gst: Vec<Found<'_, '_>> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| !l.amount.is_zero())
+        .filter_map(|(i, l)| match ird_kind(l.description)? {
+            IrdKind::Gst { months } => Some((i, l, months)),
+            _ => None,
+        })
+        .collect();
+    gst.sort_by_key(|(i, l, _)| (l.date, *i));
+    let Some(&(first, first_line, _)) = gst.first() else {
+        return GstDetection::Assumed {
+            frequency: DEFAULT_FREQUENCY,
+        };
+    };
+    let evidence = if first_line.amount > Money::ZERO {
+        GstEvidence::Refund
+    } else {
+        GstEvidence::Payment
+    };
+    let from_range = gst.iter().find_map(|(_, _, months)| {
+        let (from, to) = (*months)?;
+        let span = (to + 12 - from) % 12 + 1;
+        match span {
+            1 => Some(GstFrequency::Monthly),
+            2 if to % 2 == 1 => Some(GstFrequency::TwoMonthlyOdd),
+            2 => Some(GstFrequency::TwoMonthlyEven),
+            6 if to == 3 || to == 9 => Some(GstFrequency::SixMonthly),
+            _ => None,
+        }
+    });
+    let from_spacing = || {
+        let payments: Vec<&DetectLine<'_>> = gst
+            .iter()
+            .map(|(_, l, _)| *l)
+            .filter(|l| l.amount < Money::ZERO)
+            .collect();
+        let days = payments
+            .windows(2)
+            .map(|w| (w[1].date - w[0].date).num_days())
+            .find(|d| *d > 0)?;
+        match days {
+            20..=45 => Some(GstFrequency::Monthly),
+            46..=75 => {
+                // A two-monthly return is paid in the month after its period ends.
+                let paid = payments[0].date.month();
+                let ended = if paid == 1 { 12 } else { paid - 1 };
+                Some(if ended % 2 == 1 {
+                    GstFrequency::TwoMonthlyOdd
+                } else {
+                    GstFrequency::TwoMonthlyEven
+                })
+            }
+            150..=210 => Some(GstFrequency::SixMonthly),
+            _ => None,
+        }
+    };
+    GstDetection::Detected {
+        line: first,
+        evidence,
+        frequency: from_range.or_else(from_spacing).unwrap_or(DEFAULT_FREQUENCY),
+    }
+}
+
 fn ymd(y: i32, m: u32, d: u32) -> NaiveDate {
     NaiveDate::from_ymd_opt(y, m, d).expect("valid date in GST data")
 }
@@ -197,6 +311,89 @@ fn first_of_month(date: NaiveDate) -> NaiveDate {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+
+    fn line<'a>(date: &str, amount: &str, description: &'a str) -> DetectLine<'a> {
+        DetectLine {
+            date: date.parse().unwrap(),
+            amount: amount.parse().unwrap(),
+            description,
+        }
+    }
+
+    #[test]
+    fn detects_registration_from_the_examples_lines() {
+        // Example 1: "GST AUG-SEP" paid on 22 Oct.
+        let one = [
+            line("2025-10-01", "450.00", "EFTPOS SETTLEMENT"),
+            line("2025-10-22", "-1234.56", "INLAND REVENUE GST AUG-SEP"),
+        ];
+        assert_eq!(
+            detect_registration(&one),
+            GstDetection::Detected {
+                line: 1,
+                evidence: GstEvidence::Payment,
+                frequency: GstFrequency::TwoMonthlyOdd,
+            }
+        );
+        // Example 2: income tax only, so assumed.
+        let two = [line("2025-09-12", "-1500.00", "INLAND REVENUE INC TAX 2026")];
+        assert_eq!(
+            detect_registration(&two),
+            GstDetection::Assumed {
+                frequency: GstFrequency::TwoMonthlyOdd
+            }
+        );
+        // Example 3: the 28 Jul payment comes first; both say even months.
+        let three = [
+            line("2025-09-09", "3961.33", "IRD GST REFUND JUL-AUG"),
+            line("2025-07-28", "-2100.00", "INLAND REVENUE GST MAY-JUN"),
+        ];
+        assert_eq!(
+            detect_registration(&three),
+            GstDetection::Detected {
+                line: 1,
+                evidence: GstEvidence::Payment,
+                frequency: GstFrequency::TwoMonthlyEven,
+            }
+        );
+    }
+
+    #[test]
+    fn frequency_from_ranges_spacing_or_the_default() {
+        let f = |lines: &[DetectLine<'_>]| match detect_registration(lines) {
+            GstDetection::Detected { frequency, .. } => frequency,
+            GstDetection::Assumed { .. } => panic!("not detected"),
+        };
+        assert_eq!(
+            f(&[line("2025-10-28", "-10.00", "IRD GST SEP")]),
+            GstFrequency::Monthly
+        );
+        assert_eq!(
+            f(&[line("2025-10-28", "-10.00", "IRD GST APR-SEP")]),
+            GstFrequency::SixMonthly
+        );
+        // No range: two payments about two months apart, the first in June for a period ending
+        // in May.
+        assert_eq!(
+            f(&[
+                line("2025-06-28", "-10.00", "IRD GST"),
+                line("2025-08-28", "-10.00", "IRD GST"),
+            ]),
+            GstFrequency::TwoMonthlyOdd
+        );
+        assert_eq!(
+            f(&[
+                line("2025-06-28", "-10.00", "IRD GST"),
+                line("2025-07-28", "-10.00", "IRD GST"),
+            ]),
+            GstFrequency::Monthly
+        );
+        // One line with no range: IRD's default.
+        assert_eq!(
+            f(&[line("2025-06-28", "50.00", "IRD GST")]),
+            GstFrequency::TwoMonthlyOdd
+        );
+    }
 
     fn d(s: &str) -> NaiveDate {
         s.parse().unwrap()

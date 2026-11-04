@@ -63,4 +63,4 @@ if ! run_python -c "import PIL" >/dev/null 2>&1; then
 fi
 
 # Start the Python server
-run_python "$SCRIPT_DIR/tools/icon-studio/icon_studio.py"
+run_python "$SCRIPT_DIR/tools/icon-studio/server.py"

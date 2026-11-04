@@ -192,6 +192,8 @@ async fn users_round_trip_and_usernames_ignore_case() {
         role: Role::PracticeAdmin,
         active: true,
         created_seq: 1,
+        guest_since: None,
+        claimed_at: None,
     };
     users::insert(&mut w, &u).await.unwrap();
     assert_eq!(users::get(&mut w, &u.id).await.unwrap(), Some(u.clone()));
@@ -228,6 +230,7 @@ async fn command_log_appends_finds_and_feeds() {
         via: None,
         changes: None,
         acting_as: None,
+        redacted_seq: None,
     };
     log::append(&mut w, &entry(1, "a")).await.unwrap();
     log::append(&mut w, &entry(2, "b")).await.unwrap();
@@ -561,6 +564,8 @@ async fn sessions_round_trip_and_expire() {
         role: Role::Staff,
         active: true,
         created_seq: 1,
+        guest_since: None,
+        claimed_at: None,
     };
     users::insert(&mut w, &user).await.unwrap();
     let at = |h: u32| Utc.with_ymd_and_hms(2026, 9, 23, h, 0, 0).unwrap();

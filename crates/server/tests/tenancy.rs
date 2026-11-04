@@ -398,13 +398,23 @@ fn fill(path: &str, v: &Victim) -> String {
 }
 
 /// No login needed.
-const PUBLIC: [&str; 4] = ["/api/health", "/api/login", "/api/logout", "/api/signup"];
+const PUBLIC: [&str; 6] = [
+    "/api/health",
+    "/api/examples",
+    "/api/login",
+    "/api/logout",
+    "/api/signup",
+    "/api/guest",
+];
 /// About the signed-in user only, or checked per command (`/api/commands`, covered below).
-const OWN: [&str; 4] = [
+const OWN: [&str; 6] = [
     "/api/me",
     "/api/commands",
     "/api/invoices/draft",
     "/api/invoices/templates",
+    // A guest saving their own trial, or an owner moving their own in (M20, `tests/guests.rs`).
+    "/api/guest/claim",
+    "/api/guest/adopt",
 ];
 /// One user's own things (the invoice maker's): no one else reaches them, A's accountant included.
 const PERSONAL: [&str; 2] = ["/api/invoices/templates/{id}", "/api/invoices/images/{id}"];
@@ -671,6 +681,13 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
         "start_impersonation" => json!({ "user_id": v.owner.user_id, "reason": "X" }),
         "end_impersonation" => json!({}),
         "allow_impersonation_changes" => json!({ "reason": "X" }),
+        // Guests (M20). Starting needs no session, so B, signed in, is refused; ending a trial or
+        // setting GST registration on A's business finds nothing. The rest name no one else's
+        // data (a guest's own trial; `tests/guests.rs` covers them).
+        "start_guest" => json!({ "source": { "example": 1 } }),
+        "expire_guest" => json!({ "client_id": biz, "why": "by_you" }),
+        "set_gst_registration" => json!({ "client_id": biz, "registered": false, "source": "owner" }),
+        "add_guest_business" | "claim_guest" | "adopt_guest_business" => return None,
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })
 }
@@ -738,6 +755,9 @@ async fn an_owner_can_submit_no_command_against_another_owners_business() {
         "set_ai_suggestions",
         "set_history_sharing",
         "set_opening_balance",
+        // M20: a trial to end, and an owner's GST answer.
+        "expire_guest",
+        "set_gst_registration",
     ]
     .into();
     assert_eq!(not_found, owners_work);

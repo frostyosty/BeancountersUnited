@@ -2,7 +2,7 @@
 
 ### General
 
-Do M20 its new
+Do M20 agent 3 - was 75% of the way through before usage limit hit. agent 4 done.
 
 Do "copy over the good stuff from the Icon Studio folder ive just dropped at root from a superior lcode project, so our icon_studio is similarly kitted out"
 

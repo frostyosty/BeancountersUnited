@@ -194,7 +194,7 @@ async function saveSelected() {
         await removeTiles(chosen);
         renderRegistry();
         updatePicks();
-        setStatus('✅ Saved ' + data.files.length + ' to ' + key + '. Reload logOS to see it.');
+        setStatus('✅ Saved ' + data.files.length + ' to ' + key + '. Reload the app to see it.');
     } catch (e) {
         setStatus(e.message, true);
     }

@@ -67,6 +67,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Roles | `overseer`, `practice_admin` (was `Master`), `staff`, `viewer`, and `business_owner`, who sees and changes only their own business. Every read and command checks the role. The rename is **planned (M12, Agent 3)**. | `crates/store/src/users.rs:11`; `CLAUDE.md`, "Roles" |
 | Tenancy | One owner can never read or change another's business; tests prove it. **Planned (M12, Agent 3)**; `crates/store/migrations/0007_tenancy.sql` reserves the migration. | |
 | Server re-validates everything | The UI is untrusted: every command is validated and recomputed in the pipeline (hard rule 4, 6). | `crates/server/src/pipeline.rs` |
+| Guests (trying it with no sign-up) | A visitor who drops a statement on the home page becomes a guest: a `business_owner` with no email or password, whose session lasts 7 days from their last request. Only their own business's owner work is allowed, from a deny-by-default list of commands and routes. No AI, no inviting an accountant, no IRD, no invoices until they claim the account. Nobody else can see a guest's business, an overseer included, and nobody can view as a guest. Claiming (email, name, password) gives them a new session token. **Planned (M20).** | ADR 014, 1 and 4 |
 | Support viewing as a user | Only an overseer, and only as an active user below them, never another overseer. It needs a reason and lasts 30 minutes from the start. It's read-only unless the overseer turns on changes, which needs its own reason. Even then, signing off a year, anything about users, passwords, sessions or invites, the owner's sharing and AI choices, and anything to do with IRD stay refused. A user's own invoices stay hidden. The person sees the whole session in their own Changes. **Planned (M19).** | ADR 013 |
 
 ### Data protection
@@ -80,6 +81,8 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Filed returns | The exact payload, IRD's response and the payload's SHA-256 are stored and never regenerated. **Planned (M14).** | PLAN.md, M14 |
 | Uploaded statement files | Each uploaded bank or card statement is kept as it arrived, with its SHA-256, so the owner can see the bank's own figures beside the books. The command log keeps only the SHA-256, not the file. The same file uploaded twice to one account is kept once. Statements uploaded before M18 have no file kept. A bank statement is kept as it arrived. A card statement that carries a full card number has it masked to the last four digits in the copy kept, so we never store a full card number (decided 2026-11-03); the stored SHA-256 is of that copy, and the log's is of the file as it arrived. **Open: how long the files are kept, and that deleting a business deletes its files too; see `NON-CODE-TODOS.md`, "Decisions and information only you can give".** | `crates/store/migrations/0012_statement_files.sql`, `crates/server/src/business.rs` (`keep_file`), `crates/server/src/statement_files.rs` |
 
+| Guest trials | A guest's statement files and everything worked out from them are deleted 7 days after their last request, and an example's 24 hours after it was made. Deletion goes through the pipeline (`expire_guest`), from a sweep every 10 minutes, or straight away when the guest presses "Delete it now". The user row is kept as an inactive stub with no details, because `command_log` refers to it. `PRAGMA secure_delete` overwrites the deleted rows in the database file. Backups roll off within 14 days of an expiry. The home page says, beside the drop zone, where the file is processed, that nobody looks at it, and how long it's kept. **Planned (M20).** | ADR 014, 6 and 7 |
+
 ### Integrity and change history
 
 | Control | What we do | Where |
@@ -87,6 +90,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | One write path | Every change to practice or client data is a command: validated, applied and appended to `command_log` in one transaction (hard rule 6). | `crates/server/src/pipeline.rs`; `command_log` in `crates/store/migrations/0001_initial.sql:43` |
 | Who changed what | Each command row records its kind, payload, result, `user_id`, business and time. M13 builds the visible history on it. | As above |
 | Immutable ledger | Posted journals never change; corrections reverse. Finalised years and filed periods reject changes. | `CLAUDE.md`, "Domain invariants" |
+| An expired guest's log rows | The one exception to an append-only `command_log`: when an unclaimed guest's business is deleted, its rows keep their `seq`, id, kind, user, business and time, but their payload, result details and changes are cleared, and `redacted_seq` names the command that did it. That command records how many rows it cleared. Nothing else may change a log row. **Planned (M20); the owner decides between this and the alternatives in ADR 014, 6.** | ADR 014, 6 |
 | A user's own invoices | The invoice maker (Settings › Tools) saves each user's draft, templates and images through commands like everything else, but they belong to that user alone: no one else can read or change them, an overseer included, and they stay out of others' change feed and out of Changes. The log keeps a SHA-256 and size in place of the invoice's page and images, so customers' names and logos don't sit in `command_log`. Images must be PNG, JPEG, GIF or WebP (checked by their bytes, so no SVG) and are served with `nosniff`; the web app cleans each page against an allowlist before showing it. | `crates/server/src/invoices.rs`, `access.rs` (`Target::Own`), `commands.rs` (`logged_payload`), `apps/web/src/lib/invoices.ts`; migration 0011 |
 
 ### Operations
@@ -98,6 +102,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Deploys | GitHub Actions to staging, then production. **Planned (M12, Agent 1).** | ADR 008 |
 | Dependencies | Each new dependency is justified in its commit message; `make check` runs clippy with `-D warnings`. | `CLAUDE.md`, "Working conventions" |
 | Tests don't touch the network | Each outside integration sits behind a trait with a fake (ADR 007). | `crates/ai` |
+| Guest abuse limits | Trials started per address per hour (10 with their own file, 30 examples), 300 an hour in all, 1,000 guests alive at once, 1 MB per file, 5 MB and 12 statements and 5,000 lines per guest, 200 MB for all guests together, 60 commands a minute per guest. Refusals are HTTP 429 with a plain message and `Retry-After`. Per-address counts are kept in memory; the address is `Fly-Client-IP` only when configured as behind Fly. **Planned (M20).** | ADR 014, 8 |
 
 ### Secrets and credentials
 
@@ -122,6 +127,7 @@ Each row is an area an ISO 27001-aligned review asks about, what we do, and wher
 | Who read which business | User, business, what was read (the endpoint, not the data), time. One row per user, business and endpoint per minute is enough. | **Planned (M12, Agent 6)** |
 | Calls to IRD | Operation, business, time, outcome; never the payload in a log (the payload is stored separately, M14). | **Planned (M14)** |
 | Calls to the AI provider | Count, model, outcome; never request or response bodies (ADR 009). | Built, `crates/server/src/ai.rs` |
+| Guest trials | Starting, claiming and expiring a trial are commands in `command_log` (`start_guest`, `add_guest_business`, `claim_guest`, `expire_guest`), with counts but no file contents. Refusals by the abuse limits: the limit, the address and the time, never the file or its name. | **Planned (M20)**, ADR 014 |
 
 Logs never contain passwords, session tokens, two-factor secrets, API keys, bank descriptions, IRD
 numbers or request bodies.
@@ -157,6 +163,8 @@ numbers or request bodies.
   where a return needs them.
 - Passwords, session tokens, two-factor secrets, myIR tokens and API keys.
 - Statement files as uploaded.
+- Anything from a guest's trial, until they claim the account: no AI suggestions are made for a guest
+  (ADR 014, 1). **Planned (M20).**
 - Anything to Icon Studio's image service: it gets icon descriptions only (`CLAUDE.md`, "Icons and
   emoji").
 

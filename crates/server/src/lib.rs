@@ -7,8 +7,10 @@ pub mod auth;
 pub mod business;
 pub mod commands;
 pub mod error;
+pub mod examples;
 pub mod finalise;
 pub mod fixtures;
+pub mod guests;
 pub mod history;
 pub mod impersonation;
 pub mod invoices;
@@ -59,6 +61,8 @@ pub struct AppState {
     /// How many times a day a business may ask the AI for suggestions. Kept in memory, so a
     /// restart gives everyone a fresh day. No limit unless the server sets one.
     pub ai_quota: Arc<ai::Quota>,
+    /// The guest abuse limits per address and per guest (M20, ADR 014, 8), kept in memory.
+    pub guest_limits: Arc<guests::Limits>,
 }
 
 impl AppState {
@@ -69,6 +73,7 @@ impl AppState {
             suggester: ai::suggester_from_env(),
             presence: Arc::default(),
             ai_quota: Arc::new(ai::Quota::from_env()),
+            guest_limits: Arc::new(guests::Limits::from_env()),
         }
     }
 }
@@ -87,9 +92,13 @@ pub struct Health {
 fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
     vec![
         (Method::GET, "/api/health", get(health)),
+        (Method::GET, "/api/examples", get(examples::get_examples)),
         (Method::POST, "/api/login", post(auth::login)),
         (Method::POST, "/api/logout", post(auth::logout)),
         (Method::POST, "/api/signup", post(signup::sign_up_route)),
+        (Method::POST, "/api/guest", post(guests::start_route)),
+        (Method::POST, "/api/guest/claim", post(guests::claim_route)),
+        (Method::POST, "/api/guest/adopt", post(guests::adopt_route)),
         (Method::GET, "/api/me", get(auth::me)),
         (Method::POST, "/api/commands", post(submit_command)),
         (Method::GET, "/api/practice", get(reads::get_practice)),
@@ -302,10 +311,17 @@ pub async fn serve(
     // Logs the end of every view-as session that ran out (M19, ADR 013): at startup, then once a
     // minute, for as long as the server runs.
     let sweep = impersonation::spawn_sweep(state.store.clone());
-    let served = axum::serve(listener, app(state))
-        .with_graceful_shutdown(shutdown)
-        .await;
+    // Ends trials nobody came back to (M20, ADR 014): at startup, then every 10 minutes.
+    let guest_sweep = guests::spawn_sweep(state.store.clone());
+    // With each connection's peer address, for the guest limits per address.
+    let served = axum::serve(
+        listener,
+        app(state).into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown)
+    .await;
     sweep.abort();
+    guest_sweep.abort();
     served
 }
 
@@ -323,6 +339,12 @@ async fn submit_command(
     body: Result<Json<CommandRequest>, JsonRejection>,
 ) -> Result<Json<Accepted>, CommandError> {
     let Json(request) = body.map_err(|e| CommandError::Malformed(e.body_text()))?;
+    // A guest (M20) sends at most so many commands a minute.
+    if user.0.is_guest() && user.acting().is_none() {
+        state
+            .guest_limits
+            .take_command(&user.0.id, chrono::Utc::now())?;
+    }
     // In the session, so starting to view as someone (M19) knows which session it's for.
     let accepted = pipeline::submit_in_session(
         &state.store,

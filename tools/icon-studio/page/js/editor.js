@@ -268,7 +268,7 @@ window.saveEdit = async function() {
     try {
         applyRegistry(await api('/save', { key: target.key, images: [dataUrl] }));
         renderRegistry();
-        setStatus('✅ Saved the edited icon to ' + target.key + '. The one before is in its ▾ list. Reload logOS to see it.');
+        setStatus('✅ Saved the edited icon to ' + target.key + '. The one before is in its ▾ list. Reload the app to see it.');
     } catch (e) {
         setStatus(e.message, true);
     }

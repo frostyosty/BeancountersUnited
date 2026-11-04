@@ -125,6 +125,15 @@ const LINE_COUNT: &str = "transactions";
 const STATEMENT: &str = "statement";
 /// The label of a bank account's opening balance, as `$1,234.56 on 1 Apr 2025`.
 const OPENING: &str = "opening balance";
+/// The label of a business's GST registration (M20), as `registered from 1 Apr 2025,
+/// two-monthly (assumed)` or `not registered`.
+const GST_REGISTRATION: &str = "GST registration";
+/// What an ended trial held (M20): its statements, lines and earlier changes, counted before.
+const TRIAL_STATEMENTS: &str = "statements";
+const TRIAL_LINES: &str = "lines";
+const TRIAL_CHANGES: &str = "earlier changes";
+/// What "You" reads as, in a guest's own Changes, until they save their work (ADR 014, 10).
+pub const GUEST_NAME: &str = "You (not saved yet)";
 
 /// One observed value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -295,7 +304,7 @@ async fn observe(
                 all_line_facts(conn, c, &mut facts).await?;
             }
         }
-        C::ImportStatement { .. } => {
+        C::ImportStatement { .. } | C::StartGuest { .. } | C::AddGuestBusiness { .. } => {
             if let Some(c) = client_id {
                 let n = bank::bank_lines(conn, c).await?.len();
                 facts.push(Fact {
@@ -304,9 +313,26 @@ async fn observe(
                     label: LINE_COUNT.into(),
                     value: n.to_string(),
                 });
+                gst_fact(conn, c, &mut facts).await?;
+            }
+        }
+        C::SetGstRegistration { client_id, .. } => gst_fact(conn, client_id, &mut facts).await?,
+        C::ExpireGuest { client_id, .. } => {
+            // Counted before; after, there's nothing left to count.
+            if let Some((statements, lines, changes)) = trial_counts(conn, client_id).await? {
+                for (key, label, n) in [
+                    ("trial_statements", TRIAL_STATEMENTS, statements),
+                    ("trial_lines", TRIAL_LINES, lines),
+                    ("trial_changes", TRIAL_CHANGES, changes),
+                ] {
+                    facts.push(fact_keyed(key, "the trial", label, n.to_string()));
+                }
             }
         }
         C::RemoveStatement { statement_id } => {
+            if let Some(c) = client_id {
+                gst_fact(conn, c, &mut facts).await?;
+            }
             if let Some(st) = bank::statement(conn, statement_id).await? {
                 facts.push(Fact {
                     key: format!("statement:{statement_id}"),
@@ -518,7 +544,9 @@ async fn observe(
         | C::AddInvoiceImage { .. }
         | C::StartImpersonation { .. }
         | C::EndImpersonation { .. }
-        | C::AllowImpersonationChanges { .. } => {}
+        | C::AllowImpersonationChanges { .. }
+        | C::ClaimGuest { .. }
+        | C::AdoptGuestBusiness { .. } => {}
         C::PickNotes { client_year_id, .. } => {
             let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
             let titles: Vec<&str> = notes.iter().map(|n| n.paragraph.title.trim()).collect();
@@ -546,6 +574,76 @@ async fn observe(
 }
 
 /// A fact keyed by its subject and label.
+fn fact_keyed(key: &str, subject: &str, label: &str, value: String) -> Fact {
+    Fact {
+        key: key.into(),
+        subject: subject.into(),
+        label: label.into(),
+        value,
+    }
+}
+
+/// A business's GST registration, and where it came from (M20).
+async fn gst_fact(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    out: &mut Vec<Fact>,
+) -> Result<(), CommandError> {
+    let Some(b) = bank::business(conn, client_id).await? else {
+        return Ok(());
+    };
+    let source = acct_store::guests::flags(conn, client_id)
+        .await?
+        .map(|f| f.source());
+    let value = match b.gst {
+        Some(g) => {
+            let mut v = format!(
+                "registered from {}, {}",
+                day(g.registered_from),
+                frequency_label(g.frequency)
+            );
+            match source {
+                Some(acct_store::guests::GstSource::Assumed) => v.push_str(" (assumed)"),
+                Some(acct_store::guests::GstSource::Detected) => v.push_str(" (detected)"),
+                Some(acct_store::guests::GstSource::Ird) => v.push_str(" (from IRD)"),
+                _ => {}
+            }
+            v
+        }
+        None => "not registered".to_owned(),
+    };
+    out.push(fact_keyed("gst_registration", "GST", GST_REGISTRATION, value));
+    Ok(())
+}
+
+fn frequency_label(f: acct_core::tax::gst::GstFrequency) -> &'static str {
+    use acct_core::tax::gst::GstFrequency as F;
+    match f {
+        F::Monthly => "monthly",
+        F::TwoMonthlyOdd => "two-monthly, ending in odd months",
+        F::TwoMonthlyEven => "two-monthly, ending in even months",
+        F::SixMonthly => "six-monthly",
+    }
+}
+
+/// What a trial holds before it's deleted: statements, lines and log rows.
+async fn trial_counts(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+) -> Result<Option<(i64, i64, i64)>, CommandError> {
+    if bank::business(conn, client_id).await?.is_none() {
+        return Ok(None);
+    }
+    let lines = bank::bank_lines(conn, client_id).await?;
+    let mut statements = BTreeSet::new();
+    for l in &lines {
+        statements.insert(l.statement_id.clone());
+    }
+    let changes = log::count_for_client(conn, client_id).await?;
+    let count = |n: usize| i64::try_from(n).unwrap_or(i64::MAX);
+    Ok(Some((count(statements.len()), count(lines.len()), changes)))
+}
+
 fn fact(subject: &str, label: &str, value: String) -> Fact {
     Fact {
         key: format!("{subject}\u{1f}{label}"),
@@ -1416,6 +1514,79 @@ fn action(
             acting.unwrap_or("someone"),
             reason.trim()
         ),
+        // Guests (M20, ADR 014, 10).
+        C::StartGuest { source } | C::AddGuestBusiness { source } => {
+            let starting = matches!(command, C::StartGuest { .. });
+            let added = field(changes, LINE_COUNT).and_then(|f| {
+                f.after.as_deref()?.parse::<usize>().ok()
+            });
+            let with = match source {
+                crate::commands::GuestSource::Example(n) if starting => {
+                    format!("started a trial with Example {n}")
+                }
+                crate::commands::GuestSource::Example(n) => format!("tried Example {n}"),
+                crate::commands::GuestSource::File { file_name, .. } if starting => {
+                    format!("started a trial with {file_name}")
+                }
+                crate::commands::GuestSource::File { file_name, .. } => {
+                    format!("added their own statement, {file_name}")
+                }
+            };
+            match added {
+                Some(n) => format!("{with}: {}", transactions(n)),
+                None => with,
+            }
+        }
+        C::ClaimGuest { display_name, .. } => {
+            format!("saved their work as {}", display_name.trim())
+        }
+        C::AdoptGuestBusiness { .. } => "moved a trial into their account".into(),
+        C::ExpireGuest { why, .. } => {
+            use crate::commands::ExpireWhy;
+            let n = |label: &str| {
+                field(changes, label)
+                    .and_then(|f| f.before.as_deref()?.parse::<usize>().ok())
+                    .unwrap_or(0)
+            };
+            let held = format!(
+                "{}, {} and {}",
+                plural(n(TRIAL_STATEMENTS), "statement", "statements"),
+                plural(n(TRIAL_LINES), "line", "lines"),
+                plural(n(TRIAL_CHANGES), "earlier change", "earlier changes"),
+            );
+            match why {
+                ExpireWhy::Unused => format!(
+                    "deleted an unsaved trial after {} days unused: {held}",
+                    crate::guests::GUEST_DAYS
+                ),
+                ExpireWhy::ExampleFinished => format!(
+                    "deleted an example after {} hours: {held}",
+                    crate::guests::EXAMPLE_HOURS
+                ),
+                ExpireWhy::ByYou => format!("deleted their trial: {held}"),
+            }
+        }
+        C::SetGstRegistration {
+            registered,
+            frequency,
+            source,
+            ..
+        } => {
+            use acct_store::guests::GstSource;
+            let how = frequency
+                .map(|f| format!(", {}", frequency_label(f)))
+                .unwrap_or_default();
+            match (source, registered) {
+                (GstSource::Ird, true) => format!("recorded that IRD says GST registered{how}"),
+                (GstSource::Ird, false) => "recorded that IRD says not GST registered".into(),
+                (GstSource::Detected, _) => {
+                    "recorded GST registration as detected from the statements".into()
+                }
+                (GstSource::Assumed, _) => "recorded GST registration as assumed".into(),
+                (GstSource::Owner, true) => format!("said they're GST registered{how}"),
+                (GstSource::Owner, false) => "said they're not GST registered".into(),
+            }
+        }
         C::EndImpersonation { reason, ended, .. } => {
             use crate::impersonation::Ended;
             let p = acting.unwrap_or("someone");
@@ -1460,10 +1631,18 @@ pub(crate) fn row_shown(
     viewer: crate::pipeline::Identity<'_>,
     visible: &access::Visible,
 ) -> bool {
+    // A deleted trial's rows (M20): there's nothing left to say about them.
+    if e.redacted_seq.is_some() {
+        return false;
+    }
     if e.acting_as.is_some() && e.acting_as.as_deref() == viewer.user_id {
         return true;
     }
     if is_session_kind(&e.kind) {
+        return viewer.role == Role::Overseer;
+    }
+    // An ended trial is for overseers only, and names no business.
+    if e.kind == "expire_guest" {
         return viewer.role == Role::Overseer;
     }
     visible.shows(e.client_id.as_deref())
@@ -1745,10 +1924,19 @@ pub async fn get_history(
         }
     }
 
+    // A guest reads their own changes as "You (not saved yet)" (ADR 014, 10); nobody else sees
+    // them. Once they've saved their work, their changes read under their name.
     let names: BTreeMap<String, String> = users::list(&mut conn)
         .await?
         .into_iter()
-        .map(|u| (u.id, u.display_name))
+        .map(|u| {
+            let name = if u.is_guest() {
+                GUEST_NAME.to_owned()
+            } else {
+                u.display_name
+            };
+            (u.id, name)
+        })
         .collect();
     let businesses: BTreeMap<String, String> = clients::list(&mut conn)
         .await?

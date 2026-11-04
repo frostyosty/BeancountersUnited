@@ -1,0 +1,13 @@
+{
+    "port": 8081,
+    "codebase": "../..",
+    "registry": "apps/web/src/icons/registry.json",
+    "registry_variable": "ICONS",
+    "web_root": "apps/web/public",
+    "icons_dir": "apps/web/public/icons",
+    "scan": {
+        "dirs": ["apps/web/src"],
+        "extensions": [".tsx", ".ts", ".css", ".html"],
+        "skip_dirs": ["node_modules", "dist", "build", ".git"]
+    }
+}

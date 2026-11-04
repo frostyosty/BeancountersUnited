@@ -194,7 +194,7 @@ async function swapPlaces() {
         targetSlot(data.to_key);
         const to = scan.find(item => item.key === data.to_key);
         setStatus('✅ Changed ' + data.changed + (data.changed === 1 ? ' place' : ' places') + ' from ' + found.emoji + ' to ' + (to ? to.emoji : data.to_key) +
-            (data.skipped ? ' (' + data.skipped + ' had changed since the scan and were left alone)' : '') + '. Reload logOS to see it.');
+            (data.skipped ? ' (' + data.skipped + ' had changed since the scan and were left alone)' : '') + '. Reload the app to see it.');
     } catch (e) {
         setStatus(e.message, true);
         updateSwap(found);
@@ -410,8 +410,8 @@ async function mergeSlots(from, into) {
         if (data.emoji) scan = data.emoji;
         renderRegistry();
         targetSlot(data.key);
-        if (mixed) return setStatus('✅ ' + names[0] + ' and ' + names[1] + ' now show the same icon, and each has the other in its ▾ list. Reload logOS to see it.');
-        setStatus('✅ Merged ' + names[0] + ' and ' + names[1] + ' into ' + slotName(data.key) + ': changed ' + data.changed + (data.changed === 1 ? ' place' : ' places') + ' in the code. Reload logOS to see it.');
+        if (mixed) return setStatus('✅ ' + names[0] + ' and ' + names[1] + ' now show the same icon, and each has the other in its ▾ list. Reload the app to see it.');
+        setStatus('✅ Merged ' + names[0] + ' and ' + names[1] + ' into ' + slotName(data.key) + ': changed ' + data.changed + (data.changed === 1 ? ' place' : ' places') + ' in the code. Reload the app to see it.');
     } catch (e) {
         setStatus(e.message, true);
     }

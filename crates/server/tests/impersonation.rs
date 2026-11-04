@@ -841,6 +841,14 @@ fn payload(kind: &str, w: &World) -> Value {
         "start_impersonation" => json!({ "user_id": w.user("val"), "reason": "X" }),
         "end_impersonation" => json!({}),
         "allow_impersonation_changes" => json!({ "reason": "X" }),
+        // Guests (M20).
+        "start_guest" | "add_guest_business" => json!({ "source": { "example": 1 } }),
+        "claim_guest" => json!({
+            "email": "x@example.nz", "display_name": "X", "password": "correct horse battery",
+        }),
+        "adopt_guest_business" => json!({ "token": token() }),
+        "expire_guest" => json!({ "client_id": biz, "why": "by_you" }),
+        "set_gst_registration" => json!({ "client_id": biz, "registered": false, "source": "owner" }),
         other => panic!("tests/impersonation.rs has no payload for the new command {other}"),
     }
 }
@@ -882,10 +890,11 @@ fn every_command_kind_is_classified_while_acting() {
         impersonation::classify("ird_anything"),
         WhileActing::Never("deal with IRD")
     );
-    // The ADR's counts: 36 allowed, 2 session, 20 as yourself, 17 never.
+    // The ADR's counts: 36 allowed, 2 session, 20 as yourself, 17 never; then M20's (ADR 014):
+    // an owner's GST answer allowed, and the five guest commands never.
     assert_eq!(
         (ALLOWED.len(), SESSION.len(), AS_YOURSELF.len(), NEVER.len()),
-        (36, 2, 20, 17)
+        (37, 2, 20, 22)
     );
 }
 

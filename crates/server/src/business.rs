@@ -377,6 +377,17 @@ fn unreadable_details(e: &StatementError) -> serde_json::Value {
     }
 }
 
+/// Parses a statement file, or says in plain words what's wrong with it.
+pub(crate) fn read_statement_or_explain(bytes: &[u8]) -> Result<Statement, CommandError> {
+    read_statement(bytes).map_err(|e| {
+        CommandError::invalid_with(
+            "statement_unreadable",
+            e.to_string(),
+            unreadable_details(&e),
+        )
+    })
+}
+
 /// Uploads one statement file. Every new line posts as its own journal; lines already imported
 /// from an overlapping statement are skipped, so uploading the same file twice changes nothing.
 #[allow(clippy::too_many_arguments)]
@@ -390,13 +401,7 @@ pub async fn import_statement(
     bank_account_id: Option<&str>,
 ) -> Result<ImportOutcome, CommandError> {
     let business = business(tx, client_id).await?;
-    let statement = read_statement(bytes).map_err(|e| {
-        CommandError::invalid_with(
-            "statement_unreadable",
-            e.to_string(),
-            unreadable_details(&e),
-        )
-    })?;
+    let statement = read_statement_or_explain(bytes)?;
     let Some(cover) = coverage(&statement) else {
         return Err(CommandError::invalid(
             "statement_empty",
@@ -1339,11 +1344,19 @@ async fn regenerate_gaps(
             .sum();
         live_amounts.push((g.start_date, g.end_date, on_bank, j));
     }
+    let gst_from = business.gst.map(|g| g.registered_from);
+    // The same gaps, posted the same way: a change of GST registration (M20) reposts them.
     let same = live_amounts.len() == wanted.len()
         && live_amounts
             .iter()
             .zip(&wanted)
-            .all(|((s, e, m, _), (g, c))| *s == g.start && *e == g.end && m == c);
+            .all(|((s, e, m, j), (g, c))| {
+                *s == g.start
+                    && *e == g.end
+                    && m == c
+                    && j.journal.lines
+                        == unsorted_lines(&account.code, g.end, *c, gst_from, &business.holding)
+            });
     if same {
         return Ok(());
     }
@@ -1371,7 +1384,6 @@ async fn regenerate_gaps(
         )
         .await?;
     }
-    let gst_from = business.gst.map(|g| g.registered_from);
     for (gap, change) in wanted {
         let year = ensure_year(tx, year_list, seq, &account.client_id, start, gap.end).await?;
         let lines = unsorted_lines(&account.code, gap.end, change, gst_from, &business.holding);
@@ -1401,6 +1413,25 @@ async fn regenerate_gaps(
             },
         )
         .await?;
+    }
+    Ok(())
+}
+
+/// Brings every account's gap journals in line with the business as it is now: after its GST
+/// registration changes (M20), so a gap's rise in balance is split for GST, or not, as the lines
+/// are.
+pub(crate) async fn regenerate_all_gaps(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    client_id: &str,
+) -> Result<(), CommandError> {
+    let business = business(tx, client_id).await?;
+    let mut year_list = years::for_client(tx, client_id).await?;
+    let Some(start) = year_list.first().map(|y| y.year.start()) else {
+        return Ok(());
+    };
+    for account in bank_store::bank_accounts(tx, client_id).await? {
+        regenerate_gaps(tx, &mut year_list, seq, &business, &account, start).await?;
     }
     Ok(())
 }

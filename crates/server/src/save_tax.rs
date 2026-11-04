@@ -21,6 +21,7 @@ use acct_core::{AccountCode, AccountType, Chart, GstCode, Journal, JournalLine, 
 use acct_store::assets as asset_store;
 use acct_store::bank::{self as bank_store, BankAccount, BankLine, Business};
 use acct_store::coding::{self as coding_store, LineState, LineStateKind};
+use acct_store::guests::GstSource;
 use acct_store::journals::{JournalKind, StoredJournal};
 use acct_store::years::{StoredYear, YearStatus};
 use acct_store::{SqliteConnection, clients, journals, new_id, years};
@@ -35,6 +36,7 @@ use crate::error::CommandError;
 use crate::pipeline::{self, NewAsset};
 
 /// A business with what coding needs: its chart, coding settings and bank and card accounts.
+#[derive(Clone)]
 pub(crate) struct Books {
     pub client_id: String,
     pub entity_type: String,
@@ -42,9 +44,28 @@ pub(crate) struct Books {
     pub chart: Chart,
     pub settings: CodingSettings,
     pub accounts: Vec<BankAccount>,
+    /// Where its GST registration came from (M20, ADR 014, 3).
+    pub gst_source: GstSource,
 }
 
 impl Books {
+    /// Whether GST on purchases is claimed. Not while registration is only assumed (ADR 014,
+    /// 3): then the GST in every period is output tax only, so assuming registration is always
+    /// at least the figure of not being registered.
+    pub(crate) fn claims_input_tax(&self) -> bool {
+        self.gst_source != GstSource::Assumed
+    }
+
+    /// `coding` as it posts for this business: with nothing claimed for GST while registration is
+    /// assumed, whatever code was sent. The server decides this; it never trusts the code.
+    pub(crate) fn claimable(&self, coding: &Coding) -> Coding {
+        if self.claims_input_tax() {
+            coding.clone()
+        } else {
+            coding::without_input_tax(coding)
+        }
+    }
+
     fn context(&self) -> CodingContext<'_> {
         CodingContext {
             chart: &self.chart,
@@ -76,6 +97,9 @@ pub(crate) async fn books(
             )
         })?;
     let accounts = bank_store::bank_accounts(conn, client_id).await?;
+    let gst_source = acct_store::guests::flags(conn, client_id)
+        .await?
+        .map_or(GstSource::Owner, |f| f.source());
     Ok(Books {
         client_id: client_id.to_owned(),
         entity_type: client.entity_type,
@@ -83,6 +107,7 @@ pub(crate) async fn books(
         chart,
         settings,
         accounts,
+        gst_source,
     })
 }
 
@@ -240,9 +265,13 @@ fn posting_lines(
             books.gst_from(),
             &books.business.holding,
         )),
-        Posting::Coded(c) => {
-            coded_lines(&info.core(), c, confirmed, &books.context()).map_err(coding_error)
-        }
+        Posting::Coded(c) => coded_lines(
+            &info.core(),
+            &books.claimable(c),
+            confirmed,
+            &books.context(),
+        )
+        .map_err(coding_error),
         Posting::Nothing => Ok(Vec::new()),
     }
 }
@@ -444,7 +473,7 @@ async fn set_posting(
     let new_lines = posting_lines(books, info, &target.posting, info.confirmed)?;
     let (kind, coding) = match &target.posting {
         Posting::Unsorted => (LineStateKind::Unsorted, None),
-        Posting::Coded(c) => (LineStateKind::Coded, Some(c.clone())),
+        Posting::Coded(c) => (LineStateKind::Coded, Some(books.claimable(c))),
         Posting::Nothing => (LineStateKind::Duplicate, None),
     };
     let asset_class = match &coding {
@@ -1091,7 +1120,12 @@ fn effect_of(
             None,
         ),
         Posting::Coded(c) => (
-            gst_totals(&info.core(), Some(c), confirmed, books.gst_from()),
+            gst_totals(
+                &info.core(),
+                Some(&books.claimable(c)),
+                confirmed,
+                books.gst_from(),
+            ),
             match c {
                 Coding::Out(WithdrawalCoding::IrdIncomeTax) => Some((
                     ird_income_year.unwrap_or(IncomeYear::containing(info.line.date)),
@@ -1323,6 +1357,86 @@ async fn snapshot(conn: &mut SqliteConnection, client_id: &str) -> Result<Snapsh
     })
 }
 
+/// The figure's inputs if the business weren't GST registered: no GST periods, and every line and
+/// gap posted without its GST split, which puts that GST back into taxable income.
+fn not_registered(snap: &Snapshot) -> TaxInputs {
+    let mut books = snap.books.clone();
+    books.business.gst = None;
+    let mut inputs = TaxInputs {
+        gst: BTreeMap::new(),
+        ..snap.inputs.clone()
+    };
+    let moved = |inputs: &mut TaxInputs, date: NaiveDate, delta: Money| {
+        if !delta.is_zero() {
+            *inputs = inputs.with(&Change::Moves {
+                gst: None,
+                taxable_income: Some((IncomeYear::containing(date), delta)),
+            });
+        }
+    };
+    for info in &snap.lines {
+        let before = current_effect(&snap.books, info, &snap.journals);
+        if let Some(after) = target_effect(
+            &books,
+            info,
+            &info.posting(),
+            info.confirmed,
+            info.state.ird_income_year,
+        ) {
+            moved(
+                &mut inputs,
+                info.line.date,
+                after.taxable_income - before.taxable_income,
+            );
+        }
+    }
+    for g in &snap.gaps {
+        let Some(account) = books.accounts.iter().find(|a| a.id == g.bank_account_id) else {
+            continue;
+        };
+        let after = unsorted_lines(&account.code, g.end, g.change, None, &books.business.holding);
+        moved(
+            &mut inputs,
+            g.end,
+            taxable_income_of(&after, &books.chart) - taxable_income_of(&g.lines, &books.chart),
+        );
+    }
+    inputs
+}
+
+/// After a business's GST registration changes (`set_gst_registration`, M20): reverses and
+/// reposts every bank line whose posting changes, as any recode does. Lines that post the same
+/// are left alone. Gap journals are `business::regenerate_all_gaps`'s.
+pub(crate) async fn repost_all(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    client_id: &str,
+) -> Result<(), CommandError> {
+    let books = books(tx, client_id).await?;
+    for info in load_lines(tx, &books).await? {
+        let posting = info.posting();
+        let new_lines = posting_lines(&books, &info, &posting, info.confirmed)?;
+        let live_lines = match &info.state.journal_id {
+            Some(id) => journals::get(tx, id)
+                .await?
+                .map(|j| j.journal.lines)
+                .unwrap_or_default(),
+            None => Vec::new(),
+        };
+        if new_lines == live_lines {
+            continue;
+        }
+        let target = Target {
+            posting,
+            rule_id: info.state.rule_id.clone(),
+            ird_income_year: info.state.ird_income_year,
+            asset_class_id: None,
+        };
+        set_posting(tx, seq, &books, &info, target).await?;
+    }
+    Ok(())
+}
+
 fn add(a: GstTotals, b: GstTotals) -> GstTotals {
     GstTotals {
         sales: a.sales + b.sales,
@@ -1399,6 +1513,10 @@ pub enum Question {
     StudentLoan,
     /// The independent earner tax credit: how many months the owner is eligible.
     Ietc,
+    /// "Are you GST registered?" (M20, ADR 014, 3), while registration is only assumed from the
+    /// statements. Answered with `set_gst_registration` (source `owner`), not `answer_question`.
+    /// Its saving is the most "no" could save; "yes" saves nothing by itself.
+    GstRegistered,
 }
 
 /// A bank line on a card.
@@ -1630,6 +1748,21 @@ pub async fn queue(
                 ask(&mut b, Question::Ietc, a, true);
             }
         }
+    }
+
+    // "Are you GST registered?", only while it's assumed (ADR 014, 3). A detected registration
+    // gets no card: a saving for "no" would invite the wrong answer.
+    if books.gst_source == GstSource::Assumed && books.business.gst.is_some() {
+        let after = not_registered(&snap);
+        b.push(SaveTaxCard {
+            question: Some(Question::GstRegistered),
+            best_case: true,
+            ..card(
+                "question:gst_registered".to_owned(),
+                CardKind::Question,
+                b.saving_of(&after),
+            )
+        });
     }
 
     // Lines that are on a card already.
@@ -1950,6 +2083,12 @@ async fn reconcile_cards(
     client_id: &str,
 ) -> Result<Vec<SaveTaxCard>, CommandError> {
     let mut out = Vec::new();
+    // An unsaved trial's books start on 1 April (ADR 014, 3), before its first statement, with no
+    // balance for that day. That's what the figure covers, not a disagreement, so it isn't a card
+    // until the trial is saved and there's an owner to ask for the balance.
+    let trial = acct_store::guests::guest_owner(conn, client_id)
+        .await?
+        .is_some();
     for account in bank_store::bank_accounts(conn, client_id).await? {
         let Some(latest) = bank_store::statements(conn, &account.id)
             .await?
@@ -1965,6 +2104,13 @@ async fn reconcile_cards(
         };
         let d = &findings.diagnosis;
         if d.difference.is_zero() {
+            continue;
+        }
+        let no_opening_yet = account.opening.is_none()
+            && d.remainder.is_zero()
+            && d.explained_by.len() == 1
+            && d.explained_by[0].kind == acct_core::reconcile::FindingKind::WrongOpeningBalance;
+        if trial && no_opening_yet {
             continue;
         }
         out.push(SaveTaxCard {
