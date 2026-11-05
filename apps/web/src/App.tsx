@@ -3,7 +3,6 @@ import { Navigate, Route, Routes } from "react-router";
 import { useMe } from "./auth";
 import { ViewAsProvider } from "./lib/viewAs";
 import { Layout } from "./components/Layout";
-import { SiteGate } from "./components/SiteGate";
 import { ContactPage } from "./pages/ContactPage";
 import { AboutPage } from "./pages/AboutPage";
 import { AccountantsPage } from "./pages/AccountantsPage";
@@ -53,18 +52,16 @@ export function App() {
   }
   if (!me.data) {
     return (
-      <SiteGate>
-        <Routes>
-          <Route path="accountants" element={<AccountantsPage />} />
+      <Routes>
+        <Route path="accountants" element={<AccountantsPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="pricing" element={<PricingPage />} />
         <Route path="product" element={<ProductPage />} />
-          <Route path="signup" element={<SignUpPage />} />
-          <Route path="invite/:token" element={<InviteSignedOutPage />} />
-          <Route path="*" element={<HomePage />} />
-        </Routes>
-      </SiteGate>
+        <Route path="signup" element={<SignUpPage />} />
+        <Route path="invite/:token" element={<InviteSignedOutPage />} />
+        <Route path="*" element={<HomePage />} />
+      </Routes>
     );
   }
   return (
