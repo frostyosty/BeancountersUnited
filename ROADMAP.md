@@ -4,8 +4,7 @@
 
 Do M20 agent 3 - was 75% of the way through before usage limit hit. agent 4 done.
 
-Do "copy over the good stuff from the Icon Studio folder ive just dropped at root from a superior lcode project, so our icon_studio is similarly kitted out"
-
+ok on homepage the new layout of the new sample ofx's the stuffs bleedign over the side.
 
 ### On comp
 
