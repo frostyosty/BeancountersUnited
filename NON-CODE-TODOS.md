@@ -159,9 +159,10 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       the practice screens plus every business.
 
 ## M20 guests (ADR 014): before the home page takes real files
-- [ ] Decide ADR 014's three open points: a guest who signs in to an existing account instead (4), the
+- [x] Decide ADR 014's three open points: a guest who signs in to an existing account instead (4), the
       claim as the first step of Submit (5), and redacting an expired guest's `command_log` rows (6).
-      Then mark the ADR accepted for those points, before wave 2 of `M20-PROMPTS.md` starts.
+      Then mark the ADR accepted for those points, before wave 2 of `M20-PROMPTS.md` starts. Done: 4 B,
+      5 A, 6 A; the ADR is accepted (M20 done, 2026-11-07).
 - [ ] Privacy policy: add a section on trials. What a trial collects (the statement file and what's
       worked out from it), why (to show the visitor their tax), that nobody looks at it and nothing is
       sent to the AI provider or anyone else, where it's processed and stored, that statements name other
@@ -182,3 +183,21 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       (hard rule 1). Staging shows a warning in place of the privacy line (`ACCT_GUEST_FILES=warn`).
 - [ ] Check the abuse limits (ADR 014, 8) against the production volume (1 GB, ADR 008) once trials are
       live, and raise the volume and the caps together if they start refusing people.
+
+## M21 (ADR 015): the accountant view, the peaks and practice requests
+- [x] Decide ADR 015's three open points: account codes in the accountant view's general ledger (1.4),
+      what replaces the "last 48 hours" banner (3.5), and whether accepting a practice request makes the
+      user (7). Record 1.4 in `docs/domain.md`. Then mark the ADR accepted for those points, before wave 2
+      of `M21-PROMPTS.md` starts. Done 2026-11-07: A for all three; the ADR is accepted.
+- [ ] Privacy policy, practice requests: what's kept (name, email, practice name, rough client count,
+      phone if given), why (to get in touch about a practice account), that only our team sees it, and
+      that it's deleted 90 days after it's sent or sooner on request (ADR 015, 7).
+- [ ] Privacy policy, trials: add that when someone saves their work we note which button led them to,
+      and count those notes by week to improve the site, with no third-party analytics (ADR 015, 4).
+- [ ] Decide who answers practice requests and how soon, and write the reply. Check Settings → Admin for
+      new requests at least weekly until something tells us when one arrives.
+- [ ] Until practice tenancy exists, don't make a second firm's people practice users on a server that
+      holds another firm's clients: every practice user sees every client without an owner, and a
+      practice admin controls the shared charts, templates and users (ADR 015, 7). Offer them the only
+      practice on a server, a server of their own, or a place on the wait list.
+- [ ] Delete a practice request sooner when the person asks, or when it's spam.

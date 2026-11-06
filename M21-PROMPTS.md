@@ -64,6 +64,7 @@ Task:
 3. request_practice_account, its route, the per-address limit, the overseer list, migration 0015.
 4. The overseer counts, from command_log as the ADR says, never reading a redacted payload.
 5. Check a guest's business can show statements: if the sole-trader template or mapping isn't there, the report read answers the ADR's plain message, not a 500.
+6. reports.rs: drop `shows_codes`, so the GL and analysis show account codes to everyone (ADR 015, 1.4, decided A).
 Tests: a guest reads its own trial's year routes and an example's; another guest and a signed-up owner can't; every write on a year is refused for a guest; report.pdf is refused with the reason; claim_guest stores `from` and refuses an unknown one; a practice request is stored, limited per address, listed for overseers and refused for everyone else; the counts after starting, claiming and expiring trials (reuse guests.rs's sweep pattern).
 Run `make check`.
 Don't commit.
@@ -91,19 +92,21 @@ Don't commit.
 
 ### Agent 4: the tiles, the peaks and "Who are you?" (Sonnet, high thinking)
 ```
-Read CLAUDE.md, apps/web/src/ui/README.md, PLAN.md (M21), docs/decisions/015-taste-then-sign-up.md, apps/web/src/pages/HomePage.tsx, apps/web/src/components/TryIt/ (useTryIt, TryItSteps), apps/web/src/components/ClaimForm/ and GuestBanner/, apps/web/src/pages/SaveTaxPage.tsx, apps/web/src/pages/AccountantsPage.tsx and SignUpPage.tsx, Agent 3's deep-link helper and Agent 2's types.
+Read CLAUDE.md, apps/web/src/ui/README.md, PLAN.md (M21), docs/decisions/015-taste-then-sign-up.md, apps/web/src/pages/HomePage.tsx, apps/web/src/components/TryIt/ (useTryIt, TryItSteps), apps/web/src/components/ClaimForm/ and GuestBanner/, apps/web/src/pages/SaveTaxPage.tsx, apps/web/src/pages/AccountantsPage.tsx and SignUpPage.tsx, apps/web/src/pages/SettingsLayout.tsx (ToolsTab, AdminSettingsTab), Agent 3's deep-link helper and Agent 2's types (TrialCounts, PracticeRequestView).
 You own:
 - the "boring stuff, for accountants" section of HomePage.tsx
 - the peak prompts: new components in apps/web/src/components/Peaks/ (new), and their one-line mounts in TryItSteps.tsx, SaveTaxPage.tsx and GuestBanner
 - the "Who are you?" step in ClaimForm, and `from` on every claim
 - apps/web/src/components/PracticeRequest/ (new), and its entries on AccountantsPage.tsx and SignUpPage.tsx
+- the overseer's two panels: apps/web/src/components/TrialCounts/ and apps/web/src/components/PracticeRequests/ (new), and their one-line mounts in SettingsLayout.tsx's ToolsTab and AdminSettingsTab
 Task:
 1. The three tiles as buttons: with a trial, open its view through the deep links; without one, run useExample(1) and open the view once it's ready.
-2. The peaks exactly as the ADR words them: the first $100 saving on their own file (once per trial, dismissable, remembered in browser storage with try/catch), the example's "drop your own statement" line, the last 48 hours in the banner. Nothing on arrival or on leaving.
+2. The peaks exactly as the ADR words them: the first $100 saving on their own file (once per trial, dismissable, remembered in browser storage with try/catch), the example's "drop your own statement" line, and the banner's and claim form's expiry wording as ADR 015, 3.5 A says (no countdown or 48-hour state). Nothing on arrival or on leaving.
 3. Every Save your work passes its `from`.
 4. "Who are you?" before the claim form, only when Agent 3's flag says they opened the accountant view; I run this business selected. The accountant choice opens PracticeRequest, which sends request_practice_account and says what happens next; the trial is untouched.
 5. Get a practice account on /accountants and /signup.
-Testing Library tests: each tile with and without a trial, the saving line once at the threshold and never for an example, dismissal, the example line, the 48-hour banner, `from` on each claim path, the question shown only after the accountant view, the practice request form (including the per-address refusal).
+6. For overseers only (render nothing for anyone else): Settings → Tools shows the trial counts from `GET /api/overseer/trials` (the last 12 weeks: started, saved, moved into an account, expired by why, and saves by `from`, with "not recorded" for none), and Settings → Admin lists the practice requests from `GET /api/practice-requests`, newest first, with a Delete button (`delete_practice_request`, `why: by_overseer`, through ConfirmDialog). The page only renders the server's counts; it adds nothing up.
+Testing Library tests: each tile with and without a trial, the saving line once at the threshold and never for an example, dismissal, the example line, the banner's expiry wording, `from` on each claim path, the question shown only after the accountant view, the practice request form (including the per-address refusal), and both overseer panels (shown for an overseer, absent for a practice admin, the counts as served, deleting a request).
 Run `make check`.
 Don't commit.
 ```
@@ -116,7 +119,7 @@ Read CLAUDE.md, PLAN.md (M21 "Done when"), docs/decisions/015-taste-then-sign-up
 You own:
 - crates/server/tests/m21.rs (new)
 Task: `m21_is_done`, with no sign-in anywhere until the claim:
-1. A guest drops fixtures/bank-statements/harbourlight-cheque-2025-08.ofx and reads its statements, trial balance, journals, general ledger and asset register; an example guest reads Example 3's (the van is in the register).
+1. A guest drops fixtures/bank-statements/harbourlight-cheque-2025-08.ofx and reads its statements, trial balance, journals, general ledger and asset register; an example guest reads Example 3's (answer its van card first, as m20.rs does; then the van is in the register).
 2. Every write on those years is refused for the guest, and the PDF, with the ADR's wording.
 3. A second guest can't read the first's.
 4. The first guest claims with `from` = accountant_view, and the overseer counts show one started, one saved by accountant_view.
@@ -128,7 +131,7 @@ Don't commit.
 ## When all of them are done
 
 Check `make check` passes, then by hand in a browser:
-- **Desktop:** with no trial, click "Statements that foot": Example 1 loads and its statements open, read-only. Back to your tax, drop a real OFX of your own, answer Save tax cards until the saving line appears; it shows once. Open the accountant view, then Save your work: "Who are you?" appears with I run this business selected. Pick the accountant path and send a request; check it's in Settings → Admin as an overseer.
+- **Desktop:** with no trial, click "Statements that foot": Example 1 loads and its statements open, read-only. Back to your tax, drop a real OFX of your own, answer Save tax cards until the saving line appears; it shows once. Open the accountant view, then Save your work: "Who are you?" appears with I run this business selected. Pick the accountant path and send a request; as an overseer, check it's in Settings → Admin and that Settings → Tools counts the trials.
 - **Phone:** the tiles open the same views; the statements read on a narrow screen.
 
-Tick M21's status in PLAN.md and set ADR 015 to Accepted. Add the browser check to NON-CODE-TODOS.md if it's left for later.
+Tick M21's status in PLAN.md (ADR 015 was accepted on 2026-11-07). Add the browser check to NON-CODE-TODOS.md if it's left for later.

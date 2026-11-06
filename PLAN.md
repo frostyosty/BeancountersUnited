@@ -365,7 +365,7 @@ Status: not started. Planned 2026-10-26. M12's Settings screen ships a UI-only p
 Done when: a test shows an overseer acting as staff sees only what that staff user sees (including owner edits hidden by the owner's sign-off setting), can't finalise, reopen or file, and that every command and the start and end of the session appear in the log with both identities.
 
 ## M20 — Try it on the home page, no sign-up
-Status: not started. Planned 2026-11-04. The three example statements are written: `fixtures/landing/` (see its README for what each one covers). The agent prompts are in `M20-PROMPTS.md` (seven agents, four waves). M19 has ADR 013 and migration 0013 reserved, so M20 takes ADR 014 and migration 0014.
+Status: done (2026-11-07). `m20_is_done` passes and the desktop and phone browser check is done. ADR 014 is accepted. Planned 2026-11-04. The three example statements are written: `fixtures/landing/` (see its README for what each one covers). The agent prompts are in `M20-PROMPTS.md` (seven agents, four waves). M19 has ADR 013 and migration 0013 reserved, so M20 takes ADR 014 and migration 0014.
 
 A visitor sees the product work before they sign up. They drop a bank statement (one of ours, or their own) onto "Upload bank statements" in "From bank statement to IRD", and the steps below it fill in with their real figures: the tax to pay, Save tax cards they can answer, and File tax. With their own file they can go all the way to the File tax screen without signing up or signing in. Everything runs through the real parser, pipeline and tax engine; nothing on the page is a mock-up.
 
@@ -405,7 +405,7 @@ A visitor sees the product work before they sign up. They drop a bank statement 
 Done when: `crates/server/tests/m20.rs` (`m20_is_done`) shows that, with no sign-in, each example gives its pinned conservative figure and answering its top three Save tax cards lowers it by pinned amounts; a real-shaped OFX from `fixtures/bank-statements/` goes from upload through Save tax to the Submit screen; claiming keeps every line and answer; one guest can't read another's business; an unclaimed guest expires and its statements, lines and files are gone; and the rate limit refuses the next guest from the same IP. The web tests cover dragging a card, **Use this example**, a real file, the phone links, the preview, the loader and the hero ticket. Then a browser check on a desktop and a phone.
 
 ## M21 — The whole taste first, then sign up at the peak
-Status: not started. Planned 2026-11-06. Builds on M20's guests (ADR 014). The agent prompts are in `M21-PROMPTS.md` (five agents, four waves). M21 takes ADR 015 and migration 0015.
+Status: ADR 015 accepted (2026-11-07); wave 2 of `M21-PROMPTS.md` is next. Planned 2026-11-06. Builds on M20's guests (ADR 014). The agent prompts are in `M21-PROMPTS.md` (five agents, four waves). M21 takes ADR 015 and migration 0015.
 
 M20 lets a visitor see their tax and bring it down with no account. M21 lets them see everything else too, the accountant's side included, and asks for an account only when it's worth the most to them: when there's something to keep, or something only an account can do. Everything they see is still the real thing, read from their own trial.
 

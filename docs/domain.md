@@ -639,8 +639,11 @@ A guest's business is set up from a bank statement alone, so nobody is asked abo
   - Company charts, templates and mappings don't change.
   - Names and structure are our own (hard rule 3).
   - Codes follow the company chart's ranges where the two overlap.
-- **Owners never see codes.** The categories they pick from are the expense accounts, by name, plus 150,
-  each with a default GST code they can change on a line.
+- **Owners never see codes on their own screens.** The categories they pick from are the expense accounts,
+  by name, plus 150, each with a default GST code they can change on a line.
+- **The accountant view shows codes (decided 2026-11-07, ADR 015, 1.4).** When an owner or a guest opens
+  the accountant view, every tab shows account codes as the accountant sees them, the general ledger
+  included. The trial balance and chart already did, so hiding them in one tab protected nothing.
 - **Default GST codes (decided 2026-10-23)** are stored on the account: `standard`, `zero`, `exempt` or
   `none`. Only income and expense accounts have one. A client's chart copies them from the master chart,
   and accountants (staff and the practice owner) can change a client's defaults with `set_account_gst`.

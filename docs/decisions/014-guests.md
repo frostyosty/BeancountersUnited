@@ -1,10 +1,10 @@
 # 014: Guests: trying it on the home page with no sign-up
 
-Status: proposed (2026-11-05). Settles PLAN.md M20's guest questions before wave 2 of `M20-PROMPTS.md`
+Status: accepted (2026-11-07, when M20 was done). Proposed 2026-11-05. Settles PLAN.md M20's guest questions before wave 2 of `M20-PROMPTS.md`
 starts. The GST rule in 3 was decided by the owner on 2026-11-04; this ADR writes it up and settles its
 details. Three points are the owner's to decide, each marked **DECISION FOR ME**: what happens to a
 guest's work if they sign in to an existing account instead (4), folding the claim into Submit (5), and
-what happens to an expired guest's `command_log` rows (6). The status becomes accepted when M20 is done.
+what happens to an expired guest's `command_log` rows (6). The owner chose B for 4, and A for 5 and 6.
 ADR 013 (M19) is taken, so this is 014.
 
 ## Context

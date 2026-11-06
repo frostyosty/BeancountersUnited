@@ -11,7 +11,7 @@ and **Submit** files the return with IRD. Underneath is a double-entry ledger pe
 statements, asset register and finalisation an accountant needs, behaving like MYOB AO Classic. One hosted
 server owns the data, and everyone uses a browser (ADR 007).
 
-**Current milestone: M10.** Before starting work, read that milestone's section in `PLAN.md`.
+**Current milestone: M21.** Before starting work, read that milestone's section in `PLAN.md`.
 
 ## The accountant view is "AO-like" (behaviour, not content)
 - A practice master chart per entity type; each client's chart starts as a copy of it.
