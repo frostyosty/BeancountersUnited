@@ -56,12 +56,39 @@
   padding: 0;
 }
 
+.lines {
+  container-type: inline-size;
+}
+
 .lines li {
   display: grid;
   grid-template-columns: 7rem 1fr auto;
   gap: var(--space-3);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* In a narrow card the description gets a row of its own instead of a sliver of a column. */
+@container (max-width: 26rem) {
+  .lines li {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "date amount"
+      "desc desc";
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .lineDate {
+    grid-area: date;
+  }
+
+  .lineAmount {
+    grid-area: amount;
+  }
+
+  .lineDesc {
+    grid-area: desc;
+  }
 }
 
 .lineDate {

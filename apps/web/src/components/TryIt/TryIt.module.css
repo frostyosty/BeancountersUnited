@@ -439,23 +439,91 @@
 }
 
 .cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-3);
   margin: var(--space-3) 0 0;
 }
 
 .cards > p,
 .cards > a {
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
   margin: 0;
 }
 
 .miniCard {
+  position: relative;
+  flex: 1 1 15rem;
+  min-width: 0;
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
+  cursor: pointer;
+  transition:
+    flex-grow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow var(--dur) var(--ease);
+}
+
+.miniFeatured {
+  flex-grow: 2.6;
+  box-shadow: var(--shadow-1);
+}
+
+/* Tall cards are clipped; the chevron opens them with a smooth slide. */
+.miniClip {
+  position: relative;
+  max-height: 22rem;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.miniFade::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3rem;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+  pointer-events: none;
+}
+
+.miniMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.miniMore:hover {
+  background: var(--accent-soft);
+}
+
+.chevron {
+  display: inline-block;
+  transition: transform 0.35s var(--ease);
+}
+
+.chevronUp {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .miniCard,
+  .miniClip,
+  .chevron {
+    transition: none;
+  }
 }
 
 .miniSaving {
