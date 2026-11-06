@@ -182,9 +182,9 @@ describe("UploadDrop", () => {
     expect(onFile).toHaveBeenCalledWith(file);
   });
 
-  it("shows the privacy line, or the staging warning", () => {
+  it("shows no privacy line, only the staging warning", () => {
     const { unmount } = render(<UploadDrop onExample={() => {}} onFile={() => {}} />);
-    expect(screen.getByText(/Nobody looks at it/)).toBeTruthy();
+    expect(screen.queryByText(/Nobody looks at it/)).toBeNull();
     unmount();
     render(<UploadDrop onExample={() => {}} onFile={() => {}} stagingWarning />);
     expect(screen.getByText(/Don't upload a real statement/)).toBeTruthy();

@@ -83,12 +83,17 @@ export function HomePage() {
   const flowRef = useRef<HTMLOListElement>(null);
   const rects = useRef(new Map<Element, DOMRect>());
   const wasDropped = useRef(false);
-  const ready = tryIt.state.phase === "ready";
+  // The Tax saved section only appears once an answer has actually saved something.
+  const hasSaved = tryIt.state.phase === "ready" && tryIt.state.savedSoFar > 0;
+  const layoutKey = `${dropped}-${hasSaved}`;
+  const lastKey = useRef(layoutKey);
   useLayoutEffect(() => {
     const flow = flowRef.current;
     if (!flow) return;
     const items = Array.from(flow.children);
-    if (dropped && !wasDropped.current && !reduced && typeof Element.prototype.animate === "function") {
+    const changed = lastKey.current !== layoutKey;
+    lastKey.current = layoutKey;
+    if (changed && !reduced && typeof Element.prototype.animate === "function") {
       for (const el of items) {
         const before = rects.current.get(el);
         if (!before) continue;
@@ -105,7 +110,7 @@ export function HomePage() {
     }
     if (dropped && !wasDropped.current) flow.scrollIntoView?.({ behavior: reduced ? "auto" : "smooth", block: "start" });
     wasDropped.current = dropped;
-  }, [dropped, reduced]);
+  }, [dropped, layoutKey, reduced]);
   useLayoutEffect(() => {
     // Runs after every render: the positions the next change will slide from.
     const flow = flowRef.current;
@@ -149,43 +154,67 @@ export function HomePage() {
           </div>
         </section>
 
-        <section id="features" className={styles.section}>
+        <section id="features" className={`${styles.section} ${dropped ? styles.sectionWide : ""}`}>
           <h2 className={styles.sectionTitle}>From bank statement to IRD</h2>
           <p className={styles.sectionLede}>Four steps, hardly any clicking.</p>
           <div className={`${styles.tryLayout} ${dropped ? styles.tryDropped : ""}`}>
-            <ol ref={flowRef} className={`${styles.flow} ${dropped ? styles.flowDropped : ""}`}>
-              {steps.map((s, i) => (
-                <li key={s.title} className={`${styles.flowItem} ${styles[`step${i}`]}`}>
-                  <div className={styles.feature}>
-                    <span className={styles.featureIcon} >
-                      <Icon name={s.icon} fallback={s.fallback} />
-                    </span>
-                    <h3>{s.title}</h3>
-                    {!(dropped && i === 2) && <p>{s.body}</p>}
-                    {i === 0 ? (
-                      <>
-                        {!desktop && <ExampleLinks examples={examples} />}
-                        <UploadDrop onExample={tryIt.useExample} onFile={tryIt.useFile} />
-                        <UploadResult state={tryIt.state} />
-                        <RetryButton tryIt={tryIt} />
-                      </>
-                    ) : (
-                      <LaterStep index={i as 1 | 2 | 3} tryIt={tryIt} />
-                    )}
-                  </div>
-                  {s.next && (
-                    <div className={styles.arrow}>
-                      <span aria-hidden="true" className={styles.arrowGlyph}>
-                        ↓
-                      </span>
-                      <span>{s.next}</span>
+            <ol ref={flowRef} className={`${styles.flow} ${dropped ? styles.flowDropped : ""} ${hasSaved ? styles.hasSaved : ""}`}>
+              {steps.map((s, i) => {
+                // Once a statement is in, Upload moves into the Save tax card's title row.
+                if (dropped && i === 0) return null;
+                const inSaveRow = dropped && i === 2;
+                const icon = (
+                  <span className={styles.featureIcon}>
+                    <Icon name={s.icon} fallback={s.fallback} />
+                  </span>
+                );
+                return (
+                  <li key={s.title} className={`${styles.flowItem} ${styles[`step${i}`]}`}>
+                    <div className={styles.feature}>
+                      {inSaveRow ? (
+                        <div className={styles.saveHead}>
+                          <div className={styles.saveTitle}>
+                            {icon}
+                            <h3>{s.title}</h3>
+                          </div>
+                          <div className={styles.saveUpload}>
+                            <UploadDrop compact onExample={tryIt.useExample} onFile={tryIt.useFile} />
+                            <UploadResult state={tryIt.state} />
+                            <RetryButton tryIt={tryIt} />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {icon}
+                          <h3>{s.title}</h3>
+                          {!(dropped && i === 1) && <p>{s.body}</p>}
+                        </>
+                      )}
+                      {i === 0 ? (
+                        <>
+                          {!desktop && <ExampleLinks examples={examples} />}
+                          <UploadDrop onExample={tryIt.useExample} onFile={tryIt.useFile} />
+                          <UploadResult state={tryIt.state} />
+                          <RetryButton tryIt={tryIt} />
+                        </>
+                      ) : (
+                        <LaterStep index={i as 1 | 2 | 3} tryIt={tryIt} />
+                      )}
                     </div>
-                  )}
-                </li>
-              ))}
-              {dropped && ready && (
+                    {s.next && (
+                      <div className={styles.arrow}>
+                        <span aria-hidden="true" className={styles.arrowGlyph}>
+                          ↓
+                        </span>
+                        <span>{s.next}</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+              {dropped && hasSaved && (
                 <li key="saved" className={`${styles.flowItem} ${styles.step4}`}>
-                  <div className={`${styles.feature} ${styles.slideIn}`}>
+                  <div className={`${styles.feature} ${styles.slideIn}`} data-slide="">
                     <span className={styles.featureIcon} data-money-bag="">
                       <Icon name="business.save_saved" fallback="💰" />
                     </span>

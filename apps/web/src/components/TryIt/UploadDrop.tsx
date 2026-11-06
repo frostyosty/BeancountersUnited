@@ -9,10 +9,12 @@ export interface UploadDropProps {
   onFile: (file: File) => void;
   /** Staging shows a warning instead of the privacy line (ADR 014, question 7). */
   stagingWarning?: boolean;
+  /** A small strip for adding more statements once one is in. */
+  compact?: boolean;
 }
 
 /** The Upload step's drop zone: takes a dragged example card or a file, or a chosen file. */
-export function UploadDrop({ onExample, onFile, stagingWarning = false }: UploadDropProps) {
+export function UploadDrop({ onExample, onFile, stagingWarning = false, compact = false }: UploadDropProps) {
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const hintId = useId();
@@ -27,7 +29,7 @@ export function UploadDrop({ onExample, onFile, stagingWarning = false }: Upload
   return (
     <div className={styles.dropWrap}>
       <div
-        className={`${styles.drop} ${over ? styles.dropOver : ""}`}
+        className={`${styles.drop} ${compact ? styles.dropCompact : ""} ${over ? styles.dropOver : ""}`}
         data-over={over || undefined}
         data-testid="upload-drop"
         onDragEnter={accept}
@@ -46,7 +48,7 @@ export function UploadDrop({ onExample, onFile, stagingWarning = false }: Upload
         <span className={styles.dropIcon}>
           <Icon name="tryit.drop" fallback="📥" />
         </span>
-        <p className={styles.dropText}>{over ? "Drop it here" : "Drag a statement here, or an example from the side"}</p>
+        <p className={styles.dropText}>{over ? "Drop it here" : compact ? "Drop more statements" : "Drag a statement here, or an example from the side"}</p>
         <Button size="sm" onClick={() => input.current?.click()} aria-describedby={hintId}>
           <Icon name="tryit.file" fallback="📂" /> Choose a file
         </Button>
@@ -67,13 +69,11 @@ export function UploadDrop({ onExample, onFile, stagingWarning = false }: Upload
           OFX works best
         </span>
       </div>
-      <p className={styles.privacy}>
-        <Emoji>🔒</Emoji>{" "}
-        {stagingWarning
-          ? "This is our test server. Don't upload a real statement: use an example, or a made-up file."
-          : "Your file is read on our server in Australia, only to show you your tax. Nobody looks at it, it isn't sent anywhere else, and it's deleted 7 days after you last use it unless you save your work."}{" "}
-        {!stagingWarning && <a href="/privacy#trials">How we handle your file</a>}
-      </p>
+      {stagingWarning && (
+        <p className={styles.privacy}>
+          <Emoji>🔒</Emoji> This is our test server. Don't upload a real statement: use an example, or a made-up file.
+        </p>
+      )}
     </div>
   );
 }

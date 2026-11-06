@@ -167,7 +167,7 @@
 /* After a drop: Save tax takes the left and middle, the other steps stack on the right. */
 .tryDropped {
   grid-template-columns: minmax(0, 1fr);
-  max-width: 88rem;
+  max-width: none;
   margin-inline: auto;
 }
 
@@ -176,19 +176,49 @@
   display: grid;
   grid-template-columns: minmax(0, 3.2fr) minmax(0, 1.1fr) minmax(0, 1.1fr);
   grid-template-areas:
-    "save tax saved"
-    "upload file file";
+    "save tax tax"
+    "save file file";
   gap: 1.25rem;
   align-items: start;
   scroll-margin-top: 5rem;
 }
 
-.flowDropped .arrow {
-  display: none;
+.flowDropped.hasSaved {
+  grid-template-areas:
+    "save tax saved"
+    "save file file";
 }
 
-.step0 {
-  grid-area: upload;
+.sectionWide {
+  max-width: 112rem;
+  padding-inline: clamp(0.75rem, 2vw, 2rem);
+}
+
+.saveHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.saveTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.saveTitle h3 {
+  margin: 0;
+}
+
+.saveUpload {
+  flex: 0 1 22rem;
+  min-width: 0;
+}
+
+.flowDropped .arrow {
+  display: none;
 }
 
 .step1 {
@@ -330,8 +360,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "save save"
+      "tax tax"
+      "file file";
+  }
+
+  .flowDropped.hasSaved {
+    grid-template-areas:
+      "save save"
       "tax saved"
-      "upload file";
+      "file file";
   }
 }
 
