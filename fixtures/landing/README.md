@@ -32,28 +32,37 @@ What each gives Save tax to find (the conservative figure counts every deposit a
   refund (not income), a GST payment, the ACC levy, a practising licence, insurance, a cheque, ATM cash and a
   supermarket shop.
 
-## Figures (worked out 2026-11-05, pinned)
+## Figures (worked out 2026-11-05, re-pinned 2026-11-06 for the guest setup, pinned)
 
-Each example is set up as a sole trader whose books start on the first day of the statement (so there's no
-gap to estimate), GST registered from that day if the business is, on the payments basis. Example 1 files
-two-monthly with periods ending in odd months (its payment is "GST AUG-SEP"); Example 3 with periods
-ending in even months ("GST MAY-JUN", "GST REFUND JUL-AUG"); Example 2 isn't registered.
-`crates/server/src/examples.rs` imports the file through `import_statement` into a throwaway store and
-reads `save_tax::queue`, so the figures are the engine's, not a second calculation. The parser writes
-Example 2's account as `99-3305-0098765-02` (it shortens the three-digit suffix).
+Each example is set up exactly as a visitor's own file would be (ADR 014, 3 and 9): `start_guest` makes a
+sole trader called by the example's name, with books from 1 April of the income year holding the
+statement's first line (1 April 2025 for all three; the months before the statement are a gap with no
+amount, so they move no figure), GST registered from then on the payments basis, and the registration
+detected from the statement or else assumed:
+- **Example 1:** detected, from "INLAND REVENUE GST AUG-SEP" on 22 Oct; two-monthly, periods ending in odd
+  months.
+- **Example 2:** assumed. Its only IRD line is income tax, and a statement can't prove a business isn't
+  registered, so it's treated as registered (the higher figure) until the owner answers "Are you GST
+  registered?". The business itself isn't registered, so that card is answered "no".
+- **Example 3:** detected, from "GST MAY-JUN" and the "GST REFUND JUL-AUG"; two-monthly, periods ending in
+  even months.
+
+`crates/server/src/examples.rs` runs each example through `start_guest` into a throwaway store and reads
+`save_tax::queue`, so the figures are the engine's, not a second calculation. The parser writes Example 2's
+account as `99-3305-0098765-02` (it shortens the three-digit suffix).
 
 | | Example 1 | Example 2 | Example 3 |
 |---|---|---|---|
-| Tax to pay, conservative (nothing answered) | **$5,307.98** | **$8,096.82** | **$32,890.09** |
+| Tax to pay, conservative (nothing answered) | **$5,307.98** | **$9,111.51** | **$32,890.09** |
 
 Then the top card of the Save tax queue is answered, three times, each time the first card the queue
 offers and with the answer the lines above imply. The figure after each answer:
 
 | Step | Example 1 | Example 2 | Example 3 |
 |---|---|---|---|
-| 1 | Only income: yes → $2,050.81 | Only income: yes → $1,686.32 | Only income: yes → $18,188.54 |
-| 2 | The GST payment → $2,050.81 | The $1,500 income tax paid → $186.32 | $20,000 transfer in from savings → $10,449.40 |
-| 3 | A card settlement is income → $2,050.81 | A client invoice is income → $186.32 | The van, with its tax invoice → $6,699.40 |
+| 1 | Only income: yes → $2,050.81 | Only income: yes → $3,520.36 | Only income: yes → $18,188.54 |
+| 2 | The GST payment → $2,050.81 | GST registered: no → $1,686.32 | $20,000 transfer in from savings → $10,449.40 |
+| 3 | A card settlement is income → $2,050.81 | The $1,500 income tax paid → $186.32 | The van, with its tax invoice → $6,699.40 |
 
 Steps that don't move the figure are right, not broken: the card's saving is a best case, and the honest
 answer (income, or a GST payment for a period before the statement) saves nothing. The tests that pin

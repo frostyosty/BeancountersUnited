@@ -343,7 +343,8 @@ async fn submit_command(
     if user.0.is_guest() && user.acting().is_none() {
         state
             .guest_limits
-            .take_command(&user.0.id, chrono::Utc::now())?;
+            .take_command(&user.0.id, chrono::Utc::now())
+            .inspect_err(|e| guests::log_refusal(e, &user.0.id))?;
     }
     // In the session, so starting to view as someone (M19) knows which session it's for.
     let accepted = pipeline::submit_in_session(

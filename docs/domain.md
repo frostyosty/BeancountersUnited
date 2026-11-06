@@ -407,7 +407,8 @@ list is under "Open".
 - **Rate.** The rate is versioned data in core, keyed by date, not a practice setting: 1500 bp (15%) for
   dates from 1 October 2010. A date with no rate gets no GST figure, and the screen says why.
 - **Registration.** Setup asks whether the owner is registered and from which date. There's no GST before
-  that date, and the first period runs from that date to the end of the period it falls in.
+  that date, and the first period runs from that date to the end of the period it falls in. A guest's
+  business (M20) is never asked: see "GST registration from statements" below.
   - An unregistered owner sees no GST. If their deposits in any 12 months exceed $60,000, a notice says
     they may have to register (**check**: the threshold came from non-IRD sources).
   - Deregistering is backlog.
@@ -487,6 +488,33 @@ list is under "Open".
 - **Income tax treatment.** For a registered owner, income and expenses are GST-exclusive. GST collected,
   GST paid to IRD and GST refunds are never income or expenses. A GST refund deposit counts as income in
   M10 only because nothing is sorted yet; M11 marks it.
+
+### GST registration from statements (decided 2026-11-04, M20)
+A guest's business is set up from a bank statement alone, so nobody is asked about GST up front. ADR 014,
+3 has the reasoning; this is the rule as built (`crates/core/src/tax/gst.rs`, `crates/server/src/guests.rs`).
+- **Detected.** A payment to IRD or a deposit from IRD whose description says GST proves registration
+  (`bank::ird_kind`, `tax::gst::detect_registration`). The business is registered from its start date
+  (1 April of the statement's income year), and the proving line is kept as the evidence. Income tax
+  lines ("INC TAX 2026") prove nothing.
+- **Frequency**, in this order: the month range in the reference ("AUG-SEP" is two-monthly ending in odd
+  months, "MAY-JUN" even months, one month alone is monthly, six months ending March or September is
+  six-monthly); else the spacing of two or more GST lines; else two-monthly, odd months.
+- **Assumed.** Without proof, registered from the start date, two-monthly (odd). A statement can't prove
+  someone isn't registered.
+- **Why registered when unsure:** it always gives the higher figure, provided no input tax is claimed.
+  So while registration is only assumed, every coding posts with GST code `none`, whatever the category's
+  default. The server enforces it. Answering "not registered" then only ever brings the figure down.
+- **"Are you GST registered?"** is a Save tax card, shown only while assumed and ranked by its saving like
+  any other. A detected registration gets no card.
+- **Where it's recorded:** `businesses.gst_source` (`detected`, `assumed`, `owner` or `ird`; `NULL` for
+  businesses set up before M20, read as `owner`) and `businesses.gst_evidence`. A browser may only send
+  `set_gst_registration` with source `owner`. `ird` beats `owner`, which beats `detected`, which beats
+  `assumed`. Each upload or statement removal re-runs detection on a `detected` or `assumed` business;
+  an owner's or IRD's answer is never changed by it.
+- **Changing it** reverses and reposts every line and gap journal whose posting changes, in the same
+  command.
+- **Not built yet:** the "Claim the GST" cards that recode lines once registration is confirmed, and the
+  notice when a later statement has a GST refund after the owner said "not registered".
 
 ### Income tax for sole traders (decided 2026-10-19)
 - **Years.** M10 supports the 2026 income year (1 April 2025 to 31 March 2026) and the 2027 income year

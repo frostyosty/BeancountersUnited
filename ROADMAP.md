@@ -2,9 +2,6 @@
 
 ### General
 
-Do M20 agent 3 - was 75% of the way through before usage limit hit. agent 4 done.
-
-ok on homepage the new layout of the new sample ofx's the stuffs bleedign over the sides of its containers (in the preview areas i.e. before you click them).
 
 ### On comp
 

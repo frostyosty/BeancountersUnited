@@ -1027,6 +1027,12 @@ impl Limits {
     }
 }
 
+/// Logs a refusal by the in-memory limits (`docs/security.md`, "What we log"): which limit, and the
+/// address or the guest's user id. Never the file or its name.
+pub(crate) fn log_refusal(e: &CommandError, who: &str) {
+    tracing::info!(limit = %e.body().code, who, "refused by the guest limits");
+}
+
 /// The client's address for the limits: an IPv4 address, or an IPv6 /64. `Fly-Client-IP` only
 /// on Fly (`FLY_APP_NAME` is set there), else the socket's peer; never `X-Forwarded-For`.
 pub fn client_address(headers: &HeaderMap, extensions: &Extensions) -> String {
@@ -1314,9 +1320,15 @@ pub async fn start_route(
         };
         let adds = matches!(command, Command::AddGuestBusiness { .. });
         if adds && !replay {
-            state.guest_limits.take_trial(&address, example, now)?;
+            state
+                .guest_limits
+                .take_trial(&address, example, now)
+                .inspect_err(|e| log_refusal(e, &address))?;
         }
-        state.guest_limits.take_command(&user.0.id, now)?;
+        state
+            .guest_limits
+            .take_command(&user.0.id, now)
+            .inspect_err(|e| log_refusal(e, &user.0.id))?;
         let accepted = pipeline::submit_in_session(
             &state.store,
             &user.actor(),
@@ -1349,7 +1361,10 @@ pub async fn start_route(
     }
 
     if !replay {
-        state.guest_limits.take_trial(&address, example, now)?;
+        state
+            .guest_limits
+            .take_trial(&address, example, now)
+            .inspect_err(|e| log_refusal(e, &address))?;
     }
     let anonymous = Actor {
         user_id: None,

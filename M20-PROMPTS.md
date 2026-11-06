@@ -100,7 +100,12 @@ Run `make check`.
 Don't commit.
 ```
 
-**Agent 3 progress (paused 2026-11-05, uncommitted in the tree). A new session: read this, then carry on from "Left".**
+**Agent 3: done 2026-11-06.** "Left" 1–4 below are finished: `crates/server/tests/guests.rs` (16 tests), types
+unchanged, `fixtures/landing/README.md` re-pinned for the guest setup, `docs/domain.md` "GST registration from
+statements", `docs/security.md` guest rows marked built, `ACCT_GUEST_FILES=warn` in `fly.staging.toml`, and
+refusals by the in-memory limits are logged (limit and address, never the file). Wave 3 can start.
+
+**Agent 3 progress (paused 2026-11-05). Kept for the record.**
 
 Done (compiles, clippy clean; the whole existing suite passed before the last small edit to `auth.rs` login):
 - `crates/store/migrations/0014_guests.sql`; `crates/store/src/guests.rs` (flags, `set_gst`, guest businesses, holding/totals, `delete_business`, `redact_log`, sessions helpers, `rename_client`, `move_owner`, `retire_guest`); `users.rs` gained `guest_since`, `claimed_at`, `is_guest()`, `claim`, `guests`; `log.rs` gained `redacted_seq` and `count_for_client`; `PRAGMA secure_delete = ON` on the writer.
