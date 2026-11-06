@@ -1,10 +1,9 @@
 import type { SaveTaxCard } from "@acct/types/SaveTaxCard";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Icon } from "../../lib/icons";
 import { formatMoney } from "../../lib/money";
 import { CardBody } from "../../pages/SaveTaxCards";
-import { coinCount, flyMoney, noteAction, recentAction, shares } from "./flyMoney";
 import { StepPlaceholder } from "./StepState";
 import styles from "./TryIt.module.css";
 import { MIN_WORK_MS, type GstNote, type TryIt, type TryItState, useReducedMotion } from "./useTryIt";
@@ -15,8 +14,7 @@ const dollars = (cents: number) => `$${formatMoney(cents)}`;
 
 /** The three steps after Upload, by the step's index in the flow (1 = See your tax). */
 export function LaterStep({ index, tryIt }: { index: 1 | 2 | 3; tryIt: TryIt }) {
-  const { state } = tryIt;
-  if (index === 1) return <SeeYourTax state={state} />;
+  if (index === 1) return <SeeYourTax tryIt={tryIt} />;
   if (index === 2) return <SaveTaxStep tryIt={tryIt} />;
   return <FileTaxStep tryIt={tryIt} />;
 }
@@ -101,63 +99,8 @@ export function GstLine({ gst, businessId }: { gst: GstNote; businessId: string 
   );
 }
 
-/**
- * The tax and "saved so far" figures, which count down in step with the coins that fly into the
- * money bag when an answer saves tax. `owed` is what hasn't landed yet.
- */
-function useFlyingFigures(tax: number, saved: number, active: boolean, refreshing: boolean) {
-  const [owed, setOwed] = useState({ tax: 0, saved: 0 });
-  const previous = useRef<{ tax: number; saved: number } | null>(null);
-  const reduced = useReducedMotion();
-  const cancel = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    if (!active) return;
-    document.addEventListener("click", noteAction, true);
-    return () => document.removeEventListener("click", noteAction, true);
-  }, [active]);
-
-  useLayoutEffect(() => {
-    if (!active) {
-      previous.current = null;
-      return;
-    }
-    // The tax and the queue are fetched separately: wait until both are in so the coins carry the whole change.
-    if (refreshing) return;
-    const before = previous.current;
-    previous.current = { tax, saved };
-    if (!before || saved <= before.saved || reduced) return;
-    const savedDelta = saved - before.saved;
-    const taxDelta = Math.max(0, before.tax - tax);
-    const n = coinCount(savedDelta);
-    const taxShares = shares(taxDelta, n);
-    const savedShares = shares(savedDelta, n);
-    cancel.current();
-    // Show the old figures straight away, then let each coin take its share off.
-    setOwed({ tax: taxDelta, saved: savedDelta });
-    const from = recentAction() ?? { x: window.innerWidth / 3, y: window.innerHeight / 2 };
-    let left = { tax: taxDelta, saved: savedDelta };
-    cancel.current = flyMoney(
-      from,
-      n,
-      (i) => {
-        left = { tax: left.tax - taxShares[i], saved: left.saved - savedShares[i] };
-        setOwed(left);
-      },
-      () => setOwed({ tax: 0, saved: 0 }),
-    );
-  }, [tax, saved, active, reduced, refreshing]);
-
-  useEffect(() => () => cancel.current(), []);
-
-  // Mid-refresh the new figures are only half in: keep showing the last settled ones.
-  if (refreshing && previous.current) return previous.current;
-  return { tax: tax + owed.tax, saved: saved - owed.saved };
-}
-
-function SeeYourTax({ state }: { state: TryItState }) {
-  const ready = state.phase === "ready" ? state : null;
-  const shown = useFlyingFigures(ready?.tax ?? 0, ready?.savedSoFar ?? 0, ready !== null, ready?.refreshing ?? false);
+function SeeYourTax({ tryIt }: { tryIt: TryIt }) {
+  const { state, shown } = tryIt;
   if (state.phase === "idle" || state.phase === "error") return <StepPlaceholder state={state} />;
   if (state.phase === "uploading") return <p className={styles.placeholder}>Waiting for your statement…</p>;
   if (state.phase === "working") return <Loader lineCount={state.upload.lineCount} />;
@@ -167,20 +110,34 @@ function SeeYourTax({ state }: { state: TryItState }) {
       <p className={styles.figure} data-testid="try-tax">
         {dollars(shown.tax)}
       </p>
-      {shown.saved > 0 ? (
-        <p className={styles.saved}>
-          <Icon name="business.save_saved" fallback="🎉" /> Saved so far {dollars(shown.saved)}{" "}
-          <span className="muted">(it was {dollars(state.conservative)})</span>
-        </p>
-      ) : (
-        <p className="muted">Counts every deposit as income and claims nothing.</p>
-      )}
+      <p className="muted">Counts every deposit as income and claims nothing.</p>
       {state.notices.map((n) => (
         <p key={n.code} className="muted">
           {n.message}
         </p>
       ))}
       <GstLine gst={state.gst} businessId={state.businessId} />
+    </div>
+  );
+}
+
+/** The section that appears beside See your tax: what the answers have saved. The coins land here. */
+export function TaxSavedCard({ tryIt }: { tryIt: TryIt }) {
+  const { state, shown } = tryIt;
+  if (state.phase !== "ready") return null;
+  return (
+    <div className={styles.result} aria-live="polite">
+      <p className={styles.figureLabel}>Saved by your answers</p>
+      <p className={`${styles.figure} ${styles.savedFigure}`} data-testid="try-saved">
+        {dollars(shown.saved)}
+      </p>
+      {shown.saved > 0 ? (
+        <p className="muted">
+          <Icon name="business.save_saved" fallback="🎉" /> It was {dollars(state.conservative)} before you answered.
+        </p>
+      ) : (
+        <p className="muted">Answer a question and watch it grow.</p>
+      )}
     </div>
   );
 }

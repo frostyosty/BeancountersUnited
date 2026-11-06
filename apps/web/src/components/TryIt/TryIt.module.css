@@ -397,6 +397,10 @@
   line-height: 1.1;
 }
 
+.savedFigure {
+  color: var(--ok);
+}
+
 .saved {
   color: var(--ok);
   font-weight: 600;

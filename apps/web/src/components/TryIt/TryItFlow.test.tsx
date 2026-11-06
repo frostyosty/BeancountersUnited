@@ -13,7 +13,7 @@ import { makeQueryClient } from "../../lib/queryClient";
 import { HomePage } from "../../pages/HomePage";
 import { jsonResponse, renderApp, stubApi } from "../../test/render";
 import { UploadResult } from "./StepState";
-import { LaterStep, RetryButton } from "./TryItSteps";
+import { LaterStep, RetryButton, TaxSavedCard } from "./TryItSteps";
 import { UploadDrop } from "./UploadDrop";
 import { useExamples } from "./useExamples";
 import { useTryIt } from "./useTryIt";
@@ -157,6 +157,7 @@ function Flow({ minWorkMs }: { minWorkMs?: number }) {
       <LaterStep index={1} tryIt={tryIt} />
       <LaterStep index={2} tryIt={tryIt} />
       <LaterStep index={3} tryIt={tryIt} />
+      <TaxSavedCard tryIt={tryIt} />
     </>
   );
 }
@@ -212,12 +213,12 @@ describe("a file dropped on the home page", () => {
     renderApp(<Flow minWorkMs={0} />);
     drop();
     await screen.findByTestId("try-tax");
-    expect(screen.queryByText(/Saved so far/)).toBeNull();
+    expect(screen.getByTestId("try-saved").textContent).toBe("$0.00");
 
     await userEvent.setup().click(within(screen.getAllByLabelText("Save tax card")[0]!).getByRole("button", { name: "Yes, it's my only income" }));
 
     await waitFor(() => expect(screen.getByTestId("try-tax").textContent).toBe("$7,000.00"));
-    expect(screen.getByText(/Saved so far \$2,000.00/)).toBeTruthy();
+    expect(screen.getByTestId("try-saved").textContent).toBe("$2,000.00");
     const command = calls.find((c) => c.path === "/api/commands")!.body as { kind: string; payload: { client_id: string; answer: unknown } };
     expect(command.kind).toBe("answer_question");
     expect(command.payload.client_id).toBe("b1");

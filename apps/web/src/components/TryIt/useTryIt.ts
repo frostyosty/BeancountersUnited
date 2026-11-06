@@ -15,6 +15,7 @@ import { fileToBase64 } from "../../lib/files";
 import { newId } from "../../lib/id";
 import { keys } from "../../lib/queries";
 import { saveTaxKey } from "../../pages/SaveTaxPage";
+import { useFlyingFigures } from "./useFlyingFigures";
 import { useMediaQuery } from "./useExamples";
 
 /** What the Upload step shows once a file or example is in. */
@@ -74,6 +75,8 @@ export type TryItState =
 
 export interface TryIt {
   state: TryItState;
+  /** The tax and saved figures to show: they count in step with the coins flying into the bag. */
+  shown: { tax: number; saved: number };
   /** Load example 1 to 3, as a drop of that file would. */
   useExample: (n: number) => void;
   /** Load a file the visitor dropped or chose. */
@@ -332,8 +335,10 @@ export function useTryIt(examples: ExampleStatement[] = [], options: { minWorkMs
     };
   }, [failure, session, pending, waited, taxQ.data, taxQ.error, taxQ.isFetching, queueQ.data, queueQ.error, queueQ.isFetching, businessQ.data, businessQ.error]);
 
+  const shown = useFlyingFigures(state);
+
   return useMemo(
-    () => ({ state, useExample, useFile, retry, reset, enterApp }),
-    [state, useExample, useFile, retry, reset, enterApp],
+    () => ({ state, shown, useExample, useFile, retry, reset, enterApp }),
+    [state, shown, useExample, useFile, retry, reset, enterApp],
   );
 }

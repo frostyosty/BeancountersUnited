@@ -167,19 +167,20 @@
 /* After a drop: Save tax takes the left and middle, the other steps stack on the right. */
 .tryDropped {
   grid-template-columns: minmax(0, 1fr);
-  max-width: 72rem;
+  max-width: 88rem;
   margin-inline: auto;
 }
 
+/* Save tax takes the wide left; See your tax and the spawned Tax saved sit to its right. */
 .flowDropped {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 3.2fr) minmax(0, 1.1fr) minmax(0, 1.1fr);
   grid-template-areas:
-    "save save tax"
-    "save save upload"
-    "save save file";
+    "save tax saved"
+    "upload file file";
   gap: 1.25rem;
   align-items: start;
+  scroll-margin-top: 5rem;
 }
 
 .flowDropped .arrow {
@@ -200,6 +201,21 @@
 
 .step3 {
   grid-area: file;
+}
+
+.step4 {
+  grid-area: saved;
+}
+
+.slideIn {
+  animation: slide-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-2.5rem);
+  }
 }
 
 .flowItem {
@@ -309,6 +325,16 @@
   color: #fff;
 }
 
+@media (max-width: 70rem) {
+  .flowDropped {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "save save"
+      "tax saved"
+      "upload file";
+  }
+}
+
 @media (max-width: 52rem) {
   .flowDropped {
     display: flex;
@@ -335,6 +361,10 @@
 
   .feature:hover {
     transform: none;
+  }
+
+  .slideIn {
+    animation: none;
   }
 }
 

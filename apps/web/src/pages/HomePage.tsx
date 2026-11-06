@@ -1,12 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation } from "react-router";
 import { SiteHeader } from "../components/SiteHeader";
 import { ExampleLinks, ExamplesPanel } from "../components/TryIt/ExamplesPanel";
 import { UploadResult } from "../components/TryIt/StepState";
-import { LaterStep, RetryButton } from "../components/TryIt/TryItSteps";
+import { LaterStep, RetryButton, TaxSavedCard } from "../components/TryIt/TryItSteps";
 import { UploadDrop } from "../components/TryIt/UploadDrop";
 import { useExamples, useIsDesktop } from "../components/TryIt/useExamples";
-import { useTryIt } from "../components/TryIt/useTryIt";
+import { useReducedMotion, useTryIt } from "../components/TryIt/useTryIt";
 import { Icon } from "../lib/icons";
 import { formatMoney } from "../lib/money";
 import { LoginPage } from "./LoginPage";
@@ -77,6 +77,42 @@ export function HomePage() {
   // Once a statement is in, the examples go and the steps re-arrange around the answers.
   const dropped = ["uploading", "working", "ready"].includes(tryIt.state.phase);
 
+  // When a statement goes in, the steps slide to their new places rather than jumping, and the page
+  // scrolls so the whole row is in view. Positions are remembered after every render (FLIP).
+  const reduced = useReducedMotion();
+  const flowRef = useRef<HTMLOListElement>(null);
+  const rects = useRef(new Map<Element, DOMRect>());
+  const wasDropped = useRef(false);
+  const ready = tryIt.state.phase === "ready";
+  useLayoutEffect(() => {
+    const flow = flowRef.current;
+    if (!flow) return;
+    const items = Array.from(flow.children);
+    if (dropped && !wasDropped.current && !reduced && typeof Element.prototype.animate === "function") {
+      for (const el of items) {
+        const before = rects.current.get(el);
+        if (!before) continue;
+        const after = el.getBoundingClientRect();
+        const dx = before.left - after.left;
+        const dy = before.top - after.top;
+        if (dx || dy) {
+          el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+            duration: 600,
+            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          });
+        }
+      }
+    }
+    if (dropped && !wasDropped.current) flow.scrollIntoView?.({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    wasDropped.current = dropped;
+  }, [dropped, reduced]);
+  useLayoutEffect(() => {
+    // Runs after every render: the positions the next change will slide from.
+    const flow = flowRef.current;
+    if (!flow) return;
+    rects.current = new Map(Array.from(flow.children).map((el) => [el, el.getBoundingClientRect()]));
+  });
+
   // The hero ticket: Example 1's real conservative figure, from the server. Clicking it loads that example
   // exactly as a drop would and scrolls to the flow.
   const example1 = examples.find((e) => e.number === 1);
@@ -117,11 +153,11 @@ export function HomePage() {
           <h2 className={styles.sectionTitle}>From bank statement to IRD</h2>
           <p className={styles.sectionLede}>Four steps, hardly any clicking.</p>
           <div className={`${styles.tryLayout} ${dropped ? styles.tryDropped : ""}`}>
-            <ol className={`${styles.flow} ${dropped ? styles.flowDropped : ""}`}>
+            <ol ref={flowRef} className={`${styles.flow} ${dropped ? styles.flowDropped : ""}`}>
               {steps.map((s, i) => (
                 <li key={s.title} className={`${styles.flowItem} ${styles[`step${i}`]}`}>
                   <div className={styles.feature}>
-                    <span className={styles.featureIcon} data-money-bag={s.icon === "home.tax" ? "" : undefined}>
+                    <span className={styles.featureIcon} >
                       <Icon name={s.icon} fallback={s.fallback} />
                     </span>
                     <h3>{s.title}</h3>
@@ -147,6 +183,17 @@ export function HomePage() {
                   )}
                 </li>
               ))}
+              {dropped && ready && (
+                <li key="saved" className={`${styles.flowItem} ${styles.step4}`}>
+                  <div className={`${styles.feature} ${styles.slideIn}`}>
+                    <span className={styles.featureIcon} data-money-bag="">
+                      <Icon name="business.save_saved" fallback="💰" />
+                    </span>
+                    <h3>Tax saved</h3>
+                    <TaxSavedCard tryIt={tryIt} />
+                  </div>
+                </li>
+              )}
             </ol>
             {desktop && !dropped && examples.length > 0 && <ExamplesPanel examples={examples} />}
           </div>
