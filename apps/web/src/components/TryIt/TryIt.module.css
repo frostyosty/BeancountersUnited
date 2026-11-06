@@ -165,16 +165,6 @@
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
 }
 
-.cardTag {
-  align-self: flex-start;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--paper-tag);
-  color: var(--paper-tag-text);
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
 .cardBank {
   font-weight: 700;
   font-size: var(--text-md);
@@ -426,11 +416,14 @@
 
 .cards {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-3);
   margin: var(--space-3) 0 0;
 }
 
-.cards > p {
+.cards > p,
+.cards > a {
+  grid-column: 1 / -1;
   margin: 0;
 }
 

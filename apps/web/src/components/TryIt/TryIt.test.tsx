@@ -76,18 +76,19 @@ describe("layout by width", () => {
 });
 
 describe("ExamplesPanel (desktop)", () => {
-  it("shows three cards, each labelled as an example", () => {
-    render(<ExamplesPanel examples={examples} onUse={() => {}} />);
+  it("shows three cards, without any example label or use button", () => {
+    render(<ExamplesPanel examples={examples} />);
     expect(screen.getByText("Drag and drop an example OFX")).toBeTruthy();
     for (const n of [1, 2, 3]) {
       const card = screen.getByTestId(`example-card-${n}`);
-      expect(within(card).getByText(`Example ${n} · example`)).toBeTruthy();
+      expect(within(card).queryByText(/· example/)).toBeNull();
+      expect(within(card).queryByText(/Use this example/)).toBeNull();
     }
     expect(screen.getAllByText("Card sales")).toHaveLength(3);
   });
 
   it("opens the full-screen preview and closes it with Escape", async () => {
-    render(<ExamplesPanel examples={examples} onUse={() => {}} />);
+    render(<ExamplesPanel examples={examples} />);
     await userEvent.setup().click(screen.getByRole("button", { name: /Open Example 2/ }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Money in")).toBeTruthy();
@@ -100,7 +101,7 @@ describe("ExamplesPanel (desktop)", () => {
   });
 
   it("closes the preview with the Close button", async () => {
-    render(<ExamplesPanel examples={examples} onUse={() => {}} />);
+    render(<ExamplesPanel examples={examples} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Open Example 1/ }));
     await user.click(screen.getByRole("button", { name: /Close/ }));
@@ -108,32 +109,15 @@ describe("ExamplesPanel (desktop)", () => {
   });
 
   it("shows the raw file on its tab", async () => {
-    render(<ExamplesPanel examples={examples} onUse={() => {}} />);
+    render(<ExamplesPanel examples={examples} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Open Example 1/ }));
     await user.click(screen.getByRole("tab", { name: /Raw file/ }));
     expect(screen.getByRole("tabpanel", { name: "Raw file" }).textContent).toContain("OFXHEADER:100");
   });
 
-  it("Use this example in the preview calls useExample and closes", async () => {
-    const onUse = vi.fn();
-    render(<ExamplesPanel examples={examples} onUse={onUse} />);
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Open Example 3/ }));
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Use this example/ }));
-    expect(onUse).toHaveBeenCalledWith(3);
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("the button on a card also uses the example", async () => {
-    const onUse = vi.fn();
-    render(<ExamplesPanel examples={examples} onUse={onUse} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Use Example 2" }));
-    expect(onUse).toHaveBeenCalledWith(2);
-  });
-
   it("a card carries its number when dragged", () => {
-    render(<ExamplesPanel examples={examples} onUse={() => {}} />);
+    render(<ExamplesPanel examples={examples} />);
     const dt = dataTransfer({ types: [] });
     fireEvent.dragStart(screen.getByTestId("example-card-2"), { dataTransfer: dt });
     expect(dt.setData).toHaveBeenCalledWith(EXAMPLE_DRAG_TYPE, "2");
@@ -142,7 +126,7 @@ describe("ExamplesPanel (desktop)", () => {
 
 describe("ExampleLinks (phone)", () => {
   it("shows three links that open the preview", async () => {
-    render(<ExampleLinks examples={examples} onUse={() => {}} />);
+    render(<ExampleLinks examples={examples} />);
     expect(screen.queryByText("Drag and drop an example OFX")).toBeNull();
     for (const n of [1, 2, 3]) expect(screen.getByRole("button", { name: `Example ${n}` })).toBeTruthy();
     await userEvent.setup().click(screen.getByRole("button", { name: "Example 3" }));

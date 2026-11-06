@@ -22,6 +22,8 @@ There's a catch: accountants can't sign themselves up today. The server has one 
 
 M21 has five agents in four waves. Wave 1 writes ADR 015, which leaves you one decision: whether accepting a practice request should create that accountant's account automatically." please make M22 with this in mind (see how much M21 covered first)
 
+For M22, please make it an intuitive claude "ask the experts" modal where theres also an example one for the 3 ofx examples, where the user sees " we noticed you have had this trend over 3 years. xyz" and they see buttons under the modal saying "graph" and "dismiss" nad if they click on graph then claude makes a graph for them in the webpage. Would we build an mcp so its easy for claude to do this and light on tokens? would be both for owners/accountants/everyone although I suppose mcp stuff might have tiers? We should already have some of this functionality in place I believe.
+
 ### On comp
 
 ### phone

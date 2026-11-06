@@ -3,7 +3,7 @@ import { useState } from "react";
 import { formatDate } from "../../lib/dates";
 import { Icon } from "../../lib/icons";
 import { formatMoney } from "../../lib/money";
-import { Button, Modal } from "../../ui";
+import { Modal } from "../../ui";
 import styles from "./TryIt.module.css";
 
 export interface StatementPreviewProps {
@@ -11,15 +11,14 @@ export interface StatementPreviewProps {
   /** The open example's number, or null when closed. */
   open: number | null;
   onClose: () => void;
-  onUse: (n: number) => void;
 }
 
-export function StatementPreview({ examples, open, onClose, onUse }: StatementPreviewProps) {
+export function StatementPreview({ examples, open, onClose }: StatementPreviewProps) {
   const e = examples.find((x) => x.number === open);
-  return e ? <Preview key={e.number} e={e} onClose={onClose} onUse={onUse} /> : null;
+  return e ? <Preview key={e.number} e={e} onClose={onClose} /> : null;
 }
 
-function Preview({ e, onClose, onUse }: { e: ExampleStatement; onClose: () => void; onUse: (n: number) => void }) {
+function Preview({ e, onClose }: { e: ExampleStatement; onClose: () => void }) {
   const [tab, setTab] = useState<"statement" | "raw">("statement");
   // Running balance, in exact integer cents.
   let balance = e.opening_balance;
@@ -35,22 +34,6 @@ function Preview({ e, onClose, onUse }: { e: ExampleStatement; onClose: () => vo
       onClose={onClose}
       icon={<Icon name="tryit.statement" fallback="🏛" />}
       title={`${e.title}: ${e.business}`}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Not now
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              onUse(e.number);
-              onClose();
-            }}
-          >
-            <Icon name="tryit.use" fallback="✅" /> Use this example
-          </Button>
-        </>
-      }
     >
       <p className={styles.previewNote}>An example, made up for this page: {e.what}.</p>
       <div role="tablist" aria-label="View" className={styles.tabs}>

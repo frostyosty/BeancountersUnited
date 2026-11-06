@@ -7,11 +7,10 @@ import styles from "./TryIt.module.css";
 
 export interface ExamplesProps {
   examples: ExampleStatement[];
-  onUse: (n: number) => void;
 }
 
 /** Desktop: the panel beside the flow, with three cards. */
-export function ExamplesPanel({ examples, onUse }: ExamplesProps) {
+export function ExamplesPanel({ examples }: ExamplesProps) {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <aside className={styles.panel} aria-label="Example statements">
@@ -20,15 +19,15 @@ export function ExamplesPanel({ examples, onUse }: ExamplesProps) {
       </h3>
       <p className={styles.panelNote}>Made-up statements, so you can see it work.</p>
       {examples.map((e) => (
-        <ExampleCard key={e.number} example={e} onOpen={setOpen} onUse={onUse} />
+        <ExampleCard key={e.number} example={e} onOpen={setOpen} />
       ))}
-      <StatementPreview examples={examples} open={open} onClose={() => setOpen(null)} onUse={onUse} />
+      <StatementPreview examples={examples} open={open} onClose={() => setOpen(null)} />
     </aside>
   );
 }
 
 /** Phone: three links under the Upload step's text, each opening the same preview. */
-export function ExampleLinks({ examples, onUse }: ExamplesProps) {
+export function ExampleLinks({ examples }: ExamplesProps) {
   const [open, setOpen] = useState<number | null>(null);
   if (examples.length === 0) return null;
   return (
@@ -41,7 +40,7 @@ export function ExampleLinks({ examples, onUse }: ExamplesProps) {
           </button>
         ))}
       </p>
-      <StatementPreview examples={examples} open={open} onClose={() => setOpen(null)} onUse={onUse} />
+      <StatementPreview examples={examples} open={open} onClose={() => setOpen(null)} />
     </>
   );
 }

@@ -1,19 +1,16 @@
 import type { ExampleStatement } from "@acct/types/ExampleStatement";
 import { formatDate } from "../../lib/dates";
-import { Icon } from "../../lib/icons";
 import { formatMoney } from "../../lib/money";
-import { Button } from "../../ui";
 import { EXAMPLE_DRAG_TYPE } from "./dnd";
 import styles from "./TryIt.module.css";
 
 export interface ExampleCardProps {
   example: ExampleStatement;
   onOpen: (n: number) => void;
-  onUse: (n: number) => void;
 }
 
 /** A small paper statement. Draggable onto the drop zone; click opens the full preview. */
-export function ExampleCard({ example: e, onOpen, onUse }: ExampleCardProps) {
+export function ExampleCard({ example: e, onOpen }: ExampleCardProps) {
   return (
     <div
       className={styles.card}
@@ -26,7 +23,6 @@ export function ExampleCard({ example: e, onOpen, onUse }: ExampleCardProps) {
       }}
     >
       <button type="button" className={styles.cardBody} onClick={() => onOpen(e.number)} aria-label={`Open ${e.title}: ${e.business}`}>
-        <span className={styles.cardTag}>{e.title} · example</span>
         <span className={styles.cardBank}>{e.bank}</span>
         <span className={styles.cardBiz}>{e.business}</span>
         <span className={styles.cardPeriod}>
@@ -41,9 +37,6 @@ export function ExampleCard({ example: e, onOpen, onUse }: ExampleCardProps) {
           ))}
         </span>
       </button>
-      <Button size="sm" variant="ghost" onClick={() => onUse(e.number)} aria-label={`Use ${e.title}`}>
-        <Icon name="tryit.use" fallback="✅" /> Use this example
-      </Button>
     </div>
   );
 }

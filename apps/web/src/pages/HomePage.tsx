@@ -74,6 +74,8 @@ export function HomePage() {
   const examples = useExamples();
   const tryIt = useTryIt(examples);
   const desktop = useIsDesktop();
+  // Once a statement is in, the examples go and the steps re-arrange around the answers.
+  const dropped = ["uploading", "working", "ready"].includes(tryIt.state.phase);
 
   // The hero ticket: Example 1's real conservative figure, from the server. Clicking it loads that example
   // exactly as a drop would and scrolls to the flow.
@@ -114,19 +116,19 @@ export function HomePage() {
         <section id="features" className={styles.section}>
           <h2 className={styles.sectionTitle}>From bank statement to IRD</h2>
           <p className={styles.sectionLede}>Four steps, hardly any clicking.</p>
-          <div className={styles.tryLayout}>
-            <ol className={styles.flow}>
+          <div className={`${styles.tryLayout} ${dropped ? styles.tryDropped : ""}`}>
+            <ol className={`${styles.flow} ${dropped ? styles.flowDropped : ""}`}>
               {steps.map((s, i) => (
-                <li key={s.title} className={styles.flowItem}>
+                <li key={s.title} className={`${styles.flowItem} ${styles[`step${i}`]}`}>
                   <div className={styles.feature}>
-                    <span className={styles.featureIcon}>
+                    <span className={styles.featureIcon} data-money-bag={s.icon === "home.tax" ? "" : undefined}>
                       <Icon name={s.icon} fallback={s.fallback} />
                     </span>
                     <h3>{s.title}</h3>
-                    <p>{s.body}</p>
+                    {!(dropped && i === 2) && <p>{s.body}</p>}
                     {i === 0 ? (
                       <>
-                        {!desktop && <ExampleLinks examples={examples} onUse={tryIt.useExample} />}
+                        {!desktop && <ExampleLinks examples={examples} />}
                         <UploadDrop onExample={tryIt.useExample} onFile={tryIt.useFile} />
                         <UploadResult state={tryIt.state} />
                         <RetryButton tryIt={tryIt} />
@@ -146,7 +148,7 @@ export function HomePage() {
                 </li>
               ))}
             </ol>
-            {desktop && examples.length > 0 && <ExamplesPanel examples={examples} onUse={tryIt.useExample} />}
+            {desktop && !dropped && examples.length > 0 && <ExamplesPanel examples={examples} />}
           </div>
         </section>
 

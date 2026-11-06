@@ -164,6 +164,44 @@
   min-width: 0;
 }
 
+/* After a drop: Save tax takes the left and middle, the other steps stack on the right. */
+.tryDropped {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.flowDropped {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "save save tax"
+    "save save upload"
+    "save save file";
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.flowDropped .arrow {
+  display: none;
+}
+
+.step0 {
+  grid-area: upload;
+}
+
+.step1 {
+  grid-area: tax;
+}
+
+.step2 {
+  grid-area: save;
+}
+
+.step3 {
+  grid-area: file;
+}
+
 .flowItem {
   display: flex;
   flex-direction: column;
@@ -217,6 +255,7 @@
 
 .featureIcon {
   display: inline-grid;
+  transform-origin: 50% 70%;
   place-items: center;
   width: 2.6rem;
   height: 2.6rem;
@@ -271,6 +310,11 @@
 }
 
 @media (max-width: 52rem) {
+  .flowDropped {
+    display: flex;
+    flex-direction: column;
+  }
+
   .tryLayout {
     grid-template-columns: minmax(0, 30rem);
   }
