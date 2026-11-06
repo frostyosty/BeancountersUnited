@@ -1443,6 +1443,72 @@ pub(crate) async fn repost_all(
     Ok(())
 }
 
+/// The purchase codings `coding` would have had if registration had been known: `none` becomes
+/// the category's default GST code (`standard` for a category with none, as the categorise form
+/// does). `None` when there's nothing to put back.
+fn with_input_tax(coding: &Coding, chart: &Chart) -> Option<Coding> {
+    let mut c = coding.clone();
+    let (account, gst) = match &mut c {
+        Coding::Out(
+            WithdrawalCoding::Expense { account, gst }
+            | WithdrawalCoding::AssetPurchase { account, gst }
+            | WithdrawalCoding::PartPrivate { account, gst, .. },
+        ) => (account, gst),
+        _ => return None,
+    };
+    if *gst != GstCode::None {
+        return None;
+    }
+    let default = chart
+        .get(account)
+        .and_then(|a| a.default_gst)
+        .unwrap_or(GstCode::Standard);
+    if default == GstCode::None {
+        return None;
+    }
+    *gst = default;
+    Some(c)
+}
+
+/// When a business's GST registration stops being only assumed (the owner or IRD confirms it, or
+/// a statement proves it), puts back the GST on purchases coded while it was assumed (ADR 014, 3).
+/// Those were posted with GST `none`, so each is recoded with its category's GST code, and the
+/// books come out as if registration had been known from the start, whichever order things were
+/// answered in. Over $200, the GST still waits on the supply information as usual. An asset keeps
+/// its class. Returns how many lines it recoded.
+pub(crate) async fn restore_input_tax(
+    tx: &mut SqliteConnection,
+    seq: i64,
+    client_id: &str,
+) -> Result<usize, CommandError> {
+    let books = books(tx, client_id).await?;
+    if !books.claims_input_tax() || books.business.gst.is_none() {
+        return Ok(0);
+    }
+    let mut recoded = 0;
+    for info in load_lines(tx, &books).await? {
+        let Posting::Coded(coding) = info.posting() else {
+            continue;
+        };
+        let Some(restored) = with_input_tax(&coding, &books.chart) else {
+            continue;
+        };
+        let asset_class_id = match &info.state.asset_id {
+            Some(id) => asset_store::get_asset(tx, id).await?.map(|a| a.class_id),
+            None => None,
+        };
+        let target = Target {
+            posting: Posting::Coded(restored),
+            rule_id: info.state.rule_id.clone(),
+            ird_income_year: info.state.ird_income_year,
+            asset_class_id,
+        };
+        set_posting(tx, seq, &books, &info, target).await?;
+        recoded += 1;
+    }
+    Ok(recoded)
+}
+
 fn add(a: GstTotals, b: GstTotals) -> GstTotals {
     GstTotals {
         sales: a.sales + b.sales,

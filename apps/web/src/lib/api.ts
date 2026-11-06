@@ -1,8 +1,13 @@
 import type { Accepted } from "@acct/types/Accepted";
+import type { Adopted } from "@acct/types/Adopted";
+import type { AdoptRequest } from "@acct/types/AdoptRequest";
 import type { AiSuggestRun } from "@acct/types/AiSuggestRun";
 import type { ApiError } from "@acct/types/ApiError";
+import type { ClaimRequest } from "@acct/types/ClaimRequest";
 import type { Command } from "@acct/types/Command";
+import type { GuestStarted } from "@acct/types/GuestStarted";
 import type { Health } from "@acct/types/Health";
+import type { StartGuestRequest } from "@acct/types/StartGuestRequest";
 import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { MappingCheck } from "@acct/types/MappingCheck";
 import type { MappingCheckRequest } from "@acct/types/MappingCheckRequest";
@@ -79,6 +84,25 @@ export function login(req: LoginRequest, fetchFn: typeof fetch = fetch): Promise
 /** Signs a business owner up (M12): their account and business in one go, then signs them in. */
 export function signUp(req: SignUpRequest, fetchFn: typeof fetch = fetch): Promise<SignedUp> {
   return postJson<SignedUp>("/api/signup", req, fetchFn);
+}
+
+/**
+ * A visitor drops a file, or uses an example, on the home page (M20, ADR 014). With no session it makes
+ * a guest and a business; with a guest's session the server adds to theirs. Pass the same `id` to retry
+ * after a lost reply.
+ */
+export function startGuest(req: StartGuestRequest, fetchFn: typeof fetch = fetch): Promise<GuestStarted> {
+  return postJson<GuestStarted>("/api/guest", req, fetchFn);
+}
+
+/** A guest saves their work (M20, ADR 014): the same user and business, now with an email and a password. */
+export function claimGuest(req: ClaimRequest, fetchFn: typeof fetch = fetch): Promise<SignedUp> {
+  return postJson<SignedUp>("/api/guest/claim", req, fetchFn);
+}
+
+/** After signing in, move the trial this browser had into the account, or leave it to expire. */
+export function adoptGuest(req: AdoptRequest, fetchFn: typeof fetch = fetch): Promise<Adopted> {
+  return postJson<Adopted>("/api/guest/adopt", req, fetchFn);
 }
 
 export async function logout(fetchFn: typeof fetch = fetch): Promise<void> {

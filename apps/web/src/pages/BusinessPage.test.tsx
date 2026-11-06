@@ -43,6 +43,10 @@ const business: BusinessView = {
   start_date: "2025-08-01",
   gst_registered_from: "2025-08-01",
   gst_frequency: "two_monthly_odd",
+  gst_source: "owner",
+  gst_evidence: null,
+  gst_contradicted_by: null,
+  example: null,
   bank_accounts: [
     {
       id: "a3",

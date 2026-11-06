@@ -16,6 +16,7 @@ import { keys, useChart } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import { Button } from "../ui";
 import { CategoriseForm, describeCoding, incomeYearOf } from "./SaveTaxCategorise";
+import { GstRegisteredQuestion } from "./SaveTaxGst";
 import styles from "./SaveTax.module.css";
 
 interface CardProps {
@@ -157,6 +158,8 @@ function QuestionCard({ card, clientId, canEdit }: CardProps) {
       return <OtherIncome year={year} canEdit={canEdit} busy={busy} error={error} onAnswer={answer} />;
     case "ietc":
       return <Ietc year={year} canEdit={canEdit} busy={busy} error={error} onAnswer={answer} />;
+    case "gst_registered":
+      return <GstRegisteredQuestion clientId={clientId} canEdit={canEdit} />;
     default:
       return <p className="muted">We can't show this question yet.</p>;
   }

@@ -3,11 +3,12 @@ import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { DetectedLine } from "@acct/types/DetectedLine";
 import type { TaxPosition } from "@acct/types/TaxPosition";
 import { type ChangeEvent, type DragEvent, type FormEvent, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { BankVsBooks, BankVsBooksForAccount } from "../components/BankVsBooks";
 import { ChangesButton } from "../components/ChangesButton";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { LockedForGuest } from "../components/GuestBanner";
 import { formatDate } from "../lib/dates";
 import { fileToBase64 } from "../lib/files";
 import { newToken } from "../lib/id";
@@ -41,6 +42,9 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
   const canEdit = can(me, "staff");
   // A new owner sees how the three steps go until their first statement is in.
   const showWalkthrough = isOwner(me) && b.bank_accounts.length === 0;
+  // A guest (M20) is trying the app. An example business is made-up figures, which can't take their
+  // own statements or be filed.
+  const isExample = !!me.guest && me.guest.example?.business_id === clientId;
   return (
     <>
       <PageHeader
@@ -63,7 +67,16 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
             <h2 id="upload-heading">
               <Icon name="business.upload" fallback="📤" /> Upload bank statements
             </h2>
-            {canEdit ? <Upload clientId={clientId} /> : <p className="muted">Viewers can't upload.</p>}
+            {isExample ? (
+              <p className="muted">
+                This is an example. Your own statements go in a business of your own: drop one on the{" "}
+                <Link to="/">home page</Link>.
+              </p>
+            ) : canEdit ? (
+              <Upload clientId={clientId} />
+            ) : (
+              <p className="muted">Viewers can't upload.</p>
+            )}
           </section>
 
           <section className={styles.area} aria-labelledby="tax-heading">
@@ -82,6 +95,15 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
             <button type="button" disabled>
               Submit
             </button>
+            {me.guest &&
+              (isExample ? (
+                <p className="muted" role="note">
+                  <Icon name="guest.locked" fallback="🔒" /> This is an example, so it can't be filed. Try your own
+                  statement.
+                </p>
+              ) : (
+                <LockedForGuest reason="Save your work to file. It's the first step." />
+              ))}
           </section>
         </div>
         {showWalkthrough && <Walkthrough />}
@@ -98,7 +120,16 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
 
       <Detected transfers={b.transfers} ird={b.ird_payments} duplicates={b.possible_duplicates} />
 
-      {isOwner(me) && <InviteAccountant clientId={clientId} />}
+      {me.guest ? (
+        <section aria-labelledby="invite-heading">
+          <h2 id="invite-heading">
+            <Icon name="business.invite" fallback="🤝" /> Invite your accountant
+          </h2>
+          <LockedForGuest reason="Save your work first to invite your accountant." />
+        </section>
+      ) : (
+        isOwner(me) && <InviteAccountant clientId={clientId} />
+      )}
     </>
   );
 }

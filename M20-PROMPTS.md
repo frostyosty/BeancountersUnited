@@ -164,6 +164,15 @@ Run `make check`.
 Don't commit.
 ```
 
+**Agent 5: done 2026-11-06.** Real `useTryIt` (`POST /api/guest`, then the tax, Save tax queue and business reads),
+`TryItSteps.tsx` (loader, figure, GST line, top three cards through `CardBody`, Review your return), the hero ticket,
+`startGuest` in `api.ts`, `saveTaxKey` exported from `SaveTaxPage.tsx`, `TryItFlow.test.tsx` (16 tests). Gaps for the
+others, none fixed here: (1) the web can't tell *why* a visitor's own file is treated as registered, since
+`BusinessView` has no `gst_source` or evidence, so it says "Treated as GST registered" and the detected/assumed
+wording appears only for the examples; (2) `/api/clients/{id}/asset-classes` isn't on `GUEST_ALLOWED` routes but the
+categorise form reads it; (3) coming back to the home page as a guest starts empty (no resume from `Me.guest`);
+(4) `make check`'s Rust half wasn't run (no Rust changed).
+
 ### Agent 6: guests inside the app (Sonnet, medium thinking)
 ```
 Read CLAUDE.md, apps/web/src/ui/README.md, PLAN.md (M20 "Guests"), docs/decisions/014-guests.md, apps/web/src/App.tsx (signed-in and signed-out routes), apps/web/src/auth.tsx, apps/web/src/components/Layout.tsx, apps/web/src/components/SiteHeader.tsx, apps/web/src/components/HistoryPanel.tsx, apps/web/src/pages/BusinessPage.tsx, apps/web/src/pages/SignUpPage.tsx and the guest fields on Me (packages/types).
@@ -208,3 +217,15 @@ Check `make check` passes, then by hand in a browser:
 - Leave an example guest alone past its expiry on staging and check it's gone.
 
 Tick M20's status in PLAN.md, record the figures in fixtures/landing/README.md if Agent 2 hasn't, and set ADR 014 to Accepted. Add the browser check to NON-CODE-TODOS.md if it's left for later.
+
+**Gaps closed after wave 3 (2026-11-06).** None of these moves a pinned figure.
+- **"Are you GST registered?" card.** The web showed "We can't show this question yet". It's now answerable on Save tax and in the home page's top three (`SaveTaxGst.tsx`): No, or Yes with how often they file.
+- **GST status on the Save tax page.** It says why we think they're registered, with the line that proved it, and has a Change link. The home page's "change" link lands there.
+- **"Claim the GST" happens when registration is confirmed.** When an owner says yes (or a statement proves it), the same command gives purchases sorted while it was assumed their categories' GST codes (`save_tax::restore_input_tax`). The books come out the same whichever order things were answered in. ADR 014 and `docs/domain.md` record why this replaced the card.
+- **"Are you registered after all?"** If the owner said no and a statement uploaded since has a GST line from IRD, Save tax asks again (`BusinessView.gst_contradicted_by`).
+- **Agent 5's gaps:**
+  - (1) `BusinessView` now has `gst_source`, `gst_evidence` and `example`, so a visitor's own file says "We spotted a GST payment to IRD on 22 Oct 2025".
+  - (2) Guests may read `/api/clients/{id}/asset-classes`.
+  - (3) A guest coming back to the home page carries on with their trial.
+- **Decided:** guests keep the reads of their own `/api/clients/{id}`, `/chart`, `/coding-settings` and `/asset-classes` (ADR 014's route list says so). A trial gets no opening-balance reconcile card until it's saved (`docs/domain.md`).
+- **Tests:** `tests/guests.rs` gained two (confirming claims the GST in either order; the refund notice). There's also `SaveTaxGst.test.tsx`, and a resume test in `TryItFlow.test.tsx`.

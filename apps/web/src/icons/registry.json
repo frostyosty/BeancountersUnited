@@ -1306,5 +1306,31 @@
       "type": "emoji",
       "value": "🏦"
     }
+  },
+  "guest": {
+    "banner": {
+      "type": "emoji",
+      "value": "🧪"
+    },
+    "save": {
+      "type": "emoji",
+      "value": "💾"
+    },
+    "leave": {
+      "type": "emoji",
+      "value": "🚪"
+    },
+    "locked": {
+      "type": "emoji",
+      "value": "🔒"
+    },
+    "move": {
+      "type": "emoji",
+      "value": "📦"
+    },
+    "delete": {
+      "type": "emoji",
+      "value": "🗑️"
+    }
   }
 }

@@ -232,6 +232,7 @@ pub fn route_allowed(method: &Method, path: &str) -> bool {
         | "/api/clients"
         | "/api/clients/{id}"
         | "/api/clients/{id}/chart"
+        | "/api/clients/{id}/asset-classes"
         | "/api/businesses/{id}"
         | "/api/businesses/{id}/tax"
         | "/api/businesses/{id}/save-tax"
@@ -327,6 +328,7 @@ pub(crate) async fn after_apply(
     tx: &mut SqliteConnection,
     command: &Command,
     effect: &Effect,
+    seq: i64,
 ) -> Result<(), CommandError> {
     let client_id = match command {
         Command::ImportStatement { .. }
@@ -342,7 +344,7 @@ pub(crate) async fn after_apply(
         command,
         Command::ImportStatement { .. } | Command::RemoveStatement { .. }
     ) {
-        redetect(tx, client_id).await?;
+        redetect(tx, seq, client_id).await?;
     }
     if let Some(owner) = store::guest_owner(tx, client_id).await? {
         check_holding(tx, &owner, client_id).await?;
@@ -652,7 +654,7 @@ async fn new_business(
         None,
     )
     .await?;
-    redetect(tx, &client_id).await?;
+    redetect(tx, seq, &client_id).await?;
     check_holding(tx, user_id, &client_id).await?;
     Ok(client_id)
 }
@@ -660,10 +662,12 @@ async fn new_business(
 /// What a business's statements say about its GST registration now, applied when it came from
 /// statements in the first place (`detected` or `assumed`); an owner's or IRD's answer is never
 /// changed. Proof upgrades `assumed` to `detected`; losing it (the statement was removed) goes
-/// back to `assumed`. The registration date doesn't change, so nothing is reposted: the frequency
-/// only decides how the same postings fall into periods.
+/// back to `assumed`. The registration date doesn't change, so the frequency only decides how the
+/// same postings fall into periods; but proof puts back the GST on purchases coded while it was
+/// assumed (`save_tax::restore_input_tax`).
 pub(crate) async fn redetect(
     tx: &mut SqliteConnection,
+    seq: i64,
     client_id: &str,
 ) -> Result<(), CommandError> {
     let Some(flags) = store::flags(tx, client_id).await? else {
@@ -709,6 +713,9 @@ pub(crate) async fn redetect(
         evidence.as_deref(),
     )
     .await?;
+    if source == GstSource::Assumed && source_now == GstSource::Detected {
+        crate::save_tax::restore_input_tax(tx, seq, client_id).await?;
+    }
     Ok(())
 }
 
@@ -917,6 +924,10 @@ async fn set_registration(
     if gst.map(|g| g.registered_from) != b.gst.map(|g| g.registered_from) {
         crate::save_tax::repost_all(tx, seq, client_id).await?;
         business::regenerate_all_gaps(tx, seq, client_id).await?;
+    }
+    // Confirmed at last: the GST on purchases coded while it was assumed is claimed now.
+    if flags.source() == GstSource::Assumed && r.source != GstSource::Assumed && gst.is_some() {
+        crate::save_tax::restore_input_tax(tx, seq, client_id).await?;
     }
     Ok(())
 }

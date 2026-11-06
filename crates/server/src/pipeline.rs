@@ -206,7 +206,7 @@ async fn run(
         },
     };
     // GST detection from the statements, and the limits on what a guest holds (M20).
-    guests::after_apply(&mut tx, &command, &effect).await?;
+    guests::after_apply(&mut tx, &command, &effect, seq).await?;
     // `start_guest` is the visitor's own doing, though there was no user until it ran.
     let user_id = match guests::logged_user(&mut tx, &command, &effect).await? {
         Some(id) => Some(id),

@@ -17,11 +17,12 @@ import { useCommand } from "../lib/useCommand";
 import { PageHeader } from "../ui";
 import { AiSuggestionsPanel } from "./SaveTaxAi";
 import { CardBody } from "./SaveTaxCards";
+import { GstPanel } from "./SaveTaxGst";
 import { describeCoding } from "./SaveTaxCategorise";
 import styles from "./SaveTax.module.css";
 
 /** Under the business's key, so every command that invalidates the business refetches the queue. */
-const saveTaxKey = (clientId: string) => [...keys.business(clientId), "save-tax"] as const;
+export const saveTaxKey = (clientId: string) => [...keys.business(clientId), "save-tax"] as const;
 
 export function useSaveTax(clientId: string) {
   return useQuery({ queryKey: saveTaxKey(clientId), queryFn: () => getJson<SaveTaxQueue>(`/api/businesses/${clientId}/save-tax`) });
@@ -73,6 +74,8 @@ export function SaveTaxPage() {
           <strong>${formatMoney(q.total)}</strong>
         </div>
       </div>
+
+      <GstPanel business={business.data} canEdit={canEdit} />
 
       {canEdit && <AiSuggestionsPanel clientId={clientId} />}
 

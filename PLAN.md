@@ -404,6 +404,76 @@ A visitor sees the product work before they sign up. They drop a bank statement 
 
 Done when: `crates/server/tests/m20.rs` (`m20_is_done`) shows that, with no sign-in, each example gives its pinned conservative figure and answering its top three Save tax cards lowers it by pinned amounts; a real-shaped OFX from `fixtures/bank-statements/` goes from upload through Save tax to the Submit screen; claiming keeps every line and answer; one guest can't read another's business; an unclaimed guest expires and its statements, lines and files are gone; and the rate limit refuses the next guest from the same IP. The web tests cover dragging a card, **Use this example**, a real file, the phone links, the preview, the loader and the hero ticket. Then a browser check on a desktop and a phone.
 
+## M21 — The whole taste first, then sign up at the peak
+Status: not started. Planned 2026-11-06. Builds on M20's guests (ADR 014). The agent prompts are in `M21-PROMPTS.md` (five agents, four waves). M21 takes ADR 015 and migration 0015.
+
+M20 lets a visitor see their tax and bring it down with no account. M21 lets them see everything else too, the accountant's side included, and asks for an account only when it's worth the most to them: when there's something to keep, or something only an account can do. Everything they see is still the real thing, read from their own trial.
+
+**The accountant view, for owners and guests (read-only).**
+- The owner's business screen gets a switch: **Your view · Accountant view**. The accountant view shows the same business's books for its current year: the statements (profit and loss, balance sheet), trial balance, journals, general ledger, the asset register and Changes. It's the accountant's own screens (M15), read-only: no journals, TB import, notes, chart edits or finalising. A line at the top says what it is: "This is what your accountant sees. They work on these same books, so nothing gets typed in twice."
+- Claimed owners get it too. Today they can read these routes but nothing links to them.
+- A guest sees it for their own trial or an example, with no sign-in. Downloading the PDF needs an account, so it says "Save your work to download the PDF", like M20's other locked actions. For an example, it says "Try it with your own statement" instead, because examples can't be saved.
+- Server: the guest route list (ADR 014) gains the read-only year routes for the guest's own business. The statements need the practice's sole-trader template and mapping. Where a server has none, the statements tab says so plainly; it never shows an error.
+
+**The home page's "boring stuff, for accountants" opens it.**
+- The three tiles become buttons that work by keyboard and touch:
+  - Real double-entry books opens the journals and trial balance.
+  - Statements that foot opens the statements.
+  - Who changed what opens Changes.
+- With a trial loaded, a tile opens that view of the trial. Without one, it loads Example 1, as the hero ticket does, and then opens the view: one click to see it.
+- Each view has "Back to your tax".
+
+**Ask for an account at the peak, never before.**
+- Nothing asks for an account on arrival, while looking, or on the way out. There are no pop-ups on landing, no "are you sure you want to leave", and no countdowns.
+- An account is asked for only at these points, each in words about what they'd keep or get:
+  1. **The first real saving on their own file.** The first time Save tax brings the figure down by $100 or more, a line appears under "saved so far": "Keep the $X you've saved: save your work. It takes 20 seconds." It shows once per trial and can be dismissed.
+  2. **Filing.** Filing needs an account (ADR 014, 5), so saving their work is the first step of Submit, not a detour.
+  3. **Something only an account can do:** inviting an accountant, AI suggestions, the PDF and filing. "Save your work first to …" was built in M20; the PDF is added.
+  4. **The peak of an example is their own file, not an account.** Examples can't be saved, so after an example's figure drops, the line says "Like that? Drop your own statement and see yours."
+  5. **Before the trial goes.** The banner already says when the trial expires. In its last 48 hours it says so plainly.
+- **Measuring it without tracking anyone:**
+  - `claim_guest` records which of these led to it (`from`) in its own log entry.
+  - An overseer read in Settings → Tools shows trials started, saved and expired by week, and saves by `from`. This needs no third-party analytics and no cookies beyond the session.
+
+**Owner or accountant: asked only when it's a fair question.**
+- If the guest opened the accountant view, **Save your work** first asks "Who are you?", with **I run this business** already selected, or **I'm an accountant or bookkeeper**. A guest who never opened it isn't asked.
+- Opening the accountant view is a reason to offer the choice, never a reason to pick it for them. Owners open it too: "your accountant gets proper books" is part of the owner's pitch. Getting it wrong costs differently:
+  - An accountant sent down the owner path loses one click.
+  - An owner sent down the accountant path loses their trial and lands in a product they don't need.
+- **I run this business** is M20's claim, unchanged.
+- **I'm an accountant or bookkeeper** is a practice account request, not an account:
+  - It asks for their name, email, practice name, roughly how many clients they have, and optionally a phone number. It's the `request_practice_account` command, on a public route.
+  - An overseer sees the requests in Settings → Admin and sets the practice up as today. Someone follows up by hand; that's in NON-CODE-TODOS.md.
+  - The trial isn't moved anywhere. An accountant's trial is usually an example. An own-file trial stays a trial, kept for 7 days, and can still be saved by its owner.
+  - The form reminds them not to upload a client's statement without the client's OK.
+- `/accountants` and `/signup` get the same **Get a practice account** entry.
+- **Why not self-serve accountant accounts yet:** the server has one practice. Practice users are made by an admin, and charts, templates and the paragraph library are practice-wide. Letting a firm sign itself up needs practice tenancy (the White label backlog item), which is its own milestone. Until then, a request someone answers is honest, and suits the stage the business is at.
+
+**ADR 015 settles:**
+- the accountant view's exact route list, and what's locked;
+- the peak rules: the $100 threshold, once per trial, and dismissal;
+- the `from` values;
+- the practice request: what's stored, how long it's kept, the privacy policy line, and who sees it;
+- that claimed owners get the switch too.
+
+Done when: `crates/server/tests/m21.rs` (`m21_is_done`) shows, with no sign-in:
+- a guest reads its trial's statements, trial balance, journals, general ledger and asset register;
+- it's refused every write on them, and the PDF, with the reason;
+- a second guest can't read them;
+- `claim_guest` records its `from`;
+- a practice request goes through the pipeline and only overseers can list it;
+- the overseer's counts match the trials started, saved and expired.
+
+The web tests cover:
+- each tile, with and without a trial;
+- the switch, read-only;
+- the saving line appearing once at the threshold, and never for an example;
+- an example's "drop your own statement" line;
+- the "Who are you?" question appearing only after the accountant view;
+- the practice request form.
+
+Then a browser check on a desktop and a phone.
+
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
@@ -423,7 +493,7 @@ Done when: `crates/server/tests/m20.rs` (`m20_is_done`) shows that, with no sign
 - ~~Does anyone need to edit away from the office network?~~ Yes, answered by going online (ADR 007).
 
 ## Backlog (not scheduled)
-- White label: practices run it for their clients under their own brand and domain.
+- White label: practices run it for their clients under their own brand and domain. This needs practice tenancy first (practice-owned charts, templates, paragraphs and users), which is also what self-serve accountant sign-up waits on (M21).
 - Tax agent mode: an accountant links many clients through IRD's intermediation services and files for them.
 - Bank feeds instead of uploads, through an NZ open-banking provider (for example Akahu).
 - Provisional tax, ACC levies, tax depreciation, home office and vehicle apportionment, and the IR10.

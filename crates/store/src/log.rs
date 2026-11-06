@@ -139,3 +139,19 @@ pub async fn count_for_client(conn: &mut SqliteConnection, client_id: &str) -> R
         .await?;
     Ok(n)
 }
+
+/// The `seq` of a client's latest command of one kind, if it has one: when the owner last said
+/// whether they're GST registered, so a statement uploaded after that can ask again (M20).
+pub async fn last_for_client(
+    conn: &mut SqliteConnection,
+    client_id: &str,
+    kind: &str,
+) -> Result<Option<i64>> {
+    let (seq,): (Option<i64>,) =
+        sqlx::query_as("SELECT MAX(seq) FROM command_log WHERE client_id = ? AND kind = ?")
+            .bind(client_id)
+            .bind(kind)
+            .fetch_one(conn)
+            .await?;
+    Ok(seq)
+}

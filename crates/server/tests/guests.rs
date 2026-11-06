@@ -38,6 +38,9 @@ const CARD: &[u8] =
 /// A signed-up owner's file, in another business.
 const KOWHAI: &[u8] =
     include_bytes!("../../../fixtures/bank-statements/kowhai-business-2025-08.csv");
+/// The same account a month on, with a GST refund from IRD on 25 Sep.
+const KOWHAI_LATER: &[u8] =
+    include_bytes!("../../../fixtures/bank-statements/kowhai-business-2025-09-10_09-30.csv");
 
 /// Every command kind, from the `Command` enum's own list of variants (as `tests/tenancy.rs`).
 fn all_kinds() -> Vec<String> {
@@ -1535,4 +1538,164 @@ async fn the_per_address_limit_refuses_the_next_trial() {
     }
     let response = start_from(file_source(OWN_FILE, OWN), "[2001:db8:1:2::9]:40000").await;
     assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+}
+
+/// The bank line ids on the Save tax queue whose description holds `what`.
+fn lines_like(queue: &Value, what: &str, out: &mut BTreeSet<String>) {
+    match queue {
+        Value::Object(o) => {
+            if let (Some(Value::String(id)), Some(Value::String(d))) =
+                (o.get("bank_line_id"), o.get("description"))
+                && d.contains(what)
+            {
+                out.insert(id.clone());
+            }
+            o.values().for_each(|v| lines_like(v, what, out));
+        }
+        Value::Array(a) => a.iter().for_each(|v| lines_like(v, what, out)),
+        _ => {}
+    }
+}
+
+/// Codes Example 2's two internet bills ($89 each, under the $200 supply information line) as
+/// phone and internet, standard GST, and returns the figure after.
+async fn code_internet(server: &Server, guest: &Guest) -> i64 {
+    let biz = &guest.business_id;
+    let queue = server
+        .get_json(&format!("/api/businesses/{biz}/save-tax"), &guest.cookie)
+        .await;
+    let mut ids = BTreeSet::new();
+    lines_like(&queue, "FIBRESTREAM", &mut ids);
+    assert_eq!(ids.len(), 2, "Example 2 has two internet bills: {queue}");
+    let lines: Vec<Value> = ids
+        .iter()
+        .map(|id| {
+            json!({
+                "bank_line_id": id,
+                "coding": { "direction": "out", "kind": "expense", "account": "245", "gst": "standard" },
+            })
+        })
+        .collect();
+    let (status, body) = server
+        .command(&guest.cookie, "code_bank_lines", json!({ "lines": lines }))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    figure(server, guest).await
+}
+
+async fn figure(server: &Server, guest: &Guest) -> i64 {
+    let biz = &guest.business_id;
+    server
+        .get_json(&format!("/api/businesses/{biz}/save-tax"), &guest.cookie)
+        .await["total"]
+        .as_i64()
+        .unwrap()
+}
+
+async fn confirm_registered(server: &Server, guest: &Guest, registered: bool) {
+    let (status, body) = server
+        .command(
+            &guest.cookie,
+            "set_gst_registration",
+            json!({ "client_id": guest.business_id, "registered": registered, "source": "owner" }),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+#[tokio::test]
+async fn confirming_registration_claims_the_gst_on_lines_sorted_while_assumed() {
+    let server = server().await;
+
+    // Sorted while assumed, then confirmed.
+    let first = start(&server, example_source(2)).await;
+    let business = server
+        .get_json(
+            &format!("/api/businesses/{}", first.business_id),
+            &first.cookie,
+        )
+        .await;
+    assert_eq!(business["gst_source"], "assumed");
+    assert_eq!(business["gst_evidence"], Value::Null);
+    assert_eq!(business["example"], 2);
+    let sorted = code_internet(&server, &first).await;
+    confirm_registered(&server, &first, true).await;
+    let after = figure(&server, &first).await;
+    // Two lines of $89 hold $11.61 of GST each, claimed now. The expenses become GST-exclusive,
+    // so income tax rises by a fraction of that, and the figure drops overall.
+    assert!(
+        after < sorted,
+        "confirming claims the GST: {sorted} then {after}"
+    );
+
+    // Confirmed first, then sorted: the same books, whichever order it was answered in.
+    let second = start(&server, example_source(2)).await;
+    confirm_registered(&server, &second, true).await;
+    let other_way = code_internet(&server, &second).await;
+    assert_eq!(after, other_way);
+
+    // Proved by a statement rather than said: Example 1 is detected from the start, with its
+    // evidence on the business.
+    let detected = start(&server, example_source(1)).await;
+    let business = server
+        .get_json(
+            &format!("/api/businesses/{}", detected.business_id),
+            &detected.cookie,
+        )
+        .await;
+    assert_eq!(business["gst_source"], "detected");
+    assert!(
+        business["gst_evidence"]["description"]
+            .as_str()
+            .unwrap()
+            .contains("GST"),
+        "{business}"
+    );
+    assert_eq!(business["gst_contradicted_by"], Value::Null);
+}
+
+#[tokio::test]
+async fn a_gst_refund_after_saying_not_registered_asks_again() {
+    let server = server().await;
+    let guest = start(&server, file_source(OWN_FILE, OWN)).await;
+    let uri = format!("/api/businesses/{}", guest.business_id);
+
+    // Nothing in August says GST, so it's assumed, and the owner says no.
+    assert_eq!(
+        server.get_json(&uri, &guest.cookie).await["gst_source"],
+        "assumed"
+    );
+    confirm_registered(&server, &guest, false).await;
+    let b = server.get_json(&uri, &guest.cookie).await;
+    assert_eq!(b["gst_source"], "owner");
+    assert_eq!(b["gst_registered_from"], Value::Null);
+    assert_eq!(b["gst_contradicted_by"], Value::Null);
+
+    // A later statement has a GST refund from IRD: asked again, never overruled.
+    let (status, body) = server
+        .command(
+            &guest.cookie,
+            "import_statement",
+            json!({
+                "client_id": guest.business_id, "file_name": "kowhai.csv",
+                "content_base64": base64(KOWHAI_LATER),
+            }),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let b = server.get_json(&uri, &guest.cookie).await;
+    assert_eq!(b["gst_source"], "owner");
+    assert_eq!(b["gst_registered_from"], Value::Null);
+    assert_eq!(
+        b["gst_contradicted_by"]["description"], "IRD GST REFUND",
+        "{b}"
+    );
+    assert_eq!(b["gst_contradicted_by"]["amount"], 16_342);
+
+    // Answering again, either way, settles it.
+    confirm_registered(&server, &guest, false).await;
+    assert_eq!(
+        server.get_json(&uri, &guest.cookie).await["gst_contradicted_by"],
+        Value::Null
+    );
 }

@@ -90,7 +90,10 @@ What they can't do yet is one list (below).
 - **Routes**, also deny by default (`guest::route_allowed`, called from `access::guard`). A guest may
   use: `GET /api/me`, `/api/clients`, `/api/businesses/{id}`, `/tax`, `/save-tax`, `/rules`,
   `/api/statements/{id}/excerpt`, `/api/bank-accounts/{id}/proof`, `/api/history`, `/api/sync`, and
-  `POST /api/commands`, `/api/presence`, `/api/logout`, `/api/guest/claim`. Every other route is refused
+  `POST /api/commands`, `/api/presence`, `/api/logout`, `/api/guest/claim`. As built (2026-11-06), also
+  their own business's `GET /api/clients/{id}`, `/chart`, `/coding-settings` and `/asset-classes`,
+  because the Save tax screens read them (the categorise form needs the chart and asset classes).
+  Each is a read of the guest's own business, already limited by the access check, so it widens nothing. Every other route is refused
   for guests, including both `/api/businesses/{id}/ai-suggestions` routes, `/api/invoices/*`,
   `/api/ird/*` and `/api/years/*`.
 - **Not until claimed:**
@@ -195,9 +198,13 @@ for GST, and G = D × 3/23, the GST inside them.
   output tax only, never a refund, and the inequality above holds for any categorisation. Assuming
   registration is always at least as high as not, and answering "not registered" only ever brings the
   figure down.
-- Once registration is confirmed (the owner says yes, or IRD does), the server adds Save tax cards that
-  recode those lines with their categories' GST codes: "Claim the GST on 14 expenses: save $X". They're
-  ordinary `code_bank_lines` commands, ranked like every other card.
+- Once registration is confirmed (the owner says yes, IRD does, or a later statement proves it), the
+  command that confirms it recodes those lines with their categories' GST codes, in the same
+  transaction (`save_tax::restore_input_tax`). *Changed while building (2026-11-06):* this was going
+  to be a "Claim the GST on 14 expenses" card, but claiming at once makes the books the same whichever
+  order the owner answered in (sorted then confirmed, or confirmed then sorted), and the screen can
+  say "You told us you're GST registered, so we've added the GST you can claim" straight away. Over
+  $200, the GST still waits for the supply information card as usual.
 
 **No up-front question.** "Are you GST registered?" is a Save tax card (a new `Question::GstRegistered`),
 shown only while registration is assumed. Its saving is the figure now less the figure if not registered,
@@ -235,12 +242,13 @@ frequency?, source }`, logged like any other command. Migration 0014 adds `busin
     `import_statement`, and its log entry's `changes` say so.
   - Detection never overrides an owner's answer. If the owner said "not registered" and a later
     statement has a GST refund, they get a notice ("This statement has a GST refund from IRD. Are you
-    registered after all?"), not a silent change.
+    registered after all?"), not a silent change. Built: `BusinessView.gst_contradicted_by`, from the
+    statements uploaded since the owner's last answer, shown above the Save tax cards with yes and no.
   - An owner can't contradict IRD: "IRD has you as GST registered, two-monthly. If that's wrong,
     contact IRD."
 - **Applying it** changes the business's GST setting, then reverses and reposts, in the same command,
   every bank-line and gap journal whose posting changes: deposits gain or lose their GST split, and once
-  confirmed, assumed-era codings keep `none` until a "Claim the GST" card recodes them. Posted journals
+  confirmed, assumed-era codings get their categories' GST codes back in the same command. Posted journals
   never change; this is the reverse-and-repost every recode already does. It's refused for a filed GST
   period or a finalised year (M14, M15), like any other change to their numbers.
 

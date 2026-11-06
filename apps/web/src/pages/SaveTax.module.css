@@ -145,3 +145,11 @@
     grid-column: 1 / -1;
   }
 }
+
+/* The business's GST registration, above the cards (M20, ADR 014, 3). */
+.gstPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}

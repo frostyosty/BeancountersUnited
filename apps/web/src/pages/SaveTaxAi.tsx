@@ -2,7 +2,9 @@ import type { AiSuggestionsView } from "@acct/types/AiSuggestionsView";
 import type { AiSuggestRun } from "@acct/types/AiSuggestRun";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { LockedForGuest } from "../components/GuestBanner";
 import { getJson, requestAiSuggestions } from "../lib/api";
 import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
@@ -25,10 +27,19 @@ function names(text: string): string[] {
  * service.
  */
 export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
+  const guest = !!useCurrentUser().guest;
   const view = useQuery({
+    enabled: !guest,
     queryKey: aiKey(clientId),
     queryFn: () => getJson<AiSuggestionsView>(`/api/businesses/${clientId}/ai-suggestions`),
   });
+  if (guest) {
+    return (
+      <section className={styles.acceptAll} aria-label="Ask the experts">
+        <LockedForGuest reason="Save your work first to get suggestions from the experts." />
+      </section>
+    );
+  }
   const v = view.data;
   if (!v || !v.available) {
     return null;

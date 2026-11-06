@@ -9,9 +9,11 @@ use std::collections::BTreeMap;
 
 use acct_core::Money;
 use acct_core::bank::{LineFacts, looks_like_ird, transfer_pairs};
+use acct_core::tax::gst::{DetectLine, GstDetection, detect_registration};
 use acct_core::tax::income_tax::{IncomeTaxBasis, IncomeYear, StudentLoanBasis, YearAnswers};
 use acct_core::tax::{self, position::TaxInputs};
 use acct_store::bank::{self as bank_store, BankAccount};
+use acct_store::guests::GstSource;
 use acct_store::journals::StoredJournal;
 use acct_store::{SqliteConnection, clients, journals, years};
 use chrono::{Days, NaiveDate};
@@ -331,6 +333,17 @@ pub struct BusinessView {
     #[ts(type = "string | null")]
     pub gst_registered_from: Option<NaiveDate>,
     pub gst_frequency: Option<String>,
+    /// Where its GST registration came from (M20, ADR 014, 3).
+    pub gst_source: GstSource,
+    /// The bank line that proved it, when `gst_source` is `detected`: "We spotted a GST payment
+    /// to IRD on 22 Oct".
+    pub gst_evidence: Option<DetectedLine>,
+    /// The owner said it isn't GST registered, but a statement uploaded since has a GST payment
+    /// to or refund from IRD: "Are you registered after all?" (ADR 014, 3). Detection never
+    /// overrides the owner, so it's only asked.
+    pub gst_contradicted_by: Option<DetectedLine>,
+    /// The example it was made from (1 to 3), for an example a guest opened.
+    pub example: Option<u8>,
     pub bank_accounts: Vec<BankAccountView>,
     /// Likely transfers between the owner's accounts: (money out, money in).
     pub transfers: Vec<(DetectedLine, DetectedLine)>,
@@ -451,6 +464,48 @@ pub async fn business_view(
         .filter(|l| l.possible_duplicate)
         .map(detected)
         .collect();
+    let flags = acct_store::guests::flags(conn, client_id).await?;
+    let gst_source = flags.as_ref().map_or(GstSource::Owner, |f| f.source());
+    let gst_evidence = flags
+        .as_ref()
+        .and_then(|f| f.gst_evidence.as_deref())
+        .filter(|_| gst_source == GstSource::Detected)
+        .and_then(|id| lines.iter().find(|l| l.id == id))
+        .map(detected);
+    // Only statements uploaded since the owner last answered: they've seen the earlier ones.
+    let answered = acct_store::log::last_for_client(conn, client_id, "set_gst_registration")
+        .await?
+        .unwrap_or(0);
+    let gst_contradicted_by = if gst_source == GstSource::Owner && business.gst.is_none() {
+        let mut since = Vec::new();
+        for account in bank_store::bank_accounts(conn, client_id).await? {
+            since.extend(
+                bank_store::statements(conn, &account.id)
+                    .await?
+                    .into_iter()
+                    .filter(|s| s.imported_seq > answered)
+                    .map(|s| s.id),
+            );
+        }
+        let newer: Vec<&bank_store::BankLine> = lines
+            .iter()
+            .filter(|l| since.contains(&l.statement_id))
+            .collect();
+        let detect: Vec<DetectLine<'_>> = newer
+            .iter()
+            .map(|l| DetectLine {
+                date: l.date,
+                amount: l.amount,
+                description: &l.description,
+            })
+            .collect();
+        match detect_registration(&detect) {
+            GstDetection::Detected { line, .. } => Some(detected(newer[line])),
+            GstDetection::Assumed { .. } => None,
+        }
+    } else {
+        None
+    };
 
     Ok(BusinessView {
         client_id: client_id.to_owned(),
@@ -463,6 +518,10 @@ pub async fn business_view(
                 .and_then(|v| v.as_str().map(str::to_owned))
                 .unwrap_or_default()
         }),
+        gst_source,
+        gst_evidence,
+        gst_contradicted_by,
+        example: flags.and_then(|f| f.example),
         bank_accounts: accounts,
         transfers,
         ird_payments,

@@ -513,8 +513,18 @@ A guest's business is set up from a bank statement alone, so nobody is asked abo
   an owner's or IRD's answer is never changed by it.
 - **Changing it** reverses and reposts every line and gap journal whose posting changes, in the same
   command.
-- **Not built yet:** the "Claim the GST" cards that recode lines once registration is confirmed, and the
-  notice when a later statement has a GST refund after the owner said "not registered".
+- **Confirming it claims the GST at once.** When registration stops being only assumed (the owner says
+  yes, or a statement proves it), the same command recodes every purchase that was posted with `none`
+  to its category's default GST code (`standard` for a category with none, as the categorise form
+  does). The books then match what they'd be had registration been known from the start, whichever
+  order things were answered in. Over $200 the GST still waits on the supply information.
+- **Said "no", then a GST line turns up.** If the owner said they aren't registered and a statement
+  uploaded since has a GST payment to or refund from IRD, the Save tax page asks "Are you GST
+  registered after all?" (`BusinessView.gst_contradicted_by`). Answering either way settles it; the
+  statements never overrule the owner.
+- **Trials and the opening balance.** An unsaved trial gets no "reconcile your opening balance" card:
+  a trial is one statement with nothing before it, and the card saves nothing. It appears once the
+  trial is saved (`save_tax::reconcile_cards`).
 
 ### Income tax for sole traders (decided 2026-10-19)
 - **Years.** M10 supports the 2026 income year (1 April 2025 to 31 March 2026) and the 2027 income year

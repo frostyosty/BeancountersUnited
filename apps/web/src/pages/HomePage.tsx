@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { useLocation } from "react-router";
 import { SiteHeader } from "../components/SiteHeader";
 import { ExampleLinks, ExamplesPanel } from "../components/TryIt/ExamplesPanel";
-import { StepPlaceholder, UploadResult } from "../components/TryIt/StepState";
+import { UploadResult } from "../components/TryIt/StepState";
+import { LaterStep, RetryButton } from "../components/TryIt/TryItSteps";
 import { UploadDrop } from "../components/TryIt/UploadDrop";
 import { useExamples, useIsDesktop } from "../components/TryIt/useExamples";
 import { useTryIt } from "../components/TryIt/useTryIt";
 import { Icon } from "../lib/icons";
+import { formatMoney } from "../lib/money";
 import { LoginPage } from "./LoginPage";
 import styles from "./HomePage.module.css";
 
@@ -73,7 +75,9 @@ export function HomePage() {
   const tryIt = useTryIt(examples);
   const desktop = useIsDesktop();
 
-  // The hero ticket's click. Agent 5 swaps the amount for Example 1's real figure.
+  // The hero ticket: Example 1's real conservative figure, from the server. Clicking it loads that example
+  // exactly as a drop would and scrolls to the flow.
+  const example1 = examples.find((e) => e.number === 1);
   const loadHeroExample = () => {
     tryIt.useExample(1);
     document.getElementById("features")?.scrollIntoView?.({ behavior: "smooth" });
@@ -92,9 +96,11 @@ export function HomePage() {
               Upload your bank statements, see what you'd owe if you filed today, then cut it down. Your accountant gets
               proper books underneath.
             </p>
-            <button type="button" className={styles.ticket} onClick={loadHeroExample}>
+            <button type="button" className={styles.ticket} onClick={loadHeroExample} disabled={!example1}>
               <span className={styles.ticketLabel}>Example: tax if you filed today</span>
-              <span className={styles.ticketAmount}>$4,820</span>
+              <span className={styles.ticketAmount} data-testid="hero-amount">
+                {example1 ? `$${formatMoney(example1.conservative_tax)}` : "…"}
+              </span>
               <span className={styles.ticketSave}>
                 <Icon name="home.tax" fallback="💰" /> Save tax could bring this down
               </span>
@@ -123,9 +129,10 @@ export function HomePage() {
                         {!desktop && <ExampleLinks examples={examples} onUse={tryIt.useExample} />}
                         <UploadDrop onExample={tryIt.useExample} onFile={tryIt.useFile} />
                         <UploadResult state={tryIt.state} />
+                        <RetryButton tryIt={tryIt} />
                       </>
                     ) : (
-                      <StepPlaceholder state={tryIt.state} />
+                      <LaterStep index={i as 1 | 2 | 3} tryIt={tryIt} />
                     )}
                   </div>
                   {s.next && (
