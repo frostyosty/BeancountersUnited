@@ -166,7 +166,7 @@ fn reads_a_recorded_openai_compatible_response() {
 #[tokio::test]
 async fn the_fake_answers_by_description_and_keeps_what_it_saw() {
     let fake = FakeSuggester::with_defaults("fake");
-    let got = fake.suggest(leaky_request()).await.unwrap();
+    let got = fake.suggest(leaky_request()).await.result.unwrap();
     assert_eq!(got.len(), 1);
     assert_eq!(got[0].reference, 1);
     assert_eq!(got[0].category, "255");
@@ -193,4 +193,63 @@ fn token_counts_are_read_from_recorded_responses() {
         serde_json::from_str(include_str!("recorded/openai_compatible.json")).unwrap();
     let u = openai_compatible::usage_of(&o);
     assert_eq!((u.input_tokens, u.output_tokens), (2302, 71));
+}
+
+#[test]
+fn usage_is_per_call_not_a_running_total() {
+    let a: serde_json::Value =
+        serde_json::from_str(include_str!("recorded/anthropic.json")).unwrap();
+    let first = anthropic::usage_of(&a);
+    let second = anthropic::usage_of(&a);
+    // Reading the same response again gives the same answer; nothing accumulates between calls.
+    assert_eq!(first, second);
+    assert_eq!(first.requests, 1);
+    let o: serde_json::Value =
+        serde_json::from_str(include_str!("recorded/openai_compatible.json")).unwrap();
+    assert_eq!(openai_compatible::usage_of(&o).requests, 1);
+    // The caller adds calls up when it wants a total.
+    let mut total = crate::Usage::default();
+    total.add(first);
+    total.add(second);
+    assert_eq!(total.requests, 2);
+    assert_eq!(total.input_tokens, first.input_tokens * 2);
+}
+
+#[test]
+fn a_refused_response_still_carries_its_tokens() {
+    // A refusal came back with a body, so it cost money: the call's usage keeps the tokens.
+    let refused = serde_json::json!({
+        "stop_reason": "refusal",
+        "content": [],
+        "usage": { "input_tokens": 300, "output_tokens": 4 }
+    });
+    let call = crate::Call::new(anthropic::read(&refused), anthropic::usage_of(&refused));
+    assert!(matches!(call.result, Err(AiError::Refused)));
+    assert_eq!((call.usage.input_tokens, call.usage.output_tokens), (300, 4));
+    // No body, no tokens.
+    let failed = crate::Call::<()>::failed(AiError::Status(529));
+    assert_eq!(failed.usage, crate::Usage::default());
+}
+
+#[tokio::test]
+async fn the_fake_reports_each_calls_own_usage() {
+    let fake = FakeSuggester::with_defaults("fake");
+    let a = fake.suggest(leaky_request()).await;
+    let b = fake.suggest(leaky_request()).await;
+    assert_eq!(a.usage, crate::fake::FAKE_CALL_USAGE);
+    assert_eq!(b.usage, crate::fake::FAKE_CALL_USAGE);
+    let custom = crate::Usage {
+        requests: 1,
+        input_tokens: 7,
+        output_tokens: 3,
+        ..crate::Usage::default()
+    };
+    let fake = FakeSuggester::with_defaults("fake").with_usage(custom);
+    assert_eq!(fake.suggest(leaky_request()).await.usage, custom);
+    // A failing one used nothing.
+    let failing = FakeSuggester::failing("fake");
+    assert_eq!(
+        failing.suggest(leaky_request()).await.usage,
+        crate::Usage::default()
+    );
 }

@@ -176,7 +176,6 @@ pub async fn run(suggester: &dyn Suggester, set: &LabelledSet) -> Report {
         lines: set.lines.len() as u64,
         ..Report::default()
     };
-    let before = suggester.usage();
     for batch in set.lines.chunks(BATCH) {
         let inputs: Vec<LineInput<'_>> = batch
             .iter()
@@ -192,7 +191,9 @@ pub async fn run(suggester: &dyn Suggester, set: &LabelledSet) -> Report {
             activity: None,
             private_names: &[],
         });
-        let answers = match suggester.suggest(request).await {
+        let call = suggester.suggest(request).await;
+        report.usage.add(call.usage);
+        let answers = match call.result {
             Ok(a) => a,
             Err(_) => {
                 report.failed_batches += 1;
@@ -247,14 +248,6 @@ pub async fn run(suggester: &dyn Suggester, set: &LabelledSet) -> Report {
             }
         }
     }
-    let after = suggester.usage();
-    report.usage = Usage {
-        requests: after.requests - before.requests,
-        input_tokens: after.input_tokens - before.input_tokens,
-        output_tokens: after.output_tokens - before.output_tokens,
-        cache_read_tokens: after.cache_read_tokens - before.cache_read_tokens,
-        cache_write_tokens: after.cache_write_tokens - before.cache_write_tokens,
-    };
     report.misses.sort_by(|a, b| {
         b.confidence
             .cmp(&a.confidence)

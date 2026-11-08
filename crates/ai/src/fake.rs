@@ -6,8 +6,19 @@ use std::sync::Mutex;
 use acct_core::GstCode;
 
 use crate::{
-    AiError, Confidence, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture,
-    SuggestRequest, Suggester,
+    AiError, Call, Confidence, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture,
+    SuggestRequest, Suggester, Usage,
+};
+
+/// The tokens each successful call of a [`FakeSuggester`] reports, unless
+/// [`FakeSuggester::with_usage`] says otherwise. A failing one reports none, as a network error
+/// would.
+pub const FAKE_CALL_USAGE: Usage = Usage {
+    requests: 1,
+    input_tokens: 120,
+    output_tokens: 30,
+    cache_read_tokens: 0,
+    cache_write_tokens: 0,
 };
 
 /// "A line whose description contains `contains` is `category`." `category` is a category key,
@@ -35,6 +46,7 @@ pub struct FakeSuggester {
     model: String,
     answers: Vec<FakeAnswer>,
     fail: bool,
+    usage: Usage,
     seen: Mutex<Vec<SuggestRequest>>,
     explained: Mutex<Vec<ExplainRequest>>,
 }
@@ -45,9 +57,17 @@ impl FakeSuggester {
             model: model.to_owned(),
             answers,
             fail: false,
+            usage: FAKE_CALL_USAGE,
             seen: Mutex::new(Vec::new()),
             explained: Mutex::new(Vec::new()),
         }
+    }
+
+    /// The tokens each successful call reports, so tests can check what an ask cost.
+    #[must_use]
+    pub fn with_usage(mut self, usage: Usage) -> Self {
+        self.usage = usage;
+        self
     }
 
     /// One that always fails, as an unreachable provider would.
@@ -136,13 +156,13 @@ impl Suggester for FakeSuggester {
     }
 
     fn suggest(&self, request: SuggestRequest) -> SuggestFuture<'_> {
-        let result = if self.fail {
-            Err(AiError::Network("the fake is set to fail".to_owned()))
+        let call = if self.fail {
+            Call::failed(AiError::Network("the fake is set to fail".to_owned()))
         } else {
-            Ok(self.answer(&request))
+            Call::new(Ok(self.answer(&request)), self.usage)
         };
         self.seen.lock().expect("not poisoned").push(request);
-        Box::pin(async move { result })
+        Box::pin(async move { call })
     }
 
     fn explain(&self, request: ExplainRequest) -> ExplainFuture<'_> {

@@ -1,13 +1,11 @@
 //! Anthropic's native Messages API: structured outputs, and prompt caching of the instructions
 //! and the business's categories.
 
-use std::sync::Mutex;
-
 use serde_json::{Value, json};
 
 use crate::prompt::{INSTRUCTIONS, answer_schema, batch, business_context, parse_answer};
 use crate::{
-    AiError, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture, SuggestRequest,
+    AiError, Call, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture, SuggestRequest,
     Suggester, Usage, count, explain, post_json,
 };
 
@@ -21,7 +19,6 @@ pub struct Client {
     url: String,
     model: String,
     api_key: String,
-    usage: Mutex<Usage>,
 }
 
 impl Client {
@@ -31,7 +28,6 @@ impl Client {
             url: format!("{}/v1/messages", base_url.trim_end_matches('/')),
             model: model.to_owned(),
             api_key: api_key.to_owned(),
-            usage: Mutex::new(Usage::default()),
         }
     }
 }
@@ -142,12 +138,10 @@ impl Suggester for Client {
                 .post(&self.url)
                 .header("x-api-key", &self.api_key)
                 .header("anthropic-version", API_VERSION);
-            let response = post_json(call, &body).await?;
-            self.usage
-                .lock()
-                .expect("not poisoned")
-                .add(usage_of(&response));
-            read(&response)
+            match post_json(call, &body).await {
+                Ok(response) => Call::new(read(&response), usage_of(&response)),
+                Err(e) => Call::failed(e),
+            }
         })
     }
 
@@ -159,16 +153,10 @@ impl Suggester for Client {
                 .post(&self.url)
                 .header("x-api-key", &self.api_key)
                 .header("anthropic-version", API_VERSION);
-            let response = post_json(call, &body).await?;
-            self.usage
-                .lock()
-                .expect("not poisoned")
-                .add(usage_of(&response));
-            read_text(&response)
+            match post_json(call, &body).await {
+                Ok(response) => Call::new(read_text(&response), usage_of(&response)),
+                Err(e) => Call::failed(e),
+            }
         })
-    }
-
-    fn usage(&self) -> Usage {
-        *self.usage.lock().expect("not poisoned")
     }
 }

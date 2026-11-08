@@ -53,6 +53,14 @@ ships.
 - [ ] M22: set the daily AI budget cap in cents for staging and production (`ACCT_AI_DAILY_BUDGET_CENTS`),
       and the per-plan, per-kind daily limits.
 - [ ] M22: check the AI usage view in a browser as an overseer, and that a spike is flagged.
+- [x] M22: accept ADR 016 and answer its decisions D1 to D6. Done 2026-11-09: every recommendation
+      accepted.
+- [ ] After M22: build the daily delete of `ai_usage` rows older than 400 days (ADR 016, D3).
+- [ ] M22: privacy policy: say that each AI request is counted against the business and user who made it
+      (when, which feature, tokens, cost and whether it worked), that what was asked and answered is never
+      kept, and how long the counts are kept (ADR 016, D3).
+- [ ] M22: fix `docs/security.md`'s "no AI for guests" lines ("What never leaves" and the guests row):
+      since M21, guests can use Explain better within their own daily limit.
 - [ ] M23: someone with accounting knowledge checks which tax invoice fields are required at which
       amounts ("Tax invoices" in `docs/domain.md`, marked **check**), and the GST rounding allowance.
 - [ ] M23: ask our IRD account manager to confirm in writing that sending an owner's invoice image or

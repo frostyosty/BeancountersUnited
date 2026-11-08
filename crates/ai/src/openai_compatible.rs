@@ -1,13 +1,12 @@
 //! The Chat Completions shape with a JSON-schema response format. OpenAI, Gemini, Mistral,
 //! OpenRouter, Anthropic's compatibility endpoint and a self-hosted Ollama all accept it.
 
-use std::sync::Mutex;
-
 use serde_json::{Value, json};
 
 use crate::prompt::{INSTRUCTIONS, answer_schema, batch, business_context, parse_answer};
 use crate::{
-    AiError, RawSuggestion, SuggestFuture, SuggestRequest, Suggester, Usage, count, post_json,
+    AiError, Call, RawSuggestion, SuggestFuture, SuggestRequest, Suggester, Usage, count,
+    post_json,
 };
 
 pub struct Client {
@@ -16,7 +15,6 @@ pub struct Client {
     url: String,
     model: String,
     api_key: String,
-    usage: Mutex<Usage>,
 }
 
 impl Client {
@@ -35,7 +33,6 @@ impl Client {
             url: format!("{}/chat/completions", base_url.trim_end_matches('/')),
             model: model.to_owned(),
             api_key: api_key.to_owned(),
-            usage: Mutex::new(Usage::default()),
         }
     }
 }
@@ -117,16 +114,10 @@ impl Suggester for Client {
         Box::pin(async move {
             let body = body(&self.model, &request);
             let call = self.http.post(&self.url).bearer_auth(&self.api_key);
-            let response = post_json(call, &body).await?;
-            self.usage
-                .lock()
-                .expect("not poisoned")
-                .add(usage_of(&response));
-            read(&response)
+            match post_json(call, &body).await {
+                Ok(response) => Call::new(read(&response), usage_of(&response)),
+                Err(e) => Call::failed(e),
+            }
         })
-    }
-
-    fn usage(&self) -> Usage {
-        *self.usage.lock().expect("not poisoned")
     }
 }

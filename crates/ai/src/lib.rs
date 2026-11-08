@@ -79,12 +79,37 @@ pub enum AiError {
     BadResponse(&'static str),
 }
 
+/// One call to a provider: its answer, and the tokens it used (ADR 016, 1). The usage is filled
+/// in whenever a response body came back, including [`AiError::Refused`] and
+/// [`AiError::BadResponse`], because those calls cost money. It's zero for [`AiError::Network`],
+/// [`AiError::Status`] and [`AiError::Unsupported`], which have no body.
+#[derive(Debug)]
+pub struct Call<T> {
+    pub result: Result<T, AiError>,
+    pub usage: Usage,
+}
+
+impl<T> Call<T> {
+    /// An answer, and the tokens it used.
+    pub fn new(result: Result<T, AiError>, usage: Usage) -> Self {
+        Call { result, usage }
+    }
+
+    /// A call that failed before any response body came back, so it used nothing.
+    pub fn failed(error: AiError) -> Self {
+        Call {
+            result: Err(error),
+            usage: Usage::default(),
+        }
+    }
+}
+
 /// What a suggester's `suggest` returns.
 pub type SuggestFuture<'a> =
-    Pin<Box<dyn Future<Output = Result<Vec<RawSuggestion>, AiError>> + Send + 'a>>;
+    Pin<Box<dyn Future<Output = Call<Vec<RawSuggestion>>> + Send + 'a>>;
 
 /// What a suggester's `explain` returns.
-pub type ExplainFuture<'a> = Pin<Box<dyn Future<Output = Result<String, AiError>> + Send + 'a>>;
+pub type ExplainFuture<'a> = Pin<Box<dyn Future<Output = Call<String>> + Send + 'a>>;
 
 /// Something that suggests categories. The server holds an `Arc<dyn Suggester>`, chosen by
 /// [`Config`].
@@ -93,14 +118,11 @@ pub trait Suggester: Send + Sync {
     fn provider(&self) -> &str;
     /// The model id recorded with each suggestion, such as `claude-haiku-5-5`.
     fn model(&self) -> &str;
+    /// One request. Each call returns its own usage; nothing is totalled here.
     fn suggest(&self, request: SuggestRequest) -> SuggestFuture<'_>;
     /// A plain-English explanation of one Save tax card. Providers that can't write one say so.
     fn explain(&self, _request: ExplainRequest) -> ExplainFuture<'_> {
-        Box::pin(async { Err(AiError::Unsupported) })
-    }
-    /// The tokens used so far, as the provider reported them. `acctd ai-eval` prices them.
-    fn usage(&self) -> Usage {
-        Usage::default()
+        Box::pin(async { Call::failed(AiError::Unsupported) })
     }
 }
 
@@ -118,7 +140,8 @@ pub struct Usage {
 }
 
 impl Usage {
-    pub(crate) fn add(&mut self, other: Usage) {
+    /// Adds another call's tokens to this one.
+    pub fn add(&mut self, other: Usage) {
         self.requests += other.requests;
         self.input_tokens += other.input_tokens;
         self.output_tokens += other.output_tokens;

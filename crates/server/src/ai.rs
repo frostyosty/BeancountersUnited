@@ -967,7 +967,7 @@ pub async fn suggest(
             activity: prepared.activity.as_deref(),
             private_names: &names,
         });
-        match suggester.suggest(request).await {
+        match suggester.suggest(request).await.result {
             Ok(answers) => {
                 let (kept, d) = check_answers(batch, &prepared.categories, answers);
                 suggestions.extend(kept);
@@ -1255,7 +1255,7 @@ pub async fn explain_card(
         activity: settings.activity.as_deref(),
         private_names: &names,
     });
-    match suggester.explain(request).await {
+    match suggester.explain(request).await.result {
         Ok(text) => Ok(Explanation {
             text,
             model: suggester.model().to_owned(),

@@ -13,6 +13,18 @@ function renderRegistry() {
         renderNeedsIcon(groups);
         fillSwapList();
     }
+    // Slots that currently show the very same icon are collated into one card (first group wins),
+    // so a repeated icon isn't listed once per group. Dragging cards together still merges slots.
+    const same = new Map();
+    for (const [group, slots] of Object.entries(registry)) {
+        for (const [name, entry] of Object.entries(slots)) {
+            if (!entry || !entry.type) continue;
+            const id = entry.type + '|' + entry.value;
+            if (!same.has(id)) same.set(id, []);
+            same.get(id).push(group + '.' + name);
+        }
+    }
+    const shown = new Set();
     for (const [group, slots] of Object.entries(registry)) {
         const heading = document.createElement('h3');
         heading.textContent = group;
@@ -21,6 +33,10 @@ function renderRegistry() {
         for (const [name, entry] of Object.entries(slots)) {
             if (!entry || !entry.type) continue;
             const key = group + '.' + name;
+            const id = entry.type + '|' + entry.value;
+            const twins = same.get(id);
+            if (shown.has(id)) continue;
+            shown.add(id);
             const card = document.createElement('div');
             card.className = 'icon-card';
             card.dataset.key = key;
@@ -29,6 +45,13 @@ function renderRegistry() {
             label.className = 'label' + (labels[key] ? ' words' : '');
             label.textContent = labels[key] || key;
             card.appendChild(label);
+            if (twins.length > 1) {
+                const badge = document.createElement('span');
+                badge.className = 'sub twin-count';
+                badge.textContent = '×' + twins.length + ' slots';
+                badge.title = 'Same icon in: ' + twins.join(', ') + '. Saving a new icon changes all of them; drag a card onto another to merge slots in the code.';
+                card.appendChild(badge);
+            }
             card.onclick = () => targetSlot(key);
             wireCard(card, key, label);
             const variants = entry.variants || [];
@@ -41,10 +64,13 @@ function renderRegistry() {
                 card.appendChild(arrow);
             }
             grid.appendChild(card);
+        }
+        for (const name of Object.keys(slots)) {
             const opt = document.createElement('option');
-            opt.value = key;
+            opt.value = group + '.' + name;
             list.appendChild(opt);
         }
+        if (!grid.children.length) continue;
         groups.appendChild(heading);
         groups.appendChild(grid);
     }

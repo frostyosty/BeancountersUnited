@@ -75,6 +75,12 @@ def save(body):
         registry = load_registry()
         slots = registry.setdefault(group, {})
         entry = slots.get(name) or {}
+        # Slots showing the same icon as this one (the "twins" the page collates) take the new icon too.
+        twins = []
+        if entry.get('value'):
+            twins = [e for g, ss in registry.items() for n, e in ss.items()
+                     if e is not entry and isinstance(e, dict)
+                     and (e.get('type'), e.get('value')) == (entry.get('type'), entry['value'])]
         variants = list(entry.get('variants') or [])
         if not variants and entry.get('value'):
             # Keep the icon being replaced so it can be swapped back.
@@ -92,6 +98,12 @@ def save(body):
         variants += [{'type': 'image', 'value': p} for p in paths]
         entry.update(type='image', value=paths[0], variants=variants)
         slots[name] = entry
+        for twin in twins:
+            twin_variants = list(twin.get('variants') or [])
+            for v in variants:
+                if v not in twin_variants:
+                    twin_variants.append(v)
+            twin.update(type='image', value=paths[0], variants=twin_variants)
         save_registry(registry)
     return 200, {**registry_response(registry), 'files': [os.path.basename(p) for p in paths]}
 

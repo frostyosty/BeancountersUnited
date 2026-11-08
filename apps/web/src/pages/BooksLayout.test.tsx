@@ -268,9 +268,10 @@ describe("the accountant view", () => {
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: /Back to your tax/ }).getAttribute("href")).toBe("/businesses/b1");
     const tabs = within(screen.getByRole("navigation", { name: "Books" })).getAllByRole("link").map((a) => a.textContent?.trim());
-    expect(tabs.map((t) => t?.replace(/^\S*\s/, "").trim() ?? "")).toEqual(
-      expect.arrayContaining(["Statements", "Trial balance", "Journals", "General ledger", "Assets"]),
-    );
+    // The studio may swap an icon for an image, so the label can come with or without a glyph.
+    for (const label of ["Statements", "Trial balance", "Journals", "General ledger", "Assets"]) {
+      expect(tabs.some((t) => t?.endsWith(label))).toBe(true);
+    }
     expect(tabs).toHaveLength(5);
     // The accountant's write-side tabs are not mounted at all.
     for (const name of [/Import TB/, /Notes/, /Reconcile/, /Analysis/, /Finalise/]) {

@@ -76,12 +76,13 @@ spikes, sets limits per plan, and gives the overseer unrestricted use of the AI 
   Each threshold is a named constant in `crates/server/src/ai_watch.rs` with its own test.
 - Click a business or user to see its asks (time, kind, outcome, plan, model, cost, layer counts), with a **View as**
   button that starts M19's impersonation. With no prompts stored, that list is the whole record.
-- Served by `GET /api/admin/ai-usage` (`?by=`, `?business=`, `?user=`, `?from=`, `?to=`), checked in `access.rs`:
+- Served by `GET /api/overseer/ai-usage` (ADR 016, D6) (`?by=`, `?business=`, `?user=`, `?from=`, `?to=`), checked in `access.rs`:
   overseers only. Owners still see only their own asks left, through the existing reads.
 
 **4. Overseer access to the AI.**
-- Every AI feature works on any business the overseer is viewing, including ones with suggestions switched off and
-  guests' trials (for support). Nothing about it is silent: every ask is recorded as the overseer's.
+- Every AI feature works on any business the overseer is viewing, with no limit or budget cap. Nothing about it is
+  silent: every ask is recorded as the overseer's. A business's own off switch still applies to overseers (ADR 016,
+  D4), and guests' trials are out of scope because nobody but the guest can open one (D5).
 - Asking for suggestions while viewing as someone doesn't need "Allow changes" (`record_suggestions` moves to
   `WhileActing::Session`), because suggestions only pre-fill and change no figures. Accepting one still needs it.
 
@@ -98,7 +99,7 @@ spikes, sets limits per plan, and gives the overseer unrestricted use of the AI 
 - an overseer is never refused by either, is recorded as an overseer, and has `acting_as` when viewing as someone;
 - the AI-share figures match a pinned set of codings;
 - a business at 3× its median is flagged, one below the floor isn't, and a rise in `invalid` outcomes flags;
-- practice admins, staff, owners and guests are refused `GET /api/admin/ai-usage`.
+- practice admins, staff, owners and guests are refused `GET /api/overseer/ai-usage`.
 
 The web tests cover the charts, the spike badge, drilling into a business and **View as**. Then a browser check as an
 overseer.
@@ -172,7 +173,7 @@ Read CLAUDE.md, M22-PROMPTS.md (the milestone), docs/decisions/016-ai-usage.md, 
 You own:
 - crates/server/src/ai_usage.rs (new): the metered wrapper and recording
 - crates/server/src/ai_limits.rs (new): Plan, plan_of, the limits table
-- crates/server/src/ai_watch.rs (new), containing only the response types for GET /api/admin/ai-usage from the ADR, with ts-rs derives (Agent 4 fills in the rest)
+- crates/server/src/ai_watch.rs (new), containing only the response types for GET /api/overseer/ai-usage from the ADR, with ts-rs derives (Agent 4 fills in the rest)
 - the changes to ai.rs and lib.rs that route every ask through the wrapper; impersonation.rs: moving record_suggestions
 - crates/server/tests/ai_usage.rs (new)
 Task:
@@ -196,7 +197,7 @@ You own:
 - its route lines in lib.rs and access.rs (append-only)
 - crates/server/tests/ai_watch.rs (new)
 Task:
-1. GET /api/admin/ai-usage with the ADR's filters: by hour (48 hours) and by day (90 days), split by kind, outcome and plan; top businesses and users with their change against their own 7-day median; one business's or user's ask list. Overseers only, checked in access.rs.
+1. GET /api/overseer/ai-usage with the ADR's filters: by hour (48 hours) and by day (90 days), split by kind, outcome and plan; top businesses and users with their change against their own 7-day median; one business's or user's ask list. Overseers only, checked in access.rs.
 2. The AI share by week exactly as the ADR defines it, beside each layer's share.
 3. The spike flags, each threshold a named constant with its own test, including the floor and the new-account case, and the flag count for the badge.
 Tests: the AI share matches a pinned set of codings built through commands, not SQL; a business at 3x its median is flagged and one below the floor isn't; a rise in invalid outcomes flags; the budget flag at 80%; practice admins, staff, owners and guests are refused.
@@ -212,13 +213,14 @@ You own:
 - apps/web/src/components/AiUsage/ (new)
 - its one-line mount in SettingsLayout.tsx's ToolsTab, and the badge on the Tools tab
 - new slots in apps/web/src/icons/registry.json (append-only)
+- one new function in apps/web/src/lib/money.ts (append-only): `formatMicroUsd`, US micro-dollars as US dollars (ADR 016, 9)
 Task:
 1. Settings → Tools → AI usage, rendered for overseers only (nothing at all for anyone else).
 2. Asks, tokens and cost by hour and by day, split by kind, outcome and plan. Follow the dataviz skill; colours only from tokens, light and dark; every chart has a text table alternative.
 3. The AI share by week beside each layer's share, with one plain sentence saying what it means.
 4. Top businesses and users with their change against the median; the spike flags with the rule that fired; the badge count.
 5. Click a business or user for its ask list, with a View as button that reuses the existing switcher.
-6. Render the server's figures only; cost in dollars through lib/money.ts.
+6. Render the server's figures only; cost in US dollars through `formatMicroUsd` in lib/money.ts.
 Testing Library tests: shown for an overseer, absent for a practice admin, owner and guest; the charts and their tables; the flags and the badge; drilling in; View as; the empty state when there's been no AI use.
 Run `make check`.
 Don't commit.
@@ -243,8 +245,9 @@ Check `make check` passes, then in a browser on staging:
   with Explain better.
 - As an overseer, open Settings → Tools → AI usage: the asks appear, the AI share reads sensibly, and a deliberately
   hammered test business is flagged and counted in the badge. Click it, then View as.
-- As the overseer, ask for suggestions on a business with suggestions switched off: it works, isn't refused, and shows
-  as an overseer's ask.
+- As the overseer, view as an owner whose business is at its daily limit, and ask for suggestions without turning on
+  Allow changes: it works, isn't refused, and shows as an overseer's ask with `acting_as`. On a business with
+  suggestions switched off, it's still refused (ADR 016, D4).
 - Set `ACCT_AI_DAILY_BUDGET_CENTS` very low on a test server: model calls are refused with plain wording, and rules,
   history and merchant suggestions still appear.
 
