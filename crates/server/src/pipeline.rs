@@ -40,6 +40,7 @@ use crate::layouts;
 use crate::ledger;
 use crate::merchants;
 use crate::paragraphs;
+use crate::practice_requests;
 use crate::save_tax;
 use crate::signup;
 use crate::starter;
@@ -202,7 +203,10 @@ async fn run(
         Some(effect) => effect,
         None => match guests::apply(&mut tx, actor, &command, seq, at).await? {
             Some(effect) => effect,
-            None => apply(&mut tx, actor, &command, seq, at.date_naive()).await?,
+            None => match practice_requests::apply(&mut tx, actor, &command, seq, at).await? {
+                Some(effect) => effect,
+                None => apply(&mut tx, actor, &command, seq, at.date_naive()).await?,
+            },
         },
     };
     // GST detection from the statements, and the limits on what a guest holds (M20).
@@ -296,6 +300,10 @@ async fn apply(
         | Command::AdoptGuestBusiness { .. }
         | Command::ExpireGuest { .. }
         | Command::SetGstRegistration { .. } => Err(CommandError::Forbidden),
+        // `run` hands these to `crate::practice_requests` (M21).
+        Command::RequestPracticeAccount { .. } | Command::DeletePracticeRequest { .. } => {
+            Err(CommandError::Forbidden)
+        }
 
         Command::SetUpBusiness {
             name,
@@ -2276,5 +2284,8 @@ pub fn lock_rule(command: &Command) -> Lock {
         C::ExpireGuest { .. } => Lock::Allowed(
             "deletes an unsaved trial, which nobody else can see, so no year of it is finalised",
         ),
+        C::RequestPracticeAccount { .. } | C::DeletePracticeRequest { .. } => {
+            Lock::Allowed("a request to us for a practice account, not any business's figures")
+        }
     }
 }

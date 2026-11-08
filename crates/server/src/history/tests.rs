@@ -783,6 +783,26 @@ fn samples() -> Vec<Sample> {
              months.",
         )
         .by(None),
+        // Practice requests (M21): neither names the person.
+        s(
+            "request_practice_account",
+            json!({ "name": "Sample Person", "email": "sample@example.test",
+                    "practice_name": "Sample Practice", "clients": "11_to_50" }),
+            "A practice asked for an account (11–50 clients).",
+        )
+        .by(None),
+        s(
+            "delete_practice_request",
+            json!({ "request_id": "pr-1", "why": "expired" }),
+            "The system deleted a practice request after 90 days.",
+        )
+        .by(None),
+        s(
+            "delete_practice_request",
+            json!({ "request_id": "pr-1", "why": "by_overseer" }),
+            "Bo deleted a practice request.",
+        )
+        .by(Some("u-bo")),
     ]
 }
 

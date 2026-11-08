@@ -327,6 +327,7 @@ struct Trial {
     guest: Guest,
     bank_account_id: String,
     statement_id: String,
+    year_id: String,
     lines: Vec<String>,
     rule_id: String,
 }
@@ -337,6 +338,7 @@ impl Trial {
             &self.guest.business_id,
             &self.bank_account_id,
             &self.statement_id,
+            &self.year_id,
             &self.rule_id,
         ]
         .into_iter()
@@ -361,6 +363,10 @@ async fn trial(server: &Server) -> Trial {
         .as_str()
         .unwrap()
         .to_owned();
+    let client = server
+        .get_json(&format!("/api/clients/{biz}"), &guest.cookie)
+        .await;
+    let year_id = client["years"][0]["id"].as_str().unwrap().to_owned();
     let queue = server
         .get_json(&format!("/api/businesses/{biz}/save-tax"), &guest.cookie)
         .await;
@@ -384,6 +390,7 @@ async fn trial(server: &Server) -> Trial {
         guest,
         bank_account_id,
         statement_id,
+        year_id,
         lines,
         rule_id,
     }
@@ -399,6 +406,7 @@ fn fill(path: &str, t: &Trial) -> String {
         let value = match &rest[open + 1..close] {
             "id" if path.starts_with("/api/statements/") => t.statement_id.clone(),
             "id" if path.starts_with("/api/bank-accounts/") => t.bank_account_id.clone(),
+            "id" if path.starts_with("/api/years/") => t.year_id.clone(),
             "id" => t.guest.business_id.clone(),
             "entity_type" => "sole_trader".to_owned(),
             _ => new_id(),
@@ -744,6 +752,10 @@ fn payload(kind: &str, biz: &str, settings: &Value) -> Value {
         "start_impersonation" => json!({ "user_id": new_id(), "reason": "X" }),
         "end_impersonation" => json!({}),
         "allow_impersonation_changes" => json!({ "reason": "X" }),
+        "request_practice_account" => json!({
+            "name": "X", "email": "x@example.test", "practice_name": "X", "clients": "up_to_10",
+        }),
+        "delete_practice_request" => json!({ "request_id": new_id(), "why": "by_overseer" }),
         other => panic!("tests/guests.rs has no payload for the refused command {other}; add one"),
     }
 }
@@ -810,7 +822,9 @@ async fn a_guest_uses_only_the_routes_for_its_own_trial() {
     ];
     let mut refused = 0;
     for (method, path) in api_routes() {
-        if public.contains(&path) || guests::route_allowed(&method, path) {
+        // Anyone may ask for a practice account (M21); only overseers list the asks.
+        let public_post = method == Method::POST && path == "/api/practice-requests";
+        if public.contains(&path) || public_post || guests::route_allowed(&method, path) {
             continue;
         }
         let uri = fill(path, &a);

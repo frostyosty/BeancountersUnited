@@ -98,6 +98,9 @@ pub enum Target {
     /// The server itself (as [`Target::Server`]), or else, for a signed-in user, this client
     /// (M20): ending a trial, setting GST registration.
     ServerOrClient(ClientRef),
+    /// Ours, who run the service (M21): an overseer, or the server itself as one. Never someone
+    /// an overseer is viewing as.
+    Overseer,
 }
 
 /// Something that belongs to one user, as the request named it.
@@ -198,6 +201,7 @@ async fn check_as(
             true
         }
         Target::Impersonation => role == Role::Overseer,
+        Target::Overseer => role == Role::Overseer,
         Target::ServerOrClient(_) if !signed_in => {
             matches!(role, Role::PracticeAdmin | Role::Overseer)
         }
@@ -513,6 +517,11 @@ async fn command_targets(
             Need::Owner,
             vec![Target::ServerOrClient(ClientRef::direct(client_id))],
         ),
+
+        // Practice requests (M21, ADR 015, 7). Asking is like signing up: no user, only through
+        // its route, so `/api/commands` refuses it for anyone signed in. Deleting is ours.
+        C::RequestPracticeAccount { .. } => (Need::Read, vec![Target::SignUp]),
+        C::DeletePracticeRequest { .. } => (Need::Read, vec![Target::Overseer]),
     })
 }
 
@@ -587,6 +596,8 @@ pub enum RouteRule {
     Statement(Need),
     /// The `{id}` parameter is a bank account or card: its business (M18).
     BankAccount(Need),
+    /// Overseers only, as themselves (M21): practice requests and trial counts.
+    Overseer,
 }
 
 /// The rule for each route in [`crate::api_routes`]. `None` means the route is refused for
@@ -654,6 +665,10 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
             R::Year(Need::Read)
         }
         "/api/years/{id}/tb-import/preview" if post => R::Year(Need::Accounting),
+        // M21 (ADR 015): anyone may ask for a practice account; only overseers read the asks
+        // and the trial counts.
+        "/api/practice-requests" if post => R::Public,
+        "/api/practice-requests" | "/api/overseer/trials" if get => R::Overseer,
         "/api/statements/{id}/excerpt" if get => R::Statement(Need::Read),
         "/api/bank-accounts/{id}/proof" if get => R::BankAccount(Need::Read),
         _ => return None,
@@ -804,6 +819,7 @@ async fn check_route(
         RouteRule::InvoiceImage => (invoice_image_target(&mut conn, id()?).await?, Need::Read),
         RouteRule::Statement(need) => (statement_target(&mut conn, id()?).await?, need),
         RouteRule::BankAccount(need) => (bank_account_target(&mut conn, id()?).await?, need),
+        RouteRule::Overseer => (Target::Overseer, Need::Read),
     };
     check(&mut conn, actor, &target, need).await
 }

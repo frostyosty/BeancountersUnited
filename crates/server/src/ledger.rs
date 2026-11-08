@@ -125,17 +125,25 @@ pub async fn report_with(
     .await
 }
 
-/// The template and mapping versions a year is pinned to.
+/// The template and mapping versions a year is pinned to. A year always has both (pinned versions
+/// are never deleted), but if one were missing, the statements say so plainly with `no_layout`,
+/// never a server error (ADR 015, 1.3).
 pub async fn pinned_layout(
     conn: &mut SqliteConnection,
     year: &StoredYear,
 ) -> Result<(Template, Mapping), CommandError> {
+    let no_layout = || {
+        CommandError::invalid(
+            "no_layout",
+            "There's no statement layout for this business yet.",
+        )
+    };
     let template = templates::template_version(conn, &year.template_version_id)
         .await?
-        .ok_or_else(|| CommandError::not_found("template version", &year.template_version_id))?;
+        .ok_or_else(no_layout)?;
     let mapping = templates::mapping_version(conn, &year.mapping_version_id)
         .await?
-        .ok_or_else(|| CommandError::not_found("mapping version", &year.mapping_version_id))?;
+        .ok_or_else(no_layout)?;
     Ok((template.body, mapping.body))
 }
 

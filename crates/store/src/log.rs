@@ -155,3 +155,36 @@ pub async fn last_for_client(
             .await?;
     Ok(seq)
 }
+
+/// One row the overseer's trial counts read (M21, ADR 015, 5).
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct TrialEvent {
+    pub kind: String,
+    pub at: DateTime<Utc>,
+    /// Only for `claim_guest` and `expire_guest`, and only if the row isn't redacted. Every other
+    /// row is counted by its kind and time alone, so a redacted payload is never read.
+    pub payload: Option<String>,
+}
+
+/// The rows of a trial's life (`start_guest`, `claim_guest`, `adopt_guest_business`,
+/// `expire_guest`) from `since` on, oldest first.
+pub async fn trial_events(
+    conn: &mut SqliteConnection,
+    since: DateTime<Utc>,
+) -> Result<Vec<TrialEvent>> {
+    // `command_log_kind_at` serves the kind and the time. The SQL bound is a day early and only
+    // narrows the read; the exact cut is made in Rust, so the stored format can't matter.
+    let rows: Vec<TrialEvent> = sqlx::query_as(
+        "SELECT kind, at,
+                CASE WHEN kind IN ('claim_guest', 'expire_guest') AND redacted_seq IS NULL
+                     THEN payload END AS payload
+         FROM command_log
+         WHERE kind IN ('start_guest', 'claim_guest', 'adopt_guest_business', 'expire_guest')
+           AND at >= ?
+         ORDER BY seq",
+    )
+    .bind(since - chrono::Duration::days(1))
+    .fetch_all(conn)
+    .await?;
+    Ok(rows.into_iter().filter(|r| r.at >= since).collect())
+}

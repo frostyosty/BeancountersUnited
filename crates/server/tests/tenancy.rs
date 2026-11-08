@@ -430,6 +430,9 @@ const PRACTICE: [&str; 9] = [
     "/api/paragraph-library/{entity_type}",
     "/api/paragraphs/{id}/push-preview",
 ];
+/// Ours, who run the service (M21): overseers only. Asking for a practice account (its POST) is
+/// public.
+const OVERSEER: [&str; 2] = ["/api/practice-requests", "/api/overseer/trials"];
 /// Lists that mix businesses: B sees them, filtered to B's own.
 const LISTS: [&str; 3] = ["/api/clients", "/api/sync", "/api/history"];
 /// Who's here now: B sees only those on businesses B can see (`tests/m13.rs` covers more).
@@ -456,6 +459,9 @@ async fn an_owner_reaches_no_route_into_another_owners_business() {
         if PUBLIC.contains(&path) || OWN.contains(&path) {
             continue;
         }
+        if OVERSEER.contains(&path) && method == Method::POST {
+            continue;
+        }
         let uri = fill(path, &a);
         let request = |cookie: &str| {
             let r = Request::builder()
@@ -480,6 +486,20 @@ async fn an_owner_reaches_no_route_into_another_owners_business() {
             );
         } else if PRACTICE.contains(&path) {
             assert_eq!(status, StatusCode::FORBIDDEN, "{method} {path}: {body}");
+        } else if OVERSEER.contains(&path) {
+            for (who, (status, body)) in [
+                ("B", (status, body)),
+                (
+                    "A's accountant",
+                    split(server.send(request(&sam)).await).await,
+                ),
+            ] {
+                assert_eq!(
+                    status,
+                    StatusCode::FORBIDDEN,
+                    "{method} {path} as {who}: {body}"
+                );
+            }
         } else if PERSONAL.contains(&path) {
             for (who, (status, body)) in [
                 ("B", (status, body)),
@@ -690,6 +710,13 @@ fn attack(kind: &str, v: &Victim) -> Option<Value> {
             json!({ "client_id": biz, "registered": false, "source": "owner" })
         }
         "add_guest_business" | "claim_guest" | "adopt_guest_business" => return None,
+        // Practice requests (M21): asking is only through its public route, so B, signed in, is
+        // refused; deleting one is an overseer's.
+        "request_practice_account" => json!({
+            "name": "Mallory", "email": "mallory@example.nz", "practice_name": "Mallory's",
+            "clients": "up_to_10",
+        }),
+        "delete_practice_request" => json!({ "request_id": new_id(), "why": "by_overseer" }),
         other => panic!("tests/tenancy.rs has no attack for the new command {other}; add one"),
     })
 }

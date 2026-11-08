@@ -546,7 +546,9 @@ async fn observe(
         | C::EndImpersonation { .. }
         | C::AllowImpersonationChanges { .. }
         | C::ClaimGuest { .. }
-        | C::AdoptGuestBusiness { .. } => {}
+        | C::AdoptGuestBusiness { .. }
+        | C::RequestPracticeAccount { .. }
+        | C::DeletePracticeRequest { .. } => {}
         C::PickNotes { client_year_id, .. } => {
             let notes = acct_store::paragraphs::for_year(conn, client_year_id).await?;
             let titles: Vec<&str> = notes.iter().map(|n| n.paragraph.title.trim()).collect();
@@ -1078,6 +1080,8 @@ pub fn describe(
     let action = action(&command, changes, &user, person.as_deref());
     let who = match &command {
         Command::SignUp { display_name, .. } if entry.user_id.is_none() => display_name.clone(),
+        // Names no one: the details are only in `practice_requests` (M21, ADR 015, 7).
+        Command::RequestPracticeAccount { .. } => "A practice".into(),
         _ => who,
     };
     let via: Option<Via> = entry
@@ -1545,6 +1549,17 @@ fn action(
             format!("saved their work as {}", display_name.trim())
         }
         C::AdoptGuestBusiness { .. } => "moved a trial into their account".into(),
+        // Practice requests (M21, ADR 015, 7). Neither names the person.
+        C::RequestPracticeAccount { clients, .. } => {
+            format!("asked for an account ({})", clients.words())
+        }
+        C::DeletePracticeRequest { why, .. } => match why {
+            crate::practice_requests::DeleteWhy::Expired => format!(
+                "deleted a practice request after {} days",
+                crate::practice_requests::KEEP_DAYS
+            ),
+            crate::practice_requests::DeleteWhy::ByOverseer => "deleted a practice request".into(),
+        },
         C::ExpireGuest { why, .. } => {
             use crate::commands::ExpireWhy;
             let n = |label: &str| {
@@ -1645,8 +1660,12 @@ pub(crate) fn row_shown(
     if is_session_kind(&e.kind) {
         return viewer.role == Role::Overseer;
     }
-    // An ended trial is for overseers only, and names no business.
-    if e.kind == "expire_guest" {
+    // An ended trial is for overseers only, and names no business; so are practice requests
+    // (M21), which are to us.
+    if matches!(
+        e.kind.as_str(),
+        "expire_guest" | "request_practice_account" | "delete_practice_request"
+    ) {
         return viewer.role == Role::Overseer;
     }
     visible.shows(e.client_id.as_deref())

@@ -73,18 +73,6 @@ describe("expense analysis", () => {
     expect(screen.getByText("620 Power").closest("tr")!.textContent).toMatch(/\+30\.00–$/);
   });
 
-  it("names accounts without codes when the server leaves them out", async () => {
-    const owners: ExpenseAnalysisView = {
-      ...analysis,
-      categories: analysis.categories.map((c) => ({ ...c, accounts: c.accounts.map((a) => ({ ...a, code: null })) })),
-    };
-    stubApi(routes(owners));
-    renderApp(<App />, "/years/y1/analysis");
-    await userEvent.setup().click(await screen.findByRole("button", { name: "Occupancy" }));
-    expect(screen.getByText("Rent")).toBeTruthy();
-    expect(screen.queryByText(/610/)).toBeNull();
-  });
-
   it("lists the mapping problems when an expense account isn't mapped", async () => {
     stubApi({
       ...routes(null),

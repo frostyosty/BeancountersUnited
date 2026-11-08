@@ -848,6 +848,11 @@ fn payload(kind: &str, w: &World) -> Value {
         }),
         "adopt_guest_business" => json!({ "token": token() }),
         "expire_guest" => json!({ "client_id": biz, "why": "by_you" }),
+        // Practice requests (M21).
+        "request_practice_account" => json!({
+            "name": "X", "email": "x@example.nz", "practice_name": "X", "clients": "up_to_10",
+        }),
+        "delete_practice_request" => json!({ "request_id": new_id(), "why": "by_overseer" }),
         "set_gst_registration" => {
             json!({ "client_id": biz, "registered": false, "source": "owner" })
         }
@@ -893,10 +898,11 @@ fn every_command_kind_is_classified_while_acting() {
         WhileActing::Never("deal with IRD")
     );
     // The ADR's counts: 36 allowed, 2 session, 20 as yourself, 17 never; then M20's (ADR 014):
-    // an owner's GST answer allowed, and the five guest commands never.
+    // an owner's GST answer allowed, and the five guest commands never; then M21's (ADR 015): the
+    // two practice request commands never.
     assert_eq!(
         (ALLOWED.len(), SESSION.len(), AS_YOURSELF.len(), NEVER.len()),
-        (37, 2, 20, 22)
+        (37, 2, 20, 24)
     );
 }
 

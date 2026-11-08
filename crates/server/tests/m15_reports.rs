@@ -206,8 +206,10 @@ async fn expense_analysis_matches_the_statements() {
     assert_eq!(first["total"]["change_bp"], Value::Null);
 }
 
+/// Owners see account codes in the GL and analysis too (M21, ADR 015, 1.4 A): the accountant view
+/// is the accountant's own screen, and owners already read codes in the trial balance.
 #[tokio::test]
-async fn owners_never_see_account_codes() {
+async fn owners_see_account_codes() {
     let server = Server::new().await;
     let boss = server.login("boss").await;
     let accounts: Value = serde_json::from_str(ST_CHART).unwrap();
@@ -305,7 +307,7 @@ async fn owners_never_see_account_codes() {
     let gl_accounts = gl["accounts"].as_array().unwrap();
     assert!(!gl_accounts.is_empty());
     for a in gl_accounts {
-        assert_eq!(a["code"], Value::Null, "{a}");
+        assert!(!a["code"].as_str().unwrap_or("").is_empty(), "{a}");
         assert!(!a["name"].as_str().unwrap().is_empty());
     }
     // The recoded line's original posting and its reversal are a matched pair.
@@ -315,7 +317,10 @@ async fn owners_never_see_account_codes() {
         .filter(|e| e["matched_reversal"] == true)
         .count();
     assert!(hidden >= 2, "{gl}");
-    assert!(!gl.to_string().contains("\"150\""));
+    assert!(
+        gl_accounts.iter().any(|a| a["code"] == "150"),
+        "the expense account, by its code: {gl}"
+    );
 
     let analysis = server
         .get_json(&format!("/api/years/{year}/analysis"), &cookie)
@@ -332,7 +337,12 @@ async fn owners_never_see_account_codes() {
             .any(|a| a["name"] == "Purchases and materials"),
         "{analysis}"
     );
-    assert!(accounts.iter().all(|a| a["code"] == Value::Null));
+    assert!(
+        accounts
+            .iter()
+            .any(|a| a["code"] == "150" && a["name"] == "Purchases and materials"),
+        "{analysis}"
+    );
 }
 
 /// Submits a command that must succeed, whether or not it creates anything.

@@ -713,6 +713,14 @@ async fn walk_case(kind: &str, b: &Books) -> Expect {
         })),
         "adopt_guest_business" => NotSubmitted(json!({ "token": "x" })),
         "expire_guest" => NotSubmitted(json!({ "client_id": biz, "why": "by_you" })),
+        // Practice requests (M21): to us, not any year's figures; `tests/practice_requests.rs`
+        // covers them.
+        "request_practice_account" => NotSubmitted(json!({
+            "name": "X", "email": "x@example.nz", "practice_name": "X", "clients": "up_to_10",
+        })),
+        "delete_practice_request" => {
+            NotSubmitted(json!({ "request_id": new_id(), "why": "by_overseer" }))
+        }
         // Registering reposts the year's deposits with their GST split.
         "set_gst_registration" => Refused(json!({
             "client_id": biz, "registered": true, "source": "owner",

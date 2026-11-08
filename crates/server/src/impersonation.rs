@@ -166,6 +166,9 @@ pub const NEVER: &[(&str, &str)] = &[
     ("claim_guest", "save a trial"),
     ("adopt_guest_business", "move a trial into an account"),
     ("expire_guest", "delete a trial"),
+    // Practice requests (M21): a visitor's own ask, and deleting one is an overseer's own call.
+    ("request_practice_account", "ask for a practice account"),
+    ("delete_practice_request", "delete a practice request"),
 ];
 
 /// Where a command kind stands while acting.

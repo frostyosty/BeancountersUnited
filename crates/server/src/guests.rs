@@ -173,6 +173,9 @@ pub const GUEST_REFUSED: &[(&str, &str)] = &[
     ("start_impersonation", "do this"),
     ("end_impersonation", "do this"),
     ("allow_impersonation_changes", "do this"),
+    // A practice request goes through its own public route, never a guest's session (ADR 015, 7).
+    ("request_practice_account", "do this"),
+    ("delete_practice_request", "do this"),
 ];
 
 /// Where a command kind stands for a guest.
@@ -224,6 +227,11 @@ fn not_a_guest() -> CommandError {
 
 /// The routes a guest may use, besides the public ones (ADR 014, 1): their own business's
 /// screens, Changes, the change feed, presence, commands and saving their work. Deny by default.
+///
+/// The accountant view (M21, ADR 015, 1) adds the year reads it shows: the year, journals, trial
+/// balance, statements, general ledger and asset register. Each is still checked against the
+/// guest's own business by the access layer, as every route is. The PDF, the snapshot, the
+/// finalise check, the notes, the layout, the reconciliation and the analysis stay refused.
 pub fn route_allowed(method: &Method, path: &str) -> bool {
     let get = *method == Method::GET;
     let post = *method == Method::POST;
@@ -242,6 +250,13 @@ pub fn route_allowed(method: &Method, path: &str) -> bool {
         | "/api/bank-accounts/{id}/proof"
         | "/api/history"
         | "/api/sync" => get,
+        // The accountant view, read-only (M21, ADR 015, 1).
+        "/api/years/{id}"
+        | "/api/years/{id}/journals"
+        | "/api/years/{id}/tb"
+        | "/api/years/{id}/report"
+        | "/api/years/{id}/gl"
+        | "/api/years/{id}/assets" => get,
         "/api/commands" | "/api/presence" | "/api/guest/claim" => post,
         _ => false,
     }
@@ -258,6 +273,9 @@ pub fn check_route(method: &Method, path: &str) -> Result<(), CommandError> {
         "make invoices"
     } else if path.starts_with("/api/ird") {
         "file with IRD"
+    } else if path == "/api/years/{id}/report.pdf" {
+        // The same words for an example: the web, which knows, words that case itself.
+        "download the PDF"
     } else {
         "do this"
     };
@@ -439,6 +457,8 @@ pub(crate) async fn apply(
             display_name,
             password,
             business_name,
+            // Only measured: kept in the log entry, and nothing here reads it.
+            from: _,
         } => client(
             claim(
                 tx,
@@ -939,6 +959,7 @@ async fn set_registration(
 pub struct Limits {
     files_per_address: u32,
     examples_per_address: u32,
+    practice_requests_per_address: u32,
     state: Mutex<Counts>,
 }
 
@@ -948,9 +969,24 @@ struct Counts {
     hour: i64,
     files: HashMap<String, u32>,
     examples: HashMap<String, u32>,
+    /// Practice requests (M21, ADR 015, 7), in the same hour.
+    practice_requests: HashMap<String, u32>,
     /// The minute the command counts are for.
     minute: i64,
     commands: HashMap<String, u32>,
+}
+
+impl Counts {
+    /// Starts the per-address counts afresh when the hour has moved on.
+    fn new_hour(&mut self, now: DateTime<Utc>) {
+        let hour = now.timestamp().div_euclid(3600);
+        if self.hour != hour {
+            self.hour = hour;
+            self.files.clear();
+            self.examples.clear();
+            self.practice_requests.clear();
+        }
+    }
 }
 
 impl Default for Limits {
@@ -964,6 +1000,7 @@ impl Limits {
         Limits {
             files_per_address,
             examples_per_address,
+            practice_requests_per_address: crate::practice_requests::PER_ADDRESS_PER_HOUR,
             state: Mutex::default(),
         }
     }
@@ -988,12 +1025,7 @@ impl Limits {
         now: DateTime<Utc>,
     ) -> Result<(), CommandError> {
         let mut s = self.state.lock().expect("the limits lock isn't poisoned");
-        let hour = now.timestamp().div_euclid(3600);
-        if s.hour != hour {
-            s.hour = hour;
-            s.files.clear();
-            s.examples.clear();
-        }
+        s.new_hour(now);
         let (limit, counts) = if example {
             (self.examples_per_address, &mut s.examples)
         } else {
@@ -1012,6 +1044,25 @@ impl Limits {
                 ),
                 retry_after_secs: u64::try_from(left).unwrap_or(3600),
             });
+        }
+        *n += 1;
+        Ok(())
+    }
+
+    /// Counts a practice request from `address` (M21, ADR 015, 7), or refuses it.
+    pub fn take_practice_request(
+        &self,
+        address: &str,
+        now: DateTime<Utc>,
+    ) -> Result<(), CommandError> {
+        let mut s = self.state.lock().expect("the limits lock isn't poisoned");
+        s.new_hour(now);
+        let n = s.practice_requests.entry(address.to_owned()).or_default();
+        if *n >= self.practice_requests_per_address {
+            let left = 3600 - now.timestamp().rem_euclid(3600);
+            return Err(crate::practice_requests::too_many(
+                u64::try_from(left).unwrap_or(3600),
+            ));
         }
         *n += 1;
         Ok(())
@@ -1079,7 +1130,8 @@ pub fn client_address(headers: &HeaderMap, extensions: &Extensions) -> String {
 
 /// Ends, through the pipeline as the server, every trial that's over at `now`: a guest's business
 /// whose guest has no live session (7 days without a request), and an example past its 24 hours.
-/// Returns how many it ended. `acctd` runs it at startup and every 10 minutes ([`spawn_sweep`]);
+/// It also deletes practice requests past their 90 days (M21, ADR 015, 7); those aren't in the
+/// count. Returns how many trials it ended. `acctd` runs it at startup and every 10 minutes ([`spawn_sweep`]);
 /// tests call it with the `now` they want.
 pub async fn sweep(store: &Store, now: DateTime<Utc>) -> Result<usize, CommandError> {
     let list = {
@@ -1125,6 +1177,7 @@ pub async fn sweep(store: &Store, now: DateTime<Utc>) -> Result<usize, CommandEr
             }
         }
     }
+    crate::practice_requests::sweep(store, now).await?;
     Ok(n)
 }
 
@@ -1453,6 +1506,42 @@ pub struct ClaimRequest {
     pub password: String,
     #[ts(optional)]
     pub business_name: Option<String>,
+    /// Which prompt led here (ADR 015, 4). An unknown value is refused; absent is accepted.
+    #[serde(default)]
+    #[ts(optional)]
+    pub from: Option<ClaimFrom>,
+}
+
+/// Which prompt led a guest to save their work (M21, ADR 015, 4), kept in `claim_guest`'s own log
+/// entry and counted for the overseers. Never shown to the visitor. A closed list, so the web
+/// can't send a typo; values are only ever added.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum ClaimFrom {
+    /// The guest banner's or site header's Save your work, anywhere not covered below.
+    #[serde(rename = "banner")]
+    Banner,
+    /// The banner's or header's button on an accountant-view page.
+    #[serde(rename = "accountant_view")]
+    AccountantView,
+    /// The first-saving line under "saved so far".
+    #[serde(rename = "saving")]
+    Saving,
+    /// The Submit step.
+    #[serde(rename = "submit")]
+    Submit,
+    /// "Save your work first to invite your accountant."
+    #[serde(rename = "locked:invite")]
+    LockedInvite,
+    /// The AI suggestions lock.
+    #[serde(rename = "locked:ai")]
+    LockedAi,
+    /// The PDF lock in the accountant view.
+    #[serde(rename = "locked:pdf")]
+    LockedPdf,
+    /// A welcome-back line before the trial goes. Unused while ADR 015, 3.5 A stands.
+    #[serde(rename = "expiry")]
+    Expiry,
 }
 
 /// `POST /api/guest/claim`: a guest saves their work. Submits `claim_guest`, then ends the guest's
@@ -1479,6 +1568,7 @@ pub async fn claim_route(
                 display_name: req.display_name,
                 password: req.password,
                 business_name: req.business_name,
+                from: req.from,
             },
         },
         None,
@@ -1608,7 +1698,22 @@ mod tests {
             &Method::POST,
             "/api/businesses/{id}/ai-suggestions"
         ));
-        assert!(!route_allowed(&Method::GET, "/api/years/{id}"));
+        // The accountant view's reads (M21), but not the PDF or the practice's year tools.
+        assert!(route_allowed(&Method::GET, "/api/years/{id}"));
+        assert!(route_allowed(&Method::GET, "/api/years/{id}/report"));
+        assert!(!route_allowed(&Method::GET, "/api/years/{id}/report.pdf"));
+        assert!(!route_allowed(&Method::GET, "/api/years/{id}/notes"));
+        assert!(!route_allowed(
+            &Method::POST,
+            "/api/years/{id}/tb-import/preview"
+        ));
+        assert_eq!(
+            check_route(&Method::GET, "/api/years/{id}/report.pdf")
+                .unwrap_err()
+                .body()
+                .message,
+            "Save your work first to download the PDF."
+        );
         assert!(!route_allowed(&Method::GET, "/api/invoices/draft"));
         assert!(!route_allowed(&Method::GET, "/api/users"));
     }

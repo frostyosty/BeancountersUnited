@@ -3,11 +3,7 @@ import type { AccountCode } from "./AccountCode";
 import type { GlEntryView } from "./GlEntryView";
 import type { Money } from "./Money";
 
-export type GlAccountView = { 
-/**
- * `None` for business owners, who never see account codes.
- */
-code: AccountCode | null, name: string, opening: Money, closing: Money, 
+export type GlAccountView = { code: AccountCode, name: string, opening: Money, closing: Money, 
 /**
  * By date, then posting order.
  */

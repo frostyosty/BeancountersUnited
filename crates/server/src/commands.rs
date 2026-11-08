@@ -658,6 +658,11 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
         business_name: Option<String>,
+        /// Which prompt led to saving (M21, ADR 015, 4), counted for the overseers. Kept in this
+        /// log entry only, and never shown to the visitor. Absent is "not recorded".
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        from: Option<crate::guests::ClaimFrom>,
     },
     /// A signed-in owner who was a guest in this browser a moment ago moves that trial's business
     /// into their account (ADR 014, 4). `token` is the guest session's, which `POST /api/guest/adopt`
@@ -688,6 +693,29 @@ pub enum Command {
         )]
         frequency: Option<acct_core::tax::gst::GstFrequency>,
         source: acct_store::guests::GstSource,
+    },
+    /// An accountant or bookkeeper asks for a practice account (M21, ADR 015, 7). Only
+    /// `POST /api/practice-requests` submits it, with no user, whatever session the browser has,
+    /// so it's never tied to a trial. The details are kept in `practice_requests` for 90 days;
+    /// the log entry keeps `[redacted]` in place of the name, email, practice name and phone.
+    /// Overseers read it. Returns the request's id.
+    RequestPracticeAccount {
+        name: String,
+        email: String,
+        practice_name: String,
+        clients: crate::practice_requests::PracticeClients,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        phone: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        from: Option<crate::practice_requests::PracticeRequestFrom>,
+    },
+    /// Deletes a practice request: the server's sweep once it's 90 days old (`expired`), or an
+    /// overseer sooner (`by_overseer`), for spam or because the person asked.
+    DeletePracticeRequest {
+        request_id: String,
+        why: crate::practice_requests::DeleteWhy,
     },
 }
 
@@ -776,6 +804,8 @@ impl Command {
             Command::AdoptGuestBusiness { .. } => "adopt_guest_business",
             Command::ExpireGuest { .. } => "expire_guest",
             Command::SetGstRegistration { .. } => "set_gst_registration",
+            Command::RequestPracticeAccount { .. } => "request_practice_account",
+            Command::DeletePracticeRequest { .. } => "delete_practice_request",
         }
     }
 
@@ -830,6 +860,16 @@ impl Command {
                 |bytes| crate::invoices::sha256_hex(&bytes),
             );
             payload["source"]["file"]["content_base64"] = format!("sha256:{sha256}").into();
+        }
+        // A practice request's details live only in `practice_requests` (M21, ADR 015, 7), so
+        // deleting the row deletes them. A one-person practice's name is often a person's name.
+        if let Command::RequestPracticeAccount { phone, .. } = self {
+            for key in ["name", "email", "practice_name"] {
+                payload[key] = "[redacted]".into();
+            }
+            if phone.is_some() {
+                payload["phone"] = "[redacted]".into();
+            }
         }
         payload
     }

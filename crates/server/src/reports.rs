@@ -1,5 +1,6 @@
-//! M15's analysis reads: the GL listing and expenses by category. Accountants see account codes in
-//! both; business owners never do, so their copies leave the codes out.
+//! M15's analysis reads: the GL listing and expenses by category. Everyone sees account codes in
+//! both: the accountant view (M21, ADR 015, 1.4 A) is the accountant's own screen, and owners
+//! already read codes in the trial balance and the chart.
 
 use std::collections::BTreeMap;
 
@@ -7,8 +8,6 @@ use acct_core::analysis::{AnalysisInput, Movement, expense_analysis};
 use acct_core::gl::{GlJournal, gl_listing};
 use acct_core::{AccountCode, Chart, Comparatives, Money};
 use acct_store::journals::{self, JournalKind};
-use acct_store::templates;
-use acct_store::users::Role;
 use acct_store::years::YearStatus;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -34,8 +33,7 @@ pub struct GlListing {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct GlAccountView {
-    /// `None` for business owners, who never see account codes.
-    pub code: Option<AccountCode>,
+    pub code: AccountCode,
     pub name: String,
     pub opening: Money,
     pub closing: Money,
@@ -82,14 +80,9 @@ pub struct ExpenseCategoryView {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct AnalysisAccountView {
-    /// `None` for business owners.
-    pub code: Option<AccountCode>,
+    pub code: AccountCode,
     pub name: String,
     pub movement: Movement,
-}
-
-fn shows_codes(user: &CurrentUser) -> bool {
-    user.0.role != Role::BusinessOwner
 }
 
 fn name(chart: &Chart, code: &AccountCode) -> String {
@@ -101,7 +94,7 @@ fn name(chart: &Chart, code: &AccountCode) -> String {
 /// `GET /api/years/{id}/gl`
 pub async fn get_gl(
     State(state): State<AppState>,
-    user: CurrentUser,
+    _user: CurrentUser,
     Path(id): Path<String>,
 ) -> ApiResult<GlListing> {
     let mut conn = state.store.reader().await?;
@@ -123,12 +116,11 @@ pub async fn get_gl(
                 .and_then(|r| index.get(r).copied()),
         })
         .collect();
-    let codes = shows_codes(&user);
     let accounts = gl_listing(&this.opening, &input)
         .into_iter()
         .map(|a| GlAccountView {
             name: name(&chart, &a.code),
-            code: codes.then(|| a.code.clone()),
+            code: a.code.clone(),
             opening: a.opening,
             closing: a.closing,
             entries: a
@@ -152,7 +144,7 @@ pub async fn get_gl(
 /// `GET /api/years/{id}/analysis`
 pub async fn get_analysis(
     State(state): State<AppState>,
-    user: CurrentUser,
+    _user: CurrentUser,
     Path(id): Path<String>,
 ) -> ApiResult<ExpenseAnalysisView> {
     let mut conn = state.store.reader().await?;
@@ -163,17 +155,12 @@ pub async fn get_analysis(
         [] => unreachable!("the year itself"),
     };
     let year = &current.year;
-    let template = templates::template_version(&mut conn, &year.template_version_id)
-        .await?
-        .ok_or_else(|| CommandError::not_found("template version", &year.template_version_id))?;
-    let mapping = templates::mapping_version(&mut conn, &year.mapping_version_id)
-        .await?
-        .ok_or_else(|| CommandError::not_found("mapping version", &year.mapping_version_id))?;
+    let (template, mapping) = ledger::pinned_layout(&mut conn, year).await?;
     // Until finalisation writes snapshots, last year's figures are its live balances, as on the
     // statements (`ledger::report`).
     let analysis = expense_analysis(&AnalysisInput {
-        template: &template.body,
-        mapping: &mapping.body,
+        template: &template,
+        mapping: &mapping,
         chart: &chart,
         current: &current.closing,
         prior: prior.map(|p| &p.closing),
@@ -194,7 +181,6 @@ pub async fn get_analysis(
         Some(p) if p.year.status == YearStatus::Finalised => Comparatives::Finalised,
         Some(_) => Comparatives::Unfinalised,
     };
-    let codes = shows_codes(&user);
     Ok(Json(ExpenseAnalysisView {
         comparatives,
         categories: analysis
@@ -209,7 +195,7 @@ pub async fn get_analysis(
                     .into_iter()
                     .map(|(code, movement)| AnalysisAccountView {
                         name: name(&chart, &code),
-                        code: codes.then_some(code),
+                        code,
                         movement,
                     })
                     .collect(),

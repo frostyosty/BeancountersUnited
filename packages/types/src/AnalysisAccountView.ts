@@ -2,8 +2,4 @@
 import type { AccountCode } from "./AccountCode";
 import type { Movement } from "./Movement";
 
-export type AnalysisAccountView = { 
-/**
- * `None` for business owners.
- */
-code: AccountCode | null, name: string, movement: Movement, };
+export type AnalysisAccountView = { code: AccountCode, name: string, movement: Movement, };

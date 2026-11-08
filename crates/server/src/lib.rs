@@ -20,6 +20,7 @@ pub mod merchants;
 pub mod paragraphs;
 pub mod pdf;
 pub mod pipeline;
+pub mod practice_requests;
 pub mod presence;
 pub mod reads;
 pub mod reconcile;
@@ -30,6 +31,7 @@ pub mod starter;
 pub mod statement_files;
 pub mod tax;
 pub mod tb_import;
+pub mod trial_counts;
 #[cfg(feature = "embed-web")]
 pub mod web;
 
@@ -269,6 +271,22 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::GET,
             "/api/bank-accounts/{id}/proof",
             get(business::get_proof),
+        ),
+        // M21 (ADR 015): practice requests, and the overseer's trial counts.
+        (
+            Method::POST,
+            "/api/practice-requests",
+            post(practice_requests::post_request),
+        ),
+        (
+            Method::GET,
+            "/api/practice-requests",
+            get(practice_requests::list_requests),
+        ),
+        (
+            Method::GET,
+            "/api/overseer/trials",
+            get(trial_counts::get_trials),
         ),
     ]
 }

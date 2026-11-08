@@ -86,16 +86,6 @@ describe("general ledger", () => {
     expect(screen.getByRole("region", { name: "100 Sales" })).toBeTruthy();
   });
 
-  it("shows accounts by name alone when the server leaves the codes out", async () => {
-    const owners: GlListing = {
-      accounts: listing.accounts.map((a) => ({ ...a, code: null })),
-    };
-    stubApi(routes(owners));
-    renderApp(<App />, "/years/y1/gl");
-    expect(await screen.findByRole("region", { name: "Bank" })).toBeTruthy();
-    expect(screen.queryByText(/800/)).toBeNull();
-  });
-
   it("says so when nothing is posted", async () => {
     stubApi(routes({ accounts: [] }));
     renderApp(<App />, "/years/y1/gl");

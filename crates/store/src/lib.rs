@@ -31,6 +31,7 @@ pub mod log;
 pub mod merchants;
 pub mod paragraphs;
 pub mod practice;
+pub mod practice_requests;
 pub mod sessions;
 pub mod snapshots;
 pub mod templates;
