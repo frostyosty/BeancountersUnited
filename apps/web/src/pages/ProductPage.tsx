@@ -1,3 +1,4 @@
+import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
@@ -64,6 +65,7 @@ export function ProductPage() {
           </ul>
         </section>
       </main>
+      <GuestBanner />
     </div>
   );
 }

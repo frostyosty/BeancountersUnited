@@ -1,3 +1,4 @@
+import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import { contact } from "../lib/theme";
@@ -26,6 +27,7 @@ export function ContactPage() {
           </ul>
         </section>
       </main>
+      <GuestBanner />
     </div>
   );
 }

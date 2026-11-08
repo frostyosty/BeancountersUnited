@@ -269,9 +269,9 @@ describe("the accountant view", () => {
     expect(screen.getByRole("link", { name: /Back to your tax/ }).getAttribute("href")).toBe("/businesses/b1");
     const tabs = within(screen.getByRole("navigation", { name: "Books" })).getAllByRole("link").map((a) => a.textContent?.trim());
     expect(tabs.map((t) => t?.replace(/^\S*\s/, "").trim() ?? "")).toEqual(
-      expect.arrayContaining(["Statements", "Trial balance", "Journals", "General ledger", "Assets", "Changes"]),
+      expect.arrayContaining(["Statements", "Trial balance", "Journals", "General ledger", "Assets"]),
     );
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(5);
     // The accountant's write-side tabs are not mounted at all.
     for (const name of [/Import TB/, /Notes/, /Reconcile/, /Analysis/, /Finalise/]) {
       expect(screen.queryByRole("link", { name })).toBeNull();

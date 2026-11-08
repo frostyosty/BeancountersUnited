@@ -1,3 +1,4 @@
+import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
@@ -41,6 +42,7 @@ export function AboutPage() {
           </ol>
         </section>
       </main>
+      <GuestBanner />
     </div>
   );
 }

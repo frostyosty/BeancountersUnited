@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { ExampleLinks, ExamplesPanel } from "../components/TryIt/ExamplesPanel";
 import { UploadResult } from "../components/TryIt/StepState";
@@ -289,6 +290,7 @@ export function HomePage() {
 
       </main>
 
+      <GuestBanner />
       <footer className={styles.footer}>
         <span>
           <Icon name="home.brand" fallback="🫘" /> White Label Accounting

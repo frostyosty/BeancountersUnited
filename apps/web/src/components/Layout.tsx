@@ -62,7 +62,6 @@ export function Layout() {
           </div>
         </header>
         <ActingBanner />
-        <GuestBanner />
         <MoveTrial />
         <ViewedAsNotice />
         <div className={styles.body}>
@@ -71,6 +70,7 @@ export function Layout() {
             <Outlet />
           </main>
         </div>
+        <GuestBanner />
       </div>
     </HistoryProvider>
   );

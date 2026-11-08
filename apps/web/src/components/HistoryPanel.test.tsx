@@ -78,10 +78,10 @@ function setup() {
 }
 
 describe("history panel", () => {
-  it("starts hidden, behind a Show changes button", async () => {
+  it("starts hidden, behind a Changes button", async () => {
     window.localStorage.clear();
     setup();
-    await userEvent.setup().click(await screen.findByRole("button", { name: /Show changes/ }));
+    await userEvent.setup().click(await screen.findByRole("button", { name: /Changes/ }));
     expect(await screen.findByRole("list", { name: /here now/i })).toBeTruthy();
   });
 

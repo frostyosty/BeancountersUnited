@@ -200,7 +200,7 @@ function Editor({ initialHtml }: { initialHtml: string | null }) {
             <Emoji>↪️</Emoji> Redo
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void startAgain()}>
-            <Emoji>🔄</Emoji> Start again
+            <Emoji>🔁</Emoji> Start again
           </Button>
         </div>
         <div className={styles.group}>

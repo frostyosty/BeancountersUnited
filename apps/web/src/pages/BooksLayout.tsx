@@ -106,9 +106,6 @@ export function BooksLayout() {
             <Tab to="assets">
               <Icon name="year.assets" fallback="🚜" /> Assets
             </Tab>
-            <Tab to="changes">
-              <Icon name="history.changes" fallback="🕑" /> Changes
-            </Tab>
           </Tabs>
           <Outlet context={{ year, client: c, chart: chart.data } satisfies YearContext} />
         </>

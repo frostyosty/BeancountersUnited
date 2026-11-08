@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
@@ -123,6 +124,7 @@ export function PricingPage() {
           ))}
         </section>
       </main>
+      <GuestBanner />
     </div>
   );
 }

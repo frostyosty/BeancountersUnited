@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { guestBusinessId, useGuest } from "../auth";
 import { Icon } from "../lib/icons";
 import styles from "../pages/HomePage.module.css";
-import { GuestBanner, SaveWorkButton } from "./GuestBanner";
+import { SaveWorkButton } from "./GuestBanner";
 
 /** The logged-out site's header, shared by the home, product and pricing pages. */
 export function SiteHeader() {
@@ -36,7 +36,6 @@ export function SiteHeader() {
         )}
       </nav>
     </header>
-    <GuestBanner />
     </>
   );
 }

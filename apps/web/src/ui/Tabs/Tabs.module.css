@@ -5,6 +5,8 @@
   padding-bottom: 1px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  /* The tabs' -2px margin would otherwise add a vertical scrollbar. */
+  overflow-y: hidden;
   scrollbar-width: thin;
 }
 
