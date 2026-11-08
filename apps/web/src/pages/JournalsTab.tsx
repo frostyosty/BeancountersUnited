@@ -7,6 +7,7 @@ import { ApiRequestError } from "../lib/api";
 import { formatDate } from "../lib/dates";
 import { blankRow, describeJournalError, evaluate, type GridRow, normaliseCode } from "../lib/journalGrid";
 import { formatMoney } from "../lib/money";
+import { useReadOnly } from "../lib/readOnly";
 import { keys, useJournals } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import { DateField } from "../ui";
@@ -16,7 +17,9 @@ import { useYearContext } from "./YearLayout";
 export function JournalsTab() {
   const { year, client } = useYearContext();
   const me = useCurrentUser();
-  const editable = can(me, "staff") && year.status === "open";
+  // The accountant view (M21) shows the same list with no way to post or reverse.
+  const { readOnly } = useReadOnly();
+  const editable = !readOnly && can(me, "staff") && year.status === "open";
   return (
     <>
       {editable && year.books_source !== "bank_coding" && <JournalEntry key={year.id} />}

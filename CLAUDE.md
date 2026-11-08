@@ -38,7 +38,7 @@ server owns the data, and everyone uses a browser (ADR 007).
    - TypeScript: money is integer cents, parsed and formatted only through `apps/web/src/lib/money.ts`.
    - The server recomputes and validates everything the UI sends.
 5. `crates/core` is pure: no IO, async, clock, randomness or env access. The same inputs always give byte-identical outputs.
-6. Every change to practice or client data is a command through the server's pipeline: validate, apply, append to `command_log`, all in one transaction. There are no other write paths: not in handlers, scripts, seeders or fixtures. (Login sessions aren't practice data.)
+6. Every change to practice or client data is a command through the server's pipeline: validate, apply, append to `command_log`, all in one transaction. There are no other write paths: not in handlers, scripts, seeders or fixtures. (Login sessions and AI usage metering, `ai_usage` from M22, aren't practice data.)
 7. Migrations are append-only. Never edit a committed migration.
 
 ## Domain invariants
@@ -133,6 +133,9 @@ NON-CODE-TODOS.md  everything a person has to do outside the code: checks, appro
 ## Working conventions
 - Work directly on `master`; don't create branches. Commit each finished task there. The user saves and pushes with `zz_quicksave.txt` (stage all, commit, pull --rebase, push), so leave the tree in a state that is safe to commit as a whole.
 - Propose a plan before changing more than about 5 files or any public type.
+- A milestone's plan and agent prompts live together in `Mnn-PROMPTS.md`, with a pointer in `PLAN.md`. When writing
+  one, prefer more waves of smaller agents on cheaper settings: Opus only for ADRs and the hardest piece, Sonnet at the
+  lowest thinking level that suits each job, and parallel agents wherever their files don't overlap.
 - When work leaves something only a person can do (a check, an approval, an application, a decision), add it to `NON-CODE-TODOS.md`, and tick it off there when it's done.
 - Snapshots: `cargo insta review` is interactive, so don't use it. Read each pending `.snap.new` against its `.snap`. Run `cargo insta accept` only when you can explain every change, and say in the commit message why each one changed.
 - When you add a dependency, explain why in the commit message.

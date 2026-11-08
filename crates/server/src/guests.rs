@@ -257,7 +257,11 @@ pub fn route_allowed(method: &Method, path: &str) -> bool {
         | "/api/years/{id}/report"
         | "/api/years/{id}/gl"
         | "/api/years/{id}/assets" => get,
-        "/api/commands" | "/api/presence" | "/api/guest/claim" => post,
+        // "Explain better" on a Save tax card costs a little and changes no books. The
+        // business's own daily explanation allowance limits it.
+        "/api/commands" | "/api/presence" | "/api/guest/claim" | "/api/businesses/{id}/explain" => {
+            post
+        }
         _ => false,
     }
 }
@@ -1698,6 +1702,8 @@ mod tests {
             &Method::POST,
             "/api/businesses/{id}/ai-suggestions"
         ));
+        // "Explain better" is open to trials, under its own tighter daily limits.
+        assert!(route_allowed(&Method::POST, "/api/businesses/{id}/explain"));
         // The accountant view's reads (M21), but not the PDF or the practice's year tools.
         assert!(route_allowed(&Method::GET, "/api/years/{id}"));
         assert!(route_allowed(&Method::GET, "/api/years/{id}/report"));

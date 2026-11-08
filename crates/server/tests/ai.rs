@@ -299,6 +299,76 @@ async fn suggestions_are_gated_redacted_and_only_ever_pre_filled() {
     assert_eq!(fake.seen().len(), before);
 }
 
+async fn explain(s: &Server, cookie: &str, client: &str, card_id: &str) -> (StatusCode, Value) {
+    split(
+        s.send(post_json(
+            &format!("/api/businesses/{client}/explain"),
+            Some(cookie),
+            &json!({ "card_id": card_id }),
+        ))
+        .await,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn explain_better_uses_the_servers_own_card_and_has_a_daily_limit() {
+    let mut s = Server::new().await;
+    let boss = s.login("boss").await;
+    let sam = s.login("sam").await;
+    let val = s.login("val").await;
+    let client = business(&s, &boss).await;
+    let (_, queue) = split(
+        s.send(get(
+            &format!("/api/businesses/{client}/save-tax"),
+            Some(&boss),
+        ))
+        .await,
+    )
+    .await;
+    let card_id = queue["cards"][0]["id"].as_str().unwrap().to_owned();
+
+    // No suggester configured.
+    let (status, body) = explain(&s, &sam, &client, &card_id).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["code"], "ai_unavailable");
+
+    let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
+    s.state.suggester = Some(fake.clone());
+    s.state.explain_quota = Arc::new(acct_server::ai::ExplainLimits::new(
+        Some(2),
+        Some(1),
+        None,
+        None,
+    ));
+
+    // Viewers can't ask, and an unknown card is not found. Neither spends the allowance.
+    assert_eq!(
+        explain(&s, &val, &client, &card_id).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        explain(&s, &sam, &client, "line:nope").await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert!(fake.explained().is_empty());
+
+    let (status, body) = explain(&s, &sam, &client, &card_id).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["model"], "fake-model");
+    assert!(body["text"].as_str().unwrap().contains("test explanation"));
+    let sent = format!("{:?}", fake.explained()).to_uppercase();
+    for secret in ["MARSH", "0000123", "0000456"] {
+        assert!(!sent.contains(secret), "{secret} reached the model: {sent}");
+    }
+
+    assert_eq!(explain(&s, &sam, &client, &card_id).await.0, StatusCode::OK);
+    let (status, body) = explain(&s, &sam, &client, &card_id).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["code"], "ai_daily_limit");
+    assert_eq!(fake.explained().len(), 2);
+}
+
 #[tokio::test]
 async fn record_suggestions_is_checked_like_any_command() {
     let s = Server::new().await;

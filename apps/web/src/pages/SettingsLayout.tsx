@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { PracticeRequests } from "../components/PracticeRequests";
+import { TrialCounts } from "../components/TrialCounts";
 import { useHistorySharing } from "../lib/historySharing";
 import { Icon } from "../lib/icons";
 import { keys, useClients, useUsers } from "../lib/queries";
@@ -69,6 +71,7 @@ export function AdminSettingsTab() {
       ) : (
         <StartViewing realId={real.id} />
       )}
+      <PracticeRequests />
     </section>
   );
 }
@@ -131,6 +134,7 @@ export function ToolsTab() {
           Open the invoice maker
         </ButtonLink>
       </Card>
+      <TrialCounts />
     </section>
   );
 }

@@ -12,3 +12,4 @@ export { Notice, type NoticeProps } from "./Notice";
 export { PageHeader, type Crumb, type PageHeaderProps } from "./PageHeader";
 export { Tab, Tabs } from "./Tabs";
 export { ThemeToggle } from "./ThemeToggle";
+export { ToastProvider, useToast, type ToastOptions } from "./Toast";

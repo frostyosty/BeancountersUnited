@@ -5,7 +5,10 @@ use std::sync::Mutex;
 
 use acct_core::GstCode;
 
-use crate::{AiError, Confidence, RawSuggestion, SuggestFuture, SuggestRequest, Suggester};
+use crate::{
+    AiError, Confidence, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture,
+    SuggestRequest, Suggester,
+};
 
 /// "A line whose description contains `contains` is `category`." `category` is a category key,
 /// or else a word in a category's name, such as `freight`.
@@ -33,6 +36,7 @@ pub struct FakeSuggester {
     answers: Vec<FakeAnswer>,
     fail: bool,
     seen: Mutex<Vec<SuggestRequest>>,
+    explained: Mutex<Vec<ExplainRequest>>,
 }
 
 impl FakeSuggester {
@@ -42,6 +46,7 @@ impl FakeSuggester {
             answers,
             fail: false,
             seen: Mutex::new(Vec::new()),
+            explained: Mutex::new(Vec::new()),
         }
     }
 
@@ -85,6 +90,11 @@ impl FakeSuggester {
     /// Every request it has been given, oldest first.
     pub fn seen(&self) -> Vec<SuggestRequest> {
         self.seen.lock().expect("not poisoned").clone()
+    }
+
+    /// Every explanation request it has been given, oldest first.
+    pub fn explained(&self) -> Vec<ExplainRequest> {
+        self.explained.lock().expect("not poisoned").clone()
     }
 
     fn answer(&self, request: &SuggestRequest) -> Vec<RawSuggestion> {
@@ -132,6 +142,19 @@ impl Suggester for FakeSuggester {
             Ok(self.answer(&request))
         };
         self.seen.lock().expect("not poisoned").push(request);
+        Box::pin(async move { result })
+    }
+
+    fn explain(&self, request: ExplainRequest) -> ExplainFuture<'_> {
+        let result = if self.fail {
+            Err(AiError::Network("the fake is set to fail".to_owned()))
+        } else {
+            Ok(format!(
+                "This is a test explanation. It was given: {}",
+                request.facts().replace('\n', " / ")
+            ))
+        };
+        self.explained.lock().expect("not poisoned").push(request);
         Box::pin(async move { result })
     }
 }

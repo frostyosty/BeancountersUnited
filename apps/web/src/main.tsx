@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import { makeQueryClient } from "./lib/queryClient";
 import { applyScheme, applyTheme, storedScheme } from "./lib/theme";
+import { ToastProvider } from "./ui";
 import "./styles/global.css";
 
 applyTheme();
@@ -16,7 +17,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

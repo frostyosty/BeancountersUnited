@@ -8,6 +8,7 @@ import { AboutPage } from "./pages/AboutPage";
 import { AccountantsPage } from "./pages/AccountantsPage";
 import { AnalysisTab } from "./pages/AnalysisTab";
 import { AssetsTab } from "./pages/AssetsTab";
+import { BooksChangesTab, BooksIndex, BooksLayout } from "./pages/BooksLayout";
 import { BusinessPage } from "./pages/BusinessPage";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
@@ -95,6 +96,16 @@ export function App() {
         <Route element={<Layout />}>
           <Route path="businesses/:clientId" element={<BusinessPage />} />
           <Route path="businesses/:clientId/save-tax" element={<SaveTaxPage />} />
+          {/* The accountant view (M21): the year screens, read-only, for owners and guests. */}
+          <Route path="businesses/:clientId/books" element={<BooksLayout />}>
+            <Route index element={<BooksIndex />} />
+            <Route path="statements" element={<StatementsTab />} />
+            <Route path="tb" element={<TrialBalanceTab />} />
+            <Route path="journals" element={<JournalsTab />} />
+            <Route path="gl" element={<GlTab />} />
+            <Route path="assets" element={<AssetsTab />} />
+            <Route path="changes" element={<BooksChangesTab />} />
+          </Route>
           <Route element={<NotForGuests />}>
             <Route index element={<HomeRoute />} />
             <Route path="clients/:clientId" element={<ClientPage />} />

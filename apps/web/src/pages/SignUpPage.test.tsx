@@ -59,9 +59,11 @@ describe("SignUpPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Ana's Gardens" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: /Invite your accountant/ })).toBeTruthy();
-    // An owner sees their business, not the practice's clients or the accountant view.
+    // An owner sees their business, not the practice's clients or its crumbs. The Your view ·
+    // Accountant view switch (M21) is theirs, and is a link in the "View" switch, not a crumb.
     expect(screen.getAllByRole("link", { name: /Overview/ }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: "Accountant view" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Clients" })).toBeNull();
 
     const body = calls.find((c) => c.path === "/api/signup")?.body as Record<string, unknown>;
     expect(body).toMatchObject({

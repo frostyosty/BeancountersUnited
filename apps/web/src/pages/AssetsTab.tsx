@@ -13,6 +13,7 @@ import { getJson } from "../lib/api";
 import { formatDate } from "../lib/dates";
 import { DEFAULT_DRAFT, describeConventions, describeMethod, type SettingsDraft, toDraft, toSettings } from "../lib/depreciation";
 import { formatMoney, parseMoney } from "../lib/money";
+import { useReadOnly } from "../lib/readOnly";
 import { keys, useClientAssetClasses, useYearAssets } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
 import { DateField, useConfirm } from "../ui";
@@ -32,7 +33,9 @@ export function AssetsTab() {
   const view = useYearAssets(year.id);
   const classes = useClientAssetClasses(client.id);
   const run = useCommand(INVALIDATES);
-  const canEdit = me.role !== "viewer";
+  // The accountant view (M21) shows the register and its class defaults with no way to change them.
+  const { readOnly } = useReadOnly();
+  const canEdit = me.role !== "viewer" && !readOnly;
   const open = year.status === "open";
 
   if (view.error ?? classes.error) {

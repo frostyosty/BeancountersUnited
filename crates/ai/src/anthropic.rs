@@ -7,7 +7,8 @@ use serde_json::{Value, json};
 
 use crate::prompt::{INSTRUCTIONS, answer_schema, batch, business_context, parse_answer};
 use crate::{
-    AiError, RawSuggestion, SuggestFuture, SuggestRequest, Suggester, Usage, count, post_json,
+    AiError, ExplainFuture, ExplainRequest, RawSuggestion, SuggestFuture, SuggestRequest,
+    Suggester, Usage, count, explain, post_json,
 };
 
 pub const DEFAULT_BASE_URL: &str = "https://api.anthropic.com";
@@ -54,6 +55,42 @@ pub(crate) fn body(model: &str, request: &SuggestRequest) -> Value {
             "format": { "type": "json_schema", "schema": answer_schema() }
         }
     })
+}
+
+/// Room for a few short sentences.
+const EXPLAIN_MAX_TOKENS: u32 = 600;
+
+/// The request body for an explanation.
+pub(crate) fn explain_body(model: &str, request: &ExplainRequest) -> Value {
+    json!({
+        "model": model,
+        "max_tokens": EXPLAIN_MAX_TOKENS,
+        "system": [{ "type": "text", "text": explain::INSTRUCTIONS }],
+        "messages": [{ "role": "user", "content": request.facts() }],
+        "output_config": { "effort": "low" }
+    })
+}
+
+/// The text of a Messages API response.
+pub(crate) fn read_text(response: &Value) -> Result<String, AiError> {
+    match response.get("stop_reason").and_then(Value::as_str) {
+        Some("refusal") => return Err(AiError::Refused),
+        Some("max_tokens") => return Err(AiError::BadResponse("the answer was cut off")),
+        _ => {}
+    }
+    response
+        .get("content")
+        .and_then(Value::as_array)
+        .and_then(|blocks| {
+            blocks
+                .iter()
+                .find(|b| b.get("type").and_then(Value::as_str) == Some("text"))
+        })
+        .and_then(|b| b.get("text"))
+        .and_then(Value::as_str)
+        .map(|t| t.trim().to_owned())
+        .filter(|t| !t.is_empty())
+        .ok_or(AiError::BadResponse("the answer had no text"))
 }
 
 /// The tokens a Messages API response says it used.
@@ -111,6 +148,23 @@ impl Suggester for Client {
                 .expect("not poisoned")
                 .add(usage_of(&response));
             read(&response)
+        })
+    }
+
+    fn explain(&self, request: ExplainRequest) -> ExplainFuture<'_> {
+        Box::pin(async move {
+            let body = explain_body(&self.model, &request);
+            let call = self
+                .http
+                .post(&self.url)
+                .header("x-api-key", &self.api_key)
+                .header("anthropic-version", API_VERSION);
+            let response = post_json(call, &body).await?;
+            self.usage
+                .lock()
+                .expect("not poisoned")
+                .add(usage_of(&response));
+            read_text(&response)
         })
     }
 

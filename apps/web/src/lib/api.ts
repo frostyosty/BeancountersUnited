@@ -5,6 +5,7 @@ import type { AiSuggestRun } from "@acct/types/AiSuggestRun";
 import type { ApiError } from "@acct/types/ApiError";
 import type { ClaimRequest } from "@acct/types/ClaimRequest";
 import type { Command } from "@acct/types/Command";
+import type { Explanation } from "@acct/types/Explanation";
 import type { GuestStarted } from "@acct/types/GuestStarted";
 import type { Health } from "@acct/types/Health";
 import type { StartGuestRequest } from "@acct/types/StartGuestRequest";
@@ -12,6 +13,7 @@ import type { LoginRequest } from "@acct/types/LoginRequest";
 import type { MappingCheck } from "@acct/types/MappingCheck";
 import type { MappingCheckRequest } from "@acct/types/MappingCheckRequest";
 import type { Me } from "@acct/types/Me";
+import type { PracticeRequestBody } from "@acct/types/PracticeRequestBody";
 import type { PresentUser } from "@acct/types/PresentUser";
 import type { SignedUp } from "@acct/types/SignedUp";
 import type { SignUpRequest } from "@acct/types/SignUpRequest";
@@ -105,6 +107,14 @@ export function adoptGuest(req: AdoptRequest, fetchFn: typeof fetch = fetch): Pr
   return postJson<Adopted>("/api/guest/adopt", req, fetchFn);
 }
 
+/**
+ * Asks for a practice account (M21, ADR 015, 7). Public: it's sent with no user whatever session the
+ * browser has, so it's never tied to a trial. `id` is the command id; pass the same one to retry.
+ */
+export function requestPracticeAccount(req: PracticeRequestBody, fetchFn: typeof fetch = fetch): Promise<Accepted> {
+  return postJson<Accepted>("/api/practice-requests", req, fetchFn);
+}
+
 export async function logout(fetchFn: typeof fetch = fetch): Promise<void> {
   await fetchFn("/api/logout", { method: "POST" });
 }
@@ -125,6 +135,12 @@ export function submitCommand(
  * pre-fills on the Save tax cards; nothing is applied until the owner accepts one. */
 export function requestAiSuggestions(clientId: string, fetchFn: typeof fetch = fetch): Promise<AiSuggestRun> {
   return postJson<AiSuggestRun>(`/api/businesses/${clientId}/ai-suggestions`, {}, fetchFn);
+}
+
+/** Asks for a longer, tailored explanation of one Save tax card ("Explain better"). Rejects with
+ * code `ai_daily_limit` once the business has used its explanations for the day. */
+export function requestExplanation(clientId: string, cardId: string, fetchFn: typeof fetch = fetch): Promise<Explanation> {
+  return postJson<Explanation>(`/api/businesses/${clientId}/explain`, { card_id: cardId }, fetchFn);
 }
 
 /** Checks a draft mapping against its template and the master chart without saving it. */

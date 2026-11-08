@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useSignUp } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { PracticeRequestButton } from "../components/PracticeRequest";
 import { newId } from "../lib/id";
 import { Icon } from "../lib/icons";
 import { keys } from "../lib/queries";
@@ -63,6 +64,10 @@ export function SignUpPage() {
       </h1>
       <p className="muted">
         For sole traders. Upload your bank statements and see the tax you'd pay, then bring it down.
+      </p>
+      <p className="muted">Run a practice instead?</p>
+      <p>
+        <PracticeRequestButton from="signup_page" />
       </p>
       <form onSubmit={submit} className="form narrow">
         <label className="field">

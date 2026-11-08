@@ -16,6 +16,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
+use acct_ai::explain;
 use acct_ai::redact::{self, ExampleInput, LineInput};
 use acct_ai::{Category, Confidence, Config, RawSuggestion, Suggester};
 use acct_core::coding::{
@@ -26,6 +27,7 @@ use acct_core::{AccountType, GstCode, Money};
 use acct_store::ai::{self as ai_store, AiSettings, StoredSuggestion};
 use acct_store::bank as bank_store;
 use acct_store::coding::{self as coding_store, LineStateKind};
+use acct_store::guests as guests_store;
 use acct_store::{SqliteConnection, clients, new_id};
 use axum::Json;
 use axum::extract::{Path, State};
@@ -428,15 +430,11 @@ impl Quota {
 
     /// `ACCT_AI_DAILY_LIMIT` asks per business per day (UTC), 1 when unset, `0` or `off` for none.
     pub fn from_env() -> Quota {
-        let limit = match std::env::var("ACCT_AI_DAILY_LIMIT") {
-            Ok(v) if v.eq_ignore_ascii_case("off") => None,
-            Ok(v) => match v.trim().parse::<u32>() {
-                Ok(0) | Err(_) => None,
-                Ok(n) => Some(n),
-            },
-            Err(_) => Some(1),
-        };
-        Quota::new(limit)
+        Quota::from_var("ACCT_AI_DAILY_LIMIT", 1)
+    }
+
+    fn from_var(name: &str, default: u32) -> Quota {
+        Quota::new(env_limit(name, default))
     }
 
     pub fn limit(&self) -> Option<u32> {
@@ -464,6 +462,135 @@ impl Quota {
         }
         *n += 1;
         true
+    }
+}
+
+/// A daily limit from the environment: a number, `0` or `off` for none, `default` when unset.
+fn env_limit(name: &str, default: u32) -> Option<u32> {
+    match std::env::var(name) {
+        Ok(v) if v.eq_ignore_ascii_case("off") => None,
+        Ok(v) => match v.trim().parse::<u32>() {
+            Ok(0) | Err(_) => None,
+            Ok(n) => Some(n),
+        },
+        Err(_) => Some(default),
+    }
+}
+
+/// The server-wide daily cap on explanations: `base`, plus `per_guest` for every guest who signed
+/// up in the last 24 hours, so it grows with real interest and bounds the worst-case bill.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GlobalCap {
+    pub base: u32,
+    pub per_guest: u32,
+}
+
+impl GlobalCap {
+    pub fn for_guests(self, guests: i64) -> u32 {
+        let guests = u32::try_from(guests.max(0)).unwrap_or(u32::MAX);
+        self.base
+            .saturating_add(self.per_guest.saturating_mul(guests))
+    }
+}
+
+/// The daily limits on "Explain better" (a guest costs us money, so abuse is worth bounding):
+/// per business, a lower one per trial, per client address, and one across everyone. In memory,
+/// like [`Quota`]: a restart resets the day. `None` is no limit. Every refusal is the same
+/// `ai_daily_limit`, so the owner sees one message whichever limit was hit.
+#[derive(Debug)]
+pub struct ExplainLimits {
+    per_business: Option<u32>,
+    per_guest: Option<u32>,
+    per_address: Option<u32>,
+    global: Option<GlobalCap>,
+    used: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
+}
+
+impl Default for ExplainLimits {
+    /// No limits, for tests and tools.
+    fn default() -> ExplainLimits {
+        ExplainLimits::new(None, None, None, None)
+    }
+}
+
+impl ExplainLimits {
+    pub fn new(
+        per_business: Option<u32>,
+        per_guest: Option<u32>,
+        per_address: Option<u32>,
+        global: Option<GlobalCap>,
+    ) -> ExplainLimits {
+        ExplainLimits {
+            per_business,
+            per_guest,
+            per_address,
+            global,
+            used: std::sync::Mutex::default(),
+        }
+    }
+
+    /// From the environment, per day (UTC); `0` or `off` for none:
+    /// - `ACCT_AI_EXPLAIN_LIMIT`: per business, 5.
+    /// - `ACCT_AI_EXPLAIN_GUEST_LIMIT`: per trial, 2.
+    /// - `ACCT_AI_EXPLAIN_IP_LIMIT`: per client address, 10.
+    /// - `ACCT_AI_EXPLAIN_GLOBAL_LIMIT`: across everyone, 50 plus
+    ///   `ACCT_AI_EXPLAIN_GLOBAL_PER_GUEST` (2) for each guest who signed up in the last 24 hours.
+    pub fn from_env() -> ExplainLimits {
+        let global = env_limit("ACCT_AI_EXPLAIN_GLOBAL_LIMIT", 50).map(|base| GlobalCap {
+            base,
+            per_guest: env_limit("ACCT_AI_EXPLAIN_GLOBAL_PER_GUEST", 2).unwrap_or(0),
+        });
+        ExplainLimits::new(
+            env_limit("ACCT_AI_EXPLAIN_LIMIT", 5),
+            env_limit("ACCT_AI_EXPLAIN_GUEST_LIMIT", 2),
+            env_limit("ACCT_AI_EXPLAIN_IP_LIMIT", 10),
+            global,
+        )
+    }
+
+    pub fn global(&self) -> Option<GlobalCap> {
+        self.global
+    }
+
+    /// Spends one explanation against every limit that applies, or none of them if any is used
+    /// up. `guests_recent` is how many guests signed up in the last 24 hours.
+    pub fn take(
+        &self,
+        client_id: &str,
+        address: &str,
+        is_guest: bool,
+        guests_recent: i64,
+        day: chrono::NaiveDate,
+    ) -> bool {
+        let mut keys: Vec<(String, Option<u32>)> = vec![(
+            format!("business:{client_id}"),
+            if is_guest {
+                self.per_guest.or(self.per_business)
+            } else {
+                self.per_business
+            },
+        )];
+        keys.push((format!("address:{address}"), self.per_address));
+        keys.push((
+            "global".to_owned(),
+            self.global.map(|g| g.for_guests(guests_recent)),
+        ));
+        let mut used = self.used.lock().unwrap_or_else(|e| e.into_inner());
+        used.retain(|(_, d), _| *d >= day);
+        let spent = |used: &BTreeMap<_, u32>, key: &str| {
+            used.get(&(key.to_owned(), day)).copied().unwrap_or(0)
+        };
+        let all_free = keys
+            .iter()
+            .all(|(key, limit)| limit.is_none_or(|l| spent(&used, key) < l));
+        if all_free {
+            for (key, limit) in keys {
+                if limit.is_some() {
+                    *used.entry((key, day)).or_insert(0) += 1;
+                }
+            }
+        }
+        all_free
     }
 }
 
@@ -925,6 +1052,239 @@ pub async fn post_ai_suggestions(
     Ok(Json(suggest(&state, &user, &id).await?))
 }
 
+// ---------------------------------------------------------------------------------------------
+// "Explain better".
+
+/// `POST /api/businesses/{id}/explain`: which card to explain.
+#[derive(Debug, Clone, Deserialize, TS)]
+#[ts(export)]
+pub struct ExplainRequest {
+    /// A card's `id` in the business's Save tax queue.
+    pub card_id: String,
+}
+
+/// An explanation of one card, written for this owner's situation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct Explanation {
+    pub text: String,
+    pub model: String,
+}
+
+fn whole_dollars(m: Money) -> i64 {
+    m.cents().abs() / 100
+}
+
+/// Our own words for what a card asks and why it matters. The model gets these, never the
+/// browser's text.
+fn card_wording(card: &save_tax::SaveTaxCard) -> (String, String) {
+    use save_tax::Question;
+    let money_in = card.lines.first().is_some_and(|l| l.amount.cents() >= 0);
+    let (heading, background) = match card.kind {
+        CardKind::Question => match card.question {
+            Some(Question::OnlyIncome) => (
+                "Was this business the owner's only income for the year?",
+                "Until answered, tax is worked out as if the owner earns enough elsewhere to pay the top rate of 39%.",
+            ),
+            Some(Question::StudentLoan) => (
+                "Did the owner have a student loan during the year?",
+                "Until answered, 12% is set aside for student loan repayments.",
+            ),
+            Some(Question::OtherIncome) => (
+                "What other income did the owner have for the year?",
+                "Wages, benefits or interest from elsewhere change which tax rates apply to the business profit, and tax already deducted from it is credited.",
+            ),
+            Some(Question::Ietc) => (
+                "How many months could the owner get the independent earner tax credit?",
+                "The credit is up to $10 a week, but is not available for months with Working for Families, NZ Super, a main benefit or a student allowance.",
+            ),
+            Some(Question::GstRegistered) => (
+                "Is the business registered for GST?",
+                "Registration is only assumed from the statements. If the business is not registered, GST is not claimed or charged.",
+            ),
+            None => (
+                "A question about the owner",
+                "The answer changes the tax worked out.",
+            ),
+        },
+        CardKind::Transfer => (
+            "Did this money move between the owner's own accounts?",
+            "Money moved between your own accounts is not income or spending, so it should not be taxed or claimed.",
+        ),
+        CardKind::IrdPayment => (
+            if money_in {
+                "Is this a GST refund from IRD?"
+            } else {
+                "Is this a payment to IRD?"
+            },
+            "A refund of GST is not income. Tax already paid to IRD is credited against what is owed, and which tax it was for matters.",
+        ),
+        CardKind::Duplicate => (
+            "Is this the same transaction listed twice?",
+            "Two statements both seem to have this line. A real duplicate should be counted once.",
+        ),
+        CardKind::Gap => (
+            "A bank statement is missing for some days",
+            "The rise in the balance over the gap is counted as income until the statement shows what it was.",
+        ),
+        CardKind::SupplyInfo => (
+            "Does the owner have the tax invoice for this purchase?",
+            "For spending over $200, GST can be claimed back only with the supplier's tax invoice showing their GST number, kept for seven years.",
+        ),
+        CardKind::Categorise => (
+            if money_in {
+                "What was this money?"
+            } else {
+                "What was this spending?"
+            },
+            if money_in {
+                "Until sorted, money in is counted as income the business earned, so it is taxed."
+            } else {
+                "Until sorted, spending does not count as a business cost, so it brings nothing off the tax."
+            },
+        ),
+        CardKind::Reconcile => (
+            "The books and the bank do not agree",
+            "Until they agree, the tax figure could be off, so it is worth sorting first.",
+        ),
+    };
+    let mut background = background.to_owned();
+    if let Some(gap) = &card.gap {
+        background.push_str(&format!(
+            " The balance rose by ${} over the missing days.",
+            whole_dollars(gap.change)
+        ));
+    }
+    if let Some(r) = &card.reconcile {
+        background.push_str(&format!(
+            " The difference is ${}.",
+            whole_dollars(r.difference)
+        ));
+    }
+    (heading.to_owned(), background)
+}
+
+/// Writes a longer explanation of one Save tax card, within the day's explanation allowance.
+pub async fn explain_card(
+    state: &AppState,
+    user: &CurrentUser,
+    client_id: &str,
+    card_id: &str,
+    address: &str,
+) -> Result<Explanation, CommandError> {
+    let actor = user.actor();
+    {
+        let mut conn = state.store.reader().await?;
+        access::check(
+            &mut conn,
+            &actor,
+            &access::Target::Client(access::ClientRef {
+                client_id: client_id.to_owned(),
+                named: ("client", client_id.to_owned()),
+            }),
+            access::Need::Owner,
+        )
+        .await?;
+    }
+    let Some(suggester) = state.suggester.clone() else {
+        return Err(CommandError::invalid(
+            "ai_unavailable",
+            "Explanations aren't set up on this server.",
+        ));
+    };
+    let (card, settings, private_names) = {
+        let mut conn = state.store.reader().await?;
+        let settings = settings_or_default(&mut conn, client_id).await?;
+        if !settings.enabled {
+            return Err(CommandError::invalid(
+                "ai_suggestions_off",
+                "The experts are turned off for this business.",
+            ));
+        }
+        let queue = save_tax::queue(&mut conn, client_id).await?;
+        let card = queue
+            .cards
+            .into_iter()
+            .find(|c| c.id == card_id)
+            .ok_or_else(|| CommandError::not_found("card", card_id))?;
+        let client = clients::get(&mut conn, client_id)
+            .await?
+            .ok_or_else(|| CommandError::not_found("client", client_id))?;
+        let mut names = settings.private_names.clone();
+        names.push(client.name);
+        (card, settings, names)
+    };
+
+    let now = chrono::Utc::now();
+    let guests_recent = if state.explain_quota.global().is_some() {
+        let mut conn = state.store.reader().await?;
+        guests_store::started_since(&mut conn, now - chrono::Duration::hours(24)).await?
+    } else {
+        0
+    };
+    if !state.explain_quota.take(
+        client_id,
+        address,
+        user.0.is_guest(),
+        guests_recent,
+        now.date_naive(),
+    ) {
+        tracing::info!(
+            limit = "explain",
+            "an explanation was refused by the daily limits"
+        );
+        return Err(CommandError::invalid(
+            "ai_daily_limit",
+            "Daily usage limit reached. Explanations are back tomorrow.",
+        ));
+    }
+
+    let (heading, background) = card_wording(&card);
+    let lines: Vec<(Money, &str)> = card
+        .lines
+        .iter()
+        .map(|l| (l.amount, l.description.as_str()))
+        .collect();
+    let names: Vec<&str> = private_names.iter().map(String::as_str).collect();
+    let request = explain::request(&explain::Input {
+        heading: &heading,
+        background: &background,
+        lines: &lines,
+        saving_dollars: whole_dollars(card.saving),
+        best_case: card.best_case,
+        activity: settings.activity.as_deref(),
+        private_names: &names,
+    });
+    match suggester.explain(request).await {
+        Ok(text) => Ok(Explanation {
+            text,
+            model: suggester.model().to_owned(),
+        }),
+        Err(e) => {
+            // The error never holds a body, so it's safe to log.
+            tracing::warn!(error = %e, "an AI explanation request failed");
+            Err(CommandError::invalid(
+                "ai_failed",
+                "The experts couldn't be reached. Try again in a minute.",
+            ))
+        }
+    }
+}
+
+/// `POST /api/businesses/{id}/explain`.
+pub async fn post_explain(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(id): Path<String>,
+    parts: axum::http::request::Parts,
+    Json(req): Json<ExplainRequest>,
+) -> Result<Json<Explanation>, CommandError> {
+    let address = crate::guests::client_address(&parts.headers, &parts.extensions);
+    Ok(Json(
+        explain_card(&state, &user, &id, &req.card_id, &address).await?,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -943,6 +1303,57 @@ mod tests {
         let none = Quota::default();
         assert_eq!(none.remaining("a", day), None);
         assert!(none.take("a", day) && none.take("a", day));
+    }
+
+    #[test]
+    fn explanations_are_limited_per_business_trial_address_and_overall() {
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 9).unwrap();
+        let next = day.succ_opt().unwrap();
+
+        // A trial gets fewer than an owner.
+        let l = ExplainLimits::new(Some(5), Some(2), None, None);
+        assert!(l.take("trial", "a", true, 0, day) && l.take("trial", "a", true, 0, day));
+        assert!(
+            !l.take("trial", "a", true, 0, day),
+            "the third in a trial is refused"
+        );
+        assert!(
+            l.take("owner", "a", false, 0, day),
+            "an owner has the larger allowance"
+        );
+        assert!(
+            l.take("trial", "a", true, 0, next),
+            "tomorrow is a fresh day"
+        );
+
+        // One address can't get round the per-trial limit by starting new trials.
+        let l = ExplainLimits::new(Some(5), Some(2), Some(3), None);
+        assert!(l.take("t1", "ip", true, 0, day) && l.take("t2", "ip", true, 0, day));
+        assert!(l.take("t3", "ip", true, 0, day));
+        assert!(!l.take("t4", "ip", true, 0, day), "the address is used up");
+        assert!(l.take("t4", "other", true, 0, day));
+
+        // The overall cap grows with the guests who signed up, and a refusal spends nothing.
+        let cap = GlobalCap {
+            base: 2,
+            per_guest: 3,
+        };
+        assert_eq!(cap.for_guests(0), 2);
+        assert_eq!(cap.for_guests(4), 14);
+        let l = ExplainLimits::new(Some(10), Some(10), None, Some(cap));
+        assert!(l.take("a", "x", false, 0, day) && l.take("b", "y", false, 0, day));
+        assert!(
+            !l.take("c", "z", false, 0, day),
+            "everyone shares the overall cap"
+        );
+        assert!(l.take("c", "z", false, 1, day), "a new guest raises it");
+        let l = ExplainLimits::new(Some(1), None, None, Some(cap));
+        assert!(l.take("a", "x", false, 0, day));
+        assert!(!l.take("a", "x", false, 0, day));
+        assert!(
+            l.take("b", "y", false, 0, day),
+            "the refusal above spent no overall share"
+        );
     }
 
     fn cat(key: &str, direction: Direction) -> Category {

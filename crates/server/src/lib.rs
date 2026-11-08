@@ -63,6 +63,8 @@ pub struct AppState {
     /// How many times a day a business may ask the AI for suggestions. Kept in memory, so a
     /// restart gives everyone a fresh day. No limit unless the server sets one.
     pub ai_quota: Arc<ai::Quota>,
+    /// The daily limits on "Explain better": per business, per trial, per address and overall.
+    pub explain_quota: Arc<ai::ExplainLimits>,
     /// The guest abuse limits per address and per guest (M20, ADR 014, 8), kept in memory.
     pub guest_limits: Arc<guests::Limits>,
 }
@@ -75,6 +77,7 @@ impl AppState {
             suggester: ai::suggester_from_env(),
             presence: Arc::default(),
             ai_quota: Arc::new(ai::Quota::from_env()),
+            explain_quota: Arc::new(ai::ExplainLimits::from_env()),
             guest_limits: Arc::new(guests::Limits::from_env()),
         }
     }
@@ -226,6 +229,11 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::POST,
             "/api/businesses/{id}/ai-suggestions",
             post(ai::post_ai_suggestions),
+        ),
+        (
+            Method::POST,
+            "/api/businesses/{id}/explain",
+            post(ai::post_explain),
         ),
         (
             Method::GET,

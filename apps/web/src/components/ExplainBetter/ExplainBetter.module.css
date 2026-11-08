@@ -1,0 +1,11 @@
+.explain {
+  margin-top: var(--space-3);
+}
+
+.text {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  line-height: 1.5;
+}

@@ -46,6 +46,23 @@ ships.
       acctd ai-eval`, then try other models with `AI_MODEL`. Choose the production model and record it in
       ADR 009.
 
+## AI monitoring and invoice scanning (M22, M23)
+- [ ] M22: decide whether free-form AI question text may ever be kept (for investigating abuse), and for
+      how long. The starting position in the plan is no: counts and cost only. If yes, the privacy policy
+      says so.
+- [ ] M22: set the daily AI budget cap in cents for staging and production (`ACCT_AI_DAILY_BUDGET_CENTS`),
+      and the per-plan, per-kind daily limits.
+- [ ] M22: check the AI usage view in a browser as an overseer, and that a spike is flagged.
+- [ ] M23: someone with accounting knowledge checks which tax invoice fields are required at which
+      amounts ("Tax invoices" in `docs/domain.md`, marked **check**), and the GST rounding allowance.
+- [ ] M23: ask our IRD account manager to confirm in writing that sending an owner's invoice image or
+      text to an AI provider is acceptable (as for ADR 009). Stages 1 and 2 don't need it.
+- [ ] M23: ZDR from Anthropic should cover invoice reads too; update the privacy policy to say invoices
+      can be sent to the provider when the owner asks.
+- [ ] M23: decide the per-plan limit on AI invoice reads.
+- [ ] M23: check the invoice scanner in a browser on a desktop and on a phone with a real camera photo of a
+      synthetic invoice. Never a real client's.
+
 ## Hand checks a person has to sign off
 - [ ] M10's worked example, "Worked example: the synthetic sole trader" in `docs/domain.md`. Put your name
       on its "Hand-checked by" line. M10 isn't done until this is.
@@ -201,3 +218,8 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
       practice admin controls the shared charts, templates and users (ADR 015, 7). Offer them the only
       practice on a server, a server of their own, or a place on the wait list.
 - [ ] Delete a practice request sooner when the person asks, or when it's spam.
+
+## Pricing page (changed 2026-11-09, ahead of M24)
+- [ ] Decide the real prices; the page still says they're samples.
+- [ ] Decide the Free plan's invoice upload number ("Up to 100,000" beside Owner's "Unlimited").
+- [ ] Decide whether to keep the FAQ's "They'll only stay this low": it's a promise about future prices.

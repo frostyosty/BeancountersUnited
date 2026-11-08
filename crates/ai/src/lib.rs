@@ -13,6 +13,7 @@
 
 pub mod anthropic;
 pub mod eval;
+pub mod explain;
 mod fake;
 #[cfg(test)]
 mod leak_tests;
@@ -30,6 +31,7 @@ use acct_core::coding::Direction;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub use explain::ExplainRequest;
 pub use fake::{FakeAnswer, FakeSuggester};
 pub use redact::SuggestRequest;
 
@@ -69,6 +71,8 @@ pub enum AiError {
     Network(String),
     #[error("the AI service answered with HTTP {0}")]
     Status(u16),
+    #[error("this AI service can't write explanations")]
+    Unsupported,
     #[error("the AI service declined the request")]
     Refused,
     #[error("the AI service's answer wasn't usable: {0}")]
@@ -79,6 +83,9 @@ pub enum AiError {
 pub type SuggestFuture<'a> =
     Pin<Box<dyn Future<Output = Result<Vec<RawSuggestion>, AiError>> + Send + 'a>>;
 
+/// What a suggester's `explain` returns.
+pub type ExplainFuture<'a> = Pin<Box<dyn Future<Output = Result<String, AiError>> + Send + 'a>>;
+
 /// Something that suggests categories. The server holds an `Arc<dyn Suggester>`, chosen by
 /// [`Config`].
 pub trait Suggester: Send + Sync {
@@ -87,6 +94,10 @@ pub trait Suggester: Send + Sync {
     /// The model id recorded with each suggestion, such as `claude-haiku-5-5`.
     fn model(&self) -> &str;
     fn suggest(&self, request: SuggestRequest) -> SuggestFuture<'_>;
+    /// A plain-English explanation of one Save tax card. Providers that can't write one say so.
+    fn explain(&self, _request: ExplainRequest) -> ExplainFuture<'_> {
+        Box::pin(async { Err(AiError::Unsupported) })
+    }
     /// The tokens used so far, as the provider reported them. `acctd ai-eval` prices them.
     fn usage(&self) -> Usage {
         Usage::default()

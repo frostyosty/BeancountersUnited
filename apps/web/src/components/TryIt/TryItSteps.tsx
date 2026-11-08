@@ -4,6 +4,8 @@ import { Link } from "react-router";
 import { Icon } from "../../lib/icons";
 import { formatMoney } from "../../lib/money";
 import { CardBody } from "../../pages/SaveTaxCards";
+import { ExplainBetter } from "../ExplainBetter";
+import { SavingPeak } from "../Peaks";
 import { StepPlaceholder } from "./StepState";
 import styles from "./TryIt.module.css";
 import {
@@ -187,6 +189,7 @@ export function TaxSavedCard({ tryIt }: { tryIt: TryIt }) {
       ) : (
         <p className="muted">Answer a question and watch it grow.</p>
       )}
+      <SavingPeak businessId={state.businessId} savedSoFar={state.savedSoFar} kind={state.example === null ? "own" : "example"} />
     </div>
   );
 }
@@ -252,6 +255,8 @@ function MiniCard({
   onFeature: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const explainOpened = useRef(false);
+  if (open) explainOpened.current = true;
   const [full, setFull] = useState(0);
   const [clipped, setClipped] = useState(false);
   const clip = useRef<HTMLDivElement>(null);
@@ -309,6 +314,12 @@ function MiniCard({
             gstRegistered={ready.business.gst_registered_from !== null}
             canEdit
           />
+          {/* Mounted once opened, then kept, so a written explanation survives "Show less". */}
+          {(open || explainOpened) && (
+            <div hidden={!open}>
+              <ExplainBetter clientId={ready.businessId} cardId={card.id} />
+            </div>
+          )}
         </div>
       </div>
       {showToggle && (

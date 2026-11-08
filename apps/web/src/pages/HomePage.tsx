@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { useLocation } from "react-router";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { SiteHeader } from "../components/SiteHeader";
 import { ExampleLinks, ExamplesPanel } from "../components/TryIt/ExamplesPanel";
 import { UploadResult } from "../components/TryIt/StepState";
@@ -7,6 +7,7 @@ import { LaterStep, RetryButton, TaxSavedCard } from "../components/TryIt/TryItS
 import { UploadDrop } from "../components/TryIt/UploadDrop";
 import { useExamples, useIsDesktop } from "../components/TryIt/useExamples";
 import { useReducedMotion, useTryIt } from "../components/TryIt/useTryIt";
+import { type BooksView, booksPath } from "../lib/books";
 import { Icon } from "../lib/icons";
 import { formatMoney } from "../lib/money";
 import { LoginPage } from "./LoginPage";
@@ -44,22 +45,26 @@ const steps = [
   },
 ];
 
-const features = [
+// Each opens a view of the accountant side (M21): a trial's own, or Example 1 when there is none yet.
+const features: { icon: string; fallback: string; title: string; body: string; view: BooksView }[] = [
   {
     icon: "nav.clients",
     fallback: "📒",
+    view: "journals",
     title: "Real double-entry books",
     body: "Every business-year has a proper ledger underneath, so your accountant can pick up where you left off.",
   },
   {
     icon: "business.save_supply",
     fallback: "📑",
+    view: "statements",
     title: "Statements that foot",
     body: "Whole-dollar statements with last year alongside, balanced to the dollar, drill down to any account.",
   },
   {
     icon: "home.history",
     fallback: "🕑",
+    view: "changes",
     title: "Who changed what",
     body: "A supremely intuitive history of every change, and finalised years stay locked.",
   },
@@ -74,6 +79,7 @@ export function HomePage() {
   const examples = useExamples();
   const tryIt = useTryIt(examples);
   const desktop = useIsDesktop();
+  const navigate = useNavigate();
   // Once a statement is in, the examples go and the steps re-arrange around the answers.
   const dropped = ["uploading", "working", "ready"].includes(tryIt.state.phase);
 
@@ -117,6 +123,28 @@ export function HomePage() {
     if (!flow) return;
     rects.current = new Map(Array.from(flow.children).map((el) => [el, el.getBoundingClientRect()]));
   });
+
+  // The accountant tiles (M21). With a trial, a tile opens that view of it. With none it loads Example 1,
+  // as the hero ticket does, and opens the view once that is ready: one click to see it.
+  const [opening, setOpening] = useState<BooksView | null>(null);
+  const readyBusiness = tryIt.state.phase === "ready" ? tryIt.state.businessId : null;
+  const { enterApp } = tryIt;
+  const failed = tryIt.state.phase === "error";
+  useEffect(() => {
+    // A failed load shows its own error and Try again; don't open anything later on its behalf.
+    if (failed) setOpening(null);
+    else if (opening && readyBusiness) {
+      setOpening(null);
+      // The signed-out app doesn't know the guest yet; let it, so the view's routes open.
+      enterApp();
+      void navigate(booksPath(readyBusiness, opening));
+    }
+  }, [opening, readyBusiness, failed, enterApp, navigate]);
+  const hasTrial = tryIt.state.phase !== "idle" && tryIt.state.phase !== "error";
+  const openTile = (view: BooksView) => {
+    setOpening(view);
+    if (!hasTrial) tryIt.useExample(1);
+  };
 
   // The hero ticket: Example 1's real conservative figure, from the server. Clicking it loads that example
   // exactly as a drop would and scrolls to the flow.
@@ -233,12 +261,23 @@ export function HomePage() {
           <p className={styles.sectionLede}>Proper books underneath, so nothing is lost when you hand over.</p>
           <ul className={styles.grid}>
             {features.map((f) => (
-              <li key={f.title} className={styles.feature}>
-                <span className={styles.featureIcon}>
-                  <Icon name={f.icon} fallback={f.fallback} />
-                </span>
-                <h3>{f.title}</h3>
-                <p>{f.body}</p>
+              <li key={f.title} className={styles.tileItem}>
+                <button
+                  type="button"
+                  className={`${styles.feature} ${styles.tile}`}
+                  aria-busy={opening === f.view}
+                  onClick={() => openTile(f.view)}
+                >
+                  <span className={styles.featureIcon}>
+                    <Icon name={f.icon} fallback={f.fallback} />
+                  </span>
+                  <h3>{f.title}</h3>
+                  <p>{f.body}</p>
+                  <span className={styles.tileGo}>
+                    <Icon name="peaks.open" fallback="➡️" />{" "}
+                    {opening === f.view ? "Opening…" : hasTrial ? "Open it" : "See it on an example"}
+                  </span>
+                </button>
               </li>
             ))}
           </ul>

@@ -109,6 +109,12 @@ Task:
 Testing Library tests: each tile with and without a trial, the saving line once at the threshold and never for an example, dismissal, the example line, the banner's expiry wording, `from` on each claim path, the question shown only after the accountant view, the practice request form (including the per-address refusal), and both overseer panels (shown for an overseer, absent for a practice admin, the counts as served, deleting a request).
 Run `make check`.
 Don't commit.
+
+From agent 3:   For Agent 4                                                                     │ 109            <Route element={<NotForGuests />}>
+  - Tiles: link them with booksPath.                                              │ 110              <Route index element={<HomeRoute />} />        
+  - "Who are you?": ask only when hasOpenedAccountantView(me.id) is true.         │ 111              <Route path="clients/:clientId" element={<Clie 
+  - Banner and header button: these still send no from. They should send          │      ntPage />} />
+    accountant_view while the path starts with /businesses/<id>/books.  
 ```
 
 ## Wave 4: after Agent 4 has landed

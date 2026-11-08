@@ -646,7 +646,9 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         {
             R::Client(Need::Read)
         }
-        "/api/businesses/{id}/ai-suggestions" if post => R::Client(Need::Owner),
+        "/api/businesses/{id}/ai-suggestions" | "/api/businesses/{id}/explain" if post => {
+            R::Client(Need::Owner)
+        }
         "/api/years/{id}"
         | "/api/years/{id}/journals"
         | "/api/years/{id}/tb"
@@ -712,7 +714,7 @@ pub fn while_acting(method: &Method, path: &str, rule: RouteRule) -> WhileActing
         | "/api/mappings/check"
         | "/api/years/{id}/tb-import/preview" => W::Allowed,
         // Sends the business's lines to the AI provider and stores what comes back.
-        "/api/businesses/{id}/ai-suggestions" => W::NeedsChanges,
+        "/api/businesses/{id}/ai-suggestions" | "/api/businesses/{id}/explain" => W::NeedsChanges,
         // A visitor's own trial (M20): nobody views as a guest, and an owner moves theirs.
         "/api/guest/claim" | "/api/guest/adopt" => W::Refused("save or move a trial"),
         _ => W::Refused("do this"),

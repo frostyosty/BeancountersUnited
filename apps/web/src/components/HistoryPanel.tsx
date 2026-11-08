@@ -1,5 +1,5 @@
 import type { HistoryEntry } from "@acct/types/HistoryEntry";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { matchPath, useLocation } from "react-router";
 import { type HistoryFilters, useHistory, useHistoryContext, usePresence } from "../lib/history";
 import { Icon } from "../lib/icons";
@@ -98,8 +98,15 @@ export function HistoryPanel() {
   );
 }
 
-function Changes({ business, people }: { business: string | null; people: [string, string][] }) {
+/**
+ * The feed of changes with its filters. The side panel mounts it, and so does the accountant view's
+ * Changes tab (M21), so its element ids are made per instance.
+ */
+export function Changes({ business, people }: { business: string | null; people: [string, string][] }) {
   const { figure, clearFigure } = useHistoryContext();
+  const uid = useId();
+  const headingId = `${uid}-changes-heading`;
+  const filtersId = `${uid}-changes-filters`;
   const { pathname } = useLocation();
   const [user, setUser] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -132,14 +139,14 @@ function Changes({ business, people }: { business: string | null; people: [strin
   }
 
   return (
-    <section aria-labelledby="changes-heading" className={styles.changes}>
-      <h2 id="changes-heading">
+    <section aria-labelledby={headingId} className={styles.changes}>
+      <h2 id={headingId}>
         <Icon name="history.changes" fallback="🕑" /> Changes
         <button
           type="button"
           className={styles.filterToggle}
           aria-expanded={open}
-          aria-controls="changes-filters"
+          aria-controls={filtersId}
           aria-label="Filter changes"
           onClick={() => setOpen(!open)}
         >
@@ -156,7 +163,7 @@ function Changes({ business, people }: { business: string | null; people: [strin
         </p>
       )}
       {open && (
-        <div className={styles.filters} id="changes-filters">
+        <div className={styles.filters} id={filtersId}>
           <label>
             Person
             <select value={user ?? ""} onChange={(e) => setUser(e.target.value || null)}>

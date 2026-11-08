@@ -6,11 +6,14 @@ import type { ReportRow } from "@acct/types/ReportRow";
 import type { ReportWarning } from "@acct/types/ReportWarning";
 import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
+import { Link } from "react-router";
 import { ChangesButton } from "../components/ChangesButton";
+import { LockedForGuest } from "../components/GuestBanner";
 import { ErrorMessage } from "../components/ErrorMessage";
-import { getJson } from "../lib/api";
+import { ApiRequestError, getJson } from "../lib/api";
 import { formatDate, isFullYear } from "../lib/dates";
 import { formatStatementCents, formatStatementDollars } from "../lib/money";
+import { type PdfMode, useReadOnly } from "../lib/readOnly";
 import { keys } from "../lib/queries";
 import { LayoutMove } from "./LayoutMove";
 import styles from "./StatementsTab.module.css";
@@ -22,15 +25,20 @@ import { useYearContext } from "./YearLayout";
  */
 export function StatementsTab() {
   const { year } = useYearContext();
+  const { readOnly } = useReadOnly();
   const report = useQuery({
     queryKey: keys.report(year.id),
     queryFn: () => getJson<ReportDoc>(`/api/years/${year.id}/report`),
   });
   return (
     <>
-      <LayoutMove year={year} />
+      {!readOnly && <LayoutMove year={year} />}
       {report.error ? (
-        <ErrorMessage error={report.error} />
+        readOnly ? (
+          <CannotShow error={report.error} />
+        ) : (
+          <ErrorMessage error={report.error} />
+        )
       ) : !report.data ? (
         <p className="muted">Building statements…</p>
       ) : (
@@ -40,8 +48,52 @@ export function StatementsTab() {
   );
 }
 
+/**
+ * What the accountant view says when the statements can't be built (ADR 015, 1.3): in plain words,
+ * never the mapping's details, which are for the practice's own screen.
+ */
+function CannotShow({ error }: { error: Error }) {
+  const code = error instanceof ApiRequestError ? error.code : null;
+  if (code === "report_failed") {
+    return (
+      <p className="muted" role="status">
+        The statements can't be shown yet: the layout your accountant uses doesn't cover every account. The trial
+        balance, journals and ledger are all here.
+      </p>
+    );
+  }
+  if (code === "no_layout") {
+    return (
+      <p className="muted" role="status">
+        {error.message}
+      </p>
+    );
+  }
+  return <ErrorMessage error={error} />;
+}
+
+/** The Download PDF control, or what stands in for it in the accountant view (ADR 015, 1.1). */
+function PdfControl({ mode, yearId }: { mode: PdfMode; yearId: string }) {
+  if (mode === "save_first") {
+    return <LockedForGuest reason="Save your work to download the PDF." from="locked:pdf" />;
+  }
+  if (mode === "example") {
+    return (
+      <span className="muted">
+        This is an example, so there's no PDF. <Link to="/">Try it with your own statement.</Link>
+      </span>
+    );
+  }
+  return (
+    <a className={styles.pdf} href={`/api/years/${yearId}/report.pdf`} target="_blank" rel="noopener">
+      Download PDF
+    </a>
+  );
+}
+
 export function Statements({ doc }: { doc: ReportDoc }) {
   const { chart, year } = useYearContext();
+  const { pdf } = useReadOnly();
   const names = new Map(chart.map((a) => [a.code, a.name]));
   const [open, setOpen] = useState<string | null>(null);
   const hasPrior = doc.prior_period !== null;
@@ -52,10 +104,10 @@ export function Statements({ doc }: { doc: ReportDoc }) {
   return (
     <div className={styles.doc}>
       <p className={styles.toolbar}>
-        <a className={styles.pdf} href={`/api/years/${year.id}/report.pdf`} target="_blank" rel="noopener">
-          Download PDF
-        </a>
-        {year.status !== "finalised" && <span className="muted"> A draft until the year is finalised.</span>}
+        <PdfControl mode={pdf} yearId={year.id} />
+        {pdf === "download" && year.status !== "finalised" && (
+          <span className="muted"> A draft until the year is finalised.</span>
+        )}
       </p>
       {unfinalised && (
         <p className={styles.notice} role="status">

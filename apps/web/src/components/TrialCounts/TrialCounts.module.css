@@ -1,0 +1,8 @@
+.scroll {
+  overflow-x: auto;
+}
+
+.total th,
+.total td {
+  font-weight: 700;
+}

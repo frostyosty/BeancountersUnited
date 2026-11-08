@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { can, isOwner, useCurrentUser } from "../auth";
 import { BankVsBooks, BankVsBooksForAccount } from "../components/BankVsBooks";
 import { ChangesButton } from "../components/ChangesButton";
+import { ViewSwitch } from "../components/ViewSwitch";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { LockedForGuest } from "../components/GuestBanner";
 import { formatDate } from "../lib/dates";
@@ -59,6 +60,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
         icon={<Icon name="business.home" fallback="🏪" />}
         title={b.name}
         subtitle={isOwner(me) ? "Overview" : undefined}
+        actions={isOwner(me) ? <ViewSwitch businessId={clientId} current="yours" /> : undefined}
       />
 
       <div className={showWalkthrough ? styles.withWalkthrough : undefined}>
@@ -102,7 +104,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
                   statement.
                 </p>
               ) : (
-                <LockedForGuest reason="Save your work to file. It's the first step." />
+                <LockedForGuest reason="Save your work to file. It's the first step." from="submit" />
               ))}
           </section>
         </div>
@@ -125,7 +127,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
           <h2 id="invite-heading">
             <Icon name="business.invite" fallback="🤝" /> Invite your accountant
           </h2>
-          <LockedForGuest reason="Save your work first to invite your accountant." />
+          <LockedForGuest reason="Save your work first to invite your accountant." from="locked:invite" />
         </section>
       ) : (
         isOwner(me) && <InviteAccountant clientId={clientId} />

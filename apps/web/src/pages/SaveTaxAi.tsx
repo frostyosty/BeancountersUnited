@@ -36,7 +36,7 @@ export function AiSuggestionsPanel({ clientId }: { clientId: string }) {
   if (guest) {
     return (
       <section className={styles.acceptAll} aria-label="Ask the experts">
-        <LockedForGuest reason="Save your work first to get suggestions from the experts." />
+        <LockedForGuest reason="Save your work first to get suggestions from the experts." from="locked:ai" />
       </section>
     );
   }

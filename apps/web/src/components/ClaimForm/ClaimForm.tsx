@@ -1,27 +1,58 @@
-import { type FormEvent, useId, useState } from "react";
+import type { ClaimFrom } from "@acct/types/ClaimFrom";
+import { useQuery } from "@tanstack/react-query";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useClaimGuest } from "../../auth";
-import { ApiRequestError } from "../../lib/api";
+import { ApiRequestError, fetchMe } from "../../lib/api";
+import { hasOpenedAccountantView } from "../../lib/books";
 import { Icon } from "../../lib/icons";
 import { Button, ButtonLink, Field, Modal, Notice } from "../../ui";
 import { ErrorMessage } from "../ErrorMessage";
+import { PracticeRequestModal } from "../PracticeRequest";
 import styles from "./ClaimForm.module.css";
+import { type Who, WhoAreYou } from "./WhoAreYou";
+
+interface ClaimFormProps {
+  open: boolean;
+  onClose: () => void;
+  /** False when the guest only has an example, which can't be saved. */
+  hasOwnBusiness: boolean;
+  /** Which prompt led here; the claim records it (ADR 015, 4). */
+  from?: ClaimFrom;
+}
+
+/**
+ * Save your work. A guest who opened the accountant view is first asked "Who are you?" (M21, ADR 015,
+ * 6): an owner carries on to the claim form, an accountant to a practice request that leaves the trial
+ * alone. Everyone else goes straight to the claim form, as in M20.
+ */
+export function ClaimForm(props: ClaimFormProps) {
+  const { open, onClose } = props;
+  const me = useQuery({ queryKey: ["me"], queryFn: () => fetchMe(), staleTime: Infinity });
+  const [step, setStep] = useState<"who" | Who>("who");
+  // Each time it's opened, the question comes first again.
+  useEffect(() => {
+    if (!open) {
+      setStep("who");
+    }
+  }, [open]);
+
+  const ask = !!me.data?.guest && hasOpenedAccountantView(me.data.id);
+  if (ask && step === "who") {
+    return <WhoAreYou open={open} onClose={onClose} onContinue={setStep} />;
+  }
+  if (ask && step === "accountant") {
+    return <PracticeRequestModal open={open} onClose={onClose} from="who_are_you" trial />;
+  }
+  return <ClaimModal {...props} />;
+}
 
 /**
  * A guest saves their work (M20, ADR 014, 4): an email, a name and a password turn the trial into a
  * real account, keeping every line and answer. A guest with only an example has nothing to save, so
  * they're pointed at sign-up instead.
  */
-export function ClaimForm({
-  open,
-  onClose,
-  hasOwnBusiness,
-}: {
-  open: boolean;
-  onClose: () => void;
-  /** False when the guest only has an example, which can't be saved. */
-  hasOwnBusiness: boolean;
-}) {
+function ClaimModal({ open, onClose, hasOwnBusiness, from }: ClaimFormProps) {
   const claim = useClaimGuest();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -47,6 +78,7 @@ export function ClaimForm({
       display_name: name.trim(),
       password,
       ...(businessName.trim() ? { business_name: businessName.trim() } : {}),
+      ...(from ? { from } : {}),
     })
       .then((businessId) => {
         onClose();
@@ -101,7 +133,10 @@ export function ClaimForm({
       }
     >
       <form id={formId} onSubmit={submit} className="form">
-        <p className="muted">Everything you've uploaded and answered stays exactly as it is.</p>
+        <p className="muted">
+          Everything you've uploaded and answered stays exactly as it is. Trials are kept for 7 days after you last
+          use them.
+        </p>
         <Field label="Email">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
         </Field>

@@ -3,8 +3,19 @@ import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
 
-// Sample prices (NZD, GST inclusive) until real pricing is decided.
-const tiers = [
+// Sample prices (NZD, GST inclusive) until real pricing is decided. M24 moves these to the server
+// (`GET /api/plans`). Practice plans are arranged with us until practices can sign themselves up.
+type Tier = {
+  name: string;
+  audience: string;
+  price: string;
+  per: string;
+  featured?: boolean;
+  talkToUs?: boolean;
+  perks: string[];
+};
+
+const tiers: Tier[] = [
   {
     name: "Free",
     audience: "For owners getting started",
@@ -14,36 +25,29 @@ const tiers = [
       "1 business",
       "Unlimited bank statement uploads",
       "Up to 100,000 invoice uploads",
+      "Your tax-to-pay figure, any day",
+      "Save tax walkthrough",
       "One button to file GST returns with IRD",
       "One button to file income tax returns with IRD",
-      "Your tax-to-pay figure, any day",
       "Real double-entry books underneath",
       "Statements with last year alongside",
       "History of who changed what",
-      "Seven year data retention period",
     ],
   },
   {
     name: "Owner",
-    audience: "For owners who want to pay less tax",
+    audience: "For owners who want more help",
     price: "$4.99",
     per: "per month",
     featured: true,
-    perks: [
-      "Everything in Free",
-      "Save tax walkthrough",
-      "Unlimited invoice uploads",
-      "History of who changed what",
-      "Up to 3 businesses",
-      "Editable history of who changed what",
-      "Unlimited data retention",
-    ],
+    perks: ["Everything in Free", "Up to 3 businesses", "More AI suggestions each day", "Unlimited invoice uploads"],
   },
   {
     name: "Practice",
     audience: "For accountants and bookkeepers",
     price: "$9.99",
     per: "per month, up to 25 clients",
+    talkToUs: true,
     perks: [
       "Everything in Owner",
       "Practice master charts and templates",
@@ -58,6 +62,7 @@ const tiers = [
     audience: "For larger practices",
     price: "$24.99",
     per: "per month, unlimited clients",
+    talkToUs: true,
     perks: ["Everything in Practice", "Unlimited clients", "Import from Xero and MYOB", "Priority support"],
   },
 ];
@@ -93,9 +98,15 @@ export function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to="/#signin" className={styles.planCta}>
-                  {t.price === "$0" ? "Start free" : "Sign in to get started"}
-                </Link>
+                {t.talkToUs ? (
+                  <Link to="/accountants" className={styles.planCta}>
+                    Talk to us
+                  </Link>
+                ) : (
+                  <Link to="/#signin" className={styles.planCta}>
+                    {t.price === "$0" ? "Start free" : "Sign in to get started"}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

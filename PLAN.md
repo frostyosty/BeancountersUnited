@@ -474,6 +474,15 @@ The web tests cover:
 
 Then a browser check on a desktop and a phone.
 
+## M22 — Watch the AI: usage, spikes and overseer access
+Status: not started. The plan and agent prompts are in `M22-PROMPTS.md` (six agents, five waves). Takes ADR 016 and migration 0016.
+
+## M23 — Invoice scanner: read, check, match
+Status: not started. The plan and agent prompts are in `M23-PROMPTS.md` (ten agents, six waves). Takes ADR 017 and migration 0017. Needs M22 first.
+
+## M24 — Plans and billing
+Status: not started; its main decisions were made 2026-11-09. The plan and agent prompts are in `M24-PROMPTS.md` (seven agents, five waves). Takes ADR 018 and migration 0018. Needs M22; planned after M23.
+
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes

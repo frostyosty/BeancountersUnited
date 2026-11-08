@@ -124,13 +124,13 @@ function AccountLedger({ account, showReversals }: { account: GlAccountView; sho
   );
 }
 
-/** Owners get no codes, so an account is known by its name there. */
+/** Everyone sees account codes in the ledger (ADR 015, 1.4). */
 function accountKey(a: GlAccountView): string {
-  return a.code ?? a.name;
+  return a.code;
 }
 
 function accountLabel(a: GlAccountView): string {
-  return a.code ? `${a.code} ${a.name}` : a.name;
+  return `${a.code} ${a.name}`;
 }
 
 function drCr(cents: number): string {

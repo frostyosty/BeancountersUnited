@@ -8,6 +8,8 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { can, useCurrentUser } from "../auth";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { ExplainBetter } from "../components/ExplainBetter";
+import { SavingPeak } from "../components/Peaks";
 import { getJson } from "../lib/api";
 import { Icon } from "../lib/icons";
 import { lineDescription } from "../lib/lines";
@@ -74,6 +76,8 @@ export function SaveTaxPage() {
           <strong>${formatMoney(q.total)}</strong>
         </div>
       </div>
+
+      {me.guest && <SavingPeak businessId={clientId} savedSoFar={q.saved_so_far} kind={me.guest.business_id === clientId ? "own" : "example"} />}
 
       <GstPanel business={business.data} canEdit={canEdit} />
 
@@ -151,6 +155,7 @@ function CardFrame({
         </p>
       )}
       <CardBody card={card} clientId={clientId} banks={banks} gstRegistered={gstRegistered} canEdit={canEdit} />
+      {canEdit && <ExplainBetter clientId={clientId} cardId={card.id} />}
       <div className={styles.skip}>
         <button type="button" onClick={onSkip}>
           <Icon name="business.save_skip" fallback="⏭️" /> Skip for now

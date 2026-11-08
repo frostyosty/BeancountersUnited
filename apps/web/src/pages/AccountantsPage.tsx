@@ -1,3 +1,4 @@
+import { PracticeRequestButton } from "../components/PracticeRequest";
 import { SiteHeader } from "../components/SiteHeader";
 import { Icon } from "../lib/icons";
 import styles from "./HomePage.module.css";
@@ -51,6 +52,7 @@ export function AccountantsPage() {
             <Icon name="home.accountants" fallback="🧮" /> For accountants
           </h1>
           <p className={styles.sectionLede}>Practice-grade tools, working on the same books your clients see.</p>
+          <PracticeRequestButton from="accountants_page" variant="primary" />
           <ul className={styles.grid}>
             {tools.map((t) => (
               <li key={t.title} className={styles.feature}>

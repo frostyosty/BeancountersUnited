@@ -796,6 +796,10 @@
       "type": "emoji",
       "value": "✨"
     },
+    "save_explain": {
+      "type": "emoji",
+      "value": "💬"
+    },
     "save_ai_off": {
       "type": "emoji",
       "value": "🚫"
@@ -1327,6 +1331,66 @@
     "move": {
       "type": "emoji",
       "value": "📦"
+    },
+    "delete": {
+      "type": "emoji",
+      "value": "🗑️"
+    }
+  },
+  "accountant_view": {
+    "yours": {
+      "type": "emoji",
+      "value": "💰"
+    },
+    "accountant": {
+      "type": "emoji",
+      "value": "📒"
+    },
+    "back": {
+      "type": "emoji",
+      "value": "↩️"
+    },
+    "empty": {
+      "type": "emoji",
+      "value": "🌱"
+    }
+  },
+  "peaks": {
+    "saving": {
+      "type": "emoji",
+      "value": "🎉"
+    },
+    "example": {
+      "type": "emoji",
+      "value": "👀"
+    },
+    "open": {
+      "type": "emoji",
+      "value": "➡️"
+    }
+  },
+  "practice_request": {
+    "who": {
+      "type": "emoji",
+      "value": "🙋"
+    },
+    "practice": {
+      "type": "emoji",
+      "value": "🏢"
+    },
+    "sent": {
+      "type": "emoji",
+      "value": "📬"
+    }
+  },
+  "overseer": {
+    "trials": {
+      "type": "emoji",
+      "value": "📊"
+    },
+    "requests": {
+      "type": "emoji",
+      "value": "📥"
     },
     "delete": {
       "type": "emoji",
