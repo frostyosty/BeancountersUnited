@@ -12,6 +12,7 @@ import { BooksChangesTab, BooksIndex, BooksLayout } from "./pages/BooksLayout";
 import { BusinessPage } from "./pages/BusinessPage";
 import { ChartPage } from "./pages/ChartPage";
 import { ClientPage } from "./pages/ClientPage";
+import { FeaturesPage } from "./pages/FeaturesPage";
 import { FinaliseTab } from "./pages/FinaliseTab";
 import { GlTab } from "./pages/GlTab";
 import { HomePage } from "./pages/HomePage";
@@ -24,7 +25,6 @@ import { MasterChartPage } from "./pages/MasterChartPage";
 import { ParagraphLibraryPage } from "./pages/ParagraphLibraryPage";
 import { TemplatePage } from "./pages/TemplatePage";
 import { PricingPage } from "./pages/PricingPage";
-import { ProductPage } from "./pages/ProductPage";
 import { ReconcileTab } from "./pages/ReconcileTab";
 import { SaveTaxPage } from "./pages/SaveTaxPage";
 import { AdminSettingsTab, MyAccountTab, SettingsHome, SettingsLayout, ToolsTab } from "./pages/SettingsLayout";
@@ -71,7 +71,8 @@ export function App() {
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="pricing" element={<PricingPage />} />
-        <Route path="product" element={<ProductPage />} />
+        <Route path="features" element={<FeaturesPage />} />
+        <Route path="product" element={<Navigate to="/features" replace />} />
         <Route path="signup" element={<SignUpPage />} />
         <Route path="invite/:token" element={<InviteSignedOutPage />} />
         <Route path="*" element={<HomePage />} />
@@ -89,7 +90,8 @@ export function App() {
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />
             <Route path="pricing" element={<PricingPage />} />
-            <Route path="product" element={<ProductPage />} />
+            <Route path="features" element={<FeaturesPage />} />
+            <Route path="product" element={<Navigate to="/features" replace />} />
             <Route path="signup" element={<SignUpPage />} />
           </>
         )}
