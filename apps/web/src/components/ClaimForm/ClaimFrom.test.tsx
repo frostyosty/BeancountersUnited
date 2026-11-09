@@ -202,11 +202,11 @@ describe("Who are you? (ADR 015, 6)", () => {
 
     await user.type(await screen.findByLabelText("Your name"), "Pat Lee");
     await user.type(screen.getByLabelText("Email"), "pat@example.com");
-    await user.type(screen.getByLabelText("Practice name"), "Lee and Co");
+    await user.type(screen.getByLabelText("Firm name"), "Lee and Co");
     await user.selectOptions(screen.getByLabelText("Roughly how many clients?"), "11_to_50");
     await user.click(within(dialog()).getByRole("button", { name: "Send request" }));
 
-    expect(await screen.findByText(/Thanks, Pat Lee\. We'll email pat@example\.com about setting up your practice\./)).toBeTruthy();
+    expect(await screen.findByText(/Thanks, Pat Lee\. We'll email pat@example\.com about setting up your firm\./)).toBeTruthy();
     expect(screen.getByText(/Your trial stays as it is: it's kept for 7 days after you last use it/)).toBeTruthy();
     expect(calls.find((c) => c.path === "/api/practice-requests")!.body).toMatchObject({
       name: "Pat Lee",
@@ -247,11 +247,12 @@ describe("the practice request form", () => {
     });
     renderApp(<App />, "/accountants");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /Get a practice account/ }));
+    // The page offers it at the top and again at the bottom; either opens the same form.
+    await user.click((await screen.findAllByRole("button", { name: /Sign up your firm/ }))[0]!);
     expect(screen.getByText(/Please don't upload a client's statement here without their OK\./)).toBeTruthy();
     await user.type(within(dialog()).getByLabelText("Your name"), "Pat Lee");
     await user.type(within(dialog()).getByLabelText("Email"), "pat@example.com");
-    await user.type(within(dialog()).getByLabelText("Practice name"), "Lee and Co");
+    await user.type(within(dialog()).getByLabelText("Firm name"), "Lee and Co");
     await user.type(within(dialog()).getByLabelText("Phone (optional)"), "021 555 0100");
     await user.click(within(dialog()).getByRole("button", { name: "Send request" }));
     expect(await screen.findByText(/We've had a few requests from your network in the last hour/)).toBeTruthy();
@@ -268,12 +269,12 @@ describe("the practice request form", () => {
     });
     renderApp(<App />, "/signup");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /Get a practice account/ }));
+    await user.click(await screen.findByRole("button", { name: /Sign up your firm/ }));
     await user.type(within(dialog()).getByLabelText("Your name"), "Pat Lee");
     await user.type(within(dialog()).getByLabelText("Email"), "pat@example.com");
-    await user.type(within(dialog()).getByLabelText("Practice name"), "Lee and Co");
+    await user.type(within(dialog()).getByLabelText("Firm name"), "Lee and Co");
     await user.click(within(dialog()).getByRole("button", { name: "Send request" }));
-    expect(await screen.findByText(/We'll email pat@example\.com about setting up your practice/)).toBeTruthy();
+    expect(await screen.findByText(/We'll email pat@example\.com about setting up your firm/)).toBeTruthy();
     expect(screen.queryByText(/Your trial stays as it is/)).toBeNull();
     const body = calls.find((c) => c.path === "/api/practice-requests")!.body as { id: string; from: string; phone?: string };
     expect(body.from).toBe("signup_page");

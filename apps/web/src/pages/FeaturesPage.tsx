@@ -1,17 +1,15 @@
 import { Link } from "react-router";
 import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
-import { type OpenInTrial, type TrialPath, useOpenInTrial } from "../components/TryIt/useOpenInTrial";
+import { Badge, type Target, TrialLink } from "../components/TryIt/TrialLink";
+import { type TrialPath, useOpenInTrial } from "../components/TryIt/useOpenInTrial";
 import { booksPath } from "../lib/books";
-import { Emoji, Icon } from "../lib/icons";
+import { Icon } from "../lib/icons";
 import home from "./HomePage.module.css";
 import styles from "./FeaturesPage.module.css";
 
 const overview: TrialPath = (id) => `/businesses/${id}`;
 const saveTax: TrialPath = (id) => `/businesses/${id}/save-tax`;
-
-/** Where a step or feature leads: the home page's drop, or a screen of the visitor's trial. */
-type Target = { home: true } | { trial: TrialPath };
 
 /** The four steps, as on the home page. Each opens that part of a trial. */
 const steps: { key: string; icon: string; fallback: string; title: string; body: string; target: Target; next: string }[] = [
@@ -196,53 +194,13 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
   },
 ];
 
-/** What a tile's link says: it depends on whether a trial is already loaded. */
-function goLabel(o: OpenInTrial, key: string, target: Target): string {
-  if ("home" in target) return "Try it on the home page";
-  if (o.opening === key) return "Opening…";
-  return o.hasTrial ? "Open it" : "See it on an example";
-}
-
 function Badges({ f }: { f: Feature }) {
   return (
     <span className={styles.badges}>
-      {f.account && (
-        <span className={styles.badge}>
-          <Icon name="guest.locked" fallback="🔒" /> Needs a free account
-        </span>
-      )}
-      {f.soon && (
-        <span className={`${styles.badge} ${styles.soon}`}>
-          <Emoji>🌱</Emoji> Coming soon
-        </span>
-      )}
-      {!f.account && !f.soon && (
-        <span className={`${styles.badge} ${styles.tryNow}`}>
-          <Emoji>✅</Emoji> Try it now
-        </span>
-      )}
+      {f.account && <Badge kind="free" />}
+      {f.soon && <Badge kind="soon" />}
+      {!f.account && !f.soon && <Badge kind="try" />}
     </span>
-  );
-}
-
-/** The link or button that opens a target. */
-function Go({ o, id, target }: { o: OpenInTrial; id: string; target: Target }) {
-  const label = (
-    <>
-      <Icon name="peaks.open" fallback="➡️" /> {goLabel(o, id, target)}
-    </>
-  );
-  if ("home" in target) {
-    return (
-      <Link to="/#features" className={styles.go}>
-        {label}
-      </Link>
-    );
-  }
-  return (
-    <button type="button" className={styles.go} aria-busy={o.opening === id} onClick={() => o.open(id, target.trial)}>
-      {label}
-    </button>
   );
 }
 
@@ -275,7 +233,7 @@ export function FeaturesPage() {
                   </span>
                   <h3>{s.title}</h3>
                   <p>{s.body}</p>
-                  <Go o={o} id={s.key} target={s.target} />
+                  <TrialLink o={o} id={s.key} target={s.target} />
                 </div>
                 {s.next && (
                   <div className={styles.arrow}>
@@ -305,7 +263,7 @@ export function FeaturesPage() {
                         <Badges f={f} />
                       </div>
                       <p>{f.body}</p>
-                      {f.target && <Go o={o} id={f.title} target={f.target} />}
+                      {f.target && <TrialLink o={o} id={f.title} target={f.target} />}
                     </li>
                   ))}
                 </ul>

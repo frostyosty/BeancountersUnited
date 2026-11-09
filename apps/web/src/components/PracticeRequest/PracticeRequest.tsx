@@ -76,7 +76,7 @@ export function PracticeRequestModal({
       .finally(() => setBusy(false));
   };
 
-  const title = "Get a practice account";
+  const title = "Sign up your firm";
   const icon = <Icon name="practice_request.practice" fallback="🏢" />;
 
   if (sent) {
@@ -94,7 +94,7 @@ export function PracticeRequestModal({
         }
       >
         <p>
-          Thanks, {sent.name}. We'll email {sent.email} about setting up your practice.
+          Thanks, {sent.name}. We'll email {sent.email} about setting up your firm.
         </p>
         {trial && (
           <p className="muted">
@@ -126,8 +126,8 @@ export function PracticeRequestModal({
     >
       <form id={formId} onSubmit={submit} className="form">
         <p className="muted">
-          Tell us a little about your practice and we'll get in touch to set it up. Please don't upload a client's
-          statement here without their OK.
+          Tell us a little about your accounting or bookkeeping firm and we'll get in touch to set it up. Please don't
+          upload a client's statement here without their OK.
         </p>
         <Field label="Your name">
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={100} required />
@@ -142,7 +142,7 @@ export function PracticeRequestModal({
             required
           />
         </Field>
-        <Field label="Practice name">
+        <Field label="Firm name">
           <input
             value={practice}
             onChange={(e) => setPractice(e.target.value)}
@@ -169,7 +169,10 @@ export function PracticeRequestModal({
   );
 }
 
-/** "Get a practice account": a button that opens the request. For /accountants and /signup. */
+/**
+ * "Sign up your firm": a button that opens the request. For /accountants and /signup. It says "firm",
+ * not "practice account", which some owners read as somewhere to practise their books.
+ */
 export function PracticeRequestButton({
   from,
   variant = "secondary",
@@ -182,7 +185,7 @@ export function PracticeRequestButton({
   return (
     <>
       <Button variant={variant} onClick={() => setOpen(true)}>
-        <Icon name="practice_request.practice" fallback="🏢" /> Get a practice account
+        <Icon name="practice_request.practice" fallback="🏢" /> Sign up your firm
       </Button>
       <PracticeRequestModal open={open} onClose={() => setOpen(false)} from={from} trial={!!guest} />
     </>

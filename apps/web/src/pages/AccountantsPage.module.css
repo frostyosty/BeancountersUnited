@@ -1,0 +1,126 @@
+.cta {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
+.lede {
+  margin: -0.5rem 0 1.25rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* The sample PDF: one wide card under the tiles. */
+.sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 1.25rem 1.4rem;
+  background: var(--accent-soft);
+  border-radius: 14px;
+}
+
+.sample > div {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.sample h3 {
+  margin: 0 0 0.2rem;
+  font-size: var(--text-md);
+}
+
+.sample p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.sampleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sampleLink:hover {
+  background: var(--accent-hover);
+}
+
+.sampleLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Your client | You. */
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1.25rem;
+}
+
+.side {
+  padding: 1.25rem 1.4rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.side h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  font-size: var(--text-lg);
+}
+
+.side ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.side li + li {
+  margin-top: 0.35rem;
+}
+
+.guardrails {
+  list-style: none;
+  margin: 1.25rem auto 0;
+  padding: 0;
+  max-width: 48rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.guardrails li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.join {
+  margin: 3rem auto 0;
+  max-width: 44rem;
+  text-align: center;
+}
+
+.join h2 {
+  margin: 0 0 0.4rem;
+  font-size: var(--text-xl);
+}
+
+.join p:not(.cta) {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.join .cta {
+  margin-top: 1.25rem;
+}

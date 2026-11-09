@@ -65,7 +65,7 @@ export function SignUpPage() {
       <p className="muted">
         For sole traders. Upload your bank statements and see the tax you'd pay, then bring it down.
       </p>
-      <p className="muted">Run a practice instead?</p>
+      <p className="muted">Are you an accountant or bookkeeper?</p>
       <p>
         <PracticeRequestButton from="signup_page" />
       </p>
@@ -132,7 +132,7 @@ export function InviteSignedOutPage() {
         <Icon name="signup.invite" fallback="🤝" /> You've been invited
       </h1>
       <p>
-        A business owner has invited you to work on their books. <Link to="/">Sign in</Link> with your practice
+        A business owner has invited you to work on their books. <Link to="/">Sign in</Link> with your firm's
         account, then open this link again to accept.
       </p>
     </main>
