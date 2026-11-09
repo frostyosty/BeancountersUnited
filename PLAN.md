@@ -485,6 +485,24 @@ Status: not started. The plan and agent prompts are in `M23-PROMPTS.md` (fourtee
 ## M24 — Plans and billing
 Status: not started; its main decisions were made 2026-11-09. The plan and agent prompts are in `M24-PROMPTS.md` (seven agents, five waves). Takes ADR 018 and migration 0018. Needs M22; planned after M23.
 
+M25 is reserved in `ROADMAP.md` for the "Ask the experts" modal; it has no plan yet. The statements an accountant expects
+beyond performance and position are M26 to M30. They share one new table shape in the ReportDoc, so M26 goes first.
+
+## M26 — Statement of movements in equity
+Status: not started. The plan and agent prompts are in `M26-PROMPTS.md` (seven agents, five waves). Adds the shared `ReportTable`, movement lines in templates and the statement for companies and sole traders. Needs an ADR; presentation choices wait on your answers.
+
+## M27 — Trusts and current accounts
+Status: not started. The plan and agent prompts are in `M27-PROMPTS.md` (seven agents, five waves). A trust entity type (chart, mapping, template) and the schedule of beneficiary current accounts ("beneficiary loan accounts"), also usable for shareholder accounts. Needs M26. Trust returns (IR6) and tax workings stay out.
+
+## M28 — Contacts and open items: aged receivables and payables
+Status: not started. The plan and agent prompts are in `M28-PROMPTS.md` (nine agents, six waves). A sub-register of open items beside the ledger, aged reports that agree to the control accounts, CSV import. Needs M26. Sales invoicing stays in the backlog.
+
+## M29 — The reporting pack, and reports apart from the statements
+Status: not started. The plan and agent prompts are in `M29-PROMPTS.md` (seven agents, five waves). Cover, contents, approval page, compilation report and detailed statements in one pack and one PDF; and a separate Reports tab (trial balance, journal listing, account transactions) that is never lumped in with the statements. Needs M26; better after M27 and M28.
+
+## M30 — Statement of cash flows (optional)
+Status: not started; go or no-go is your call. The plan and agent prompts are in `M30-PROMPTS.md` (seven agents, four waves). Indirect method computed from the ledger. Needs M26.
+
 ## Open questions
 - **Who's the customer?** Assumed: business owners first (sole traders), with their accountants working on the same data. Practices running it for their clients under their own brand (the "white label") comes later. Confirmed.
 - **GST or income tax first in M14?** Assumed GST: its periods are shorter, so it's filed more often. yes
@@ -510,7 +528,8 @@ Status: not started; its main decisions were made 2026-11-09. The plan and agent
 - Provisional tax, ACC levies, tax depreciation, home office and vehicle apportionment, and the IR10.
 - GST: the invoice and hybrid bases (these need sales invoicing), and deregistering. Entertainment's half-claim rule.
 - Income tax: non-standard balance dates, and older income years (2025's composite rates) for late filers. Penalties and interest on late returns.
-- Companies (IR4), partnerships and trusts: templates and returns.
+- Companies (IR4), partnerships and trusts: returns, and partnership templates. (Trust statements are M27.)
+- Customer statements, payment reminders and sales invoicing (M28's open items are what they'd feed). Allocating trust income to beneficiaries as a helper (a tax decision as well). Budget against actual, and monthly trend reports.
 - Premade master charts and templates in the familiar NZ style, in our own words (see `docs/domain.md`).
 - Client-level mapping overrides.
 - Workpapers; minutes and resolutions from our own paragraph library.

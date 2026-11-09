@@ -265,3 +265,18 @@ The items marked **check** in `docs/domain.md`; its "Open" section has the detai
 - [ ] Decide the real prices; the page still says they're samples.
 - [ ] Decide the Free plan's invoice upload number ("Up to 100,000" beside Owner's "Unlimited").
 - [ ] Decide whether to keep the FAQ's "They'll only stay this low": it's a promise about future prices.
+## M26 to M30: the rest of the accountant's statements (planned 2026-11-10)
+Each milestone's ADR agent appends its own items here. These are the ones known now.
+- [ ] Answer M26's DECISIONS FOR ME (movements layout, title and position, sole traders) before wave 2 of
+      `M26-PROMPTS.md`, and the other milestones' DECISIONS FOR ME before their wave 2. Presentation is asked,
+      not guessed (CLAUDE.md).
+- [ ] M26: an NZ accountant checks the movements statement's layout and wording against what they issue, and the
+      sole-trader and company worked examples in `docs/domain.md`.
+- [ ] M27: decide whether trusts are worth building now (ROADMAP's "which entity types after sole traders" is still
+      open in `PLAN.md`). If yes, an accountant who prepares trust accounts checks the chart, template and schedule
+      against real trust accounts, which stay outside the repo (hard rule 1).
+- [ ] M28: an accountant checks the ageing convention (due date or issue date, month buckets) and the worked example.
+- [ ] M29: an accountant supplies and approves the compilation report and approval-page wording (professional
+      standards apply, so it isn't ours to write), then checks a sample pack.
+- [ ] M30: decide whether your practices issue cash flow statements at all; if not, drop M30 from `PLAN.md`.
+      Otherwise an accountant checks the cash-flow classes and the worked example.
