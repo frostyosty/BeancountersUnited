@@ -252,3 +252,5 @@ Check `make check` passes, then in a browser on staging:
   history and merchant suggestions still appear.
 
 Tick M22's status here and in `PLAN.md`. Add the browser check to `NON-CODE-TODOS.md` if it's left for later.
+
+All done. consider this ticked

@@ -475,7 +475,8 @@ The web tests cover:
 Then a browser check on a desktop and a phone.
 
 ## M22 — Watch the AI: usage, spikes and overseer access
-Status: not started. The plan and agent prompts are in `M22-PROMPTS.md` (six agents, five waves). Takes ADR 016 and migration 0016.
+Status: completed. The plan and agent prompts are in `M22-PROMPTS.md` (six agents, five waves). Takes ADR 016 and migration 0016.
+
 
 ## M23 — Invoice scanner: read, check, match
 Status: not started. The plan and agent prompts are in `M23-PROMPTS.md` (ten agents, six waves). Takes ADR 017 and migration 0017. Needs M22 first.
