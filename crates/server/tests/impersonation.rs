@@ -665,10 +665,13 @@ fn routes_other_than_reads_are_refused_while_acting_unless_given_a_rule() {
     assert_eq!(while_acting(&Method::GET, "/api/clients", rule), W::Allowed);
     assert_eq!(while_acting(&post, "/api/commands", rule), W::Allowed);
     assert_eq!(while_acting(&post, "/api/presence", rule), W::Allowed);
-    assert_eq!(
-        while_acting(&post, "/api/businesses/{id}/ai-suggestions", rule),
-        W::NeedsChanges
-    );
+    // Asking the AI is allowed read-only (ADR 016, 8): it pre-fills and changes no figures.
+    for path in [
+        "/api/businesses/{id}/ai-suggestions",
+        "/api/businesses/{id}/explain",
+    ] {
+        assert_eq!(while_acting(&post, path, rule), W::Allowed);
+    }
     // IRD, reads included (ADR 013, 4), and any new route that changes something.
     assert_eq!(
         while_acting(&Method::GET, "/api/ird/returns/{id}/status", rule),
@@ -899,10 +902,11 @@ fn every_command_kind_is_classified_while_acting() {
     );
     // The ADR's counts: 36 allowed, 2 session, 20 as yourself, 17 never; then M20's (ADR 014):
     // an owner's GST answer allowed, and the five guest commands never; then M21's (ADR 015): the
-    // two practice request commands never.
+    // two practice request commands never; then M22's (ADR 016): `record_suggestions` moves from
+    // allowed to session.
     assert_eq!(
         (ALLOWED.len(), SESSION.len(), AS_YOURSELF.len(), NEVER.len()),
-        (37, 2, 20, 24)
+        (36, 3, 20, 24)
     );
 }
 
@@ -991,9 +995,12 @@ async fn allowed_writes_work_only_once_changes_are_on() {
         body["message"],
         "You're viewing as sam, read-only. Turn on Allow changes to make this change."
     );
+    // Asking the AI is no longer a change (ADR 016, 8): the access layer lets it through, and
+    // this server has no suggester, so it is the ordinary "not set up" answer.
     let ai = format!("/api/businesses/{}/ai-suggestions", w.ana.business_id);
     let (status, body) = split(s.send(post_json(&ai, Some(&olive), &json!({}))).await).await;
-    assert_impersonating(status, &body, "POST ai-suggestions");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["code"], "ai_unavailable");
 
     // Allowing changes needs a reason, and is itself logged.
     let (status, body) = s

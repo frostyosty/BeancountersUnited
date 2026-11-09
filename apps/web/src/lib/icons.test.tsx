@@ -10,7 +10,7 @@ describe("icons", () => {
   });
 
   it("reads a slot from the registry", () => {
-    expect(["emoji", "image"]).toContain(slotEntry("nav.clients")?.type);
+    expect(["emoji", "image"]).toContain(slotEntry("ui.empty")?.type);
     expect(slotEntry("nope.missing")).toBeUndefined();
     expect(slotEntry("malformed")).toBeUndefined();
   });
@@ -18,7 +18,7 @@ describe("icons", () => {
   it("hides the icon from assistive tech and falls back when a slot is missing", () => {
     const { container } = render(
       <>
-        <Icon name="nav.clients" />
+        <Icon name="ui.empty" />
         <Icon name="nope.missing" fallback="🧾" />
         <Icon name="nope.missing" />
         <Emoji>💬</Emoji>

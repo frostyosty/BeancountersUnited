@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub use explain::ExplainRequest;
-pub use fake::{FakeAnswer, FakeSuggester};
+pub use fake::{FAKE_CALL_USAGE, FakeAnswer, FakeSuggester};
 pub use redact::SuggestRequest;
 
 /// How sure the model is. [`Confidence::Low`] answers never pre-fill a card.
@@ -105,8 +105,7 @@ impl<T> Call<T> {
 }
 
 /// What a suggester's `suggest` returns.
-pub type SuggestFuture<'a> =
-    Pin<Box<dyn Future<Output = Call<Vec<RawSuggestion>>> + Send + 'a>>;
+pub type SuggestFuture<'a> = Pin<Box<dyn Future<Output = Call<Vec<RawSuggestion>>> + Send + 'a>>;
 
 /// What a suggester's `explain` returns.
 pub type ExplainFuture<'a> = Pin<Box<dyn Future<Output = Call<String>> + Send + 'a>>;

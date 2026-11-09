@@ -12,7 +12,7 @@ export function SiteHeader() {
     <>
     <header className={styles.nav}>
       <Link to="/" className={styles.brand}>
-        <Icon name="home.brand" fallback="🫘" /> White Label Accounting
+        <Icon name="layouts.check" fallback="🫘" /> White Label Accounting
       </Link>
       <nav aria-label="Sections" className={styles.links}>
         <Link to="/features">Features</Link>

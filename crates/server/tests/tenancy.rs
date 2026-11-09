@@ -432,7 +432,11 @@ const PRACTICE: [&str; 9] = [
 ];
 /// Ours, who run the service (M21): overseers only. Asking for a practice account (its POST) is
 /// public.
-const OVERSEER: [&str; 2] = ["/api/practice-requests", "/api/overseer/trials"];
+const OVERSEER: [&str; 3] = [
+    "/api/practice-requests",
+    "/api/overseer/trials",
+    "/api/overseer/ai-usage",
+];
 /// Lists that mix businesses: B sees them, filtered to B's own.
 const LISTS: [&str; 3] = ["/api/clients", "/api/sync", "/api/history"];
 /// Who's here now: B sees only those on businesses B can see (`tests/m13.rs` covers more).

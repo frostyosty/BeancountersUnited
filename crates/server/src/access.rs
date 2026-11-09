@@ -670,7 +670,9 @@ pub fn route_rule(method: &Method, path: &str) -> Option<RouteRule> {
         // M21 (ADR 015): anyone may ask for a practice account; only overseers read the asks
         // and the trial counts.
         "/api/practice-requests" if post => R::Public,
-        "/api/practice-requests" | "/api/overseer/trials" if get => R::Overseer,
+        "/api/practice-requests" | "/api/overseer/trials" | "/api/overseer/ai-usage" if get => {
+            R::Overseer
+        }
         "/api/statements/{id}/excerpt" if get => R::Statement(Need::Read),
         "/api/bank-accounts/{id}/proof" if get => R::BankAccount(Need::Read),
         _ => return None,
@@ -713,8 +715,10 @@ pub fn while_acting(method: &Method, path: &str, rule: RouteRule) -> WhileActing
         | "/api/presence"
         | "/api/mappings/check"
         | "/api/years/{id}/tb-import/preview" => W::Allowed,
-        // Sends the business's lines to the AI provider and stores what comes back.
-        "/api/businesses/{id}/ai-suggestions" | "/api/businesses/{id}/explain" => W::NeedsChanges,
+        // Ask the AI (ADR 016, 8). Suggestions only pre-fill cards (`record_suggestions` is a
+        // session command), and an explanation is stored nowhere and changes no figures. Both
+        // are metered as the overseer's, and accepting a pre-fill still needs changes on.
+        "/api/businesses/{id}/ai-suggestions" | "/api/businesses/{id}/explain" => W::Allowed,
         // A visitor's own trial (M20): nobody views as a guest, and an owner moves theirs.
         "/api/guest/claim" | "/api/guest/adopt" => W::Refused("save or move a trial"),
         _ => W::Refused("do this"),

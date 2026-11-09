@@ -166,15 +166,18 @@ impl Suggester for FakeSuggester {
     }
 
     fn explain(&self, request: ExplainRequest) -> ExplainFuture<'_> {
-        let result = if self.fail {
-            Err(AiError::Network("the fake is set to fail".to_owned()))
+        let call = if self.fail {
+            Call::failed(AiError::Network("the fake is set to fail".to_owned()))
         } else {
-            Ok(format!(
-                "This is a test explanation. It was given: {}",
-                request.facts().replace('\n', " / ")
-            ))
+            Call::new(
+                Ok(format!(
+                    "This is a test explanation. It was given: {}",
+                    request.facts().replace('\n', " / ")
+                )),
+                self.usage,
+            )
         };
         self.explained.lock().expect("not poisoned").push(request);
-        Box::pin(async move { result })
+        Box::pin(async move { call })
     }
 }

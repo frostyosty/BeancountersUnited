@@ -28,7 +28,7 @@ const screens: { view: BooksView; icon: string; fallback: string; title: string;
   },
   {
     view: "journals",
-    icon: "year.journals",
+    icon: "ui.empty",
     fallback: "✍️",
     title: "Journals",
     body: "Balanced, dated inside the year, and never changed once posted. Corrections are reversing journals.",
@@ -140,7 +140,7 @@ export function AccountantsPage() {
       <main>
         <section className={home.section}>
           <h1 className={home.sectionTitle}>
-            <Icon name="home.accountants" fallback="🧮" /> For accountants
+            <Icon name="layouts.statements" fallback="🧮" /> For accountants
           </h1>
           <p className={home.sectionLede}>
             Your clients sort their own bank statements. You get proper books underneath, and the final say.
@@ -211,7 +211,7 @@ export function AccountantsPage() {
             </section>
             <section className={styles.side} aria-labelledby="you-do">
               <h3 id="you-do">
-                <Icon name="home.accountants" fallback="🧮" /> You
+                <Icon name="layouts.statements" fallback="🧮" /> You
               </h3>
               <ul>
                 {you.map((t) => (
@@ -262,10 +262,10 @@ export function AccountantsPage() {
             </p>
             <p className={features.more}>
               <Link to="/features">
-                <Icon name="home.product" fallback="🧭" /> What your clients see
+                <Icon name="defaults.ranges" fallback="🧭" /> What your clients see
               </Link>
               <Link to="/pricing">
-                <Icon name="home.pricing" fallback="🏷️" /> See pricing
+                <Icon name="business.save_categorise" fallback="🏷️" /> See pricing
               </Link>
             </p>
           </div>

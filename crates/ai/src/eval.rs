@@ -150,6 +150,36 @@ impl Prices {
         whole.checked_mul(1_000_000)?.checked_add(frac)
     }
 
+    /// The prices to charge for `model` (ADR 016, 2). `AI_PRICE_INPUT` and `AI_PRICE_OUTPUT`, both
+    /// set, win (with `AI_PRICE_CACHE_READ` and `AI_PRICE_CACHE_WRITE` defaulting to the usual
+    /// ratios of the input price), in USD per million tokens. Otherwise [`Prices::known`]. A blank
+    /// variable counts as unset; one that isn't an amount of dollars is an error. The bake-off and
+    /// the server both price tokens through this.
+    pub fn from_vars(
+        var: impl Fn(&str) -> Option<String>,
+        model: &str,
+    ) -> Result<Option<Prices>, String> {
+        let price = |name: &str| -> Result<Option<u64>, String> {
+            match var(name).filter(|v| !v.trim().is_empty()) {
+                Some(v) => Prices::parse_usd(&v)
+                    .map(Some)
+                    .ok_or(format!("{name} isn't an amount of dollars: {v:?}")),
+                None => Ok(None),
+            }
+        };
+        Ok(
+            match (price("AI_PRICE_INPUT")?, price("AI_PRICE_OUTPUT")?) {
+                (Some(input), Some(output)) => Some(Prices {
+                    input,
+                    output,
+                    cache_read: price("AI_PRICE_CACHE_READ")?.unwrap_or(input / 10),
+                    cache_write: price("AI_PRICE_CACHE_WRITE")?.unwrap_or(input / 4 * 5),
+                }),
+                _ => Prices::known(model),
+            },
+        )
+    }
+
     /// What `usage` costs, in micro-dollars, rounded half up.
     pub fn cost(&self, usage: &Usage) -> u64 {
         let micro_mtok = u128::from(usage.input_tokens) * u128::from(self.input)
@@ -403,6 +433,57 @@ mod tests {
         assert_eq!(usd(15_900), "$0.0159");
         assert_eq!(percent(9, 10), "90.0%");
         assert_eq!(percent(2, 3), "66.7%");
+    }
+
+    #[test]
+    fn prices_come_from_the_variables_or_the_known_list() {
+        fn vars<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> + 'a {
+            move |name| {
+                pairs
+                    .iter()
+                    .find(|(k, _)| *k == name)
+                    .map(|(_, v)| (*v).to_owned())
+            }
+        }
+        // Nothing set: the list prices, or nothing for a model that isn't on the list.
+        assert_eq!(
+            Prices::from_vars(vars(&[]), "claude-haiku-5-5"),
+            Ok(Prices::known("claude-haiku-5-5"))
+        );
+        assert_eq!(Prices::from_vars(vars(&[]), "fake-model"), Ok(None));
+        // Input and output set: they win, and the cache prices follow the input price.
+        let set = [("AI_PRICE_INPUT", "0.20"), ("AI_PRICE_OUTPUT", "$1")];
+        assert_eq!(
+            Prices::from_vars(vars(&set), "fake-model"),
+            Ok(Some(Prices {
+                input: 200_000,
+                output: 1_000_000,
+                cache_read: 20_000,
+                cache_write: 250_000,
+            }))
+        );
+        let with_cache = [
+            ("AI_PRICE_INPUT", "0.20"),
+            ("AI_PRICE_OUTPUT", "1"),
+            ("AI_PRICE_CACHE_READ", "0.05"),
+            ("AI_PRICE_CACHE_WRITE", "0.3"),
+        ];
+        let p = Prices::from_vars(vars(&with_cache), "fake-model")
+            .unwrap()
+            .unwrap();
+        assert_eq!((p.cache_read, p.cache_write), (50_000, 300_000));
+        // Only one of the two: not enough, so the list prices.
+        assert_eq!(
+            Prices::from_vars(vars(&[("AI_PRICE_INPUT", "0.2")]), "fake-model"),
+            Ok(None)
+        );
+        // A blank variable is unset; nonsense is an error that names the variable.
+        assert_eq!(
+            Prices::from_vars(vars(&[("AI_PRICE_INPUT", "  ")]), "fake-model"),
+            Ok(None)
+        );
+        let err = Prices::from_vars(vars(&[("AI_PRICE_INPUT", "lots")]), "fake-model").unwrap_err();
+        assert!(err.contains("AI_PRICE_INPUT"), "{err}");
     }
 
     #[tokio::test]

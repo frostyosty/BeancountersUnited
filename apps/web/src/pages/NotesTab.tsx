@@ -140,7 +140,7 @@ export function NotesTab() {
       {canEdit && (
         <>
           <h2>
-            <Icon name="notes.library" fallback="📚" /> Add from the library
+            <Icon name="ui.empty" fallback="📚" /> Add from the library
           </h2>
           {unpicked.length === 0 ? (
             <p className="muted">Every paragraph in the library is already in this year.</p>

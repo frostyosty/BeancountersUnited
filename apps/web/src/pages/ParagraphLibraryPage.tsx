@@ -41,7 +41,7 @@ export function ParagraphLibraryPage() {
     <>
       <PageHeader
         crumbs={[{ to: "/settings", label: "Settings" }]}
-        icon={<Icon name="notes.library" fallback="📚" />}
+        icon={<Icon name="ui.empty" fallback="📚" />}
         title="Paragraph library"
       />
       <p className="muted">

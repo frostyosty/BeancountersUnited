@@ -71,7 +71,7 @@ function Defaults() {
                 <td>{entityLabel(c.entity_type)}</td>
                 <td>
                   <Link to={`/settings/charts/${c.entity_type}`}>
-                    <Icon name="defaults.chart" fallback="🗂️" /> {c.name}
+                    <Icon name="year.statements" fallback="🗂️" /> {c.name}
                   </Link>{" "}
                   <span className="muted">({c.accounts.length} accounts)</span>
                 </td>
@@ -98,7 +98,7 @@ function Defaults() {
       </p>
       <p>
         <Link to="/settings/paragraphs">
-          <Icon name="notes.library" fallback="📚" /> Paragraph library
+          <Icon name="ui.empty" fallback="📚" /> Paragraph library
         </Link>{" "}
         <span className="muted">(accounting policies and notes)</span>
       </p>
@@ -184,7 +184,7 @@ function NewMasterChart({ practice }: { practice: PracticeView }) {
   return (
     <form onSubmit={submit} className="card form">
       <h2>
-        <Icon name="defaults.new_chart" fallback="🆕" /> Make your own chart
+        <Icon name="defaults.ranges" fallback="🆕" /> Make your own chart
       </h2>
       <div className="row">
         <label className="field">
@@ -383,7 +383,7 @@ function AssetClasses() {
       <h2>Asset classes</h2>
       <div role="tablist" aria-label="Asset classes" className={styles.tabs}>
         <button type="button" role="tab" aria-selected={tab === "classes"} onClick={() => setTab("classes")}>
-          <Icon name="defaults.chart" fallback="🗂️" /> Classes ({classes.data.length})
+          <Icon name="year.statements" fallback="🗂️" /> Classes ({classes.data.length})
         </button>
         <button type="button" role="tab" aria-selected={tab === "add"} onClick={() => setTab("add")}>
           <Icon name="defaults.add_account" fallback="➕" /> Add a class

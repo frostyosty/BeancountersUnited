@@ -34,7 +34,7 @@ export function OverviewPage() {
         <p>Set up your business to upload bank statements and see the tax you'd pay.</p>
         {!isOwner(real) && (
           <ButtonLink to="/businesses/new" variant="primary">
-            <Icon name="business.save_supply" fallback="🧾" /> Set up a business
+            <Icon name="year.statements" fallback="🧾" /> Set up a business
           </ButtonLink>
         )}
       </EmptyState>

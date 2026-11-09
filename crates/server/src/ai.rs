@@ -14,20 +14,20 @@
 //! Accepting a pre-fill is the ordinary `code_bank_line(s)` with `via` (see [`accept_via`]).
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::sync::Arc;
 
 use acct_ai::explain;
 use acct_ai::redact::{self, ExampleInput, LineInput};
-use acct_ai::{Category, Confidence, Config, RawSuggestion, Suggester};
+use acct_ai::{Category, Confidence, RawSuggestion};
 use acct_core::coding::{
     BankLine as CoreLine, Coding, CodingContext, DepositCoding, Direction, WithdrawalCoding,
     coded_lines,
 };
 use acct_core::{AccountType, GstCode, Money};
 use acct_store::ai::{self as ai_store, AiSettings, StoredSuggestion};
+use acct_store::ai_usage as usage_store;
 use acct_store::bank as bank_store;
 use acct_store::coding::{self as coding_store, LineStateKind};
-use acct_store::guests as guests_store;
+use acct_store::users::Role;
 use acct_store::{SqliteConnection, clients, new_id};
 use axum::Json;
 use axum::extract::{Path, State};
@@ -36,42 +36,18 @@ use ts_rs::TS;
 
 use crate::AppState;
 use crate::access;
+use crate::ai_limits::{LimitTable, Plan, env_limit, plan_of};
+use crate::ai_usage::{AskCtx, Finish, Layers, Metered};
+use crate::ai_watch::AiKind;
 use crate::auth::CurrentUser;
 use crate::business;
 use crate::commands::{Command, CommandEnvelope, LineCoding, Via};
 use crate::error::CommandError;
 use crate::pipeline;
-use crate::save_tax::{self, CardKind};
+use crate::save_tax::{self, CardKind, SuggestionSource};
 
 /// How many lines go in one request.
 const BATCH: usize = 50;
-
-/// The suggester the server's environment names, if any. A bad configuration is logged and
-/// leaves suggestions off.
-pub fn suggester_from_env() -> Option<Arc<dyn Suggester>> {
-    let config = match Config::from_vars(|name| std::env::var(name).ok()) {
-        Ok(Some(c)) => c,
-        Ok(None) => return None,
-        Err(e) => {
-            tracing::warn!("AI suggestions are off: {e}");
-            return None;
-        }
-    };
-    match config.suggester() {
-        Ok(s) => {
-            tracing::info!(
-                provider = %config.provider_name,
-                model = %config.model,
-                "AI suggestions are available"
-            );
-            Some(s)
-        }
-        Err(e) => {
-            tracing::warn!("AI suggestions are off: {e}");
-            None
-        }
-    }
-}
 
 /// How sure the model was of a suggestion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
@@ -404,76 +380,28 @@ async fn settings_or_default(
         }))
 }
 
-/// How many times a day each business may ask for suggestions. In memory: a restart resets the
-/// day, which is fine for a courtesy limit on spend.
-#[derive(Debug)]
+/// How many times a day each business may ask for suggestions, by plan (ADR 016, 4). This holds
+/// only the numbers: the count is today's (UTC) rows in `ai_usage`, read when an ask begins, so a
+/// restart doesn't reset anyone's day.
+#[derive(Debug, Default)]
 pub struct Quota {
-    /// `None`: no limit.
-    limit: Option<u32>,
-    used: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
-}
-
-impl Default for Quota {
-    /// No limit, for tests and tools.
-    fn default() -> Quota {
-        Quota::new(None)
-    }
+    /// No limits unless the server sets some.
+    limits: LimitTable,
 }
 
 impl Quota {
-    pub fn new(limit: Option<u32>) -> Quota {
-        Quota {
-            limit,
-            used: std::sync::Mutex::default(),
-        }
+    pub fn new(limits: LimitTable) -> Quota {
+        Quota { limits }
     }
 
-    /// `ACCT_AI_DAILY_LIMIT` asks per business per day (UTC), 1 when unset, `0` or `off` for none.
+    /// The plan table, with `ACCT_AI_DAILY_LIMIT` overriding the Free plan's number.
     pub fn from_env() -> Quota {
-        Quota::from_var("ACCT_AI_DAILY_LIMIT", 1)
+        Quota::new(LimitTable::from_env())
     }
 
-    fn from_var(name: &str, default: u32) -> Quota {
-        Quota::new(env_limit(name, default))
-    }
-
-    pub fn limit(&self) -> Option<u32> {
-        self.limit
-    }
-
-    /// How many asks `client_id` has left on `day`; `None` when there's no limit.
-    pub fn remaining(&self, client_id: &str, day: chrono::NaiveDate) -> Option<u32> {
-        let limit = self.limit?;
-        let used = self.used.lock().unwrap_or_else(|e| e.into_inner());
-        let n = used.get(&(client_id.to_owned(), day)).copied().unwrap_or(0);
-        Some(limit.saturating_sub(n))
-    }
-
-    /// Spends one ask. False when none are left.
-    pub fn take(&self, client_id: &str, day: chrono::NaiveDate) -> bool {
-        let Some(limit) = self.limit else {
-            return true;
-        };
-        let mut used = self.used.lock().unwrap_or_else(|e| e.into_inner());
-        used.retain(|(_, d), _| *d >= day);
-        let n = used.entry((client_id.to_owned(), day)).or_insert(0);
-        if *n >= limit {
-            return false;
-        }
-        *n += 1;
-        true
-    }
-}
-
-/// A daily limit from the environment: a number, `0` or `off` for none, `default` when unset.
-fn env_limit(name: &str, default: u32) -> Option<u32> {
-    match std::env::var(name) {
-        Ok(v) if v.eq_ignore_ascii_case("off") => None,
-        Ok(v) => match v.trim().parse::<u32>() {
-            Ok(0) | Err(_) => None,
-            Ok(n) => Some(n),
-        },
-        Err(_) => Some(default),
+    /// Asks per business per day (UTC) on `plan`; `None` is no limit.
+    pub fn limit(&self, plan: Plan) -> Option<u32> {
+        self.limits.get(plan, AiKind::Suggestion)
     }
 }
 
@@ -493,46 +421,46 @@ impl GlobalCap {
     }
 }
 
-/// The daily limits on "Explain better" (a guest costs us money, so abuse is worth bounding):
-/// per business, a lower one per trial, per client address, and one across everyone. In memory,
-/// like [`Quota`]: a restart resets the day. `None` is no limit. Every refusal is the same
-/// `ai_daily_limit`, so the owner sees one message whichever limit was hit.
+/// The daily limits on "Explain better" (a guest costs us money, so abuse is worth bounding): per
+/// business by plan (a trial has its own, lower one), per client address, and one across
+/// everyone. `None` is no limit. Every refusal is the same `ai_daily_limit`, so the owner sees one
+/// message whichever limit was hit.
+///
+/// The business and global limits are counted from `ai_usage` (ADR 016, 5). Addresses aren't
+/// stored, so the per-address count stays in memory and a restart resets only that one.
 #[derive(Debug)]
 pub struct ExplainLimits {
-    per_business: Option<u32>,
-    per_guest: Option<u32>,
+    limits: LimitTable,
     per_address: Option<u32>,
     global: Option<GlobalCap>,
-    used: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
+    addresses: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
 }
 
 impl Default for ExplainLimits {
     /// No limits, for tests and tools.
     fn default() -> ExplainLimits {
-        ExplainLimits::new(None, None, None, None)
+        ExplainLimits::new(LimitTable::unlimited(), None, None)
     }
 }
 
 impl ExplainLimits {
     pub fn new(
-        per_business: Option<u32>,
-        per_guest: Option<u32>,
+        limits: LimitTable,
         per_address: Option<u32>,
         global: Option<GlobalCap>,
     ) -> ExplainLimits {
         ExplainLimits {
-            per_business,
-            per_guest,
+            limits,
             per_address,
             global,
-            used: std::sync::Mutex::default(),
+            addresses: std::sync::Mutex::default(),
         }
     }
 
     /// From the environment, per day (UTC); `0` or `off` for none:
-    /// - `ACCT_AI_EXPLAIN_LIMIT`: per business, 5.
-    /// - `ACCT_AI_EXPLAIN_GUEST_LIMIT`: per trial, 2.
-    /// - `ACCT_AI_EXPLAIN_IP_LIMIT`: per client address, 10.
+    /// - the plan table, with `ACCT_AI_EXPLAIN_LIMIT` (per business, 5) and
+    ///   `ACCT_AI_EXPLAIN_GUEST_LIMIT` (per trial, 2) overriding the Free and Guest cells;
+    /// - `ACCT_AI_EXPLAIN_IP_LIMIT`: per client address, 10;
     /// - `ACCT_AI_EXPLAIN_GLOBAL_LIMIT`: across everyone, 50 plus
     ///   `ACCT_AI_EXPLAIN_GLOBAL_PER_GUEST` (2) for each guest who signed up in the last 24 hours.
     pub fn from_env() -> ExplainLimits {
@@ -541,64 +469,46 @@ impl ExplainLimits {
             per_guest: env_limit("ACCT_AI_EXPLAIN_GLOBAL_PER_GUEST", 2).unwrap_or(0),
         });
         ExplainLimits::new(
-            env_limit("ACCT_AI_EXPLAIN_LIMIT", 5),
-            env_limit("ACCT_AI_EXPLAIN_GUEST_LIMIT", 2),
+            LimitTable::from_env(),
             env_limit("ACCT_AI_EXPLAIN_IP_LIMIT", 10),
             global,
         )
+    }
+
+    /// Explanations per business per day (UTC) on `plan`; `None` is no limit.
+    pub fn limit(&self, plan: Plan) -> Option<u32> {
+        self.limits.get(plan, AiKind::Explain)
     }
 
     pub fn global(&self) -> Option<GlobalCap> {
         self.global
     }
 
-    /// Spends one explanation against every limit that applies, or none of them if any is used
-    /// up. `guests_recent` is how many guests signed up in the last 24 hours.
-    pub fn take(
-        &self,
-        client_id: &str,
-        address: &str,
-        is_guest: bool,
-        guests_recent: i64,
-        day: chrono::NaiveDate,
-    ) -> bool {
-        let mut keys: Vec<(String, Option<u32>)> = vec![(
-            format!("business:{client_id}"),
-            if is_guest {
-                self.per_guest.or(self.per_business)
-            } else {
-                self.per_business
-            },
-        )];
-        keys.push((format!("address:{address}"), self.per_address));
-        keys.push((
-            "global".to_owned(),
-            self.global.map(|g| g.for_guests(guests_recent)),
-        ));
-        let mut used = self.used.lock().unwrap_or_else(|e| e.into_inner());
-        used.retain(|(_, d), _| *d >= day);
-        let spent = |used: &BTreeMap<_, u32>, key: &str| {
-            used.get(&(key.to_owned(), day)).copied().unwrap_or(0)
+    /// Spends one of `address`'s explanations on `day`. False when none are left. Checked last,
+    /// after the limits that are counted from `ai_usage`, because it's the only one that spends
+    /// anything when it passes.
+    pub fn take_address(&self, address: &str, day: chrono::NaiveDate) -> bool {
+        let Some(limit) = self.per_address else {
+            return true;
         };
-        let all_free = keys
-            .iter()
-            .all(|(key, limit)| limit.is_none_or(|l| spent(&used, key) < l));
-        if all_free {
-            for (key, limit) in keys {
-                if limit.is_some() {
-                    *used.entry((key, day)).or_insert(0) += 1;
-                }
-            }
+        let mut used = self.addresses.lock().unwrap_or_else(|e| e.into_inner());
+        used.retain(|(_, d), _| *d >= day);
+        let n = used.entry((address.to_owned(), day)).or_insert(0);
+        if *n >= limit {
+            return false;
         }
-        all_free
+        *n += 1;
+        true
     }
 }
 
-/// The view for a business, with the server's suggester.
+/// The view for a business, with the server's suggester. The daily limit and what's left of it
+/// come from the plan and from `ai_usage`; an overseer has none (ADR 016, 8).
 pub async fn view(
     conn: &mut SqliteConnection,
-    suggester: Option<&dyn Suggester>,
+    suggester: Option<&Metered>,
     quota: &Quota,
+    user: &CurrentUser,
     client_id: &str,
 ) -> Result<AiSuggestionsView, CommandError> {
     business::business(conn, client_id).await?;
@@ -608,6 +518,27 @@ pub async fn view(
         .into_iter()
         .map(AiSuggestion::of)
         .collect();
+    let actor = user.actor();
+    let (daily_limit, remaining_today) = if actor.role == Role::Overseer {
+        (None, None)
+    } else {
+        let limit = quota.limit(plan_of(conn, &actor, client_id).await?);
+        let remaining = match limit {
+            Some(limit) => {
+                let today = chrono::Utc::now().date_naive();
+                let used = usage_store::count_for_business(
+                    conn,
+                    client_id,
+                    AiKind::Suggestion.as_str(),
+                    today,
+                )
+                .await?;
+                Some(limit.saturating_sub(used))
+            }
+            None => None,
+        };
+        (limit, remaining)
+    };
     Ok(AiSuggestionsView {
         available: suggester.is_some(),
         provider: suggester.map(|s| s.provider().to_owned()),
@@ -616,19 +547,26 @@ pub async fn view(
         activity: settings.activity,
         private_names: settings.private_names,
         suggestions,
-        daily_limit: quota.limit(),
-        remaining_today: quota.remaining(client_id, chrono::Utc::now().date_naive()),
+        daily_limit,
+        remaining_today,
     })
 }
 
 pub async fn get_ai_suggestions(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<String>,
 ) -> Result<Json<AiSuggestionsView>, CommandError> {
     let mut conn = state.store.reader().await?;
     Ok(Json(
-        view(&mut conn, state.suggester.as_deref(), &state.ai_quota, &id).await?,
+        view(
+            &mut conn,
+            state.suggester.as_deref(),
+            &state.ai_quota,
+            &user,
+            &id,
+        )
+        .await?,
     ))
 }
 
@@ -664,6 +602,8 @@ struct Coded {
 /// Everything a run reads before calling the suggester.
 struct Prepared {
     asks: Vec<Ask>,
+    /// What the first three layers answered, counted from the queue (ADR 016, 2).
+    layers: Layers,
     categories: Vec<Category>,
     history: Vec<Coded>,
     activity: Option<String>,
@@ -765,6 +705,21 @@ async fn prepare(
     settings: &AiSettings,
 ) -> Result<Prepared, CommandError> {
     let queue = save_tax::queue(conn, client_id).await?;
+    let mut layers = Layers::default();
+    for card in queue
+        .cards
+        .iter()
+        .filter(|c| c.kind == CardKind::Categorise)
+    {
+        layers.lines_total += 1;
+        match card.suggestion.as_ref().map(|s| s.source) {
+            Some(SuggestionSource::Rule) => layers.by_rules += 1,
+            Some(SuggestionSource::History) => layers.by_history += 1,
+            Some(SuggestionSource::Merchant) => layers.by_merchants += 1,
+            // A pre-fill from an earlier run is already waiting; nothing is asked about it.
+            Some(SuggestionSource::Ai) | None => {}
+        }
+    }
     let asks: Vec<Ask> = queue
         .cards
         .into_iter()
@@ -776,6 +731,7 @@ async fn prepare(
             description: l.description,
         })
         .collect();
+    layers.lines_asked = u32::try_from(asks.len()).unwrap_or(u32::MAX);
 
     let books = save_tax::books(conn, client_id).await?;
     let categories = categories_for(
@@ -814,6 +770,7 @@ async fn prepare(
     private_names.push(client.name);
     Ok(Prepared {
         asks,
+        layers,
         categories,
         history,
         activity: settings.activity.clone(),
@@ -914,7 +871,7 @@ pub async fn suggest(
         )
         .await?;
     }
-    let Some(suggester) = state.suggester.clone() else {
+    let Some(metered) = state.suggester.clone() else {
         return Err(CommandError::invalid(
             "ai_unavailable",
             "AI suggestions aren't set up on this server.",
@@ -935,22 +892,28 @@ pub async fn suggest(
         prepare(&mut conn, client_id, &settings).await?
     };
 
-    // Only a real ask spends the day's allowance.
-    if !prepared.asks.is_empty()
-        && !state
-            .ai_quota
-            .take(client_id, chrono::Utc::now().date_naive())
-    {
-        return Err(CommandError::invalid(
-            "ai_daily_limit",
-            "You've used today's question. The experts are back tomorrow.",
-        ));
-    }
+    // Begin the ask (ADR 016, 1). Only a run with something to send is limited: one that layers 1
+    // to 3 answered completely costs nothing, and still writes its row for the AI share. Every
+    // path from here ends in `finish`, which writes the ask's one row.
+    let mut ask = metered
+        .begin(
+            state,
+            AskCtx {
+                kind: AiKind::Suggestion,
+                user,
+                client_id,
+                address: None,
+                layers: Some(prepared.layers),
+                sends_to_model: !prepared.asks.is_empty(),
+            },
+        )
+        .await?;
 
     // 2 and 3. Ask, with no transaction open, and check the answers.
     let names: Vec<&str> = prepared.private_names.iter().map(String::as_str).collect();
     let mut suggestions = Vec::new();
     let (mut dropped, mut failed_batches) = (0u32, 0u32);
+    let (mut answered, mut kept_answers) = (0usize, 0usize);
     for batch in prepared.asks.chunks(BATCH) {
         let lines: Vec<LineInput<'_>> = batch
             .iter()
@@ -967,9 +930,11 @@ pub async fn suggest(
             activity: prepared.activity.as_deref(),
             private_names: &names,
         });
-        match suggester.suggest(request).await.result {
+        match ask.suggestions(request).await {
             Ok(answers) => {
+                answered += answers.len();
                 let (kept, d) = check_answers(batch, &prepared.categories, answers);
+                kept_answers += kept.len();
                 suggestions.extend(kept);
                 dropped += d;
             }
@@ -984,9 +949,34 @@ pub async fn suggest(
         tracing::info!(dropped, "AI suggestions dropped as unusable");
     }
 
-    // 4. Store them through the pipeline. A line sorted meanwhile rejects the command, so keep
-    // only the lines still unsorted.
+    // 4. Store them through the pipeline, then end the ask: its row says how many pre-fills the
+    // run stored, and none if storing them failed.
     let asked = u32::try_from(prepared.asks.len()).unwrap_or(u32::MAX);
+    let stored = store_prefills(state, &actor, client_id, metered.model(), suggestions).await;
+    let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+    ask.finish(Finish {
+        answered: count(answered),
+        kept: count(kept_answers),
+        by_model: stored.as_ref().map_or(0, |s| count(s.len())),
+    })
+    .await;
+    Ok(AiSuggestRun {
+        asked,
+        suggestions: stored?,
+        dropped,
+        failed_batches,
+    })
+}
+
+/// Stores the checked answers as pre-fills and returns the ones now waiting on the owner. A line
+/// sorted meanwhile would reject the command, so only the lines still unsorted are kept.
+async fn store_prefills(
+    state: &AppState,
+    actor: &pipeline::Actor,
+    client_id: &str,
+    model: &str,
+    mut suggestions: Vec<SuggestedCoding>,
+) -> Result<Vec<AiSuggestion>, CommandError> {
     if !suggestions.is_empty() {
         let unsorted: BTreeSet<String> = {
             let mut conn = state.store.reader().await?;
@@ -1005,22 +995,17 @@ pub async fn suggest(
         suggestions.retain(|s| unsorted.contains(&s.bank_line_id));
     }
     if suggestions.is_empty() {
-        return Ok(AiSuggestRun {
-            asked,
-            suggestions: Vec::new(),
-            dropped,
-            failed_batches,
-        });
+        return Ok(Vec::new());
     }
     let lines: BTreeSet<String> = suggestions.iter().map(|s| s.bank_line_id.clone()).collect();
     pipeline::submit(
         &state.store,
-        &actor,
+        actor,
         CommandEnvelope {
             id: uuid::Uuid::now_v7().to_string(),
             command: Command::RecordSuggestions {
                 client_id: client_id.to_owned(),
-                model: suggester.model().to_owned(),
+                model: model.to_owned(),
                 suggestions,
             },
         },
@@ -1028,18 +1013,12 @@ pub async fn suggest(
     )
     .await?;
     let mut conn = state.store.reader().await?;
-    let suggestions = ai_store::live_suggestions(&mut conn, client_id)
+    Ok(ai_store::live_suggestions(&mut conn, client_id)
         .await?
         .into_iter()
         .filter(|s| lines.contains(&s.bank_line_id))
         .map(AiSuggestion::of)
-        .collect();
-    Ok(AiSuggestRun {
-        asked,
-        suggestions,
-        dropped,
-        failed_batches,
-    })
+        .collect())
 }
 
 /// `POST /api/businesses/{id}/ai-suggestions`: asks for suggestions for the business's unsorted
@@ -1186,7 +1165,7 @@ pub async fn explain_card(
         )
         .await?;
     }
-    let Some(suggester) = state.suggester.clone() else {
+    let Some(metered) = state.suggester.clone() else {
         return Err(CommandError::invalid(
             "ai_unavailable",
             "Explanations aren't set up on this server.",
@@ -1215,29 +1194,21 @@ pub async fn explain_card(
         (card, settings, names)
     };
 
-    let now = chrono::Utc::now();
-    let guests_recent = if state.explain_quota.global().is_some() {
-        let mut conn = state.store.reader().await?;
-        guests_store::started_since(&mut conn, now - chrono::Duration::hours(24)).await?
-    } else {
-        0
-    };
-    if !state.explain_quota.take(
-        client_id,
-        address,
-        user.0.is_guest(),
-        guests_recent,
-        now.date_naive(),
-    ) {
-        tracing::info!(
-            limit = "explain",
-            "an explanation was refused by the daily limits"
-        );
-        return Err(CommandError::invalid(
-            "ai_daily_limit",
-            "Daily usage limit reached. Explanations are back tomorrow.",
-        ));
-    }
+    // Begin the ask (ADR 016, 1): the limits and the budget cap are checked here, and a refusal
+    // writes its row. From here every path ends in `finish`.
+    let mut ask = metered
+        .begin(
+            state,
+            AskCtx {
+                kind: AiKind::Explain,
+                user,
+                client_id,
+                address: Some(address),
+                layers: None,
+                sends_to_model: true,
+            },
+        )
+        .await?;
 
     let (heading, background) = card_wording(&card);
     let lines: Vec<(Money, &str)> = card
@@ -1255,10 +1226,12 @@ pub async fn explain_card(
         activity: settings.activity.as_deref(),
         private_names: &names,
     });
-    match suggester.explain(request).await.result {
+    let answer = ask.explanation(request).await;
+    ask.finish(Finish::default()).await;
+    match answer {
         Ok(text) => Ok(Explanation {
             text,
-            model: suggester.model().to_owned(),
+            model: metered.model().to_owned(),
         }),
         Err(e) => {
             // The error never holds a body, so it's safe to log.
@@ -1290,70 +1263,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_daily_quota_is_per_business_and_per_day() {
-        let day = chrono::NaiveDate::from_ymd_opt(2026, 10, 26).unwrap();
-        let next = day.succ_opt().unwrap();
-        let q = Quota::new(Some(1));
-        assert_eq!(q.remaining("a", day), Some(1));
-        assert!(q.take("a", day));
-        assert_eq!(q.remaining("a", day), Some(0));
-        assert!(!q.take("a", day), "the second ask in a day is refused");
-        assert!(q.take("b", day), "another business has its own");
-        assert!(q.take("a", next), "tomorrow is a fresh day");
-        let none = Quota::default();
-        assert_eq!(none.remaining("a", day), None);
-        assert!(none.take("a", day) && none.take("a", day));
+    fn the_quota_takes_its_numbers_from_the_plan_table() {
+        let q =
+            Quota::new(LimitTable::standard().with(Plan::Practice, AiKind::Suggestion, Some(4)));
+        assert_eq!(q.limit(Plan::Free), Some(1));
+        assert_eq!(q.limit(Plan::Practice), Some(4));
+        assert_eq!(Quota::default().limit(Plan::Free), None);
     }
 
     #[test]
-    fn explanations_are_limited_per_business_trial_address_and_overall() {
+    fn explanation_limits_are_looked_up_by_plan() {
+        let l = ExplainLimits::new(LimitTable::standard(), None, None);
+        assert_eq!(l.limit(Plan::Free), Some(5));
+        assert_eq!(
+            l.limit(Plan::Guest),
+            Some(2),
+            "a trial has fewer than an owner"
+        );
+        assert_eq!(ExplainLimits::default().limit(Plan::Guest), None);
+    }
+
+    #[test]
+    fn the_address_limit_is_per_address_and_per_day() {
         let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 9).unwrap();
         let next = day.succ_opt().unwrap();
+        let l = ExplainLimits::new(LimitTable::unlimited(), Some(2), None);
+        assert!(l.take_address("ip", day) && l.take_address("ip", day));
+        assert!(!l.take_address("ip", day), "the address is used up");
+        assert!(l.take_address("other", day), "another address has its own");
+        assert!(l.take_address("ip", next), "tomorrow is a fresh day");
+        let none = ExplainLimits::default();
+        assert!(none.take_address("ip", day) && none.take_address("ip", day));
+    }
 
-        // A trial gets fewer than an owner.
-        let l = ExplainLimits::new(Some(5), Some(2), None, None);
-        assert!(l.take("trial", "a", true, 0, day) && l.take("trial", "a", true, 0, day));
-        assert!(
-            !l.take("trial", "a", true, 0, day),
-            "the third in a trial is refused"
-        );
-        assert!(
-            l.take("owner", "a", false, 0, day),
-            "an owner has the larger allowance"
-        );
-        assert!(
-            l.take("trial", "a", true, 0, next),
-            "tomorrow is a fresh day"
-        );
-
-        // One address can't get round the per-trial limit by starting new trials.
-        let l = ExplainLimits::new(Some(5), Some(2), Some(3), None);
-        assert!(l.take("t1", "ip", true, 0, day) && l.take("t2", "ip", true, 0, day));
-        assert!(l.take("t3", "ip", true, 0, day));
-        assert!(!l.take("t4", "ip", true, 0, day), "the address is used up");
-        assert!(l.take("t4", "other", true, 0, day));
-
-        // The overall cap grows with the guests who signed up, and a refusal spends nothing.
+    #[test]
+    fn the_global_cap_grows_with_the_guests_who_signed_up() {
         let cap = GlobalCap {
             base: 2,
             per_guest: 3,
         };
         assert_eq!(cap.for_guests(0), 2);
         assert_eq!(cap.for_guests(4), 14);
-        let l = ExplainLimits::new(Some(10), Some(10), None, Some(cap));
-        assert!(l.take("a", "x", false, 0, day) && l.take("b", "y", false, 0, day));
-        assert!(
-            !l.take("c", "z", false, 0, day),
-            "everyone shares the overall cap"
-        );
-        assert!(l.take("c", "z", false, 1, day), "a new guest raises it");
-        let l = ExplainLimits::new(Some(1), None, None, Some(cap));
-        assert!(l.take("a", "x", false, 0, day));
-        assert!(!l.take("a", "x", false, 0, day));
-        assert!(
-            l.take("b", "y", false, 0, day),
-            "the refusal above spent no overall share"
-        );
+        assert_eq!(cap.for_guests(-1), 2);
     }
 
     fn cat(key: &str, direction: Direction) -> Category {

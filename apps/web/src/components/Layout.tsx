@@ -20,7 +20,7 @@ export function Layout() {
       <div className={styles.shell}>
         <header className={styles.header}>
           <Link to="/" className={styles.brand}>
-            <Icon name="home.brand" fallback="🫘" className={styles.logo} />
+            <Icon name="layouts.check" fallback="🫘" className={styles.logo} />
             White Label Accounting
           </Link>
           <nav className={styles.nav} aria-label="Main">
@@ -33,11 +33,11 @@ export function Layout() {
             ) : (
               <>
                 <NavLink to="/" end>
-                  <Icon name="nav.clients" className={styles.icon} />
+                  <Icon name="ui.empty" className={styles.icon} />
                   {isOwner(me) ? "Overview" : "Clients"}
                 </NavLink>
                 <NavLink to="/settings">
-                  <Icon name="nav.settings" className={styles.icon} />
+                  <Icon name="settings.admin" className={styles.icon} />
                   Settings
                 </NavLink>
               </>

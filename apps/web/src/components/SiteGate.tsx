@@ -43,7 +43,7 @@ export function SiteGate({ children }: { children: ReactNode }) {
   return (
     <header className="page" style={{ textAlign: "center", paddingTop: "30vh" }}>
       <h1 onClick={tap} style={{ cursor: "default", userSelect: "none" }}>
-        <Icon name="home.brand" fallback="🫘" /> White Label Accounting
+        <Icon name="layouts.check" fallback="🫘" /> White Label Accounting
       </h1>
       <p>Coming soon.</p>
     </header>

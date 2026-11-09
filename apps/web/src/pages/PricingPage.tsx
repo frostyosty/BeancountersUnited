@@ -81,7 +81,7 @@ export function PricingPage() {
       <main>
         <section className={styles.section}>
           <h1 className={styles.sectionTitle}>
-            <Icon name="home.pricing" fallback="🏷️" /> Pricing
+            <Icon name="business.save_categorise" fallback="🏷️" /> Pricing
           </h1>
           <p className={styles.sectionLede}>Generous free plan. Paid plans that cost less than a coffee a week.</p>
           <ul className={`${styles.grid} ${styles.tiers}`}>
@@ -95,7 +95,7 @@ export function PricingPage() {
                 <ul className={styles.perks}>
                   {t.perks.map((perk) => (
                     <li key={perk}>
-                      <Icon name="home.check" fallback="✅" /> {perk}
+                      <Icon name="business.ok" fallback="✅" /> {perk}
                     </li>
                   ))}
                 </ul>
@@ -114,7 +114,7 @@ export function PricingPage() {
         </section>
         <section className={`${styles.section} ${styles.about}`}>
           <h2 className={styles.sectionTitle}>
-            <Icon name="home.faq" fallback="💬" /> Questions
+            <Icon name="business.save_explain" fallback="💬" /> Questions
           </h2>
           {faqs.map(([q, a]) => (
             <div key={q}>

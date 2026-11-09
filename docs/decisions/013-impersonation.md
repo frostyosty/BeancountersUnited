@@ -74,7 +74,7 @@ kind is refused, so a new command is refused while acting until someone adds it 
 purpose. A test goes through every command kind and fails unless each is in exactly one of the three
 groups below, so a new kind can't be added without someone deciding.
 
-**Allowed while acting, only with changes on (36 kinds).** The work done on one business, which is
+**Allowed while acting, only with changes on (36 kinds at M19; see the M22 amendment below).** The work done on one business, which is
 where a person's view and their role make a difference:
 - Chart: `add_account`, `rename_account`, `set_account_active`, `set_account_gst`,
   `set_rounding_priority`.
@@ -85,12 +85,12 @@ where a person's view and their role make a difference:
 - Bank, uploads and Save tax: `set_coding_settings`, `add_bank_account`, `add_card_account`,
   `import_statement`, `set_opening_balance`, `remove_statement`, `code_bank_line`, `code_bank_lines`,
   `add_rule`, `remove_rule`, `answer_question`, `confirm_transfer`, `confirm_ird_payment`,
-  `resolve_duplicate`, `confirm_supply_info`, `record_suggestions`.
+  `resolve_duplicate`, `confirm_supply_info`.
   - `confirm_ird_payment` codes a bank line as a payment to IRD. It's bookkeeping, not an IRD action
     (see 4), so it's allowed.
 
-The two session commands are allowed while acting **even with changes off**: `end_impersonation` and
-`allow_impersonation_changes`.
+The session commands are allowed while acting **even with changes off**: `end_impersonation`,
+`allow_impersonation_changes` and, from M22, `record_suggestions` (see the amendment below).
 
 **Not on the list: do it as yourself (20 kinds).** Practice-wide defaults and new businesses. An
 overseer can already do all of these as themselves, and doing them "as" someone else adds nothing but a
@@ -125,11 +125,24 @@ the allowed list by mistake.
 - `POST` routes other than `/api/commands`:
   - `/api/presence`, `/api/mappings/check` and `/api/years/{id}/tb-import/preview` change nothing, so
     they're allowed.
-  - `POST /api/businesses/{id}/ai-suggestions` sends the business's lines to the AI provider and submits
-    `record_suggestions`, so it counts as a write: it's refused unless changes are on.
+  - `POST /api/businesses/{id}/ai-suggestions` and `POST /api/businesses/{id}/explain` ask the AI. Both
+    are allowed while acting, even with changes off (M22 amendment, below).
   - `/api/logout` ends the acting state first (see 5).
   - Any new non-`GET` route is refused while acting until it's given a rule, the same deny-by-default
     as commands.
+
+**Amended by M22 (ADR 016, 8, 2026-11-09): asking the AI is not a change.**
+- `record_suggestions` moves from the allowed list to the session group, and both AI `POST` routes
+  (`ai-suggestions` and `explain`) are allowed while acting with changes off. *Reason:* suggestions only
+  pre-fill cards and change no figures, and an explanation is stored nowhere. Making an overseer turn on
+  Allow changes, with a reason, just to see what the AI says would add friction and protect nothing.
+- Nothing is hidden. Each ask is metered as the overseer's own (`is_overseer`, with `acting_as` naming
+  the person), and the pre-fill's command still carries `acting_as` in `command_log`.
+- **Accepting a pre-fill is unchanged.** It's `code_bank_line(s)` with `via`, which still needs Allow
+  changes, because it moves the owner's figures.
+- **The owner's off switch still applies** to an overseer: `set_ai_suggestions` stays on the always-refused
+  list, and an ask on a business with suggestions off is refused for everyone.
+- Limits and the daily budget cap don't apply to an overseer (ADR 016, 2 and 8).
 
 **Refusals say why**, in plain words, naming the person: "You're viewing as Sam Staff. Overseers can't
 finalise a year as someone else." or "You're viewing as Sam Staff, read-only. Turn on Allow changes to

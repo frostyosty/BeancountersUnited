@@ -19,7 +19,7 @@ export function SettingsLayout() {
   const { real } = useViewAs();
   return (
     <>
-      <PageHeader icon={<Icon name="nav.settings" fallback="⚙️" />} title="Settings" />
+      <PageHeader icon={<Icon name="settings.admin" fallback="⚙️" />} title="Settings" />
       <Tabs label="Settings">
         {can(me, "practice_admin") && !isOwner(me) && (
           <Tab to="/settings" end>

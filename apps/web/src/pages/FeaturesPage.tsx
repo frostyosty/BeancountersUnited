@@ -15,7 +15,7 @@ const saveTax: TrialPath = (id) => `/businesses/${id}/save-tax`;
 const steps: { key: string; icon: string; fallback: string; title: string; body: string; target: Target; next: string }[] = [
   {
     key: "step-upload",
-    icon: "home.upload",
+    icon: "business.upload",
     fallback: "📤",
     title: "Upload bank statements",
     body: "Drop in a statement and your transactions are ready to sort. No re-typing.",
@@ -145,7 +145,7 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
     ],
   },
   {
-    icon: "nav.clients",
+    icon: "ui.empty",
     fallback: "📒",
     title: "Proper books underneath",
     features: [
@@ -212,7 +212,7 @@ export function FeaturesPage() {
       <main>
         <section className={home.section}>
           <h1 className={home.sectionTitle}>
-            <Icon name="home.product" fallback="🧭" /> Features
+            <Icon name="defaults.ranges" fallback="🧭" /> Features
           </h1>
           <p className={home.sectionLede}>
             Everything it does. Click any of it to try it on an example, with no sign-up.
@@ -283,10 +283,10 @@ export function FeaturesPage() {
 
           <p className={styles.more}>
             <Link to="/accountants">
-              <Icon name="home.accountants" fallback="🧮" /> Are you an accountant? See what's there for you
+              <Icon name="layouts.statements" fallback="🧮" /> Are you an accountant? See what's there for you
             </Link>
             <Link to="/pricing">
-              <Icon name="home.pricing" fallback="🏷️" /> See pricing
+              <Icon name="business.save_categorise" fallback="🏷️" /> See pricing
             </Link>
           </p>
         </section>

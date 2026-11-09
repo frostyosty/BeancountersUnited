@@ -126,24 +126,7 @@ async fn ai_eval(path: Option<String>) -> Result<(), BoxError> {
         &std::fs::read_to_string(&path).map_err(|e| format!("couldn't read {path}: {e}"))?,
     )?;
 
-    let price = |name: &str| -> Result<Option<u64>, BoxError> {
-        match std::env::var(name) {
-            Ok(v) => Ok(Some(
-                Prices::parse_usd(&v).ok_or(format!("{name} isn't an amount of dollars: {v:?}"))?,
-            )),
-            Err(_) => Ok(None),
-        }
-    };
-    let known = Prices::known(suggester.model());
-    let prices = match (price("AI_PRICE_INPUT")?, price("AI_PRICE_OUTPUT")?) {
-        (Some(input), Some(output)) => Some(Prices {
-            input,
-            output,
-            cache_read: price("AI_PRICE_CACHE_READ")?.unwrap_or(input / 10),
-            cache_write: price("AI_PRICE_CACHE_WRITE")?.unwrap_or(input / 4 * 5),
-        }),
-        _ => known,
-    };
+    let prices = Prices::from_vars(|name| std::env::var(name).ok(), suggester.model())?;
 
     println!(
         "Sending {} labelled lines to {} ({}), {} at a time.{}",

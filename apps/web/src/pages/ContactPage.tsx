@@ -11,7 +11,7 @@ export function ContactPage() {
       <main>
         <section className={`${styles.section} ${styles.contact}`}>
           <h1 className={styles.sectionTitle}>
-            <Icon name="home.contact" fallback="✉️" /> Contact
+            <Icon name="business.save_gap" fallback="✉️" /> Contact
           </h1>
           <p className={styles.sectionLede}>Questions? We'd love to hear from you. (Sample details for now.)</p>
           <ul className={styles.contactList}>

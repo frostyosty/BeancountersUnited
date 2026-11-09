@@ -105,13 +105,18 @@ pub const ALLOWED: &[&str] = &[
     "confirm_ird_payment",
     "resolve_duplicate",
     "confirm_supply_info",
-    "record_suggestions",
     // An owner's answer to "Are you GST registered?" (M20); refused for the server's sources.
     "set_gst_registration",
 ];
 
-/// The two session commands, allowed while acting even with changes off.
-pub const SESSION: &[&str] = &["end_impersonation", "allow_impersonation_changes"];
+/// Allowed while acting even with changes off: the two session commands, and
+/// `record_suggestions` (ADR 016, 8), which only pre-fills cards and changes no figures. Accepting
+/// a pre-fill is `code_bank_line(s)`, which still needs changes on.
+pub const SESSION: &[&str] = &[
+    "end_impersonation",
+    "allow_impersonation_changes",
+    "record_suggestions",
+];
 
 /// Not on [`ALLOWED`]: practice-wide defaults and new businesses. An overseer does these as
 /// themselves. This list only documents them for the test; any kind not on [`ALLOWED`] is refused
@@ -176,7 +181,7 @@ pub const NEVER: &[(&str, &str)] = &[
 pub enum WhileActing {
     /// Allowed once changes are on.
     Allowed,
-    /// `end_impersonation` and `allow_impersonation_changes`: always allowed.
+    /// `end_impersonation`, `allow_impersonation_changes` and `record_suggestions`: always allowed.
     Session,
     /// Refused: do it as yourself. Includes every kind nobody has classified yet.
     AsYourself,

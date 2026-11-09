@@ -2,6 +2,9 @@
 
 pub mod access;
 pub mod ai;
+pub mod ai_limits;
+pub mod ai_usage;
+pub mod ai_watch;
 pub mod assets;
 pub mod auth;
 pub mod business;
@@ -55,15 +58,15 @@ use crate::error::CommandError;
 #[derive(Clone)]
 pub struct AppState {
     pub store: Arc<Store>,
-    /// The AI suggester (ADR 009), if the server is configured with one. `None` means Save tax
-    /// shows no AI suggestions.
-    pub suggester: Option<Arc<dyn acct_ai::Suggester>>,
+    /// The AI suggester (ADR 009), if the server is configured with one, wrapped so every call is
+    /// metered (ADR 016). `None` means Save tax shows no AI suggestions.
+    pub suggester: Option<Arc<ai_usage::Metered>>,
     /// Who's signed in now (M13), kept in memory.
     pub presence: Arc<presence::Presence>,
-    /// How many times a day a business may ask the AI for suggestions. Kept in memory, so a
-    /// restart gives everyone a fresh day. No limit unless the server sets one.
+    /// How many times a day a business may ask the AI for suggestions, by plan. Counted from
+    /// `ai_usage`, so a restart doesn't reset the day. No limit unless the server sets one.
     pub ai_quota: Arc<ai::Quota>,
-    /// The daily limits on "Explain better": per business, per trial, per address and overall.
+    /// The daily limits on "Explain better": per business by plan, per address and overall.
     pub explain_quota: Arc<ai::ExplainLimits>,
     /// The guest abuse limits per address and per guest (M20, ADR 014, 8), kept in memory.
     pub guest_limits: Arc<guests::Limits>,
@@ -74,7 +77,7 @@ impl AppState {
     pub fn new(store: Arc<Store>) -> AppState {
         AppState {
             store,
-            suggester: ai::suggester_from_env(),
+            suggester: ai_usage::suggester_from_env(),
             presence: Arc::default(),
             ai_quota: Arc::new(ai::Quota::from_env()),
             explain_quota: Arc::new(ai::ExplainLimits::from_env()),
@@ -295,6 +298,12 @@ fn routes() -> Vec<(Method, &'static str, MethodRouter<AppState>)> {
             Method::GET,
             "/api/overseer/trials",
             get(trial_counts::get_trials),
+        ),
+        // M22 (ADR 016, 9): the overseer's view of AI use.
+        (
+            Method::GET,
+            "/api/overseer/ai-usage",
+            get(ai_watch::get_ai_usage),
         ),
     ]
 }

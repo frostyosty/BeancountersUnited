@@ -53,7 +53,7 @@ export function MasterChartPage() {
   const commands = masterCommands(chart.entity_type);
   return (
     <>
-      <PageHeader crumbs={crumbs} icon={<Icon name="defaults.chart" fallback="🗂️" />} title={`${chart.name} master chart`} />
+      <PageHeader crumbs={crumbs} icon={<Icon name="year.statements" fallback="🗂️" />} title={`${chart.name} master chart`} />
       <p className="muted">
         Each new {entityLabel(chart.entity_type)} client starts with a copy of this chart. Changing it never alters a
         client already set up: change theirs on the client's own chart page.

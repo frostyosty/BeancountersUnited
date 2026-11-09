@@ -225,7 +225,10 @@ fn a_refused_response_still_carries_its_tokens() {
     });
     let call = crate::Call::new(anthropic::read(&refused), anthropic::usage_of(&refused));
     assert!(matches!(call.result, Err(AiError::Refused)));
-    assert_eq!((call.usage.input_tokens, call.usage.output_tokens), (300, 4));
+    assert_eq!(
+        (call.usage.input_tokens, call.usage.output_tokens),
+        (300, 4)
+    );
     // No body, no tokens.
     let failed = crate::Call::<()>::failed(AiError::Status(529));
     assert_eq!(failed.usage, crate::Usage::default());
@@ -236,8 +239,8 @@ async fn the_fake_reports_each_calls_own_usage() {
     let fake = FakeSuggester::with_defaults("fake");
     let a = fake.suggest(leaky_request()).await;
     let b = fake.suggest(leaky_request()).await;
-    assert_eq!(a.usage, crate::fake::FAKE_CALL_USAGE);
-    assert_eq!(b.usage, crate::fake::FAKE_CALL_USAGE);
+    assert_eq!(a.usage, crate::FAKE_CALL_USAGE);
+    assert_eq!(b.usage, crate::FAKE_CALL_USAGE);
     let custom = crate::Usage {
         requests: 1,
         input_tokens: 7,

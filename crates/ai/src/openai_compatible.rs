@@ -5,8 +5,7 @@ use serde_json::{Value, json};
 
 use crate::prompt::{INSTRUCTIONS, answer_schema, batch, business_context, parse_answer};
 use crate::{
-    AiError, Call, RawSuggestion, SuggestFuture, SuggestRequest, Suggester, Usage, count,
-    post_json,
+    AiError, Call, RawSuggestion, SuggestFuture, SuggestRequest, Suggester, Usage, count, post_json,
 };
 
 pub struct Client {

@@ -17,7 +17,7 @@ import styles from "./HomePage.module.css";
 // `next` is the label on the arrow leading to the following step.
 const steps = [
   {
-    icon: "home.upload",
+    icon: "business.upload",
     fallback: "📤",
     title: "Upload bank statements",
     body: "Drop in a statement and your transactions are ready to sort. No re-typing.",
@@ -49,14 +49,14 @@ const steps = [
 // Each opens a view of the accountant side (M21): a trial's own, or Example 1 when there is none yet.
 const features: { icon: string; fallback: string; title: string; body: string; view: BooksView }[] = [
   {
-    icon: "nav.clients",
+    icon: "ui.empty",
     fallback: "📒",
     view: "journals",
     title: "Real double-entry books",
     body: "Every business-year has a proper ledger underneath, so your accountant can pick up where you left off.",
   },
   {
-    icon: "business.save_supply",
+    icon: "year.statements",
     fallback: "📑",
     view: "statements",
     title: "Statements that foot",
@@ -293,7 +293,7 @@ export function HomePage() {
       <GuestBanner />
       <footer className={styles.footer}>
         <span>
-          <Icon name="home.brand" fallback="🫘" /> White Label Accounting
+          <Icon name="layouts.check" fallback="🫘" /> White Label Accounting
         </span>
         <a href="#top">Back to top</a>
       </footer>

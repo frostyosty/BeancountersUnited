@@ -98,7 +98,7 @@ export function BooksLayout() {
               <Icon name="year.tb" fallback="⚖️" /> Trial balance
             </Tab>
             <Tab to="journals">
-              <Icon name="year.journals" fallback="📒" /> Journals
+              <Icon name="ui.empty" fallback="📒" /> Journals
             </Tab>
             <Tab to="gl">
               <Icon name="year.gl" fallback="📖" /> General ledger

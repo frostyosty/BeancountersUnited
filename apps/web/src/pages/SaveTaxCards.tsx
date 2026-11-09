@@ -450,7 +450,7 @@ function SupplyInfoCard({ card, clientId, banks, canEdit }: CardProps) {
   }
   return (
     <>
-      <Heading icon="business.save_supply" fallback="🧾">
+      <Heading icon="year.statements" fallback="🧾">
         Do you have the tax invoice for this?
       </Heading>
       <p className="muted">

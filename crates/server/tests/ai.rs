@@ -9,6 +9,9 @@ use std::sync::Arc;
 use acct_ai::FakeSuggester;
 use acct_core::tax::gst::GstFrequency;
 use acct_core::{Account, Mapping, Template};
+use acct_server::ai_limits::{LimitTable, Plan};
+use acct_server::ai_usage::Metered;
+use acct_server::ai_watch::AiKind;
 use acct_server::business::{GstBasis, GstSetup};
 use acct_server::commands::Command;
 use axum::http::StatusCode;
@@ -181,7 +184,7 @@ async fn suggestions_are_gated_redacted_and_only_ever_pre_filled() {
     assert_eq!(body["code"], "ai_unavailable");
 
     let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
-    s.state.suggester = Some(fake.clone());
+    s.state.suggester = Some(Arc::new(Metered::new(fake.clone())));
 
     // On by default, with no consent screen (ADR 011).
     let v = view(&s, &sam, &client).await;
@@ -334,10 +337,11 @@ async fn explain_better_uses_the_servers_own_card_and_has_a_daily_limit() {
     assert_eq!(body["code"], "ai_unavailable");
 
     let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
-    s.state.suggester = Some(fake.clone());
+    s.state.suggester = Some(Arc::new(Metered::new(fake.clone())));
     s.state.explain_quota = Arc::new(acct_server::ai::ExplainLimits::new(
-        Some(2),
-        Some(1),
+        LimitTable::unlimited()
+            .with(Plan::Free, AiKind::Explain, Some(2))
+            .with(Plan::Guest, AiKind::Explain, Some(1)),
         None,
         None,
     ));
@@ -556,7 +560,7 @@ async fn the_merchant_list_suggests_after_rules_and_history_and_before_ai() {
 
     // AI is asked only about what the list didn't answer.
     let fake = Arc::new(FakeSuggester::with_defaults("fake-model"));
-    s.state.suggester = Some(fake.clone());
+    s.state.suggester = Some(Arc::new(Metered::new(fake.clone())));
     ok(&s, &sam, set(&client, true)).await;
     let (status, run) = ask(&s, &sam, &client).await;
     assert_eq!(status, StatusCode::OK, "{run}");

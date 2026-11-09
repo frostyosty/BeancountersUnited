@@ -15,12 +15,12 @@ export function ClientsPage() {
   return (
     <>
       <PageHeader
-        icon={<Icon name="nav.clients" fallback="📒" />}
+        icon={<Icon name="ui.empty" fallback="📒" />}
         title="Clients"
         actions={
           can(me, "staff") && (
             <ButtonLink to="/businesses/new" variant="primary">
-              <Icon name="business.save_supply" fallback="🧾" /> Set up a business
+              <Icon name="year.statements" fallback="🧾" /> Set up a business
             </ButtonLink>
           )
         }
