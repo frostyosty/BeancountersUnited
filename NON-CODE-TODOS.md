@@ -70,6 +70,40 @@ ships.
 - [ ] M23: decide the per-plan limit on AI invoice reads.
 - [ ] M23: check the invoice scanner in a browser on a desktop and on a phone with a real camera photo of a
       synthetic invoice. Never a real client's.
+- [x] M23: decide ADR 017's D1 to D5 (what an AI read sends, the line on the button, what has to be done
+      before real owners get AI reads, where bill files are kept and how much space each business gets,
+      and the read and upload limits). Done 2026-11-10: every recommendation accepted.
+- [x] M23: decide ADR 017's D6 to D8 (the OCR engine, what happens to the bits OCR can't read, and
+      whether a possible split payment holds GST before it's answered), then mark the ADR accepted before
+      wave 2 of `M23-PROMPTS.md` starts. Done 2026-11-10: every recommendation accepted; ADR 017 accepted.
+- [ ] M23: before real owners can read invoices with AI, tell IRD in advance that invoice pictures can now
+      go to the AI provider (IR1269 5.2(b): unlike ADR 011's generalised lines, a picture can identify the
+      taxpayer), add it to the OSF answers, and then set `ACCT_AI_INVOICE_READS=on` in production
+      (ADR 017, D3).
+- [ ] M23: privacy policy, invoices: what's kept (the file, with photo location data stripped, and the
+      fields read from it), for how long, that e-invoices and PDFs with text are read on our server, and
+      that a picture of the page goes to the AI provider, overseas, only when the owner presses Read this
+      with AI. Invoices name other people (suppliers, sometimes staff), and we use those names only to
+      keep the owner's records.
+- [ ] M23: customer terms: whether an owner may rely on our copy of an invoice as their GST record (IRD
+      asks for 7 years), or should keep their own too. Have the tax specialist confirm that a phone photo
+      of a paper invoice, kept by us, is an acceptable record. Decide with M18's statement-file item below.
+- [ ] M23: include bill files in the offshore storage application if production stays in Sydney (M12
+      security, below).
+- [ ] M23, for the tax specialist: check the IRD-number check-digit rule in "Tax invoices" in
+      `docs/domain.md` against IRD's current specification. The gap it used to note (the $200 threshold
+      applied per payment) is answered: the specialist confirmed on 2026-11-10 that it goes by the supply,
+      and ADR 017, 14 closes it.
+- [ ] M23, for the tax specialist: "Purchases paid in parts" in `docs/domain.md`. Check the worked
+      example; whether one supply split across several invoices of $200 or less counts as one supply; and
+      how to correct a purchase that reaches back into a finalised year or a filed GST period.
+- [ ] M23: run `acctd ai-eval --invoices` with a real key once M23 is built (a few cents), choose the
+      invoice reader by ADR 017, 11 (no false passes; 90% read right), and record the result in ADR 017.
+      Record OCR's share, its unclear fields, and its time and memory per page too, and set the confidence
+      floor from them (ADR 017, 13). Before launch, have the fixture generator make a larger set with
+      photos (skew, shadow, blur) and run it again.
+- [ ] M23: if the bake-off shows OCR doesn't fit beside `acctd` in 512 MB, decide whether to move
+      production (and staging) to a 1 GB machine, and check the price on Fly.
 
 ## Hand checks a person has to sign off
 - [ ] M10's worked example, "Worked example: the synthetic sole trader" in `docs/domain.md`. Put your name

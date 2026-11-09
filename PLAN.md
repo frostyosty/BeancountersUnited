@@ -240,6 +240,7 @@ Status: not started. Needs IRD test environment access (see the business track).
 - Core builds each return's payload from the ledger, deterministically, with snapshot tests.
 - Submit shows the return's lines and the declaration, then files. The exact payload, IRD's response and a SHA-256 of the payload are stored and never regenerated, like a finalisation snapshot.
 - A filed GST period or income year rejects changes to its numbers. Corrections go through an amendment.
+- Submit refuses a GST period while a "Were these one purchase?" card covering it is open (`blocks_filing`, ADR 017, D8), and filed periods refuse new purchases that reach into them (ADR 017, 14).
 - After filing, show how to pay. We don't process payments.
 
 Done when: in IRD's test environment, a synthetic business files a GST return and an IR3, checks their status, retrieves them and amends one, and changes to a filed period are rejected.
@@ -479,7 +480,7 @@ Status: completed. The plan and agent prompts are in `M22-PROMPTS.md` (six agent
 
 
 ## M23 — Invoice scanner: read, check, match
-Status: not started. The plan and agent prompts are in `M23-PROMPTS.md` (ten agents, six waves). Takes ADR 017 and migration 0017. Needs M22 first.
+Status: not started. The plan and agent prompts are in `M23-PROMPTS.md` (fourteen agents, six waves). ADR 017 accepted 2026-11-10: invoices are read on our server where possible (UBL, PDF text, local OCR with Tesseract), AI only when pressed, and purchases paid in parts count as one supply for the $200 rule. Takes migration 0017. Needs M22 first.
 
 ## M24 — Plans and billing
 Status: not started; its main decisions were made 2026-11-09. The plan and agent prompts are in `M24-PROMPTS.md` (seven agents, five waves). Takes ADR 018 and migration 0018. Needs M22; planned after M23.

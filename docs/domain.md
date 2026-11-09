@@ -526,6 +526,214 @@ A guest's business is set up from a bank statement alone, so nobody is asked abo
   a trial is one statement with nothing before it, and the card saves nothing. It appears once the
   trial is saved (`save_tax::reconcile_cards`).
 
+### Tax invoices (proposed 2026-11-10, M23; ADR 017)
+What a supplier's invoice or receipt has to show before its GST can be claimed, and what the invoice
+scanner checks (`acct_core::bill`). The code calls one a **bill**, to keep it apart from the invoice
+maker; the screens say "invoice or receipt". Every rule here rests on our reading of IRD's pages, read
+on 2026-11-10, so each is marked **check** for the tax specialist.
+
+Sources (IRD):
+- [How taxable supply information for GST works](https://www.ird.govt.nz/gst/tax-invoices-for-gst/how-taxable-supply-information-for-gst-works)
+  (updated 31 Mar 2026).
+- [Taxable supply information for GST](https://www.ird.govt.nz/gst/taxable-supply-information-for-gst)
+  (updated 27 Nov 2024).
+- [Record keeping](https://www.ird.govt.nz/managing-my-tax/record-keeping).
+
+**The name.** Since 1 April 2023 the law asks for "taxable supply information" rather than a tax invoice.
+A document doesn't have to be titled "Tax invoice", and one that is still counts. Credit and debit notes
+are now "supply correction information" (out of M23).
+
+**The tiers** go by the supply's GST-inclusive value, which for us is the bill's total. $200.00 is in the
+first tier and $200.01 in the second; $1,000.00 is in the second and $1,000.01 in the third. That matches
+`SUPPLY_INFO_THRESHOLD`, which is strictly over $200 (**check**).
+
+| What's shown | Up to $200 | Over $200, up to $1,000 | Over $1,000 |
+|---|---|---|---|
+| The supplier's name (or trading name) | Yes | Yes | Yes |
+| The supplier's GST number | | Yes | Yes |
+| The invoice date (the date of supply if there's no invoice) | Yes | Yes | Yes |
+| A description of what was supplied | Yes | Yes | Yes |
+| The total | Yes | Yes | Yes |
+| The GST: either the GST-exclusive amount, the GST and the total, or the total and a statement that it includes GST (allowed only when everything listed is at the standard rate) | | Yes | Yes |
+| The buyer's name, plus one of: a physical or postal address, phone number, email, trading name (if it differs from the name), NZBN, or website | | | Yes |
+
+Every row is **check**.
+
+- Up to $200, the owner needs none of this to claim: the bank line is enough, as M11 already does (see
+  "GST", "Input tax"). A bill under $200 is kept as evidence for income tax.
+- The buyer details over $1,000 are needed when the buyer is GST registered, which is the only time
+  the GST is claimed (**check**).
+
+**What the scanner checks.** Two groups, because they mean different things (ADR 017, 1):
+- **Reading checks**: the numbers hold together. A failure means the file was misread, or the invoice
+  itself is wrong. The bill can't be confirmed, and nothing is claimed.
+  - *Total found.*
+  - *The lines add up*, exactly to the cent. When the lines are shown without GST, they add to the
+    subtotal; when they include GST (most receipts), to the total. A discount or cash-rounding line is
+    a line with a negative amount.
+  - *Subtotal plus GST is the total*, exactly, when both are shown.
+  - *A GST rate for the date*: core's dated rates (`tax::gst::gst_rate_bp`). A date we hold no rate for
+    fails.
+  - *The GST is the rate's share of the total*, within the allowance below: neither above it (the
+    invoice is wrong) nor below it (some items may carry no GST; claiming 3/23 of the payment would
+    over-claim, so mixed-rate bills aren't supported yet).
+  - *The GST number passes IRD's checksum*, if one is shown.
+  - *The currency is NZD.* A bill that names no currency is taken as NZD. Multi-currency is out of
+    scope.
+- **Records checks**: the fields the tier asks for are there (the table above). A failure means the
+  bill is genuine but short. It's kept and can be matched, and confirming it claims nothing; the owner
+  is told what to ask the supplier for. The tier's fields are needed only when the bill charges GST, so
+  a bill with no GST charged doesn't need a GST number.
+
+**The GST allowance (check).** The GST shown may differ from the GST in the total (total × rate ÷ (100%
++ rate), rounded half away from zero to cents, as `gst_in_inclusive` does) by at most 1 cent per line
+plus 1 cent, and never more than 50 cents.
+- Suppliers who work GST out line by line can drift up to half a cent a line, and one more cent covers
+  rounding a GST-exclusive subtotal.
+- The cap stops a long invoice from hiding a GST-free item inside the allowance.
+- A few cents either way doesn't change what's claimed. The return claims 3/23 of the GST-inclusive
+  purchases (boxes 11 and 12), and so does core on the bank line, so the bill's own GST figure never
+  reaches the ledger. The check only shows that the purchase was standard-rated throughout.
+
+**No GST charged.** A bill showing its GST as nil, with no GST number, is from a supplier who isn't
+registered: there's no GST to claim. Confirming it claims nothing, and the owner is told the payment
+shouldn't claim GST. A GST figure that's simply not shown proves nothing, so it's never read as nil.
+
+**The IRD number checksum (check).** A GST number is the supplier's IRD number. As we understand IRD's
+published check-digit rule:
+1. It's 8 or 9 digits, between 10,000,000 and 150,000,000.
+2. Take off the last digit (the check digit), and pad what's left to 8 digits with a leading zero.
+3. Multiply the 8 digits by 3, 2, 7, 6, 5, 4, 3, 2, add them up, and take the remainder after dividing
+   by 11. A remainder of 0 gives a check digit of 0; otherwise it's 11 less the remainder.
+4. If that comes to 10, do step 3 again with the weights 7, 4, 3, 2, 5, 2, 7, 6. If it comes to 10
+   again, the number is invalid.
+5. The number is valid when the result equals its check digit.
+
+Check it against IRD's current specification before M23 is done.
+
+**Keeping them (check).** IRD asks that records, electronic ones included, be kept for at least 7 years,
+in English or Māori unless it agrees otherwise. Records kept outside New Zealand, in the cloud
+included, need IRD's approval. That's the same open question as the rest of our hosting (ADR 008,
+`NON-CODE-TODOS.md`).
+
+**Out of M23:**
+- imported goods and secondhand goods, which have rules of their own;
+- buyer-created taxable supply information;
+- supply correction information (credit notes);
+- bills with items at more than one GST rate;
+- bills not in NZD;
+- one payment covering several bills.
+
+**Payments in parts.** The tiers go by the supply, not by each payment: see "Purchases paid in parts"
+below.
+
+#### Worked example: three bills (invented, 2026-11-10; a person still has to check it)
+The business is GST registered, and its bank has these payments. Every name and number is invented, and
+`123456785` is an invented GST number whose checksum is valid.
+
+| Date | Description | Amount | Coded |
+|---|---|---|---|
+| 5 Feb 2026 | AP TOTARA LANE TIMBER INV 2041 | −345.00 | Repairs and maintenance, standard GST |
+| 9 Feb 2026 | POS PURIRI PLUMBING | −1,380.00 | Repairs and maintenance, standard GST |
+| 10 Feb 2026 | POS CORNER DAIRY | −7.00 | Office supplies, standard GST |
+
+Before any bill, both payments over $200 hold their GST in 615: 345.00 × 3/23 = 45.00, and 1,380.00 ×
+3/23 = 180.00. The expenses are 300.00 and 1,200.00. The 7.00 is under $200, so its 0.91 is already
+claimed.
+
+**Bill 1: Tōtara Lane Timber Ltd**, GST number 123-456-785, invoice 2041, dated 3 Feb 2026, no buyer
+named.
+
+| Line | Amount (excl. GST) |
+|---|---|
+| Timber, 90 × 45 H3.2, 12 lengths | 240.00 |
+| Galvanised nails, 5 kg | 60.00 |
+| Subtotal | 300.00 |
+| GST | 45.00 |
+| Total | 345.00 |
+
+- Reading checks: the lines add to 300.00; 300.00 + 45.00 = 345.00; the rate on 3 Feb 2026 is 1500 bp,
+  so the GST in 345.00 is 45.00, inside the allowance of 3 cents (2 lines + 1); the GST number's
+  checksum is 5, which matches. All pass.
+- Records: $345.00 is over $200 and up to $1,000, so the supplier's name, GST number, date, description
+  and the GST breakdown are needed. All there, and the buyer isn't needed. The verdict **holds**.
+- Matching: the 5 Feb payment is exactly 345.00, two days after the invoice (the window is 27 Jan to 4
+  Apr), and its description has "TOTARA" and "2041". One match.
+- Confirming moves 45.00 from 615 to 810. Box 11 rises by 345.00 and box 12 by 45.00, so the GST to pay
+  falls by **45.00**. Income tax doesn't change, because the expense was already 300.00.
+
+**Bill 2: Pūriri Plumbing Ltd**, hot water cylinder 1,200.00, GST 180.00, total 1,380.00, dated 8 Feb
+2026, with a GST number that passes, marked "Cash sale" with no buyer named.
+- The reading checks pass: the GST in 1,380.00 is exactly 180.00.
+- Over $1,000 the buyer has to be named, so the verdict is **short**. It matches the 9 Feb payment.
+- Confirming keeps the bill against the payment but claims nothing: the 180.00 stays in 615. The owner
+  is told to ask the supplier for an invoice showing their name (or their business's) and one of their
+  address, phone, email, trading name, NZBN or website.
+
+**Bill 3: Corner Dairy receipt**, two items at 3.50 including GST, total 7.00, GST shown 0.92.
+- The GST in 7.00 is 7.00 × 3/23 = 0.913…, so 0.91. The receipt worked it out per line (3.50 × 3/23 =
+  0.456…, so 0.46, twice), giving 0.92. That's 1 cent out, inside the allowance of 3 cents, so it
+  passes.
+- It's under $200, so it's kept as evidence and claims nothing more.
+
+**Bills that fail.**
+- Bill 1 with GST 52.00, subtotal 300.00 and total 352.00 adds up, but the GST in 352.00 is 45.91. 52.00
+  is 6.09 over, so *the GST is the rate's share* fails, and the bill can't be confirmed.
+- Bill 1 with GST number 123-456-786 fails *the GST number passes IRD's checksum*: its check digit
+  should be 5.
+
+#### Purchases paid in parts (decided 2026-11-10, M23; ADR 017, 14)
+**The rule (confirmed by the tax specialist, through the owner, 2026-11-10).** The $200 and $1,000
+tiers go by the GST-inclusive value of the **supply**, not by each payment. A job paid as a deposit and
+a balance, or one purchase paid on two cards, needs the information for the whole supply's tier before
+any of its GST is claimed.
+
+**How we hold it.** A **purchase** is one or more payments for one supply, with the supply's total.
+- The threshold reads the purchase's total. A payment in no purchase is its own supply, as before.
+- The GST on each payment is still 3/23 of that payment, in that payment's GST period. Only whether it
+  waits in 615 changes.
+- A purchase comes from a bill paid in more than one payment (or part paid), from the owner saying so,
+  or from answering a flag.
+- Confirming the supply information on one payment of a purchase confirms them all.
+
+**What's flagged** ("Were these one purchase?"): payments of $200 or less each, to the same payee,
+together over $200, that share a reference number of 4 or more digits or use instalment words
+(deposit, balance, part, final, "1 of 2") within 60 days, or that fall on the same day. Two bills from
+one supplier, each $200 or less, together over $200, with the same date or invoice numbers one apart,
+are flagged too (**check**: one supply split across invoices). Regular payments with none of these
+signs aren't. A flag holds no GST by itself; it must be answered before a GST return covering it is
+filed (ADR 017, D8).
+
+**Periods already done (check).** A purchase can't take a payment in a finalised year, and, once filing
+exists, one in a filed GST period: grouping could raise tax in a period already done, so the accountant
+corrects it. The tax specialist to say how such a correction should go.
+
+**Worked example (invented, 2026-11-10; a person still has to check it).** A GST-registered owner has
+an outdoor light fitted by Kōwhai Electrical Ltd, paid in two parts:
+
+| Date | Description | Amount | Coded |
+|---|---|---|---|
+| 12 Mar 2026 | AP KOWHAI ELECTRICAL DEP 4471 | −150.00 | Repairs and maintenance, standard GST |
+| 19 Mar 2026 | AP KOWHAI ELECTRICAL BAL 4471 | −195.50 | Repairs and maintenance, standard GST |
+
+1. **As separate payments**, each is $200 or less, so each claims its GST at once: 150.00 × 3/23 =
+   19.565…, so 19.57; and 195.50 × 3/23 = 25.50. 45.07 is claimed with no invoice.
+2. **The flag.** Same payee ("KOWHAI"), together 345.50, both mention 4471, and one says DEP: "Were
+   these one purchase?"
+3. **The owner answers "One purchase"** of 345.50. That's over $200 with no information confirmed, so
+   both payments' GST moves from 810 to 615. The GST to pay rises by **45.07**; the expenses stay
+   130.43 and 170.00, so income tax doesn't change.
+4. **The invoice arrives**: Kōwhai Electrical Ltd, GST number 135-792-462 (invented; its checksum is
+   valid), invoice 4471, dated 11 Mar 2026, "Supply and fit outdoor light", 300.43 plus GST 45.07, total
+   345.50. The GST in 345.50 is 45.07 exactly, so it holds. Its total equals the purchase's, so it's
+   proposed for both payments.
+5. **Confirming it** confirms the supply information on both payments: 45.07 moves back to 810, and the
+   GST to pay falls by **45.07**.
+
+Had the owner answered "Separate purchases", nothing would move and that pair would never be flagged
+again. Had the invoice named no GST number, it would be short: the purchase keeps the 45.07 in 615 and
+the owner is told to ask for one.
+
 ### Income tax for sole traders (decided 2026-10-19)
 - **Years.** M10 supports the 2026 income year (1 April 2025 to 31 March 2026) and the 2027 income year
   (1 April 2026 to 31 March 2027), with a 31 March balance date only.
