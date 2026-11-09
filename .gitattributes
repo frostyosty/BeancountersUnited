@@ -15,3 +15,6 @@ fixtures/landing/*.ofx -text
 
 # PDFs (the sample statements in apps/web/public/samples) are binary: never convert their line endings.
 *.pdf binary
+
+# Invoice fixtures (M23) are byte-exact (images, PDFs, UBL, JSON): never convert line endings.
+fixtures/invoices/* -text

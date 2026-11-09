@@ -47,7 +47,7 @@ function ExpenseAnalysis({ view }: { view: ExpenseAnalysisView }) {
       {view.comparatives === "none" && <p className="muted">There's no earlier year to compare with.</p>}
       {view.categories.length === 0 ? (
         <p className="muted">
-          <Emoji>🌱</Emoji> No expenses in either year yet.
+          <Emoji>🌳</Emoji> No expenses in either year yet.
         </p>
       ) : (
         <table className={`table ${styles.analysis}`}>

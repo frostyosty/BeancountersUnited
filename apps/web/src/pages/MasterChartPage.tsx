@@ -76,7 +76,7 @@ function StatementLayout({ practice, entityType, chartName }: { practice: Practi
   return (
     <section className="card">
       <h2>
-        <Icon name="layouts.statements" fallback="📑" /> Statements
+        <Icon name="accountant_view.accountant" fallback="📑" /> Statements
       </h2>
       <ul>
         {templates.map((t) => {
@@ -158,7 +158,7 @@ function SetUpStatements({ practice, entityType, chartName }: { practice: Practi
   return (
     <form className="card form" onSubmit={submit}>
       <h2>
-        <Icon name="layouts.statements" fallback="📑" /> Set up statements
+        <Icon name="accountant_view.accountant" fallback="📑" /> Set up statements
       </h2>
       <p className="muted">
         {entityLabel(entityType)} clients need a statement template, and a mapping from account codes to its lines,

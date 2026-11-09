@@ -45,7 +45,7 @@ function OwnSavingLine({ businessId, savedSoFar }: { businessId: string; savedSo
   return (
     <div className={styles.peak} role="note">
       <p>
-        <Icon name="peaks.saving" fallback="🎉" /> Keep the ${formatMoney(savedSoFar)} you've saved: save your work. It
+        <Icon name="peaks.saving" fallback="🥳" /> Keep the ${formatMoney(savedSoFar)} you've saved: save your work. It
         takes 20 seconds.
       </p>
       <div className={styles.actions}>

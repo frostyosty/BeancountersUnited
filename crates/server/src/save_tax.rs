@@ -14,6 +14,7 @@ use acct_core::coding::{
     Rule, SUPPLY_INFO_THRESHOLD, WithdrawalCoding, best_rule, coded_lines, from_history,
     from_merchants, gst_totals, taxable_income_of,
 };
+use acct_core::purchases::Supply;
 use acct_core::tax::gst::{GstTotals, gst_period};
 use acct_core::tax::income_tax::{IETC_FROM, IETC_TO, IncomeYear, OtherIncome, YearAnswers};
 use acct_core::tax::position::{Change, TaxInputs, position};
@@ -265,13 +266,16 @@ fn posting_lines(
             books.gst_from(),
             &books.business.holding,
         )),
-        Posting::Coded(c) => coded_lines(
-            &info.core(),
-            &books.claimable(c),
-            confirmed,
-            &books.context(),
-        )
-        .map_err(coding_error),
+        Posting::Coded(c) => {
+            let line = info.core();
+            coded_lines(
+                &line,
+                &books.claimable(c),
+                &Supply::of_line(&line, confirmed),
+                &books.context(),
+            )
+            .map_err(coding_error)
+        }
         Posting::Nothing => Ok(Vec::new()),
     }
 }
@@ -699,7 +703,13 @@ async fn check_coding(
         date: books.business.start_date,
         amount,
     };
-    coded_lines(&line, coding, None, &books.context()).map_err(coding_error)?;
+    coded_lines(
+        &line,
+        coding,
+        &Supply::of_line(&line, None),
+        &books.context(),
+    )
+    .map_err(coding_error)?;
     if let Coding::Out(WithdrawalCoding::AssetPurchase { account, .. }) = coding {
         asset_class_for(tx, books, account, None).await?;
     }
@@ -1114,18 +1124,12 @@ fn effect_of(
     confirmed: Option<NaiveDate>,
     ird_income_year: Option<IncomeYear>,
 ) -> Effect {
+    let line = info.core();
+    let supply = Supply::of_line(&line, confirmed);
     let (gst, tax_paid) = match posting {
-        Posting::Unsorted => (
-            gst_totals(&info.core(), None, confirmed, books.gst_from()),
-            None,
-        ),
+        Posting::Unsorted => (gst_totals(&line, None, &supply, books.gst_from()), None),
         Posting::Coded(c) => (
-            gst_totals(
-                &info.core(),
-                Some(&books.claimable(c)),
-                confirmed,
-                books.gst_from(),
-            ),
+            gst_totals(&line, Some(&books.claimable(c)), &supply, books.gst_from()),
             match c {
                 Coding::Out(WithdrawalCoding::IrdIncomeTax) => Some((
                     ird_income_year.unwrap_or(IncomeYear::containing(info.line.date)),
@@ -1310,7 +1314,10 @@ async fn snapshot(conn: &mut SqliteConnection, client_id: &str) -> Result<Snapsh
                     amount: g.change,
                 };
                 let totals = inputs.gst.entry(period).or_default();
-                *totals = add(*totals, gst_totals(&line, None, None, books.gst_from()));
+                *totals = add(
+                    *totals,
+                    gst_totals(&line, None, &Supply::of_line(&line, None), books.gst_from()),
+                );
             }
         }
     }
@@ -1960,7 +1967,7 @@ pub async fn queue(
             amount: g.change,
         };
         let before = Effect {
-            gst: gst_totals(&line, None, None, books.gst_from()),
+            gst: gst_totals(&line, None, &Supply::of_line(&line, None), books.gst_from()),
             taxable_income: taxable_income_of(&g.lines, &books.chart),
             tax_paid: None,
         };

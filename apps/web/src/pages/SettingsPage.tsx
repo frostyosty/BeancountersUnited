@@ -52,7 +52,7 @@ function Defaults() {
       <h2>Defaults</h2>
       {p.master_charts.length === 0 ? (
         <p className="muted">
-          <Icon name="defaults.none_yet" fallback="🌱" /> No defaults yet, so no clients can be set up. Install a starter
+          <Icon name="defaults.none_yet" fallback="🌳" /> No defaults yet, so no clients can be set up. Install a starter
           set below, or make your own chart.
         </p>
       ) : (
@@ -399,7 +399,7 @@ function AssetClasses() {
               </button>
             ))}
             <button type="button" aria-pressed={preset === null} onClick={() => setPreset(null)}>
-              <Emoji>✏️</Emoji> Custom
+              <Emoji>⏳️</Emoji> Custom
             </button>
           </div>
           <AssetClassForm

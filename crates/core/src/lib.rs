@@ -5,6 +5,7 @@
 
 pub mod analysis;
 pub mod bank;
+pub mod bill;
 pub mod chart;
 pub mod coding;
 pub mod depreciation;
@@ -15,6 +16,7 @@ pub mod ledger;
 pub mod mapping;
 pub mod money;
 pub mod notes;
+pub mod purchases;
 pub mod reconcile;
 pub mod reportdoc;
 pub mod tax;

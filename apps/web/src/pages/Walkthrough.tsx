@@ -97,7 +97,7 @@ export function Walkthrough() {
           <span className={styles.step}>3 · Submit</span>
           <span className={styles.filedWrap}>
             <span className={styles.filed}>
-              <Icon name="walkthrough.filed" fallback="🎉" /> Filed with IRD
+              <Icon name="walkthrough.filed" fallback="🥳" /> Filed with IRD
             </span>
             <span className={styles.confetti}>
               {CONFETTI.map((style, i) => (

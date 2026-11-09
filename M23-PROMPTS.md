@@ -229,6 +229,12 @@ Run `make check`.
 Don't commit.
 ```
 
+Note from Agent 2 (fixtures, 2026-11-10): `fixtures/invoices/expected.json` writes enum values in snake_case
+(`over_200`, `holds`, `gst_not_above_rate`, `pdf_rules`, `email`), numbers pages from 1, and gives boxes as
+`{ x_bp, y_bp, w_bp, h_bp }`. Give the core types serde renames to match, or map them in the test. `failed` lists
+only checks with outcome Fail. In the blurred photo's entry the unclear GST number is `null`, so
+`supplier_gst_number` fails and the verdict is `short`.
+
 ### Agent 4: purchases in core (Sonnet, high thinking)
 ```
 Read CLAUDE.md (hard rules 4, 5 and 6), M23-PROMPTS.md (the milestone, "Purchases paid in parts"), docs/decisions/017-invoice-scanner.md (section 14, accepted), docs/domain.md ("GST", "Tax invoices" and "Purchases paid in parts"), crates/core/src/coding.rs (coded_lines, gst_totals, SUPPLY_INFO_THRESHOLD, normalise), crates/core/src/bank.rs, crates/server/src/save_tax.rs and ai.rs (the callers of coded_lines and gst_totals), fixtures/invoices/README.md (the bank lines for flagging).
@@ -276,6 +282,13 @@ Tests: every fixture gives its expected fields or failure; the photos' ocr-words
 Run `make check`.
 Don't commit.
 ```
+
+Note from Agent 2 (fixtures, 2026-11-10): ADR 017, 2 counts a `short` reading as passing, and the blurred photo
+reads as `short` (its GST number is unclear, so it counts as missing). So don't stop on "passes" alone: whenever a
+reading has a non-empty `unclear`, mark those fields so the owner is asked what they say. `pdf-hoiho-0412.pdf`
+can't be read by generic rules by design: its expected stage is `ai` (its fields are what a confirmed bill holds),
+and `pdf-hoiho-0419.pdf` reads with `pdf_template` once 0412's template is learned. `ocr-words.json` has the
+words for each image, keyed by file name; the Flate scan's PNG wrapper is yours, so its SHA isn't fixed.
 
 ### Agent 7: local OCR (Sonnet, medium thinking)
 ```
@@ -355,6 +368,11 @@ Tests (FakeOcr and the fake readers): UBL and text-layer fixtures give their fie
 Run `make check`.
 Don't commit.
 ```
+
+Note from Agent 2 (fixtures, 2026-11-10): the same ADR 017, 2 point as for Agent 6. A `short` reading counts as
+passing, but the blurred photo (`photo-manuka-blurred.jpg`) is `short` with an unclear GST number. Offer
+`fill_bill_fields` whenever `unclear` is non-empty, whatever the verdict, and don't treat that reading as finished
+or offer AI first. In the test, answering the GST number with `110-101-015` completes it to `holds`.
 
 ### Agent 11: purchases on the server (Sonnet, medium thinking)
 ```

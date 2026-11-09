@@ -71,7 +71,7 @@ export function BooksLayout() {
       </Notice>
 
       {!year ? (
-        <EmptyState icon={<Icon name="accountant_view.empty" fallback="🌱" />} title="No books yet">
+        <EmptyState icon={<Icon name="accountant_view.empty" fallback="🌳" />} title="No books yet">
           Upload a bank statement and they fill in.
         </EmptyState>
       ) : (

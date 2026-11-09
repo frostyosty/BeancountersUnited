@@ -140,7 +140,7 @@ function Library({ entityType }: { entityType: string }) {
             {m === null && (
               <div className="row">
                 <button type="button" onClick={() => setMode({ id: p.id, kind: "revise" })}>
-                  <Icon name="notes.edit" fallback="✏️" /> Revise
+                  <Icon name="notes.edit" fallback="⏳️" /> Revise
                 </button>
                 <button type="button" onClick={() => setMode({ id: p.id, kind: "push" })}>
                   <Icon name="notes.push" fallback="📤" /> Push to open years…

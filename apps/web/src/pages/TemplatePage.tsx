@@ -451,7 +451,7 @@ function AddStatement({ ctx }: { ctx: Ctx }) {
     >
       <input aria-label="New statement title" placeholder="e.g. Statement of financial position" value={title} onChange={(e) => setTitle(e.target.value)} required />
       <button type="submit">
-        <Icon name="layouts.statements" fallback="📑" /> Add statement
+        <Icon name="accountant_view.accountant" fallback="📑" /> Add statement
       </button>
     </form>
   );

@@ -37,6 +37,21 @@ import { YearLayout } from "./pages/YearLayout";
 
 // Loaded on first visit: the editor and its libraries are only for the few who open it.
 const InvoiceMakerPage = lazy(() => import("./pages/InvoiceMakerPage").then((m) => ({ default: m.InvoiceMakerPage })));
+const PublicInvoiceMakerPage = lazy(() =>
+  import("./pages/InvoiceMakerPage").then((m) => ({ default: m.PublicInvoiceMakerPage })),
+);
+
+/** The invoice maker for anyone not signed in, and for a trial: it needs no account, only the saving does. */
+const publicInvoiceRoute = (
+  <Route
+    path="tools/invoice"
+    element={
+      <Suspense fallback={<p className="page">Opening the invoice maker…</p>}>
+        <PublicInvoiceMakerPage />
+      </Suspense>
+    }
+  />
+);
 
 /**
  * Everything in the signed-in app except the owner's business screens. A guest (M20) is sent back
@@ -74,6 +89,7 @@ export function App() {
         <Route path="features" element={<FeaturesPage />} />
         <Route path="product" element={<Navigate to="/features" replace />} />
         <Route path="signup" element={<SignUpPage />} />
+        {publicInvoiceRoute}
         <Route path="invite/:token" element={<InviteSignedOutPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
@@ -93,6 +109,7 @@ export function App() {
             <Route path="features" element={<FeaturesPage />} />
             <Route path="product" element={<Navigate to="/features" replace />} />
             <Route path="signup" element={<SignUpPage />} />
+            {publicInvoiceRoute}
           </>
         )}
         <Route element={<Layout />}>

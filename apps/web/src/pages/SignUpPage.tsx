@@ -60,7 +60,7 @@ export function SignUpPage() {
   return (
     <main className="page">
       <h1>
-        <Icon name="history.empty" fallback="🌱" /> Start your books
+        <Icon name="history.empty" fallback="🌳" /> Start your books
       </h1>
       <p className="muted">
         For sole traders. Upload your bank statements and see the tax you'd pay, then bring it down.
@@ -129,7 +129,7 @@ export function InviteSignedOutPage() {
   return (
     <main className="page">
       <h1>
-        <Icon name="signup.invite" fallback="🤝" /> You've been invited
+        <Icon name="signup.invite" fallback="🥳" /> You've been invited
       </h1>
       <p>
         A business owner has invited you to work on their books. <Link to="/">Sign in</Link> with your firm's
@@ -147,7 +147,7 @@ export function AcceptInvitePage() {
   return (
     <>
       <h1>
-        <Icon name="signup.invite" fallback="🤝" /> Accept invite
+        <Icon name="signup.invite" fallback="🥳" /> Accept invite
       </h1>
       <p>A business owner has invited you to work on their books. Accepting adds their business to your clients.</p>
       <button

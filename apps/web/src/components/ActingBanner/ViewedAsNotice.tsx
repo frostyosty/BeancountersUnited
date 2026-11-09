@@ -72,7 +72,7 @@ export function ViewedAsNotice() {
   const reason = reasonOf(start);
   return (
     <div className={styles.notice}>
-      <Notice tone="info" role="status" icon={<Icon name="acting.notice" fallback="🔔" />}>
+      <Notice tone="info" role="status" icon={<Icon name="acting.notice" fallback="👀" />}>
         {start.who} from support viewed your account as you on {date}
         {minutes !== null && ` for ${minutes} ${minutes === 1 ? "minute" : "minutes"}`}
         {reason && `: ${reason}`}. See Changes.{" "}

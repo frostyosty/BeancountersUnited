@@ -1,0 +1,59 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<<  /Length 999 >>
+stream
+BT /F2 18 Tf 50.00 772.00 Td (Totara Lane Timber Ltd) Tj ET
+BT /F1 10 Tf 50.00 754.00 Td (27 Kauri Lane, Petone) Tj ET
+BT /F1 10 Tf 50.00 741.00 Td (Lower Hutt 5012) Tj ET
+BT /F1 10 Tf 50.00 728.00 Td (GST No. 123-456-786) Tj ET
+BT /F2 16 Tf 50.00 682.00 Td (TAX INVOICE) Tj ET
+BT /F1 11 Tf 50.00 656.00 Td (Invoice No: 2044) Tj ET
+BT /F1 11 Tf 50.00 641.00 Td (Date: 3 February 2026) Tj ET
+BT /F2 11 Tf 50.00 572.00 Td (Description) Tj ET
+BT /F2 11 Tf 400.00 572.00 Td (Amount \(excl GST\)) Tj ET
+BT /F1 11 Tf 50.00 550.00 Td (Timber, 90 x 45 H3.2, 12 lengths) Tj ET
+BT /F1 11 Tf 511.36 550.00 Td (240.00) Tj ET
+BT /F1 11 Tf 50.00 533.00 Td (Galvanised nails, 5 kg) Tj ET
+BT /F1 11 Tf 517.48 533.00 Td (60.00) Tj ET
+BT /F1 11 Tf 380.00 504.00 Td (Subtotal) Tj ET
+BT /F1 11 Tf 511.36 504.00 Td (300.00) Tj ET
+BT /F1 11 Tf 380.00 487.00 Td (GST \(15%\)) Tj ET
+BT /F1 11 Tf 517.48 487.00 Td (45.00) Tj ET
+BT /F2 12 Tf 380.00 470.00 Td (Total \(NZD\)) Tj ET
+BT /F2 12 Tf 508.30 470.00 Td (345.00) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Synthetic invoice fixture) /Producer (acct fixtures/invoices/generate.py) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000001308 00000 n 
+0000001405 00000 n 
+0000001507 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+1610
+%%EOF

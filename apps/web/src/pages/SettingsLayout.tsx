@@ -28,7 +28,7 @@ export function SettingsLayout() {
         )}
         {real.role === "overseer" && (
           <Tab to="/settings/admin">
-            <Icon name="settings.admin" fallback="🛠️" /> Admin
+            <Icon name="settings.admin" fallback="🔧" /> Admin
           </Tab>
         )}
         <Tab to="/settings/account">
@@ -163,7 +163,7 @@ function OwnerSharing() {
   return (
     <section className="card form">
       <h2>
-        <Icon name="settings.sharing" fallback="🤝" /> What your accountant sees
+        <Icon name="settings.sharing" fallback="🥳" /> What your accountant sees
       </h2>
       <p className="muted">
         Your accountant sees what they change in Changes. Your own edits stay private unless you choose to share them.

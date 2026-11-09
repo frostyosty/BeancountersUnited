@@ -1,0 +1,3074 @@
+{
+ "about": "What FakeOcr returns for each image: every word with its page, box (basis points) and confidence 0 to 100. Text-layer PDFs need none (their words are all 100). Key by file name.",
+ "images": {
+  "photo-manuka-clean.png": {
+   "sha256": "9cdf19140b681d16ac6e412441f7c28941af8c85c38725560d53ecb0cd68b715",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 702,
+      "y_bp": 721,
+      "w_bp": 1114,
+      "h_bp": 184
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1879,
+      "y_bp": 698,
+      "w_bp": 1358,
+      "h_bp": 188
+     },
+     "confidence": 97
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3298,
+      "y_bp": 690,
+      "w_bp": 467,
+      "h_bp": 174
+     },
+     "confidence": 96
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 712,
+      "y_bp": 1025,
+      "w_bp": 305,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1048,
+      "y_bp": 1003,
+      "w_bp": 961,
+      "h_bp": 104
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2039,
+      "y_bp": 996,
+      "w_bp": 415,
+      "h_bp": 108
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2484,
+      "y_bp": 980,
+      "w_bp": 944,
+      "h_bp": 104
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 717,
+      "y_bp": 1165,
+      "w_bp": 827,
+      "h_bp": 126
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1574,
+      "y_bp": 1164,
+      "w_bp": 406,
+      "h_bp": 90
+     },
+     "confidence": 95
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 722,
+      "y_bp": 1333,
+      "w_bp": 330,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1083,
+      "y_bp": 1328,
+      "w_bp": 263,
+      "h_bp": 87
+     },
+     "confidence": 91
+    },
+    {
+     "text": "110-101-015",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1377,
+      "y_bp": 1312,
+      "w_bp": 1011,
+      "h_bp": 99
+     },
+     "confidence": 95
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 738,
+      "y_bp": 1823,
+      "w_bp": 500,
+      "h_bp": 144
+     },
+     "confidence": 99
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1292,
+      "y_bp": 1806,
+      "w_bp": 1046,
+      "h_bp": 153
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 749,
+      "y_bp": 2171,
+      "w_bp": 625,
+      "h_bp": 105
+     },
+     "confidence": 90
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1413,
+      "y_bp": 2172,
+      "w_bp": 297,
+      "h_bp": 94
+     },
+     "confidence": 95
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1749,
+      "y_bp": 2161,
+      "w_bp": 633,
+      "h_bp": 99
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 755,
+      "y_bp": 2358,
+      "w_bp": 448,
+      "h_bp": 96
+     },
+     "confidence": 92
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1242,
+      "y_bp": 2356,
+      "w_bp": 112,
+      "h_bp": 91
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1393,
+      "y_bp": 2350,
+      "w_bp": 331,
+      "h_bp": 94
+     },
+     "confidence": 94
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1763,
+      "y_bp": 2342,
+      "w_bp": 440,
+      "h_bp": 96
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 781,
+      "y_bp": 3163,
+      "w_bp": 995,
+      "h_bp": 135
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6662,
+      "y_bp": 3079,
+      "w_bp": 700,
+      "h_bp": 100
+     },
+     "confidence": 92
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7401,
+      "y_bp": 3060,
+      "w_bp": 398,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7838,
+      "y_bp": 3053,
+      "w_bp": 407,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 789,
+      "y_bp": 3428,
+      "w_bp": 751,
+      "h_bp": 107
+     },
+     "confidence": 99
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1579,
+      "y_bp": 3422,
+      "w_bp": 331,
+      "h_bp": 100
+     },
+     "confidence": 91
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1949,
+      "y_bp": 3418,
+      "w_bp": 213,
+      "h_bp": 98
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8541,
+      "y_bp": 3312,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 796,
+      "y_bp": 3636,
+      "w_bp": 347,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1182,
+      "y_bp": 3632,
+      "w_bp": 230,
+      "h_bp": 99
+     },
+     "confidence": 93
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1451,
+      "y_bp": 3633,
+      "w_bp": 297,
+      "h_bp": 112
+     },
+     "confidence": 99
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1787,
+      "y_bp": 3628,
+      "w_bp": 221,
+      "h_bp": 93
+     },
+     "confidence": 97
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2047,
+      "y_bp": 3614,
+      "w_bp": 466,
+      "h_bp": 126
+     },
+     "confidence": 91
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8651,
+      "y_bp": 3514,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 802,
+      "y_bp": 3829,
+      "w_bp": 542,
+      "h_bp": 133
+     },
+     "confidence": 96
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1382,
+      "y_bp": 3824,
+      "w_bp": 626,
+      "h_bp": 129
+     },
+     "confidence": 92
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8657,
+      "y_bp": 3716,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6358,
+      "y_bp": 4087,
+      "w_bp": 742,
+      "h_bp": 107
+     },
+     "confidence": 90
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8565,
+      "y_bp": 4060,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 97
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6365,
+      "y_bp": 4301,
+      "w_bp": 356,
+      "h_bp": 95
+     },
+     "confidence": 94
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6759,
+      "y_bp": 4281,
+      "w_bp": 466,
+      "h_bp": 120
+     },
+     "confidence": 99
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8675,
+      "y_bp": 4262,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6371,
+      "y_bp": 4489,
+      "w_bp": 482,
+      "h_bp": 109
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6891,
+      "y_bp": 4468,
+      "w_bp": 550,
+      "h_bp": 133
+     },
+     "confidence": 95
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8527,
+      "y_bp": 4458,
+      "w_bp": 633,
+      "h_bp": 105
+     },
+     "confidence": 91
+    }
+   ]
+  },
+  "photo-manuka-clean.jpg": {
+   "sha256": "d994b6534740be5e6c5ec37d3b36b8f9a148f29f4160cab12b5f98df7fab366c",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 702,
+      "y_bp": 721,
+      "w_bp": 1114,
+      "h_bp": 184
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1879,
+      "y_bp": 698,
+      "w_bp": 1358,
+      "h_bp": 188
+     },
+     "confidence": 97
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3298,
+      "y_bp": 690,
+      "w_bp": 467,
+      "h_bp": 174
+     },
+     "confidence": 96
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 712,
+      "y_bp": 1025,
+      "w_bp": 305,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1048,
+      "y_bp": 1003,
+      "w_bp": 961,
+      "h_bp": 104
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2039,
+      "y_bp": 996,
+      "w_bp": 415,
+      "h_bp": 108
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2484,
+      "y_bp": 980,
+      "w_bp": 944,
+      "h_bp": 104
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 717,
+      "y_bp": 1165,
+      "w_bp": 827,
+      "h_bp": 126
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1574,
+      "y_bp": 1164,
+      "w_bp": 406,
+      "h_bp": 90
+     },
+     "confidence": 95
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 722,
+      "y_bp": 1333,
+      "w_bp": 330,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1083,
+      "y_bp": 1328,
+      "w_bp": 263,
+      "h_bp": 87
+     },
+     "confidence": 91
+    },
+    {
+     "text": "110-101-015",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1377,
+      "y_bp": 1312,
+      "w_bp": 1011,
+      "h_bp": 99
+     },
+     "confidence": 95
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 738,
+      "y_bp": 1823,
+      "w_bp": 500,
+      "h_bp": 144
+     },
+     "confidence": 99
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1292,
+      "y_bp": 1806,
+      "w_bp": 1046,
+      "h_bp": 153
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 749,
+      "y_bp": 2171,
+      "w_bp": 625,
+      "h_bp": 105
+     },
+     "confidence": 90
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1413,
+      "y_bp": 2172,
+      "w_bp": 297,
+      "h_bp": 94
+     },
+     "confidence": 95
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1749,
+      "y_bp": 2161,
+      "w_bp": 633,
+      "h_bp": 99
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 755,
+      "y_bp": 2358,
+      "w_bp": 448,
+      "h_bp": 96
+     },
+     "confidence": 92
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1242,
+      "y_bp": 2356,
+      "w_bp": 112,
+      "h_bp": 91
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1393,
+      "y_bp": 2350,
+      "w_bp": 331,
+      "h_bp": 94
+     },
+     "confidence": 94
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1763,
+      "y_bp": 2342,
+      "w_bp": 440,
+      "h_bp": 96
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 781,
+      "y_bp": 3163,
+      "w_bp": 995,
+      "h_bp": 135
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6662,
+      "y_bp": 3079,
+      "w_bp": 700,
+      "h_bp": 100
+     },
+     "confidence": 92
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7401,
+      "y_bp": 3060,
+      "w_bp": 398,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7838,
+      "y_bp": 3053,
+      "w_bp": 407,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 789,
+      "y_bp": 3428,
+      "w_bp": 751,
+      "h_bp": 107
+     },
+     "confidence": 99
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1579,
+      "y_bp": 3422,
+      "w_bp": 331,
+      "h_bp": 100
+     },
+     "confidence": 91
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1949,
+      "y_bp": 3418,
+      "w_bp": 213,
+      "h_bp": 98
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8541,
+      "y_bp": 3312,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 796,
+      "y_bp": 3636,
+      "w_bp": 347,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1182,
+      "y_bp": 3632,
+      "w_bp": 230,
+      "h_bp": 99
+     },
+     "confidence": 93
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1451,
+      "y_bp": 3633,
+      "w_bp": 297,
+      "h_bp": 112
+     },
+     "confidence": 99
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1787,
+      "y_bp": 3628,
+      "w_bp": 221,
+      "h_bp": 93
+     },
+     "confidence": 97
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2047,
+      "y_bp": 3614,
+      "w_bp": 466,
+      "h_bp": 126
+     },
+     "confidence": 91
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8651,
+      "y_bp": 3514,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 802,
+      "y_bp": 3829,
+      "w_bp": 542,
+      "h_bp": 133
+     },
+     "confidence": 96
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1382,
+      "y_bp": 3824,
+      "w_bp": 626,
+      "h_bp": 129
+     },
+     "confidence": 92
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8657,
+      "y_bp": 3716,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6358,
+      "y_bp": 4087,
+      "w_bp": 742,
+      "h_bp": 107
+     },
+     "confidence": 90
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8565,
+      "y_bp": 4060,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 97
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6365,
+      "y_bp": 4301,
+      "w_bp": 356,
+      "h_bp": 95
+     },
+     "confidence": 94
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6759,
+      "y_bp": 4281,
+      "w_bp": 466,
+      "h_bp": 120
+     },
+     "confidence": 99
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8675,
+      "y_bp": 4262,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6371,
+      "y_bp": 4489,
+      "w_bp": 482,
+      "h_bp": 109
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6891,
+      "y_bp": 4468,
+      "w_bp": 550,
+      "h_bp": 133
+     },
+     "confidence": 95
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8527,
+      "y_bp": 4458,
+      "w_bp": 633,
+      "h_bp": 105
+     },
+     "confidence": 91
+    }
+   ]
+  },
+  "photo-manuka-clean-gps.jpg": {
+   "sha256": "f441a834226a698db0f79f5f90172e1ebedcdcf09c4a355f11f4c4fe222df129",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 702,
+      "y_bp": 721,
+      "w_bp": 1114,
+      "h_bp": 184
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1879,
+      "y_bp": 698,
+      "w_bp": 1358,
+      "h_bp": 188
+     },
+     "confidence": 97
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3298,
+      "y_bp": 690,
+      "w_bp": 467,
+      "h_bp": 174
+     },
+     "confidence": 96
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 712,
+      "y_bp": 1025,
+      "w_bp": 305,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1048,
+      "y_bp": 1003,
+      "w_bp": 961,
+      "h_bp": 104
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2039,
+      "y_bp": 996,
+      "w_bp": 415,
+      "h_bp": 108
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2484,
+      "y_bp": 980,
+      "w_bp": 944,
+      "h_bp": 104
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 717,
+      "y_bp": 1165,
+      "w_bp": 827,
+      "h_bp": 126
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1574,
+      "y_bp": 1164,
+      "w_bp": 406,
+      "h_bp": 90
+     },
+     "confidence": 95
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 722,
+      "y_bp": 1333,
+      "w_bp": 330,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1083,
+      "y_bp": 1328,
+      "w_bp": 263,
+      "h_bp": 87
+     },
+     "confidence": 91
+    },
+    {
+     "text": "110-101-015",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1377,
+      "y_bp": 1312,
+      "w_bp": 1011,
+      "h_bp": 99
+     },
+     "confidence": 95
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 738,
+      "y_bp": 1823,
+      "w_bp": 500,
+      "h_bp": 144
+     },
+     "confidence": 99
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1292,
+      "y_bp": 1806,
+      "w_bp": 1046,
+      "h_bp": 153
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 749,
+      "y_bp": 2171,
+      "w_bp": 625,
+      "h_bp": 105
+     },
+     "confidence": 90
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1413,
+      "y_bp": 2172,
+      "w_bp": 297,
+      "h_bp": 94
+     },
+     "confidence": 95
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1749,
+      "y_bp": 2161,
+      "w_bp": 633,
+      "h_bp": 99
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 755,
+      "y_bp": 2358,
+      "w_bp": 448,
+      "h_bp": 96
+     },
+     "confidence": 92
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1242,
+      "y_bp": 2356,
+      "w_bp": 112,
+      "h_bp": 91
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1393,
+      "y_bp": 2350,
+      "w_bp": 331,
+      "h_bp": 94
+     },
+     "confidence": 94
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1763,
+      "y_bp": 2342,
+      "w_bp": 440,
+      "h_bp": 96
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 781,
+      "y_bp": 3163,
+      "w_bp": 995,
+      "h_bp": 135
+     },
+     "confidence": 99
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6662,
+      "y_bp": 3079,
+      "w_bp": 700,
+      "h_bp": 100
+     },
+     "confidence": 92
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7401,
+      "y_bp": 3060,
+      "w_bp": 398,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7838,
+      "y_bp": 3053,
+      "w_bp": 407,
+      "h_bp": 119
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 789,
+      "y_bp": 3428,
+      "w_bp": 751,
+      "h_bp": 107
+     },
+     "confidence": 99
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1579,
+      "y_bp": 3422,
+      "w_bp": 331,
+      "h_bp": 100
+     },
+     "confidence": 91
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1949,
+      "y_bp": 3418,
+      "w_bp": 213,
+      "h_bp": 98
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8541,
+      "y_bp": 3312,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 796,
+      "y_bp": 3636,
+      "w_bp": 347,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1182,
+      "y_bp": 3632,
+      "w_bp": 230,
+      "h_bp": 99
+     },
+     "confidence": 93
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1451,
+      "y_bp": 3633,
+      "w_bp": 297,
+      "h_bp": 112
+     },
+     "confidence": 99
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1787,
+      "y_bp": 3628,
+      "w_bp": 221,
+      "h_bp": 93
+     },
+     "confidence": 97
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2047,
+      "y_bp": 3614,
+      "w_bp": 466,
+      "h_bp": 126
+     },
+     "confidence": 91
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8651,
+      "y_bp": 3514,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 802,
+      "y_bp": 3829,
+      "w_bp": 542,
+      "h_bp": 133
+     },
+     "confidence": 96
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1382,
+      "y_bp": 3824,
+      "w_bp": 626,
+      "h_bp": 129
+     },
+     "confidence": 92
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8657,
+      "y_bp": 3716,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6358,
+      "y_bp": 4087,
+      "w_bp": 742,
+      "h_bp": 107
+     },
+     "confidence": 90
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8565,
+      "y_bp": 4060,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 97
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6365,
+      "y_bp": 4301,
+      "w_bp": 356,
+      "h_bp": 95
+     },
+     "confidence": 94
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6759,
+      "y_bp": 4281,
+      "w_bp": 466,
+      "h_bp": 120
+     },
+     "confidence": 99
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8675,
+      "y_bp": 4262,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6371,
+      "y_bp": 4489,
+      "w_bp": 482,
+      "h_bp": 109
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6891,
+      "y_bp": 4468,
+      "w_bp": 550,
+      "h_bp": 133
+     },
+     "confidence": 95
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8527,
+      "y_bp": 4458,
+      "w_bp": 633,
+      "h_bp": 105
+     },
+     "confidence": 91
+    }
+   ]
+  },
+  "photo-manuka-blurred.jpg": {
+   "sha256": "0c1b67435e831519ad5e95123d2e60c9c9cfbee504d2904caf970ad6150cb1c6",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 702,
+      "y_bp": 721,
+      "w_bp": 1114,
+      "h_bp": 184
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1879,
+      "y_bp": 698,
+      "w_bp": 1358,
+      "h_bp": 188
+     },
+     "confidence": 95
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3298,
+      "y_bp": 690,
+      "w_bp": 467,
+      "h_bp": 174
+     },
+     "confidence": 95
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 712,
+      "y_bp": 1025,
+      "w_bp": 305,
+      "h_bp": 88
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1048,
+      "y_bp": 1003,
+      "w_bp": 961,
+      "h_bp": 104
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2039,
+      "y_bp": 996,
+      "w_bp": 415,
+      "h_bp": 108
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2484,
+      "y_bp": 980,
+      "w_bp": 944,
+      "h_bp": 104
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 717,
+      "y_bp": 1165,
+      "w_bp": 827,
+      "h_bp": 126
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1574,
+      "y_bp": 1164,
+      "w_bp": 406,
+      "h_bp": 90
+     },
+     "confidence": 92
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 722,
+      "y_bp": 1333,
+      "w_bp": 330,
+      "h_bp": 88
+     },
+     "confidence": 99
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1083,
+      "y_bp": 1328,
+      "w_bp": 263,
+      "h_bp": 87
+     },
+     "confidence": 97
+    },
+    {
+     "text": "IIO-IOI-OIS",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1377,
+      "y_bp": 1312,
+      "w_bp": 1011,
+      "h_bp": 99
+     },
+     "confidence": 61
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 738,
+      "y_bp": 1823,
+      "w_bp": 500,
+      "h_bp": 144
+     },
+     "confidence": 97
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1292,
+      "y_bp": 1806,
+      "w_bp": 1046,
+      "h_bp": 153
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 749,
+      "y_bp": 2171,
+      "w_bp": 625,
+      "h_bp": 105
+     },
+     "confidence": 91
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1413,
+      "y_bp": 2172,
+      "w_bp": 297,
+      "h_bp": 94
+     },
+     "confidence": 99
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1749,
+      "y_bp": 2161,
+      "w_bp": 633,
+      "h_bp": 99
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 755,
+      "y_bp": 2358,
+      "w_bp": 448,
+      "h_bp": 96
+     },
+     "confidence": 95
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1242,
+      "y_bp": 2356,
+      "w_bp": 112,
+      "h_bp": 91
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1393,
+      "y_bp": 2350,
+      "w_bp": 331,
+      "h_bp": 94
+     },
+     "confidence": 97
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1763,
+      "y_bp": 2342,
+      "w_bp": 440,
+      "h_bp": 96
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 781,
+      "y_bp": 3163,
+      "w_bp": 995,
+      "h_bp": 135
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6662,
+      "y_bp": 3079,
+      "w_bp": 700,
+      "h_bp": 100
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7401,
+      "y_bp": 3060,
+      "w_bp": 398,
+      "h_bp": 119
+     },
+     "confidence": 92
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7838,
+      "y_bp": 3053,
+      "w_bp": 407,
+      "h_bp": 119
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 789,
+      "y_bp": 3428,
+      "w_bp": 751,
+      "h_bp": 107
+     },
+     "confidence": 94
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1579,
+      "y_bp": 3422,
+      "w_bp": 331,
+      "h_bp": 100
+     },
+     "confidence": 96
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1949,
+      "y_bp": 3418,
+      "w_bp": 213,
+      "h_bp": 98
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8541,
+      "y_bp": 3312,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 796,
+      "y_bp": 3636,
+      "w_bp": 347,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1182,
+      "y_bp": 3632,
+      "w_bp": 230,
+      "h_bp": 99
+     },
+     "confidence": 93
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1451,
+      "y_bp": 3633,
+      "w_bp": 297,
+      "h_bp": 112
+     },
+     "confidence": 93
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1787,
+      "y_bp": 3628,
+      "w_bp": 221,
+      "h_bp": 93
+     },
+     "confidence": 94
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2047,
+      "y_bp": 3614,
+      "w_bp": 466,
+      "h_bp": 126
+     },
+     "confidence": 93
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8651,
+      "y_bp": 3514,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 802,
+      "y_bp": 3829,
+      "w_bp": 542,
+      "h_bp": 133
+     },
+     "confidence": 90
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1382,
+      "y_bp": 3824,
+      "w_bp": 626,
+      "h_bp": 129
+     },
+     "confidence": 94
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8657,
+      "y_bp": 3716,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6358,
+      "y_bp": 4087,
+      "w_bp": 742,
+      "h_bp": 107
+     },
+     "confidence": 91
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8565,
+      "y_bp": 4060,
+      "w_bp": 591,
+      "h_bp": 98
+     },
+     "confidence": 93
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6365,
+      "y_bp": 4301,
+      "w_bp": 356,
+      "h_bp": 95
+     },
+     "confidence": 95
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6759,
+      "y_bp": 4281,
+      "w_bp": 466,
+      "h_bp": 120
+     },
+     "confidence": 96
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8675,
+      "y_bp": 4262,
+      "w_bp": 482,
+      "h_bp": 97
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6371,
+      "y_bp": 4489,
+      "w_bp": 482,
+      "h_bp": 109
+     },
+     "confidence": 97
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6891,
+      "y_bp": 4468,
+      "w_bp": 550,
+      "h_bp": 133
+     },
+     "confidence": 99
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8527,
+      "y_bp": 4458,
+      "w_bp": 633,
+      "h_bp": 105
+     },
+     "confidence": 91
+    }
+   ]
+  },
+  "scan-manuka-jpeg.pdf": {
+   "sha256": "10a1becfac984483dcbe86e6f93bbb65cb68593274f0fa7fecafc648f94702ce",
+   "ocr_input_sha256": "2c5b73b09792b3681310e6f292d3ea1ebb39604e741ef7b2f0974c2f77c513c6",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 671,
+      "w_bp": 1109,
+      "h_bp": 166
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2017,
+      "y_bp": 671,
+      "w_bp": 1353,
+      "h_bp": 166
+     },
+     "confidence": 95
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3437,
+      "y_bp": 671,
+      "w_bp": 462,
+      "h_bp": 166
+     },
+     "confidence": 91
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 962,
+      "w_bp": 303,
+      "h_bp": 83
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1176,
+      "y_bp": 956,
+      "w_bp": 958,
+      "h_bp": 89
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2168,
+      "y_bp": 956,
+      "w_bp": 412,
+      "h_bp": 101
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2613,
+      "y_bp": 956,
+      "w_bp": 941,
+      "h_bp": 89
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1110,
+      "w_bp": 824,
+      "h_bp": 113
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1697,
+      "y_bp": 1116,
+      "w_bp": 403,
+      "h_bp": 83
+     },
+     "confidence": 94
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1271,
+      "w_bp": 328,
+      "h_bp": 83
+     },
+     "confidence": 96
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1202,
+      "y_bp": 1271,
+      "w_bp": 261,
+      "h_bp": 83
+     },
+     "confidence": 95
+    },
+    {
+     "text": "110-101-015",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1496,
+      "y_bp": 1271,
+      "w_bp": 1008,
+      "h_bp": 83
+     },
+     "confidence": 96
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1764,
+      "w_bp": 496,
+      "h_bp": 137
+     },
+     "confidence": 91
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1395,
+      "y_bp": 1764,
+      "w_bp": 1042,
+      "h_bp": 137
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 2114,
+      "w_bp": 622,
+      "h_bp": 95
+     },
+     "confidence": 99
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1504,
+      "y_bp": 2120,
+      "w_bp": 294,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1840,
+      "y_bp": 2120,
+      "w_bp": 630,
+      "h_bp": 89
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 2298,
+      "w_bp": 445,
+      "h_bp": 89
+     },
+     "confidence": 92
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1328,
+      "y_bp": 2298,
+      "w_bp": 109,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1479,
+      "y_bp": 2298,
+      "w_bp": 328,
+      "h_bp": 89
+     },
+     "confidence": 99
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1849,
+      "y_bp": 2298,
+      "w_bp": 437,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3112,
+      "w_bp": 992,
+      "h_bp": 119
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6723,
+      "y_bp": 3118,
+      "w_bp": 697,
+      "h_bp": 89
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7462,
+      "y_bp": 3106,
+      "w_bp": 395,
+      "h_bp": 113
+     },
+     "confidence": 93
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7899,
+      "y_bp": 3106,
+      "w_bp": 403,
+      "h_bp": 113
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3373,
+      "w_bp": 748,
+      "h_bp": 95
+     },
+     "confidence": 96
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1630,
+      "y_bp": 3373,
+      "w_bp": 328,
+      "h_bp": 95
+     },
+     "confidence": 99
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2000,
+      "y_bp": 3373,
+      "w_bp": 210,
+      "h_bp": 95
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8594,
+      "y_bp": 3379,
+      "w_bp": 588,
+      "h_bp": 89
+     },
+     "confidence": 95
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3575,
+      "w_bp": 345,
+      "h_bp": 95
+     },
+     "confidence": 98
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1227,
+      "y_bp": 3575,
+      "w_bp": 227,
+      "h_bp": 95
+     },
+     "confidence": 92
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1496,
+      "y_bp": 3581,
+      "w_bp": 294,
+      "h_bp": 107
+     },
+     "confidence": 94
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1832,
+      "y_bp": 3581,
+      "w_bp": 218,
+      "h_bp": 89
+     },
+     "confidence": 95
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2092,
+      "y_bp": 3575,
+      "w_bp": 462,
+      "h_bp": 119
+     },
+     "confidence": 98
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 3581,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 97
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3771,
+      "w_bp": 538,
+      "h_bp": 125
+     },
+     "confidence": 90
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1420,
+      "y_bp": 3777,
+      "w_bp": 622,
+      "h_bp": 119
+     },
+     "confidence": 95
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 3783,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4121,
+      "w_bp": 739,
+      "h_bp": 95
+     },
+     "confidence": 96
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8594,
+      "y_bp": 4127,
+      "w_bp": 588,
+      "h_bp": 89
+     },
+     "confidence": 98
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4329,
+      "w_bp": 353,
+      "h_bp": 89
+     },
+     "confidence": 94
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6782,
+      "y_bp": 4317,
+      "w_bp": 462,
+      "h_bp": 113
+     },
+     "confidence": 97
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 4329,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4519,
+      "w_bp": 479,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6908,
+      "y_bp": 4507,
+      "w_bp": 546,
+      "h_bp": 125
+     },
+     "confidence": 91
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8543,
+      "y_bp": 4525,
+      "w_bp": 630,
+      "h_bp": 95
+     },
+     "confidence": 92
+    }
+   ]
+  },
+  "scan-manuka-flate.pdf": {
+   "sha256": "875ccf9b9ff5ecec9e429afe2a33c3edebb1cf00d662ad134f2ded8d0e484b83",
+   "ocr_input_sha256": null,
+   "note": "the PNG wrapper is built by the importer, so its bytes aren't fixed here; key by file name",
+   "words": [
+    {
+     "text": "Manuka",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 671,
+      "w_bp": 1109,
+      "h_bp": 166
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Hardware",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2017,
+      "y_bp": 671,
+      "w_bp": 1353,
+      "h_bp": 166
+     },
+     "confidence": 95
+    },
+    {
+     "text": "Ltd",
+     "page": 1,
+     "bbox": {
+      "x_bp": 3437,
+      "y_bp": 671,
+      "w_bp": 462,
+      "h_bp": 166
+     },
+     "confidence": 91
+    },
+    {
+     "text": "105",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 962,
+      "w_bp": 303,
+      "h_bp": 83
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Pohutukawa",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1176,
+      "y_bp": 956,
+      "w_bp": 958,
+      "h_bp": 89
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Drive,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2168,
+      "y_bp": 956,
+      "w_bp": 412,
+      "h_bp": 101
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Johnsonville",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2613,
+      "y_bp": 956,
+      "w_bp": 941,
+      "h_bp": 89
+     },
+     "confidence": 93
+    },
+    {
+     "text": "Wellington",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1110,
+      "w_bp": 824,
+      "h_bp": 113
+     },
+     "confidence": 80
+    },
+    {
+     "text": "6037",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1697,
+      "y_bp": 1116,
+      "w_bp": 403,
+      "h_bp": 83
+     },
+     "confidence": 94
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1271,
+      "w_bp": 328,
+      "h_bp": 83
+     },
+     "confidence": 96
+    },
+    {
+     "text": "No.",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1202,
+      "y_bp": 1271,
+      "w_bp": 261,
+      "h_bp": 83
+     },
+     "confidence": 95
+    },
+    {
+     "text": "110-101-015",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1496,
+      "y_bp": 1271,
+      "w_bp": 1008,
+      "h_bp": 83
+     },
+     "confidence": 96
+    },
+    {
+     "text": "TAX",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 1764,
+      "w_bp": 496,
+      "h_bp": 137
+     },
+     "confidence": 91
+    },
+    {
+     "text": "INVOICE",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1395,
+      "y_bp": 1764,
+      "w_bp": 1042,
+      "h_bp": 137
+     },
+     "confidence": 94
+    },
+    {
+     "text": "Invoice",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 2114,
+      "w_bp": 622,
+      "h_bp": 95
+     },
+     "confidence": 99
+    },
+    {
+     "text": "No:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1504,
+      "y_bp": 2120,
+      "w_bp": 294,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "H-5120",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1840,
+      "y_bp": 2120,
+      "w_bp": 630,
+      "h_bp": 89
+     },
+     "confidence": 91
+    },
+    {
+     "text": "Date:",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 2298,
+      "w_bp": 445,
+      "h_bp": 89
+     },
+     "confidence": 92
+    },
+    {
+     "text": "2",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1328,
+      "y_bp": 2298,
+      "w_bp": 109,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Mar",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1479,
+      "y_bp": 2298,
+      "w_bp": 328,
+      "h_bp": 89
+     },
+     "confidence": 99
+    },
+    {
+     "text": "2026",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1849,
+      "y_bp": 2298,
+      "w_bp": 437,
+      "h_bp": 89
+     },
+     "confidence": 96
+    },
+    {
+     "text": "Description",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3112,
+      "w_bp": 992,
+      "h_bp": 119
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Amount",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6723,
+      "y_bp": 3118,
+      "w_bp": 697,
+      "h_bp": 89
+     },
+     "confidence": 90
+    },
+    {
+     "text": "(excl",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7462,
+      "y_bp": 3106,
+      "w_bp": 395,
+      "h_bp": 113
+     },
+     "confidence": 93
+    },
+    {
+     "text": "GST)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 7899,
+      "y_bp": 3106,
+      "w_bp": 403,
+      "h_bp": 113
+     },
+     "confidence": 92
+    },
+    {
+     "text": "Cordless",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3373,
+      "w_bp": 748,
+      "h_bp": 95
+     },
+     "confidence": 96
+    },
+    {
+     "text": "drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1630,
+      "y_bp": 3373,
+      "w_bp": 328,
+      "h_bp": 95
+     },
+     "confidence": 99
+    },
+    {
+     "text": "kit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2000,
+      "y_bp": 3373,
+      "w_bp": 210,
+      "h_bp": 95
+     },
+     "confidence": 98
+    },
+    {
+     "text": "189.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8594,
+      "y_bp": 3379,
+      "w_bp": 588,
+      "h_bp": 89
+     },
+     "confidence": 95
+    },
+    {
+     "text": "Drill",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3575,
+      "w_bp": 345,
+      "h_bp": 95
+     },
+     "confidence": 98
+    },
+    {
+     "text": "bit",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1227,
+      "y_bp": 3575,
+      "w_bp": 227,
+      "h_bp": 95
+     },
+     "confidence": 92
+    },
+    {
+     "text": "set,",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1496,
+      "y_bp": 3581,
+      "w_bp": 294,
+      "h_bp": 107
+     },
+     "confidence": 94
+    },
+    {
+     "text": "29",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1832,
+      "y_bp": 3581,
+      "w_bp": 218,
+      "h_bp": 89
+     },
+     "confidence": 95
+    },
+    {
+     "text": "piece",
+     "page": 1,
+     "bbox": {
+      "x_bp": 2092,
+      "y_bp": 3575,
+      "w_bp": 462,
+      "h_bp": 119
+     },
+     "confidence": 98
+    },
+    {
+     "text": "41.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 3581,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 97
+    },
+    {
+     "text": "Safety",
+     "page": 1,
+     "bbox": {
+      "x_bp": 840,
+      "y_bp": 3771,
+      "w_bp": 538,
+      "h_bp": 125
+     },
+     "confidence": 90
+    },
+    {
+     "text": "glasses",
+     "page": 1,
+     "bbox": {
+      "x_bp": 1420,
+      "y_bp": 3777,
+      "w_bp": 622,
+      "h_bp": 119
+     },
+     "confidence": 95
+    },
+    {
+     "text": "24.00",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 3783,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 98
+    },
+    {
+     "text": "Subtotal",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4121,
+      "w_bp": 739,
+      "h_bp": 95
+     },
+     "confidence": 96
+    },
+    {
+     "text": "254.50",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8594,
+      "y_bp": 4127,
+      "w_bp": 588,
+      "h_bp": 89
+     },
+     "confidence": 98
+    },
+    {
+     "text": "GST",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4329,
+      "w_bp": 353,
+      "h_bp": 89
+     },
+     "confidence": 94
+    },
+    {
+     "text": "(15%)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6782,
+      "y_bp": 4317,
+      "w_bp": 462,
+      "h_bp": 113
+     },
+     "confidence": 97
+    },
+    {
+     "text": "38.18",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8697,
+      "y_bp": 4329,
+      "w_bp": 479,
+      "h_bp": 89
+     },
+     "confidence": 90
+    },
+    {
+     "text": "Total",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6387,
+      "y_bp": 4519,
+      "w_bp": 479,
+      "h_bp": 101
+     },
+     "confidence": 99
+    },
+    {
+     "text": "(NZD)",
+     "page": 1,
+     "bbox": {
+      "x_bp": 6908,
+      "y_bp": 4507,
+      "w_bp": 546,
+      "h_bp": 125
+     },
+     "confidence": 91
+    },
+    {
+     "text": "292.68",
+     "page": 1,
+     "bbox": {
+      "x_bp": 8543,
+      "y_bp": 4525,
+      "w_bp": 630,
+      "h_bp": 95
+     },
+     "confidence": 92
+    }
+   ]
+  }
+ }
+}

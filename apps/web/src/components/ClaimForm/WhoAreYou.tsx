@@ -18,7 +18,7 @@ export function WhoAreYou({ open, onClose, onContinue }: { open: boolean; onClos
       open={open}
       onClose={onClose}
       title="Who are you?"
-      icon={<Icon name="practice_request.who" fallback="🙋" />}
+      icon={<Icon name="practice_request.who" fallback="👀" />}
       size="sm"
       footer={
         <>

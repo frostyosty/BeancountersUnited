@@ -3,12 +3,16 @@ import { Emoji, Icon } from "../../lib/icons";
 import styles from "../../pages/FeaturesPage.module.css";
 import type { OpenInTrial, TrialPath } from "./useOpenInTrial";
 
-/** Where a site page's link leads: the home page's drop, or a screen of the visitor's trial. */
-export type Target = { home: true } | { trial: TrialPath };
+/**
+ * Where a site page's link leads: the home page's drop, a screen of the visitor's trial, or a page that
+ * needs neither (`to`, like the invoice maker).
+ */
+export type Target = { home: true } | { trial: TrialPath } | { to: string };
 
 /** What the link says: it depends on whether a trial is already loaded. */
 function goLabel(o: OpenInTrial, key: string, target: Target): string {
   if ("home" in target) return "Try it on the home page";
+  if ("to" in target) return "Open it";
   if (o.opening === key) return "Opening…";
   return o.hasTrial ? "Open it" : "See it on an example";
 }
@@ -23,6 +27,13 @@ export function TrialLink({ o, id, target }: { o: OpenInTrial; id: string; targe
   if ("home" in target) {
     return (
       <Link to="/#features" className={styles.go}>
+        {label}
+      </Link>
+    );
+  }
+  if ("to" in target) {
+    return (
+      <Link to={target.to} className={styles.go}>
         {label}
       </Link>
     );
@@ -63,7 +74,7 @@ export function Badge({ kind }: { kind: Access }) {
     case "soon":
       return (
         <span className={`${styles.badge} ${styles.soon}`}>
-          <Emoji>🌱</Emoji> Coming soon
+          <Emoji>🌳</Emoji> Coming soon
         </span>
       );
   }

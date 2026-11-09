@@ -212,7 +212,7 @@ function FindingsSummary({ bankAccountId, date, onOpen }: { bankAccountId: strin
         <p className="muted">{d.other_findings.filter((f) => f.explains !== 0).length} other things we noticed are in Bank vs books.</p>
       )}
       <Button variant="secondary" size="sm" onClick={onOpen}>
-        <Icon name="proof.fix" fallback="🛠️" /> See the details and fix it
+        <Icon name="proof.fix" fallback="🔧" /> See the details and fix it
       </Button>
     </div>
   );

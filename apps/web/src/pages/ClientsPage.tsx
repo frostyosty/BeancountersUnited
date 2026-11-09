@@ -91,7 +91,7 @@ function NewClientForm() {
   if (practice.isSuccess && charts.length === 0) {
     return (
       <p className="muted">
-        <Icon name="defaults.none_yet" fallback="🌱" /> There are no master charts yet, so clients can't be created.{" "}
+        <Icon name="defaults.none_yet" fallback="🌳" /> There are no master charts yet, so clients can't be created.{" "}
         {can(me, "practice_admin") ? (
           <Link to="/settings">Install a starter set in Settings</Link>
         ) : (

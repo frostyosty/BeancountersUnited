@@ -1,0 +1,59 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<<  /Length 975 >>
+stream
+BT /F2 18 Tf 50.00 772.00 Td (Pihi Equipment Hire Ltd) Tj ET
+BT /F1 10 Tf 50.00 754.00 Td (8 Rata Road, Seaview) Tj ET
+BT /F1 10 Tf 50.00 741.00 Td (Lower Hutt 5010) Tj ET
+BT /F1 10 Tf 50.00 728.00 Td (GST No. 102-030-400) Tj ET
+BT /F2 16 Tf 50.00 682.00 Td (TAX INVOICE) Tj ET
+BT /F1 11 Tf 50.00 656.00 Td (Invoice No: 3301) Tj ET
+BT /F1 11 Tf 50.00 641.00 Td (Date: 14/04/2026) Tj ET
+BT /F2 11 Tf 50.00 572.00 Td (Description) Tj ET
+BT /F2 11 Tf 400.00 572.00 Td (Amount \(excl GST\)) Tj ET
+BT /F1 11 Tf 50.00 550.00 Td (Concrete mixer hire, 2 days) Tj ET
+BT /F1 11 Tf 511.36 550.00 Td (100.00) Tj ET
+BT /F1 11 Tf 50.00 533.00 Td (Delivery) Tj ET
+BT /F1 11 Tf 517.48 533.00 Td (30.00) Tj ET
+BT /F1 11 Tf 380.00 504.00 Td (Subtotal) Tj ET
+BT /F1 11 Tf 511.36 504.00 Td (130.00) Tj ET
+BT /F1 11 Tf 380.00 487.00 Td (GST \(15%\)) Tj ET
+BT /F1 11 Tf 517.48 487.00 Td (19.50) Tj ET
+BT /F2 12 Tf 380.00 470.00 Td (Total \(NZD\)) Tj ET
+BT /F2 12 Tf 508.30 470.00 Td (149.50) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Title (Synthetic invoice fixture) /Producer (acct fixtures/invoices/generate.py) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000001284 00000 n 
+0000001381 00000 n 
+0000001483 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info 7 0 R >>
+startxref
+1586
+%%EOF

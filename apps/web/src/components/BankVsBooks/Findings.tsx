@@ -133,7 +133,7 @@ function Explained({ proof: p, findings: x, onFixed }: { proof: AccountProof; fi
                 <Preview proof={p} explains={f.explains} onConfirm={() => void run([f])} onCancel={() => setConfirming(null)} />
               ) : (
                 <Button size="sm" onClick={() => setConfirming(i)} disabled={confirming !== null}>
-                  <Icon name="proof.fix" fallback="🛠️" /> Fix it
+                  <Icon name="proof.fix" fallback="🔧" /> Fix it
                 </Button>
               ))}
           </li>
@@ -154,7 +154,7 @@ function Explained({ proof: p, findings: x, onFixed }: { proof: AccountProof; fi
           />
         ) : (
           <Button variant="primary" onClick={() => setConfirming("all")} disabled={confirming !== null}>
-            <Icon name="proof.fix" fallback="🛠️" /> Fix all {all.length}
+            <Icon name="proof.fix" fallback="🔧" /> Fix all {all.length}
           </Button>
         ))}
       <ErrorMessage error={failed} />

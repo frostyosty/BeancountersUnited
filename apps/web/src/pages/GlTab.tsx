@@ -37,7 +37,7 @@ export function GlTab() {
   if (accounts.length === 0) {
     return (
       <p className="muted">
-        <Emoji>🌱</Emoji> Nothing posted yet.
+        <Emoji>🌳</Emoji> Nothing posted yet.
       </p>
     );
   }

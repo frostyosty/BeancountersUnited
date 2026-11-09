@@ -26,7 +26,7 @@ type OutChoice = "expense" | "part_private" | "asset_purchase" | "personal" | "t
 const IN_CHOICES: [InChoice, string, string][] = [
   ["income", "💵", "Money the business earned"],
   ["transfer", "🔁", "Moved from another of my accounts"],
-  ["owner_funds", "🙋", "Money I put in myself"],
+  ["owner_funds", "👀", "Money I put in myself"],
   ["loan", "🏛", "A loan"],
   ["gst_refund", "🏛️", "A GST refund from IRD"],
   ["paye_wages", "💼", "Wages from a job (tax already taken off)"],
@@ -36,7 +36,7 @@ const IN_CHOICES: [InChoice, string, string][] = [
 const OUT_CHOICES: [OutChoice, string, string][] = [
   ["expense", "🧾", "A business cost"],
   ["part_private", "➗", "Partly business, partly personal"],
-  ["asset_purchase", "🛠️", "Something for the business that lasts years (tools, a vehicle, a computer)"],
+  ["asset_purchase", "🔧", "Something for the business that lasts years (tools, a vehicle, a computer)"],
   ["personal", "🛒", "Personal spending"],
   ["transfer", "🔁", "Moved to another of my accounts"],
   ["ird_gst", "🏛️", "GST paid to IRD"],

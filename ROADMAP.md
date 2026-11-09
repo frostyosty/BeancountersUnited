@@ -2,7 +2,7 @@
 
 ### General
 
-Up to M23start
+Up to M23start wave 3 (agents 5 and 6). wave 2 complete
 
 For M25, please make it an intuitive claude "ask the experts" modal where theres also an example one for the 3 ofx examples, where the user sees a button come up when theyre in the 
 Save tax section (the button can show under there "ask the experts - 1 question left today" and should appear once there's 3 seconds of inactivity on the screen. or should it be more? 10?) once the ubtton is clicked a modal spawns where they can type and send a question, (wit ha greyed out sample question filled in) and they see buttons under the modal saying "send" "graph please" and "dismiss" and if they click on graph then claude makes a graph for them in the webpage responding to the question, and if theres no question then just general graphs showing income over the years etc or if just one year idk maybe a bar chart showing expenses or something? Would we build an mcp so its easy for claude to do this and light on tokens? would be both for owners/accountants/everyone although I suppose mcp stuff might have tiers? We should already have most of this functionality in place I believe.

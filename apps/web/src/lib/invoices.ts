@@ -24,10 +24,12 @@ export function useInvoiceDraft() {
   });
 }
 
-export function useInvoiceTemplates() {
+/** `enabled` is false for someone who isn't signed in: there's no account to ask. */
+export function useInvoiceTemplates(enabled = true) {
   return useQuery({
     queryKey: invoiceKeys.templates,
     queryFn: () => getJson<InvoiceTemplateSummary[]>("/api/invoices/templates"),
+    enabled,
   });
 }
 
@@ -54,6 +56,55 @@ export async function uploadInvoiceImage(dataUrl: string): Promise<string> {
   return `/api/invoices/images/${accepted.entity_id}`;
 }
 
+// --- Without an account: the draft stays on this device -------------------------------------------
+// Anyone can use the invoice maker. Without an account the draft is kept in this browser only, and an
+// image is kept in the page itself (a data URL) instead of being uploaded.
+
+const LOCAL_DRAFT_KEY = "wla.invoice.draft";
+
+/** The draft kept on this device, or null if there isn't one (or the browser won't say). */
+export function readLocalInvoiceDraft(): string | null {
+  try {
+    return localStorage.getItem(LOCAL_DRAFT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps the draft on this device. Throws if the browser refuses (storage full or blocked), which the editor shows as "couldn't save". */
+export async function saveLocalInvoiceDraft(html: string): Promise<void> {
+  localStorage.setItem(LOCAL_DRAFT_KEY, html);
+}
+
+/** Forgets the draft kept on this device. */
+export function clearLocalInvoiceDraft(): void {
+  try {
+    localStorage.removeItem(LOCAL_DRAFT_KEY);
+  } catch {
+    // Nothing to forget, or the browser won't let us.
+  }
+}
+
+const LOCAL_IMAGE = /data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}/g;
+
+/**
+ * A page's images kept in the page as data URLs (made without an account) uploaded to the account, and
+ * swapped for the account's URLs, so the page can be saved there. Throws if an upload fails, leaving the
+ * caller with the original page.
+ */
+export async function moveImagesToAccount(html: string, upload: (dataUrl: string) => Promise<string>): Promise<string> {
+  const urls = new Map<string, string>();
+  for (const dataUrl of new Set(html.match(LOCAL_IMAGE) ?? [])) {
+    urls.set(dataUrl, await upload(dataUrl));
+  }
+  return html.replace(LOCAL_IMAGE, (found) => urls.get(found) ?? found);
+}
+
+/** With nowhere to upload to, the page shows the image from its own data URL. */
+export async function localInvoiceImage(dataUrl: string): Promise<string> {
+  return dataUrl;
+}
+
 // --- Cleaning a page before it's shown ------------------------------------------------------------
 
 /** Elements the editor makes, or that editing text can leave behind. */
@@ -72,12 +123,38 @@ const ATTRIBUTES = new Set([
   "class", "style", "id", "contenteditable", "tabindex", "hidden", "title", "colspan", "rowspan",
   "data-font",
 ]);
-const IMAGE_URL = /^url\(\s*(["']?)\/api\/invoices\/images\/[0-9a-f-]{36}\1\s*\)$/i;
+// An image is the user's own upload, or (with no account) a PNG, JPEG, GIF or WebP kept in the page as a data URL.
+const IMAGE_URL =
+  /^url\(\s*(["']?)(?:\/api\/invoices\/images\/[0-9a-f-]{36}|data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2})\1\s*\)$/i;
+
+/** Splits a style attribute at its semicolons, except those inside brackets or quotes (a data URL has one). */
+function splitDeclarations(style: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  for (let i = 0; i < style.length; i++) {
+    const c = style[i]!;
+    if (quote) {
+      if (c === quote) quote = "";
+    } else if (c === '"' || c === "'") {
+      quote = c;
+    } else if (c === "(") {
+      depth++;
+    } else if (c === ")") {
+      depth = Math.max(0, depth - 1);
+    } else if (c === ";" && depth === 0) {
+      parts.push(style.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(style.slice(start));
+  return parts;
+}
 
 /** A style attribute with only safe declarations: no outside URLs, no script. */
 function cleanStyle(style: string): string {
-  return style
-    .split(";")
+  return splitDeclarations(style)
     .map((d) => d.trim())
     .filter((d) => {
       if (!d) return false;

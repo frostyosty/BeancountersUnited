@@ -1,0 +1,3 @@
+<!doctype html>
+<html><head><title>Not a PDF</title></head>
+<body><h1>This is HTML, not a PDF</h1><script>/* never runs */</script></body></html>

@@ -21,6 +21,11 @@ afterEach(() => {
 
 const blocks = () => screen.getByTestId("invoice-page").querySelectorAll(".invoice-element").length;
 
+const UPLOADED = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
+const DEVICE_DRAFT =
+  '<div class="invoice-element image-element style-default" style="left: 10px; top: 10px; width: 100px; height: 50px; background-image: url(&quot;data:image/png;base64,iVBORw0KGgo=&quot;);"></div>' +
+  '<div class="invoice-element style-default" style="left: 10px; top: 80px;"><div contenteditable="true" class="invoice-text">Made before signing in</div></div>';
+
 interface Sent {
   kind: string;
   payload: Record<string, string>;
@@ -44,6 +49,7 @@ function fakeServer(me: typeof sam, draft: string | null = null) {
         return { seq: next, entity_id: id };
       }
       if (kind === "delete_invoice_template") templates.delete(payload.template_id!);
+      if (kind === "add_invoice_image") return { seq: next++, entity_id: UPLOADED };
       return { seq: next++, entity_id: null };
     },
   });
@@ -139,5 +145,82 @@ describe("invoice maker", () => {
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Delete template" }));
     await vi.waitFor(() => expect(server.templates.size).toBe(0));
     expect(server.sent().map((c) => c.kind)).toContain("delete_invoice_template");
+  });
+});
+
+describe("an invoice made on this device before signing in", () => {
+  it("is offered, and moves into the account with its images uploaded", async () => {
+    localStorage.setItem("wla.invoice.draft", DEVICE_DRAFT);
+    const server = fakeServer(sam);
+    renderApp(<App />, "/tools/invoice");
+    const user = userEvent.setup();
+    const page = await screen.findByTestId("invoice-page");
+    // Nothing moves until asked.
+    expect(page.textContent).toContain("TAX INVOICE");
+    expect(server.draft()).toBeNull();
+
+    await user.click(await screen.findByRole("button", { name: "Use that invoice" }));
+    await vi.waitFor(() => expect(page.textContent).toContain("Made before signing in"));
+    await vi.waitFor(() => expect(server.draft()).toContain("Made before signing in"), { timeout: 5000 });
+    expect(server.draft()).toContain(`/api/invoices/images/${UPLOADED}`);
+    expect(server.draft()).not.toContain("data:image");
+    expect(localStorage.getItem("wla.invoice.draft")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use that invoice" })).toBeNull();
+  });
+
+  it("can be thrown away instead", async () => {
+    localStorage.setItem("wla.invoice.draft", DEVICE_DRAFT);
+    const server = fakeServer(sam);
+    renderApp(<App />, "/tools/invoice");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Throw it away" }));
+    expect(localStorage.getItem("wla.invoice.draft")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use that invoice" })).toBeNull();
+    expect(screen.getByTestId("invoice-page").textContent).toContain("TAX INVOICE");
+    expect(server.sent()).toEqual([]);
+  });
+
+  it("isn't offered when there's nothing kept", async () => {
+    fakeServer(sam);
+    renderApp(<App />, "/tools/invoice");
+    await screen.findByTestId("invoice-page");
+    expect(screen.queryByRole("button", { name: "Use that invoice" })).toBeNull();
+  });
+});
+
+describe("invoice maker without an account", () => {
+  /** Signed out: only /api/me is answered, so any other request (a draft, templates, a command) fails the test. */
+  function signedOut() {
+    return stubApi({ "GET /api/me": () => null });
+  }
+
+  it("opens for a visitor, and keeps the draft on this device instead of the server", async () => {
+    const calls = signedOut();
+    renderApp(<App />, "/tools/invoice");
+    const user = userEvent.setup();
+    const page = await screen.findByTestId("invoice-page");
+    expect(page.textContent).toContain("TAX INVOICE");
+    expect(screen.getByText(/Saved templates need a free account/)).toBeTruthy();
+    expect(screen.queryByLabelText("Template name")).toBeNull();
+    expect(screen.getByRole("status", { name: "Save status" }).textContent).toMatch(/Kept on this device$/);
+
+    const toolbar = screen.getByRole("toolbar", { name: "Invoice tools" });
+    await user.click(within(toolbar).getByRole("button", { name: /Text/ }));
+    await vi.waitFor(() => expect(localStorage.getItem("wla.invoice.draft")).toContain("New text"), { timeout: 5000 });
+    expect(localStorage.getItem("wla.invoice.draft")).not.toContain("element-controls");
+    // Nothing went to the server but the check for who's signed in.
+    expect(calls.map((c) => c.path)).toEqual(["/api/me"]);
+  });
+
+  it("opens the draft kept on this device, cleaned", async () => {
+    localStorage.setItem(
+      "wla.invoice.draft",
+      '<div class="invoice-element style-default" style="left: 10px; top: 10px;"><div contenteditable="true" class="invoice-text">Kept here</div><script>window.hacked = true</script></div>',
+    );
+    signedOut();
+    renderApp(<App />, "/tools/invoice");
+    const page = await screen.findByTestId("invoice-page");
+    expect(page.textContent).toContain("Kept here");
+    expect(page.querySelector("script")).toBeNull();
   });
 });

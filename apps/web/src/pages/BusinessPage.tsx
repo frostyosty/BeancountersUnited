@@ -125,7 +125,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
       {me.guest ? (
         <section aria-labelledby="invite-heading">
           <h2 id="invite-heading">
-            <Icon name="business.invite" fallback="🤝" /> Invite your accountant
+            <Icon name="business.invite" fallback="🥳" /> Invite your accountant
           </h2>
           <LockedForGuest reason="Save your work first to invite your accountant." from="locked:invite" />
         </section>
@@ -157,7 +157,7 @@ function InviteAccountant({ clientId }: { clientId: string }) {
   return (
     <section aria-labelledby="invite-heading">
       <h2 id="invite-heading">
-        <Icon name="business.invite" fallback="🤝" /> Invite your accountant
+        <Icon name="business.invite" fallback="🥳" /> Invite your accountant
       </h2>
       <p className="muted">They'll be able to see and work on this business. Nobody else can.</p>
       <form onSubmit={submit} className="form narrow">

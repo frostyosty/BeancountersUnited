@@ -183,7 +183,7 @@ export function TaxSavedCard({ tryIt }: { tryIt: TryIt }) {
       </p>
       {shown.saved > 0 ? (
         <p className="muted">
-          <Icon name="business.save_saved" fallback="🎉" /> It was{" "}
+          <Icon name="business.save_saved" fallback="🥳" /> It was{" "}
           {dollars(state.conservative)} before you answered.
         </p>
       ) : (
@@ -301,7 +301,7 @@ function MiniCard({
         <div ref={content}>
           {card.kind !== "reconcile" && (
             <p className={styles.miniSaving}>
-              <Icon name="business.save_saving" fallback="💸" />{" "}
+              <Icon name="business.save_saving" fallback="💵" />{" "}
               {card.best_case
                 ? `Could save up to ${dollars(card.saving)}`
                 : `Saves ${dollars(card.saving)}`}

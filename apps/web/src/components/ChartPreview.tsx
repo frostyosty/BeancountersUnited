@@ -46,7 +46,7 @@ export function ChartPreview({ chart }: { chart: Pick<MasterChartView, "name" | 
   if (!chart) {
     return (
       <p className="muted">
-        <Icon name="defaults.none_yet" fallback="🌱" /> An empty chart has no accounts yet. Add them on its page.
+        <Icon name="defaults.none_yet" fallback="🌳" /> An empty chart has no accounts yet. Add them on its page.
       </p>
     );
   }

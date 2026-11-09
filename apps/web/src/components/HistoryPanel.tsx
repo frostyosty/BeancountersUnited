@@ -198,7 +198,7 @@ export function Changes({ business, people }: { business: string | null; people:
       <ErrorMessage error={history.error} />
       {history.data && entries.length === 0 && (
         <p className="muted">
-          <Icon name="history.empty" fallback="🌱" /> No changes {figure || active > 0 ? "match" : "yet"}.
+          <Icon name="history.empty" fallback="🌳" /> No changes {figure || active > 0 ? "match" : "yet"}.
         </p>
       )}
       {entries.length > 0 && (

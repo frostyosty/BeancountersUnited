@@ -100,7 +100,7 @@ export function GstRegisteredQuestion({ clientId, canEdit }: { clientId: string;
   return (
     <>
       <h2>
-        <Icon name="business.save_question" fallback="❓" /> Are you GST registered?
+        <Icon name="business.save_question" fallback="❔️" /> Are you GST registered?
       </h2>
       <p className="muted">
         Your statements don't say, so we've worked your tax out as if you are: that gives the higher figure. If you're not

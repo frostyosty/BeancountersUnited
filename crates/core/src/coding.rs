@@ -15,6 +15,7 @@ use ts_rs::TS;
 use crate::chart::{AccountCode, AccountType, Chart, GstCode};
 use crate::ledger::JournalLine;
 use crate::money::{Money, div_round_half_away, money_from_i128};
+use crate::purchases::Supply;
 use crate::tax::gst::{GstTotals, gst_in_inclusive, gst_rate_bp};
 
 /// Basis points in 100%.
@@ -218,15 +219,16 @@ pub enum CodingError {
 ///
 /// - GST applies only from the registration date, at the rate for the line's date, and only on a
 ///   `standard` code. Zero-rated, exempt and outside-GST lines post GST-inclusive amounts whole.
-/// - On a withdrawal over [`SUPPLY_INFO_THRESHOLD`], GST is claimed only if
-///   `supply_info_confirmed` holds the date the owner confirmed they hold the supplier's taxable
-///   supply information. Until then the expense or asset is still GST-exclusive, and the GST
+/// - On a withdrawal whose supply is over [`SUPPLY_INFO_THRESHOLD`], GST is claimed only if
+///   `supply.info_confirmed` holds the date the owner confirmed they hold the supplier's taxable
+///   supply information. The supply is the purchase the line pays for, or the line itself
+///   ([`Supply::of_line`]); the GST is still worked out on this line alone (ADR 017, 14). Until then the expense or asset is still GST-exclusive, and the GST
 ///   waits in [`CodingSettings::unclaimed_gst`]: input tax is never an income tax deduction.
 /// - Every account the coding names must exist in the chart, be active, and be of the right type.
 pub fn coded_lines(
     line: &BankLine<'_>,
     coding: &Coding,
-    supply_info_confirmed: Option<NaiveDate>,
+    supply: &Supply,
     ctx: &CodingContext<'_>,
 ) -> Result<Vec<JournalLine>, CodingError> {
     use AccountType::{Asset, Expense, Income, Liability};
@@ -281,7 +283,8 @@ pub fn coded_lines(
             // Positive from here: what left the bank.
             let spent = -line.amount;
             // Over the threshold and not confirmed, the GST waits in its own account.
-            let gst_to = if spent > SUPPLY_INFO_THRESHOLD && supply_info_confirmed.is_none() {
+            let gst_to = if supply.total > SUPPLY_INFO_THRESHOLD && supply.info_confirmed.is_none()
+            {
                 &a.unclaimed_gst
             } else {
                 &a.gst
@@ -426,14 +429,15 @@ fn not_self(bank: &AccountCode, other: &AccountCode) -> Result<(), CodingError> 
 /// - Nothing counts before the owner registered, or on a date with no GST rate.
 /// - Income: standard and zero-rated income are sales (zero-rated also in `zero_rated`); exempt
 ///   income isn't in the return.
-/// - Spending: only a `standard` code counts, and only once the GST is claimed, so up to
-///   [`SUPPLY_INFO_THRESHOLD`] or once the owner confirms the supply information. A partly
+/// - Spending: only a `standard` code counts, and only once the GST is claimed, so when the
+///   supply ([`Supply`]) is up to [`SUPPLY_INFO_THRESHOLD`] or once the owner confirms the
+///   supply information. A partly
 ///   private line counts its business share.
 /// - Every other coding (transfers, loans, refunds, drawings, IRD payments) is outside the return.
 pub fn gst_totals(
     line: &BankLine<'_>,
     coding: Option<&Coding>,
-    supply_info_confirmed: Option<NaiveDate>,
+    supply: &Supply,
     gst_registered_from: Option<NaiveDate>,
 ) -> GstTotals {
     let mut totals = GstTotals::default();
@@ -442,7 +446,7 @@ pub fn gst_totals(
         return totals;
     }
     let spent = -line.amount;
-    let claimed = spent <= SUPPLY_INFO_THRESHOLD || supply_info_confirmed.is_some();
+    let claimed = supply.total <= SUPPLY_INFO_THRESHOLD || supply.info_confirmed.is_some();
     match coding {
         None if line.amount > Money::ZERO => totals.sales = line.amount,
         None => {}
@@ -719,7 +723,8 @@ mod tests {
             date: d(date),
             amount: m(amount),
         };
-        let lines = coded_lines(&line, coding, confirmed.then(|| d("2025-09-02")), &ctx)?;
+        let supply = Supply::of_line(&line, confirmed.then(|| d("2025-09-02")));
+        let lines = coded_lines(&line, coding, &supply, &ctx)?;
         Ok(lines
             .into_iter()
             .map(|l| (l.account.as_str().to_owned(), l.amount))
@@ -1132,7 +1137,12 @@ mod tests {
             amount: m("-10.00"),
         };
         assert_eq!(
-            coded_lines(&line, &expense("230", GstCode::Standard), None, &ctx),
+            coded_lines(
+                &line,
+                &expense("230", GstCode::Standard),
+                &Supply::of_line(&line, None),
+                &ctx
+            ),
             Err(CodingError::InactiveAccount {
                 account: code("230")
             })
@@ -1277,12 +1287,8 @@ mod tests {
             date: d("2025-09-01"),
             amount: m(amount),
         };
-        gst_totals(
-            &line,
-            coding,
-            confirmed.then(|| d("2025-09-02")),
-            Some(d(REGISTERED)),
-        )
+        let supply = Supply::of_line(&line, confirmed.then(|| d("2025-09-02")));
+        gst_totals(&line, coding, &supply, Some(d(REGISTERED)))
     }
 
     fn sales(s: &str) -> GstTotals {
@@ -1356,8 +1362,12 @@ mod tests {
             date: d("2025-07-31"),
             amount: m("115.00"),
         };
-        assert_eq!(gst_totals(&early, None, None, Some(d(REGISTERED))), none);
-        assert_eq!(gst_totals(&early, None, None, None), none);
+        let early_supply = Supply::of_line(&early, None);
+        assert_eq!(
+            gst_totals(&early, None, &early_supply, Some(d(REGISTERED))),
+            none
+        );
+        assert_eq!(gst_totals(&early, None, &early_supply, None), none);
     }
 
     #[test]

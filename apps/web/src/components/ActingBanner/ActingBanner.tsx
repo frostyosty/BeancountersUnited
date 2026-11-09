@@ -64,7 +64,7 @@ export function ActingBanner() {
       <span className={styles.actions}>
         {!acting.allow_changes && (
           <Button size="sm" onClick={() => setAsking("allow")}>
-            <Icon name="acting.allow" fallback="✏️" /> Allow changes
+            <Icon name="acting.allow" fallback="⏳️" /> Allow changes
           </Button>
         )}
         <Button size="sm" onClick={() => setAsking("end")}>

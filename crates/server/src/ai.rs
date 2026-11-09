@@ -22,6 +22,7 @@ use acct_core::coding::{
     BankLine as CoreLine, Coding, CodingContext, DepositCoding, Direction, WithdrawalCoding,
     coded_lines,
 };
+use acct_core::purchases::Supply;
 use acct_core::{AccountType, GstCode, Money};
 use acct_store::ai::{self as ai_store, AiSettings, StoredSuggestion};
 use acct_store::ai_usage as usage_store;
@@ -256,7 +257,7 @@ pub async fn record_suggestions(
             date: line.date,
             amount: line.amount,
         };
-        coded_lines(&core, &s.coding, None, &ctx).map_err(|e| {
+        coded_lines(&core, &s.coding, &Supply::of_line(&core, None), &ctx).map_err(|e| {
             CommandError::invalid_with(
                 "invalid_coding",
                 "A suggestion doesn't fit this business's chart.",

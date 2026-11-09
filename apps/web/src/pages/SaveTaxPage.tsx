@@ -65,7 +65,7 @@ export function SaveTaxPage() {
       <div className={styles.scoreboard} role="status">
         <div>
           <span className="muted">
-            <Icon name="business.save_saved" fallback="🎉" /> Saved so far
+            <Icon name="business.save_saved" fallback="🥳" /> Saved so far
           </span>
           <strong className={styles.saved}>${formatMoney(q.saved_so_far)}</strong>
         </div>
@@ -150,7 +150,7 @@ function CardFrame({
         </p>
       ) : (
         <p className={styles.saving}>
-          <Icon name="business.save_saving" fallback="💸" />{" "}
+          <Icon name="business.save_saving" fallback="💵" />{" "}
           {card.best_case ? `Could save up to $${formatMoney(card.saving)}` : `Saves $${formatMoney(card.saving)}`}
         </p>
       )}

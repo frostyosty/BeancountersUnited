@@ -169,7 +169,7 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
   },
   {
     icon: "business.invite",
-    fallback: "🤝",
+    fallback: "🥳",
     title: "Working with your accountant",
     features: [
       {
@@ -187,8 +187,8 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
     features: [
       {
         title: "Invoice maker",
-        body: "Make a tidy invoice for a customer and download it. Saved to your account, separate from your books.",
-        account: true,
+        body: "Make a tidy invoice for a customer and download it as a PDF. No account needed; sign in to keep your invoices and templates. Separate from your books.",
+        target: { to: "/tools/invoice" },
       },
     ],
   },
@@ -283,7 +283,7 @@ export function FeaturesPage() {
 
           <p className={styles.more}>
             <Link to="/accountants">
-              <Icon name="layouts.statements" fallback="🧮" /> Are you an accountant? See what's there for you
+              <Icon name="accountant_view.accountant" fallback="📊" /> Are you an accountant? See what's there for you
             </Link>
             <Link to="/pricing">
               <Icon name="business.save_categorise" fallback="🏷️" /> See pricing

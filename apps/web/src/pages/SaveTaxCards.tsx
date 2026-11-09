@@ -121,7 +121,7 @@ function QuestionCard({ card, clientId, canEdit }: CardProps) {
     case "only_income":
       return (
         <>
-          <Heading icon="business.save_question" fallback="❓">
+          <Heading icon="business.save_question" fallback="❔️">
             Was this business your only income in {yearLabel(year)}?
           </Heading>
           <p className="muted">Until you tell us, we work the tax out as if you already earn enough elsewhere to pay the top rate, 39%.</p>
@@ -139,7 +139,7 @@ function QuestionCard({ card, clientId, canEdit }: CardProps) {
     case "student_loan":
       return (
         <>
-          <Heading icon="business.save_question" fallback="❓">
+          <Heading icon="business.save_question" fallback="❔️">
             Did you have a student loan in {yearLabel(year)}?
           </Heading>
           <p className="muted">Until you tell us, we set aside 12% for student loan repayments.</p>
@@ -181,7 +181,7 @@ function OtherIncome({ year, canEdit, busy, error, onAnswer }: { year: number; c
   };
   return (
     <>
-      <Heading icon="business.save_question" fallback="❓">
+      <Heading icon="business.save_question" fallback="❔️">
         Your other income in {yearLabel(year)}
       </Heading>
       <p className="muted">
@@ -213,7 +213,7 @@ function Ietc({ year, canEdit, busy, error, onAnswer }: { year: number; canEdit:
   const [months, setMonths] = useState("12");
   return (
     <>
-      <Heading icon="business.save_question" fallback="❓">
+      <Heading icon="business.save_question" fallback="❔️">
         The independent earner tax credit, {yearLabel(year)}
       </Heading>
       <p className="muted">
