@@ -49,7 +49,7 @@ export function YearLayout() {
       />
       <Tabs label="Year">
         <Tab to="" end>
-          <Icon name="ui.empty" fallback="📒" /> Journals
+          <Icon name="ui.empty" fallback="🏭" /> Journals
         </Tab>
         <Tab to="tb">
           <Icon name="year.tb" fallback="⚖️" /> Trial balance

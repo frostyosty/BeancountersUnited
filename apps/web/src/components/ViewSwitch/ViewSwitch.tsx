@@ -22,7 +22,7 @@ export function ViewSwitch({ businessId, current }: { businessId: string; curren
         className={styles.option}
         aria-current={current === "accountant" ? "page" : undefined}
       >
-        <Icon name="accountant_view.accountant" fallback="📒" /> Accountant view
+        <Icon name="accountant_view.accountant" fallback="🏭" /> Accountant view
       </Link>
     </nav>
   );

@@ -188,7 +188,7 @@ function AcceptAll({ cards, clientId, banks }: { cards: SaveTaxCard[]; clientId:
   return (
     <div className={styles.acceptAll}>
       <p>
-        <Icon name="business.save_suggest" fallback="💡" /> We have a suggestion for {suggested.length === 1 ? "1 transaction" : `${suggested.length} transactions`},
+        <Icon name="business.save_suggest" fallback="✨️" /> We have a suggestion for {suggested.length === 1 ? "1 transaction" : `${suggested.length} transactions`},
         from your rules, how you sorted the same descriptions before, your accountant's list of common businesses and, if
         you've turned it on, AI.
       </p>

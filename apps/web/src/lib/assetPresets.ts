@@ -25,7 +25,7 @@ export const ASSET_PRESETS: AssetPreset[] = [
   { key: "computers", name: "Computers and office equipment", icon: "💻", blurb: "DV 40%", draft: dv("40"), match: /comput|office/i },
   { key: "furniture", name: "Furniture and fittings", icon: "🪑", blurb: "DV 13%", draft: dv("13"), match: /furnit|fitting/i },
   { key: "tools", name: "Tools", icon: "🔧", blurb: "DV 20%", draft: dv("20"), match: /tool/i },
-  { key: "buildings", name: "Buildings", icon: "🏢", blurb: "SL 2%", draft: sl("2"), match: /building|property/i },
+  { key: "buildings", name: "Buildings", icon: "🏭", blurb: "SL 2%", draft: sl("2"), match: /building|property/i },
   { key: "land", name: "Land", icon: "🌳", blurb: "Not depreciated", draft: { ...DEFAULT_DRAFT, method: "none" }, match: /land/i },
 ];
 

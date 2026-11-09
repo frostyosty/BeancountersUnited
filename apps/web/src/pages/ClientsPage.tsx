@@ -15,7 +15,7 @@ export function ClientsPage() {
   return (
     <>
       <PageHeader
-        icon={<Icon name="ui.empty" fallback="📒" />}
+        icon={<Icon name="ui.empty" fallback="🏭" />}
         title="Clients"
         actions={
           can(me, "staff") && (

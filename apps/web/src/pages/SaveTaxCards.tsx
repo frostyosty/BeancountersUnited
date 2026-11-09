@@ -494,7 +494,7 @@ function CategoriseCard({ card, clientId, banks, gstRegistered, canEdit }: CardP
       {suggestion && !changing ? (
         <>
           <p className={styles.suggestion}>
-            <Icon name="business.save_suggest" fallback="💡" /> We think it's: <strong>{describeCoding(suggestion.coding, chart.data, banks)}</strong>
+            <Icon name="business.save_suggest" fallback="✨️" /> We think it's: <strong>{describeCoding(suggestion.coding, chart.data, banks)}</strong>
             <br />
             <span className="muted">
               {suggestion.source === "ai"

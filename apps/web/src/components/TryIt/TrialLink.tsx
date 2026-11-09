@@ -57,7 +57,7 @@ export function Badge({ kind }: { kind: Access }) {
     case "firm":
       return (
         <span className={styles.badge}>
-          <Icon name="practice_request.practice" fallback="🏢" /> With a firm account
+          <Icon name="practice_request.practice" fallback="🏭" /> With a firm account
         </span>
       );
     case "soon":

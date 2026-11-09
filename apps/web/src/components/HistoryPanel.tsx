@@ -75,7 +75,7 @@ export function HistoryPanel() {
     <aside className={styles.panel} aria-label="Who changed what">
       <div className={styles.top}>
         <h2 id="here-heading">
-          <Icon name="history.here" fallback="👥" /> Here now
+          <Icon name="history.here" fallback="👯" /> Here now
         </h2>
         <button type="button" className={styles.hide} onClick={toggle} aria-expanded={true}>
           Hide

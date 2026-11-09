@@ -21,7 +21,7 @@ type Show = (message: string, options?: ToastOptions) => void;
 const ToastContext = createContext<Show>(() => {});
 
 const icons = {
-  info: <Icon name="ui.info" fallback="💡" />,
+  info: <Icon name="ui.info" fallback="✨️" />,
   ok: <Icon name="ui.ok" fallback="✅" />,
   warn: <Icon name="ui.warning" fallback="⚠️" />,
   danger: <Icon name="ui.warning" fallback="⚠️" />,

@@ -152,7 +152,7 @@ export function BankVsBooks({ open, onClose, proofs }: BankVsBooksProps) {
 
           <section className={styles.cutout} aria-labelledby={`${id}-books`}>
             <h3 id={`${id}-books`}>
-              <Icon name="ui.empty" fallback="📒" /> Your books say
+              <Icon name="ui.empty" fallback="🏭" /> Your books say
             </h3>
             <p className={styles.figure}>{balanceWords(p.proof.ledger, p.kind)}</p>
             <p className="muted">At the end of {formatDate(p.proof.books_date)}</p>

@@ -23,7 +23,7 @@ export function SettingsLayout() {
       <Tabs label="Settings">
         {can(me, "practice_admin") && !isOwner(me) && (
           <Tab to="/settings" end>
-            <Icon name="settings.practice" fallback="🏢" /> Practice
+            <Icon name="settings.practice" fallback="🏭" /> Practice
           </Tab>
         )}
         {real.role === "overseer" && (

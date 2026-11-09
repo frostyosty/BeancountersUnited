@@ -77,7 +77,7 @@ export function PracticeRequestModal({
   };
 
   const title = "Sign up your firm";
-  const icon = <Icon name="practice_request.practice" fallback="🏢" />;
+  const icon = <Icon name="practice_request.practice" fallback="🏭" />;
 
   if (sent) {
     return (
@@ -185,7 +185,7 @@ export function PracticeRequestButton({
   return (
     <>
       <Button variant={variant} onClick={() => setOpen(true)}>
-        <Icon name="practice_request.practice" fallback="🏢" /> Sign up your firm
+        <Icon name="practice_request.practice" fallback="🏭" /> Sign up your firm
       </Button>
       <PracticeRequestModal open={open} onClose={() => setOpen(false)} from={from} trial={!!guest} />
     </>

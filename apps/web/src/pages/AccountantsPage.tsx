@@ -36,7 +36,7 @@ const screens: { view: BooksView; icon: string; fallback: string; title: string;
   {
     view: "gl",
     icon: "year.gl",
-    fallback: "📒",
+    fallback: "🏭",
     title: "General ledger",
     body: "Every entry behind every account, so you can see where each balance came from.",
   },
@@ -251,7 +251,7 @@ export function AccountantsPage() {
 
           <div className={styles.join}>
             <h2>
-              <Icon name="practice_request.practice" fallback="🏢" /> Bring your firm on board
+              <Icon name="practice_request.practice" fallback="🏭" /> Bring your firm on board
             </h2>
             <p>
               We're setting firms up by hand for now. Tell us about yours and we'll be in touch. Your clients can

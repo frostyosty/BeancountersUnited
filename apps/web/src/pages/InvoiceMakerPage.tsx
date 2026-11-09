@@ -252,7 +252,7 @@ function Editor({ initialHtml }: { initialHtml: string | null }) {
       )}
 
       <p className={`muted ${styles.hint}`}>
-        <Emoji>💡</Emoji> Click any text to edit it. Drag a block to move it, and drag its edges to resize. Arrow keys
+        <Emoji>✨️</Emoji> Click any text to edit it. Drag a block to move it, and drag its edges to resize. Arrow keys
         nudge the selected block; Delete removes it.
       </p>
 

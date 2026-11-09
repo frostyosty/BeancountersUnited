@@ -146,7 +146,7 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
   },
   {
     icon: "ui.empty",
-    fallback: "📒",
+    fallback: "🏭",
     title: "Proper books underneath",
     features: [
       {

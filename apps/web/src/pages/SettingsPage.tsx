@@ -26,7 +26,7 @@ export function SettingsPage() {
   return (
     <>
       <h2>
-        <Icon name="settings.practice" fallback="🏢" /> Practice
+        <Icon name="settings.practice" fallback="🏭" /> Practice
       </h2>
       <Defaults />
       <AssetClasses />

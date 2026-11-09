@@ -54,7 +54,7 @@ export function BooksLayout() {
   return (
     <ReadOnlyContext.Provider value={readOnly}>
       <PageHeader
-        icon={<Icon name="accountant_view.accountant" fallback="📒" />}
+        icon={<Icon name="accountant_view.accountant" fallback="🏭" />}
         title={c.name}
         subtitle={year ? `${formatDate(year.start)} to ${formatDate(year.end)}` : undefined}
         actions={
@@ -98,7 +98,7 @@ export function BooksLayout() {
               <Icon name="year.tb" fallback="⚖️" /> Trial balance
             </Tab>
             <Tab to="journals">
-              <Icon name="ui.empty" fallback="📒" /> Journals
+              <Icon name="ui.empty" fallback="🏭" /> Journals
             </Tab>
             <Tab to="gl">
               <Icon name="year.gl" fallback="📖" /> General ledger

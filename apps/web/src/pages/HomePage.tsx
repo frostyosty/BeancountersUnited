@@ -50,7 +50,7 @@ const steps = [
 const features: { icon: string; fallback: string; title: string; body: string; view: BooksView }[] = [
   {
     icon: "ui.empty",
-    fallback: "📒",
+    fallback: "🏭",
     view: "journals",
     title: "Real double-entry books",
     body: "Every business-year has a proper ledger underneath, so your accountant can pick up where you left off.",
