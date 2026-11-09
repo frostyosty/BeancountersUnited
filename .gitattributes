@@ -12,3 +12,6 @@ fixtures/bank-statements/ofx-edge/* -text
 
 # Landing examples (M20) show both LF and CRLF downloads on purpose: never convert them.
 fixtures/landing/*.ofx -text
+
+# PDFs (the sample statements in apps/web/public/samples) are binary: never convert their line endings.
+*.pdf binary
