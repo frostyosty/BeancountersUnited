@@ -2,7 +2,7 @@
 import type { BusinessView } from "@acct/types/BusinessView";
 import type { Me } from "@acct/types/Me";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -110,7 +110,7 @@ describe("the features page", () => {
     const calls = server(ownTrial);
     renderPage(ownTrial);
     const go = group("Proper books underneath").getAllByRole("button")[2]!;
-    await waitFor(() => expect(go.textContent).toContain("Open it"));
+    expect(go.textContent).toContain("Try it now");
     await userEvent.setup().click(go);
     expect(await screen.findByText("at /businesses/b1/books/changes")).toBeTruthy();
     expect(calls.some((c) => c.path === "/api/guest")).toBe(false);
@@ -120,7 +120,7 @@ describe("the features page", () => {
     server(exampleTrial);
     renderPage(exampleTrial);
     const go = group("Saving tax").getAllByRole("button")[0]!;
-    await waitFor(() => expect(go.textContent).toContain("Open it"));
+    expect(go.textContent).toContain("Try it now");
     await userEvent.setup().click(go);
     expect(await screen.findByText("at /businesses/x1/save-tax")).toBeTruthy();
   });

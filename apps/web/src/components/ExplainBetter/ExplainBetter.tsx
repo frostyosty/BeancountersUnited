@@ -11,12 +11,11 @@ import styles from "./ExplainBetter.module.css";
  * "Explain better" on a Save tax card: asks the server for a longer explanation written for this
  * owner's situation. The server finds the card itself and redacts what it sends, so only the card's
  * id goes up. When the day's allowance is used up it says so in a toast and stays disabled; when
- * the server has no AI service it shows nothing.
+ * the server can't answer it shows the error, never a silent button.
  */
 export function ExplainBetter({ clientId, cardId }: { clientId: string; cardId: string }) {
   const toast = useToast();
   const [spent, setSpent] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
   const ask = useMutation<Explanation, Error>({
     mutationFn: () => requestExplanation(clientId, cardId),
     onError: (e) => {
@@ -26,14 +25,9 @@ export function ExplainBetter({ clientId, cardId }: { clientId: string; cardId: 
       if (e.code === "ai_daily_limit") {
         setSpent(true);
         toast("Daily usage limit reached. Explanations are back tomorrow.", { tone: "warn" });
-      } else if (e.code === "ai_unavailable" || e.code === "ai_suggestions_off") {
-        setUnavailable(true);
       }
     },
   });
-  if (unavailable) {
-    return null;
-  }
   const failed = ask.error instanceof ApiRequestError && ask.error.code === "ai_daily_limit" ? null : ask.error;
   return (
     <div className={styles.explain}>

@@ -77,7 +77,7 @@ pub async fn plan_of(
 pub const STANDARD: [(Plan, AiKind, Option<u32>); 10] = [
     // A guest can't ask for suggestions at all (the route is refused for them anyway).
     (Plan::Guest, AiKind::Suggestion, Some(0)),
-    (Plan::Guest, AiKind::Explain, Some(2)),
+    (Plan::Guest, AiKind::Explain, Some(1)),
     (Plan::Free, AiKind::Suggestion, Some(1)),
     (Plan::Free, AiKind::Explain, Some(5)),
     (Plan::Owner, AiKind::Suggestion, Some(1)),
@@ -208,7 +208,7 @@ mod tests {
         }
         assert_eq!(t.get(Plan::Free, AiKind::Suggestion), Some(1));
         assert_eq!(t.get(Plan::Free, AiKind::Explain), Some(5));
-        assert_eq!(t.get(Plan::Guest, AiKind::Explain), Some(2));
+        assert_eq!(t.get(Plan::Guest, AiKind::Explain), Some(1));
         assert_eq!(t.get(Plan::Guest, AiKind::Suggestion), Some(0));
         assert_eq!(
             LimitTable::unlimited().get(Plan::Free, AiKind::Explain),

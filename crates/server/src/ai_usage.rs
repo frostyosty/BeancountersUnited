@@ -112,6 +112,18 @@ impl Metered {
         let (plan, refusal) = {
             let mut conn = state.store.reader().await?;
             let plan = plan_of(&mut conn, &actor, ctx.client_id).await?;
+            if !is_overseer
+                && ctx.sends_to_model
+                && ctx.kind == AiKind::Explain
+                && plan == Plan::Guest
+                && let Some(address) = ctx.address
+                && let Some(left) = state.explain_quota.guest_cooldown_left(address, now)
+            {
+                return Err(CommandError::invalid(
+                    "ai_cooldown",
+                    format!("Please wait {left} seconds before asking again."),
+                ));
+            }
             let refusal = if is_overseer || !ctx.sends_to_model {
                 None
             } else {
@@ -144,7 +156,17 @@ impl Metered {
                 ask.write(outcome, 0).await;
                 Err(refusal_error(outcome, ctx.kind))
             }
-            None => Ok(ask),
+            None => {
+                if !is_overseer
+                    && ctx.sends_to_model
+                    && ctx.kind == AiKind::Explain
+                    && plan == Plan::Guest
+                    && let Some(address) = ctx.address
+                {
+                    state.explain_quota.start_guest_cooldown(address, now);
+                }
+                Ok(ask)
+            }
         }
     }
 

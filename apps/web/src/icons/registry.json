@@ -41,8 +41,22 @@
       ]
     },
     "view_as": {
-      "type": "emoji",
-      "value": "👁️"
+      "type": "image",
+      "value": "icons/emoji_1f441_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "👁️"
+        },
+        {
+          "type": "emoji",
+          "value": "👁"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f441_1_icon.png"
+        }
+      ]
     }
   },
   "home": {
@@ -1151,6 +1165,130 @@
           "value": "icons/home_assets_1_icon.png"
         }
       ]
+    },
+    "1f6d2": {
+      "type": "image",
+      "value": "icons/emoji_1f6d2_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🛒"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f6d2_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f6d2_2_icon.png"
+        }
+      ]
+    },
+    "1f4bc": {
+      "type": "image",
+      "value": "icons/emoji_1f4bc_2_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "💼"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4bc_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4bc_2_icon.png"
+        }
+      ]
+    },
+    "26a0": {
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
+    },
+    "1f441": {
+      "type": "image",
+      "value": "icons/emoji_1f441_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "👁"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f441_1_icon.png"
+        }
+      ]
+    },
+    "1f916": {
+      "type": "image",
+      "value": "icons/emoji_1f916_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🤖"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f916_1_icon.png"
+        }
+      ]
+    },
+    "1f5bc": {
+      "type": "image",
+      "value": "icons/emoji_1f5bc_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🖼"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f5bc_1_icon.png"
+        }
+      ]
+    },
+    "1f4c8": {
+      "type": "image",
+      "value": "icons/emoji_1f4c8_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📈"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4c8_1_icon.png"
+        }
+      ]
+    },
+    "1f4c9": {
+      "type": "image",
+      "value": "icons/emoji_1f4c9_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📉"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4c9_1_icon.png"
+        }
+      ]
     }
   },
   "business": {
@@ -1261,8 +1399,22 @@
       ]
     },
     "gap": {
-      "type": "emoji",
-      "value": "⚠️"
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
     },
     "ok": {
       "type": "image",
@@ -1733,12 +1885,32 @@
       ]
     },
     "up": {
-      "type": "emoji",
-      "value": "📈"
+      "type": "image",
+      "value": "icons/emoji_1f4c8_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📈"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4c8_1_icon.png"
+        }
+      ]
     },
     "down": {
-      "type": "emoji",
-      "value": "📉"
+      "type": "image",
+      "value": "icons/emoji_1f4c9_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "📉"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f4c9_1_icon.png"
+        }
+      ]
     },
     "empty": {
       "type": "image",
@@ -1855,8 +2027,22 @@
       ]
     },
     "finalise_failed": {
-      "type": "emoji",
-      "value": "⚠️"
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
     },
     "finalise_skipped": {
       "type": "emoji",
@@ -2189,8 +2375,22 @@
       ]
     },
     "unmapped": {
-      "type": "emoji",
-      "value": "⚠️"
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
     },
     "covered": {
       "type": "image",
@@ -2273,8 +2473,22 @@
       "value": "📅"
     },
     "warning": {
-      "type": "emoji",
-      "value": "⚠️"
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
     },
     "empty": {
       "type": "image",
@@ -2553,8 +2767,22 @@
       ]
     },
     "out": {
-      "type": "emoji",
-      "value": "⚠️"
+      "type": "image",
+      "value": "icons/emoji_26a0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "⚠️"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_1_icon.png"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_26a0_2_icon.png"
+        }
+      ]
     },
     "print": {
       "type": "emoji",
@@ -2591,8 +2819,22 @@
       "value": "📭"
     },
     "fix": {
-      "type": "emoji",
-      "value": "🛠️"
+      "type": "image",
+      "value": "icons/emoji_1f6e0_1_icon.png",
+      "variants": [
+        {
+          "type": "emoji",
+          "value": "🛠️"
+        },
+        {
+          "type": "emoji",
+          "value": "🔧"
+        },
+        {
+          "type": "image",
+          "value": "icons/emoji_1f6e0_1_icon.png"
+        }
+      ]
     },
     "ask": {
       "type": "image",

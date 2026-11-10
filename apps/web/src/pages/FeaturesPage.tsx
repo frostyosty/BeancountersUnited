@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { GuestBanner } from "../components/GuestBanner";
 import { SiteHeader } from "../components/SiteHeader";
 import { Badge, type Target, TrialLink } from "../components/TryIt/TrialLink";
-import { type TrialPath, useOpenInTrial } from "../components/TryIt/useOpenInTrial";
+import { type OpenInTrial, type TrialPath, useOpenInTrial } from "../components/TryIt/useOpenInTrial";
 import { booksPath } from "../lib/books";
 import { Icon } from "../lib/icons";
 import home from "./HomePage.module.css";
@@ -194,12 +194,12 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
   },
 ];
 
-function Badges({ f }: { f: Feature }) {
+function Badges({ f, o }: { f: Feature; o: OpenInTrial }) {
   return (
     <span className={styles.badges}>
       {f.account && <Badge kind="free" />}
       {f.soon && <Badge kind="soon" />}
-      {!f.account && !f.soon && <Badge kind="try" />}
+      {!f.account && !f.soon && (f.target ? <TrialLink badge o={o} id={f.title} target={f.target} /> : <Badge kind="try" />)}
     </span>
   );
 }
@@ -260,10 +260,10 @@ export function FeaturesPage() {
                     <li key={f.title} className={styles.item}>
                       <div className={styles.itemHead}>
                         <h4>{f.title}</h4>
-                        <Badges f={f} />
+                        <Badges f={f} o={o} />
                       </div>
                       <p>{f.body}</p>
-                      {f.target && <TrialLink o={o} id={f.title} target={f.target} />}
+                      {f.target && (f.account || f.soon) && <TrialLink o={o} id={f.title} target={f.target} />}
                     </li>
                   ))}
                 </ul>

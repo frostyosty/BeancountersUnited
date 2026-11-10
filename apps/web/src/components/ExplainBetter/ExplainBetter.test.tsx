@@ -44,9 +44,10 @@ describe("ExplainBetter", () => {
     await waitFor(() => expect((screen.getByRole("button", { name: /back tomorrow/i }) as HTMLButtonElement).disabled).toBe(true));
   });
 
-  it("shows nothing when the server has no AI service", async () => {
-    setup(() => json(422, { code: "ai_unavailable", message: "no" }));
+  it("shows the server's message (e.g. the guest cooldown) and keeps the button", async () => {
+    setup(() => json(422, { code: "ai_cooldown", message: "Please wait 90 seconds before asking again." }));
     await userEvent.click(screen.getByRole("button", { name: /explain better/i }));
-    await waitFor(() => expect(screen.queryByRole("button")).toBeNull());
+    expect(await screen.findByText(/Please wait 90 seconds/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /explain better/i })).toBeTruthy();
   });
 });

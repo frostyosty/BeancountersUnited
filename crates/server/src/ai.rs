@@ -435,7 +435,12 @@ pub struct ExplainLimits {
     per_address: Option<u32>,
     global: Option<GlobalCap>,
     addresses: std::sync::Mutex<BTreeMap<(String, chrono::NaiveDate), u32>>,
+    /// When each address last had a guest explanation, for the guest cooldown.
+    last_guest_ask: std::sync::Mutex<BTreeMap<String, chrono::DateTime<chrono::Utc>>>,
 }
+
+/// How long one address waits between guests' explanations, so new trials can't be used to spam.
+pub const GUEST_COOLDOWN_SECS: i64 = 120;
 
 impl Default for ExplainLimits {
     /// No limits, for tests and tools.
@@ -455,7 +460,26 @@ impl ExplainLimits {
             per_address,
             global,
             addresses: std::sync::Mutex::default(),
+            last_guest_ask: std::sync::Mutex::default(),
         }
+    }
+
+    /// Seconds `address` must still wait before another guest explanation; `None` when free.
+    pub fn guest_cooldown_left(
+        &self,
+        address: &str,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Option<i64> {
+        let last = self.last_guest_ask.lock().unwrap_or_else(|e| e.into_inner());
+        let left = GUEST_COOLDOWN_SECS - (now - *last.get(address)?).num_seconds();
+        (left > 0).then_some(left)
+    }
+
+    /// Starts `address`'s guest cooldown.
+    pub fn start_guest_cooldown(&self, address: &str, now: chrono::DateTime<chrono::Utc>) {
+        let mut last = self.last_guest_ask.lock().unwrap_or_else(|e| e.into_inner());
+        last.retain(|_, t| (now - *t).num_seconds() < GUEST_COOLDOWN_SECS);
+        last.insert(address.to_owned(), now);
     }
 
     /// From the environment, per day (UTC); `0` or `off` for none:

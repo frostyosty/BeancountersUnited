@@ -18,28 +18,44 @@ function goLabel(o: OpenInTrial, key: string, target: Target): string {
 }
 
 /** The link or button that opens a target. `id` names it, so only the clicked one says "Opening…". */
-export function TrialLink({ o, id, target }: { o: OpenInTrial; id: string; target: Target }) {
-  const label = (
+export function TrialLink({
+  o,
+  id,
+  target,
+  badge = false,
+}: {
+  o: OpenInTrial;
+  id: string;
+  target: Target;
+  /** Show it as the green "Try it now" badge instead of a text link. */
+  badge?: boolean;
+}) {
+  const className = badge ? `${styles.badge} ${styles.tryNow} ${styles.badgeLink}` : styles.go;
+  const label = badge ? (
+    <>
+      <Emoji>✅</Emoji> {"trial" in target && o.opening === id ? "Opening…" : "Try it now"}
+    </>
+  ) : (
     <>
       <Icon name="peaks.open" fallback="➡️" /> {goLabel(o, id, target)}
     </>
   );
   if ("home" in target) {
     return (
-      <Link to="/#features" className={styles.go}>
+      <Link to="/#features" className={className}>
         {label}
       </Link>
     );
   }
   if ("to" in target) {
     return (
-      <Link to={target.to} className={styles.go}>
+      <Link to={target.to} className={className}>
         {label}
       </Link>
     );
   }
   return (
-    <button type="button" className={styles.go} aria-busy={o.opening === id} onClick={() => o.open(id, target.trial)}>
+    <button type="button" className={className} aria-busy={o.opening === id} onClick={() => o.open(id, target.trial)}>
       {label}
     </button>
   );
