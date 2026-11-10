@@ -3,12 +3,13 @@ import type { BankAccountView } from "@acct/types/BankAccountView";
 import type { Coding } from "@acct/types/Coding";
 import type { GstCode } from "@acct/types/GstCode";
 import type { SaveTaxCard } from "@acct/types/SaveTaxCard";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { Emoji, Icon } from "../lib/icons";
 import { formatMoney } from "../lib/money";
 import { keys, useChart, useClientAssetClasses } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
+import { Button } from "../ui";
 import styles from "./SaveTax.module.css";
 
 /** Over this, GST is claimed only once the owner holds the supplier's tax invoice (PLAN.md M11). */
@@ -320,17 +321,14 @@ export function CategoriseForm({
       {s.choice === "asset_purchase" && <AssetPicker clientId={clientId} value={s.assetClass} onPick={(assetClass, account) => set({ assetClass, account })} />}
 
       {s.choice === "transfer" && (
-        <label className="field">
-          {direction === "in" ? "Which account did it come from?" : "Which account did it go to?"}
-          <select value={s.bank} onChange={(e) => set({ bank: e.target.value })}>
-            <option value="">Choose…</option>
-            {otherBanks.map((b) => (
-              <option key={b.id} value={b.code}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <TransferAccount
+          clientId={clientId}
+          direction={direction}
+          banks={otherBanks}
+          value={s.bank}
+          onPick={(bank) => set({ bank })}
+          onPersonal={() => set({ choice: direction === "in" ? "owner_funds" : "personal", bank: "" })}
+        />
       )}
 
       {s.choice === "part_private" && (
@@ -388,6 +386,128 @@ export function CategoriseForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/** The select option that opens the add-account form instead of picking an account. */
+const ADD_ACCOUNT = "__add";
+
+/**
+ * Which of the owner's other accounts money moved to or from. With none set up yet, it asks for
+ * the account's name straight away (`add_bank_account`) rather than showing an empty list. It also
+ * points to "personal" for the usual case of a sole trader's own everyday account, which needs no
+ * statement of its own.
+ */
+function TransferAccount({
+  clientId,
+  direction,
+  banks,
+  value,
+  onPick,
+  onPersonal,
+}: {
+  clientId: string;
+  direction: "in" | "out";
+  banks: BankAccountView[];
+  value: string;
+  onPick: (code: string) => void;
+  onPersonal: () => void;
+}) {
+  const add = useCommand([keys.business(clientId)]);
+  const [adding, setAdding] = useState(banks.length === 0);
+  const [name, setName] = useState("");
+  const [number, setNumber] = useState("");
+  // The account just added: picked once the business refetches with its code.
+  const [addedId, setAddedId] = useState<string | null>(null);
+  const added = banks.find((b) => b.id === addedId);
+
+  useEffect(() => {
+    if (added) {
+      onPick(added.code);
+      setAddedId(null);
+      setAdding(false);
+      setName("");
+      setNumber("");
+    }
+  }, [added, onPick]);
+
+  const submit = async () => {
+    if (!name.trim() || add.isPending) {
+      return;
+    }
+    try {
+      const accepted = await add.mutateAsync({
+        kind: "add_bank_account",
+        payload: { client_id: clientId, name: name.trim(), ...(number.trim() ? { account_number: number.trim() } : {}) },
+      });
+      setAddedId(accepted.entity_id);
+    } catch {
+      // Shown below from add.error.
+    }
+  };
+
+  const question = direction === "in" ? "Which account did it come from?" : "Which account did it go to?";
+  return (
+    <>
+      {adding ? (
+        <fieldset className={styles.addAccount}>
+          <legend>{question}</legend>
+          {banks.length === 0 && <p className="muted">We don't know about that account yet. Tell us its name and we'll add it.</p>}
+          <label className="field">
+            What's it called?
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter adds the account, not the whole form.
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void submit();
+                }
+              }}
+              placeholder="e.g. ASB savings"
+            />
+          </label>
+          <label className="field">
+            <span>
+              Account number <span className="muted">(optional, so its statement finds it when you upload one)</span>
+            </span>
+            <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="12-3456-7890123-00" inputMode="numeric" />
+          </label>
+          <ErrorMessage error={add.error} />
+          <div className="row">
+            <Button size="sm" onClick={() => void submit()} busy={add.isPending || addedId !== null} disabled={!name.trim()}>
+              <Icon name="business.add_account" fallback="➕" /> Add account
+            </Button>
+            {banks.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </fieldset>
+      ) : (
+        <label className="field">
+          {question}
+          <select value={value} onChange={(e) => (e.target.value === ADD_ACCOUNT ? setAdding(true) : onPick(e.target.value))}>
+            <option value="">Choose…</option>
+            {banks.map((b) => (
+              <option key={b.id} value={b.code}>
+                {b.name}
+              </option>
+            ))}
+            <option value={ADD_ACCOUNT}>Another account…</option>
+          </select>
+        </label>
+      )}
+      <p className="muted">
+        {direction === "in" ? "Did it come from your own everyday account?" : "Did it go to your own everyday account?"}{" "}
+        <Button size="sm" variant="ghost" onClick={onPersonal}>
+          {direction === "in" ? "Choose “Money I put in myself”" : "Choose “Personal spending”"}
+        </Button>{" "}
+        instead. It's the same for your tax, and you won't need that account's statements.
+      </p>
+    </>
   );
 }
 

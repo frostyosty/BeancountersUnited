@@ -84,6 +84,32 @@ afterEach(() => {
 });
 
 describe("business screen", () => {
+  it("lists an account with no statements before Submit, and uploads into that account", async () => {
+    const empty = { ...business.bank_accounts[0]!, id: "a4", code: "600.04", name: "ASB savings", account_number: null, needs_opening_balance: false, statements: [], gaps: [], reconciliation: null };
+    const calls = stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/businesses/b1": () => ({ ...business, bank_accounts: [...business.bank_accounts, empty] }),
+      "GET /api/businesses/b1/tax": () => tax,
+      "POST /api/commands": () => ({ seq: 9, entity_id: null }),
+    });
+    renderApp(<App />, "/businesses/b1");
+    expect(await screen.findByText(/Before you submit, we haven't seen statements for/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "ASB savings" }).getAttribute("href")).toBe("#account-a4");
+    // Only the account with no statements is listed.
+    expect(screen.queryByRole("link", { name: "Rimu savings" })).toBeNull();
+    const tick = screen.getByLabelText(/There's no business income in it/) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(tick);
+    expect(tick.checked).toBe(true);
+
+    await user.upload(screen.getByLabelText(/Upload a statement for ASB savings/), new File(["x"], "asb.csv", { type: "text/csv" }));
+    await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(1));
+    expect(calls.find((c) => c.method === "POST")!.body).toMatchObject({
+      kind: "import_statement",
+      payload: { client_id: "b1", file_name: "asb.csv", bank_account_id: "a4" },
+    });
+  });
+
   it("shows the three areas, with Submit switched off", async () => {
     stubApi({
       "GET /api/me": () => sam,

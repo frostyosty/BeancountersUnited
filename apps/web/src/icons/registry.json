@@ -1647,6 +1647,14 @@
           "value": "icons/emoji_1f3ea_1_icon.png"
         }
       ]
+    },
+    "add_account": {
+      "type": "emoji",
+      "value": "➕"
+    },
+    "no_statement": {
+      "type": "emoji",
+      "value": "📭"
     }
   },
   "signup": {

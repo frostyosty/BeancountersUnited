@@ -18,7 +18,7 @@ import { lineDescription } from "../lib/lines";
 import { formatMoney, parseMoney } from "../lib/money";
 import { keys, useBusiness, useTax } from "../lib/queries";
 import { useCommand } from "../lib/useCommand";
-import { Button, Field, PageHeader } from "../ui";
+import { Button, Field, Notice, PageHeader } from "../ui";
 import styles from "./BusinessPage.module.css";
 import { Walkthrough } from "./Walkthrough";
 
@@ -94,6 +94,7 @@ export function BusinessPage({ clientId: given }: { clientId?: string }) {
               <Icon name="business.submit" fallback="📨" /> Submit to IRD
             </h2>
             <p className={styles.blurb}>Filing with IRD is coming. Until then, this shows what you'd file.</p>
+            <BeforeSubmit accounts={b.bank_accounts.filter((a) => a.statements.length === 0)} />
             <button type="button" disabled>
               Submit
             </button>
@@ -378,10 +379,19 @@ function BankAccount({ account: a, clientId, canEdit }: { account: BankAccountVi
   const rec = a.reconciliation;
   const [proofOpen, setProofOpen] = useState(false);
   return (
-    <section className={styles.account}>
+    <section className={styles.account} id={`account-${a.id}`}>
       <h3>
         {a.name} <span className="muted">{a.account_number ?? ""}</span>
       </h3>
+      {a.statements.length === 0 && (
+        <>
+          <p className={styles.notice}>
+            <Icon name="business.no_statement" fallback="📭" /> No statements yet. Any income paid into this account
+            isn't counted until you upload one.
+          </p>
+          {canEdit && <UploadFor account={a} clientId={clientId} />}
+        </>
+      )}
       {a.statements.length > 0 && (
         <>
           <Button variant="secondary" size="sm" onClick={() => setProofOpen(true)}>
@@ -434,6 +444,77 @@ function BankAccount({ account: a, clientId, canEdit }: { account: BankAccountVi
       )}
       {a.needs_opening_balance && canEdit && <OpeningBalanceForm account={a} clientId={clientId} />}
     </section>
+  );
+}
+
+/**
+ * What to settle before submitting: accounts we know about but have no statements for, so any
+ * income in them is missing from the return. The owner uploads one, or confirms there's no business
+ * income in it. Not a hard block: a savings account with nothing to report shouldn't stop filing.
+ * Submit (M14) files only once each is ticked, and the server keeps the confirmation with the filing.
+ */
+function BeforeSubmit({ accounts }: { accounts: BankAccountView[] }) {
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  if (accounts.length === 0) {
+    return null;
+  }
+  const toggle = (id: string) =>
+    setConfirmed((old) => {
+      const next = new Set(old);
+      if (!next.delete(id)) {
+        next.add(id);
+      }
+      return next;
+    });
+  return (
+    <Notice tone="warn" role="note">
+      <p>Before you submit, we haven't seen statements for:</p>
+      <ul>
+        {accounts.map((a) => (
+          <li key={a.id}>
+            <a href={`#account-${a.id}`}>{a.name}</a>. Income paid into it isn't counted.{" "}
+            <label>
+              <input type="checkbox" checked={confirmed.has(a.id)} onChange={() => toggle(a.id)} /> There's no business
+              income in it
+            </label>
+          </li>
+        ))}
+      </ul>
+    </Notice>
+  );
+}
+
+/**
+ * Uploads a statement into this account, for one added by name before any statement (a transfer's
+ * other side), so the file doesn't start a second account.
+ */
+function UploadFor({ account, clientId }: { account: BankAccountView; clientId: string }) {
+  const upload = useCommand([keys.business(clientId)]);
+  const onPicked = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) {
+      return;
+    }
+    try {
+      await upload.mutateAsync({
+        kind: "import_statement",
+        payload: { client_id: clientId, file_name: file.name, content_base64: await fileToBase64(file), bank_account_id: account.id },
+      });
+    } catch {
+      // Shown below from upload.error.
+    }
+  };
+  return (
+    <>
+      <label className="field">
+        <span>
+          <Icon name="business.upload" fallback="📤" /> Upload a statement for {account.name}
+        </span>
+        <input type="file" accept=".ofx,.qfx,.qif,.csv,.txt" onChange={(e) => void onPicked(e)} disabled={upload.isPending} />
+      </label>
+      <ErrorMessage error={upload.error} />
+    </>
   );
 }
 

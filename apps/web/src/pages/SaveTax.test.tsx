@@ -329,6 +329,60 @@ describe("save tax", () => {
     });
   });
 
+  it("asks for the account a transfer went to when there's no other, and picks it once added", async () => {
+    const spend = card({ id: "line:l20", kind: "categorise", saving: 0, lines: [line("l20", -50000, "TFR TO SAVINGS")] });
+    let added = false;
+    const asb = bank("a9", "600.09", "ASB savings");
+    const calls = stubApi({
+      "GET /api/me": () => sam,
+      "GET /api/businesses/b1": () => ({ ...business, bank_accounts: added ? [business.bank_accounts[0], asb] : [business.bank_accounts[0]] }),
+      "GET /api/businesses/b1/tax": () => ({ total: 0, gst: [], income: [], notices: [] }),
+      "GET /api/businesses/b1/save-tax": () => queue([spend]),
+      "GET /api/businesses/b1/ai-suggestions": () => ({ available: false, provider: null, model: null, enabled: true, activity: null, private_names: [], suggestions: [] }),
+      "GET /api/clients/b1/chart": () => chart,
+      "POST /api/commands": (init) => {
+        if (String(init?.body).includes('"add_bank_account"')) {
+          added = true;
+          return { seq: 21, entity_id: "a9" };
+        }
+        return { seq: 22, entity_id: null };
+      },
+    });
+    renderApp(<App />, "/businesses/b1/save-tax");
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText(/Moved to another of my accounts/));
+    // No empty list: it asks for the account's name.
+    expect(screen.getByText(/We don't know about that account yet/)).toBeTruthy();
+    await user.type(screen.getByLabelText("What's it called?"), "ASB savings");
+    await user.type(screen.getByLabelText(/Account number/), "12-3456-7890123-00");
+    await user.click(screen.getByRole("button", { name: /Add account/ }));
+    // Once the business refetches, the new account is chosen.
+    const select = (await screen.findByLabelText("Which account did it go to?")) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe("600.09"));
+    await user.click(screen.getByRole("button", { name: /^.*Save$/ }));
+    await waitFor(() => expect(posts(calls)).toHaveLength(2));
+    expect(posts(calls)).toEqual([
+      expect.objectContaining({ kind: "add_bank_account", payload: { client_id: "b1", name: "ASB savings", account_number: "12-3456-7890123-00" } }),
+      expect.objectContaining({ kind: "code_bank_line", payload: { bank_line_id: "l20", coding: { direction: "out", kind: "transfer", to: "600.09" } } }),
+    ]);
+  });
+
+  it("points a transfer to personal spending, which needs no other account", async () => {
+    const spend = card({ id: "line:l21", kind: "categorise", saving: 0, lines: [line("l21", -50000, "TFR TO ME")] });
+    const calls = routes(() => queue([spend]));
+    renderApp(<App />, "/businesses/b1/save-tax");
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText(/Moved to another of my accounts/));
+    // With accounts to pick from, the list has a way to add another.
+    const select = screen.getByLabelText("Which account did it go to?") as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.textContent)).toEqual(["Choose…", "Rimu savings", "Another account…"]);
+    await user.click(screen.getByRole("button", { name: /Choose “Personal spending”/ }));
+    expect((screen.getByLabelText(/Personal spending/) as HTMLInputElement).checked).toBe(true);
+    await user.click(screen.getByRole("button", { name: /^.*Save$/ }));
+    await waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]).toMatchObject({ kind: "code_bank_line", payload: { coding: { direction: "out", kind: "personal" } } });
+  });
+
   it("accepts a suggestion on its card, or all of them in one batch", async () => {
     const a = card({
       id: "line:l11",

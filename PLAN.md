@@ -241,6 +241,7 @@ Status: not started. Needs IRD test environment access (see the business track).
 - Submit shows the return's lines and the declaration, then files. The exact payload, IRD's response and a SHA-256 of the payload are stored and never regenerated, like a finalisation snapshot.
 - A filed GST period or income year rejects changes to its numbers. Corrections go through an amendment.
 - Submit refuses a GST period while a "Were these one purchase?" card covering it is open (`blocks_filing`, ADR 017, D8), and filed periods refuse new purchases that reach into them (ADR 017, 14).
+- A bank account with no statements (often one added by name as a transfer's other side) doesn't block filing, but Submit asks the owner to confirm, per account, that there's no business income in it (the business screen's "Before you submit" list already shows this). The server re-checks, and keeps the confirmations with the filing record.
 - After filing, show how to pay. We don't process payments.
 
 Done when: in IRD's test environment, a synthetic business files a GST return and an IR3, checks their status, retrieves them and amends one, and changes to a filed period are rejected.
