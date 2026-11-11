@@ -253,7 +253,7 @@ impl Config {
     /// The suggester this configuration names.
     pub fn suggester(&self) -> Result<Arc<dyn Suggester>, AiError> {
         Ok(match self.provider {
-            Provider::Fake => Arc::new(FakeSuggester::with_defaults(&self.model)),
+            Provider::Fake => Arc::new(FakeSuggester::with_demo(&self.model)),
             Provider::Anthropic => Arc::new(anthropic::Client::new(
                 http()?,
                 &self.base_url,

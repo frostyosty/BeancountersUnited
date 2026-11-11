@@ -1199,7 +1199,7 @@ pub async fn explain_card(
     let Some(metered) = state.suggester.clone() else {
         return Err(CommandError::invalid(
             "ai_unavailable",
-            "Explanations aren't set up on this server.",
+            "Explanations have been disabled by admin until product launch.",
         ));
     };
     let (card, settings, private_names) = {

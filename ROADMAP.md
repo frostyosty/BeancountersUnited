@@ -2,6 +2,19 @@
 
 ### General
 
+ Real explanations: you do need an API key. Make an account at console.anthropic.com, which is separate from a Claude.ai or Claude Code     
+    subscription and billed per use. Then set (as an export command, like "export AI_PROVIDER=fake" straight into bash):
+    - AI_PROVIDER=anthropic
+    - AI_API_KEY=<your key>
+    - optionally AI_MODEL. It defaults to claude-haiku-5-5, which is cheap.
+  - Another provider: AI_PROVIDER=openai_compatible also needs AI_PROVIDER_NAME, AI_MODEL and AI_BASE_URL.
+  Restart the server after setting these. If AI_PROVIDER is missing, or AI_API_KEY is missing for a real provider, the server silently disables
+  AI and shows this message. The check is in crates/ai/src/lib.rs:200.
+  Once it's on, limits apply by default: 5 explanations per business, 10 per IP and 50 across everyone. You can change them with the
+  ACCT_AI_EXPLAIN_* variables, and ACCT_AI_DAILY_BUDGET_CENTS caps the daily spend.
+
+
+
 Up to M23start wave 3 (agents 5 and 6). wave 2 complete
 
 For M25, please make it an intuitive claude "ask the experts" modal where theres also an example one for the 3 ofx examples, where the user sees a button come up when theyre in the 
