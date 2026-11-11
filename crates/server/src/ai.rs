@@ -470,21 +470,27 @@ impl ExplainLimits {
         address: &str,
         now: chrono::DateTime<chrono::Utc>,
     ) -> Option<i64> {
-        let last = self.last_guest_ask.lock().unwrap_or_else(|e| e.into_inner());
+        let last = self
+            .last_guest_ask
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let left = GUEST_COOLDOWN_SECS - (now - *last.get(address)?).num_seconds();
         (left > 0).then_some(left)
     }
 
     /// Starts `address`'s guest cooldown.
     pub fn start_guest_cooldown(&self, address: &str, now: chrono::DateTime<chrono::Utc>) {
-        let mut last = self.last_guest_ask.lock().unwrap_or_else(|e| e.into_inner());
+        let mut last = self
+            .last_guest_ask
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         last.retain(|_, t| (now - *t).num_seconds() < GUEST_COOLDOWN_SECS);
         last.insert(address.to_owned(), now);
     }
 
     /// From the environment, per day (UTC); `0` or `off` for none:
     /// - the plan table, with `ACCT_AI_EXPLAIN_LIMIT` (per business, 5) and
-    ///   `ACCT_AI_EXPLAIN_GUEST_LIMIT` (per trial, 2) overriding the Free and Guest cells;
+    ///   `ACCT_AI_EXPLAIN_GUEST_LIMIT` (per trial, 1) overriding the Free and Guest cells;
     /// - `ACCT_AI_EXPLAIN_IP_LIMIT`: per client address, 10;
     /// - `ACCT_AI_EXPLAIN_GLOBAL_LIMIT`: across everyone, 50 plus
     ///   `ACCT_AI_EXPLAIN_GLOBAL_PER_GUEST` (2) for each guest who signed up in the last 24 hours.
@@ -1302,7 +1308,7 @@ mod tests {
         assert_eq!(l.limit(Plan::Free), Some(5));
         assert_eq!(
             l.limit(Plan::Guest),
-            Some(2),
+            Some(1),
             "a trial has fewer than an owner"
         );
         assert_eq!(ExplainLimits::default().limit(Plan::Guest), None);
