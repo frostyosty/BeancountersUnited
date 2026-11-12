@@ -50,6 +50,54 @@ export function parseMoney(text: string): number | null {
   return negative && value !== 0 ? -value : value;
 }
 
+/** An amount as a bank statement prints it: its size, and the sign the text gives it, if any. */
+export interface StatementAmount {
+  /** The size in cents, never negative. */
+  cents: number;
+  /**
+   * How the text signs it: a minus, brackets or a trailing minus (`minus`), a plus (`plus`), `DR` or
+   * `OD` (`dr`), `CR` (`cr`), or nothing at all (`null`). What an unsigned amount means depends on
+   * the statement, so it's left to the reader.
+   */
+  sign: "minus" | "plus" | "dr" | "cr" | null;
+}
+
+const STATEMENT_AMOUNT =
+  /^(?<open>[-+(])?\s?(?:NZ\$|NZD\s?|\$)?\s?(?<minus>-)?(?<number>\d{1,3}(?:,\d{3})+\.\d{2}|\d+\.\d{2})(?<close>\))?\s?(?<trail>-|\+|CR|DR|OD)?\.?$/i;
+
+/**
+ * Reads an amount printed on a bank statement: `1,234.56`, `$12.00`, `-12.00`, `(12.00)`, `12.00-`,
+ * `+12.00`, `12.00 CR`, `12.00DR`. It must have exactly two decimal places, so reference numbers,
+ * account numbers and rates aren't taken for money. Null when it isn't an amount, or when it signs
+ * itself twice (`-12.00 CR`).
+ */
+export function parseStatementAmount(text: string): StatementAmount | null {
+  const m = STATEMENT_AMOUNT.exec(text.trim());
+  if (!m?.groups) {
+    return null;
+  }
+  const { open, minus, number, close, trail } = m.groups;
+  if ((open === "(") !== (close === ")") || (open && minus)) {
+    return null;
+  }
+  const lead: StatementAmount["sign"] = open === "(" || open === "-" || minus ? "minus" : open === "+" ? "plus" : null;
+  const upper = trail?.toUpperCase();
+  const tail: StatementAmount["sign"] =
+    upper === "-" ? "minus" : upper === "+" ? "plus" : upper === "CR" ? "cr" : upper ? "dr" : null;
+  if (lead && tail) {
+    return null;
+  }
+  const cents = parseMoney(number!);
+  return cents === null ? null : { cents, sign: lead ?? tail };
+}
+
+/** Formats cents as `-1234.56`: no thousands separators, as files such as OFX want them. */
+export function formatPlainMoney(cents: number): string {
+  assertCents(cents);
+  const digits = String(Math.abs(cents)).padStart(3, "0");
+  return `${cents < 0 ? "-" : ""}${digits.slice(0, -2)}.${digits.slice(-2)}`;
+}
+
 /**
  * Formats cents as `1,234.56`, with a leading `-` for negatives. Throws on anything that isn't a
  * safe integer, because that means a bug upstream.

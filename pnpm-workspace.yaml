@@ -3,3 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   core-js: false
+# pdf.js lists a native canvas build as optional, for drawing pages in Node. We only read text from
+# PDFs (the PDF to OFX tool), so skip the download.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
