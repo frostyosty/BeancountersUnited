@@ -2669,6 +2669,10 @@
     "invoice": {
       "type": "emoji",
       "value": "🧾"
+    },
+    "pdfToOfx": {
+      "type": "emoji",
+      "value": "🔄"
     }
   },
   "walkthrough": {

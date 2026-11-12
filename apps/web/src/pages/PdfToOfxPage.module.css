@@ -1,0 +1,108 @@
+.converter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.dropOver {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropIcon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.dropText {
+  margin: 0;
+  font-weight: 600;
+}
+
+.dropHint {
+  max-width: 32rem;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.promise {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.file {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.check {
+  margin-top: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+/* Long statements scroll sideways inside their box on a phone, not the whole page. */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.tableWrap table {
+  width: 100%;
+}
+
+.date {
+  white-space: nowrap;
+}
+
+.madeOn {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.off > td {
+  background: var(--warn-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop {
+    transition: none;
+  }
+}

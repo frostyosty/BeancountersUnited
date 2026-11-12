@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   formatDollars,
+  formatPlainMoney,
   formatMoney,
   formatStatementCents,
   formatStatementDollars,
   MAX_CENTS,
   parseMoney,
+  parseStatementAmount,
   sumCents,
 } from "./money";
 
@@ -98,5 +100,37 @@ describe("formatStatementCents", () => {
     expect(formatStatementCents(10341260)).toBe("103,412.60");
     expect(formatStatementCents(-60)).toBe("(0.60)");
     expect(formatStatementCents(0)).toBe("–");
+  });
+});
+
+describe("parseStatementAmount", () => {
+  it("reads the ways statements print money, and how they sign it", () => {
+    expect(parseStatementAmount("1,234.56")).toEqual({ cents: 123456, sign: null });
+    expect(parseStatementAmount("$12.00")).toEqual({ cents: 1200, sign: null });
+    expect(parseStatementAmount("-12.00")).toEqual({ cents: 1200, sign: "minus" });
+    expect(parseStatementAmount("-$12.00")).toEqual({ cents: 1200, sign: "minus" });
+    expect(parseStatementAmount("(12.00)")).toEqual({ cents: 1200, sign: "minus" });
+    expect(parseStatementAmount("12.00-")).toEqual({ cents: 1200, sign: "minus" });
+    expect(parseStatementAmount("+12.00")).toEqual({ cents: 1200, sign: "plus" });
+    expect(parseStatementAmount("12.00 CR")).toEqual({ cents: 1200, sign: "cr" });
+    expect(parseStatementAmount("12.00DR")).toEqual({ cents: 1200, sign: "dr" });
+    expect(parseStatementAmount("12.00 od")).toEqual({ cents: 1200, sign: "dr" });
+    expect(parseStatementAmount("NZ$ 0.50")).toEqual({ cents: 50, sign: null });
+  });
+
+  it("refuses what isn't money: no cents, a rate, a reference, or two signs", () => {
+    for (const text of ["12", "12.5", "4.875", "1234-5678", "12/03", "(12.00", "-12.00 CR", "--12.00", "1,23.00", "abc"]) {
+      expect(parseStatementAmount(text), text).toBeNull();
+    }
+  });
+});
+
+describe("formatPlainMoney", () => {
+  it("writes cents with no separators, as OFX wants them", () => {
+    expect(formatPlainMoney(123456789)).toBe("1234567.89");
+    expect(formatPlainMoney(-450)).toBe("-4.50");
+    expect(formatPlainMoney(5)).toBe("0.05");
+    expect(formatPlainMoney(0)).toBe("0.00");
+    expect(() => formatPlainMoney(1.5)).toThrow();
   });
 });

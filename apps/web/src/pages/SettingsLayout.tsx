@@ -134,6 +134,15 @@ export function ToolsTab() {
           Open the invoice maker
         </ButtonLink>
       </Card>
+      <Card title="PDF to OFX" icon={<Icon name="tools.pdfToOfx" fallback="🔄" />}>
+        <p>
+          Turn a bank or credit card statement PDF into an OFX file that accounting software can import. The PDF is
+          read on this device and never uploaded.
+        </p>
+        <ButtonLink to="/tools/pdf-to-ofx" variant="primary">
+          Open PDF to OFX
+        </ButtonLink>
+      </Card>
       <TrialCounts />
     </section>
   );

@@ -190,6 +190,11 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
         body: "Make a tidy invoice for a customer and download it as a PDF. No account needed; sign in to keep your invoices and templates. Separate from your books.",
         target: { to: "/tools/invoice" },
       },
+      {
+        title: "PDF to OFX",
+        body: "Only have a statement as a PDF? Turn it into an OFX file that Xero, MYOB and other accounting software can import. Read on your device, never uploaded. No account needed.",
+        target: { to: "/tools/pdf-to-ofx" },
+      },
     ],
   },
 ];

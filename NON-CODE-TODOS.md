@@ -280,3 +280,12 @@ Each milestone's ADR agent appends its own items here. These are the ones known 
       standards apply, so it isn't ours to write), then checks a sample pack.
 - [ ] M30: decide whether your practices issue cash flow statements at all; if not, drop M30 from `PLAN.md`.
       Otherwise an accountant checks the cash-flow classes and the worked example.
+
+## PDF to OFX (Settings → Tools, and /tools/pdf-to-ofx; added 2026-11-12)
+It reads statement PDFs by fixed rules, tested only on synthetic statements. Real PDFs stay on an office
+machine and out of the repo (hard rule 1): the converter runs in the browser and uploads nothing, so it can be
+tried on the live site.
+- [ ] Convert a recent statement PDF from each bank you see most (ANZ, ASB, BNZ, Westpac, Kiwibank, and one or
+      two credit cards) and check each against its PDF. For any that read wrong, describe the layout (columns,
+      how dates and signs are printed) without client details, so a synthetic look-alike can be added to the tests.
+- [ ] Import one converted file each into Xero and MYOB to confirm they accept it.

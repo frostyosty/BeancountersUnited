@@ -41,16 +41,33 @@ const PublicInvoiceMakerPage = lazy(() =>
   import("./pages/InvoiceMakerPage").then((m) => ({ default: m.PublicInvoiceMakerPage })),
 );
 
-/** The invoice maker for anyone not signed in, and for a trial: it needs no account, only the saving does. */
-const publicInvoiceRoute = (
-  <Route
-    path="tools/invoice"
-    element={
-      <Suspense fallback={<p className="page">Opening the invoice maker…</p>}>
-        <PublicInvoiceMakerPage />
-      </Suspense>
-    }
-  />
+// The PDF reader (pdf.js) is loaded only once a PDF is dropped in; the page itself is loaded on first visit.
+const PdfToOfxPage = lazy(() => import("./pages/PdfToOfxPage").then((m) => ({ default: m.PdfToOfxPage })));
+const PublicPdfToOfxPage = lazy(() => import("./pages/PdfToOfxPage").then((m) => ({ default: m.PublicPdfToOfxPage })));
+
+/**
+ * The tools that need no account, for anyone not signed in and for a trial: the invoice maker (only
+ * its saving needs an account) and PDF to OFX (which keeps nothing).
+ */
+const publicToolRoutes = (
+  <>
+    <Route
+      path="tools/invoice"
+      element={
+        <Suspense fallback={<p className="page">Opening the invoice maker…</p>}>
+          <PublicInvoiceMakerPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="tools/pdf-to-ofx"
+      element={
+        <Suspense fallback={<p className="page">Opening PDF to OFX…</p>}>
+          <PublicPdfToOfxPage />
+        </Suspense>
+      }
+    />
+  </>
 );
 
 /**
@@ -89,7 +106,7 @@ export function App() {
         <Route path="features" element={<FeaturesPage />} />
         <Route path="product" element={<Navigate to="/features" replace />} />
         <Route path="signup" element={<SignUpPage />} />
-        {publicInvoiceRoute}
+        {publicToolRoutes}
         <Route path="invite/:token" element={<InviteSignedOutPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
@@ -109,7 +126,7 @@ export function App() {
             <Route path="features" element={<FeaturesPage />} />
             <Route path="product" element={<Navigate to="/features" replace />} />
             <Route path="signup" element={<SignUpPage />} />
-            {publicInvoiceRoute}
+            {publicToolRoutes}
           </>
         )}
         <Route element={<Layout />}>
@@ -157,6 +174,14 @@ export function App() {
               element={
                 <Suspense fallback={<p>Opening the invoice maker…</p>}>
                   <InvoiceMakerPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="tools/pdf-to-ofx"
+              element={
+                <Suspense fallback={<p>Opening PDF to OFX…</p>}>
+                  <PdfToOfxPage />
                 </Suspense>
               }
             />
