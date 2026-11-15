@@ -3,16 +3,24 @@ import { SiteHeader } from "../components/SiteHeader";
 import { formatDate } from "../lib/dates";
 import { Emoji, Icon } from "../lib/icons";
 import { formatMoney, sumCents } from "../lib/money";
-import { buildOfx, type OfxAccountType, ofxFileName } from "../lib/pdfToOfx/ofx";
-import { looksLikePdf, PdfReadError, pdfTextRuns } from "../lib/pdfToOfx/pdfText";
-import { type ReadLine, type ReadStatement, readStatement } from "../lib/pdfToOfx/read";
+import { fileKind, inPageOrder, MAX_PICTURES } from "../lib/pdfToOfx/files";
+import {
+  buildStatementFile,
+  STATEMENT_FORMATS,
+  type StatementFormat,
+  statementFileName,
+} from "../lib/pdfToOfx/formats";
+import { canvasBlob, ocrTextRuns, type OcrProgress, PictureReadError } from "../lib/pdfToOfx/ocr";
+import type { OfxAccountType } from "../lib/pdfToOfx/ofx";
+import { PdfReadError, pdfPagePictures, pdfTextRuns } from "../lib/pdfToOfx/pdfText";
+import { hasReadableText, type ReadLine, type ReadStatement, readStatement } from "../lib/pdfToOfx/read";
 import type { TextRun } from "../lib/pdfToOfx/layout";
 import { Button, Card, Field, Notice, PageHeader } from "../ui";
 import styles from "./PdfToOfxPage.module.css";
 
 const SUBTITLE =
-  "Drop in a bank or credit card statement saved as a PDF, check what we read, and download it as an OFX file for " +
-  "your accounting software. Your PDF is read on this device and never uploaded.";
+  "Drop in a bank or credit card statement (the PDF, a scan, or photos or screenshots of its pages), check what we " +
+  "read, and download it as an OFX file for your accounting software. It's read on this device and never uploaded.";
 
 /** Bigger than any statement; a file this size is something else. */
 const MAX_BYTES = 30 * 1024 * 1024;
@@ -45,11 +53,14 @@ export function PublicPdfToOfxPage() {
   );
 }
 
+/** Where the text came from: drawn in the PDF, or read with OCR off a scanned PDF or pictures. */
+type Source = "text" | "scan" | "picture" | "pictures";
+
 type Stage =
   | { kind: "idle" }
-  | { kind: "reading"; name: string }
+  | { kind: "reading"; name: string; progress: OcrProgress | null }
   | { kind: "failed"; name: string; message: string }
-  | { kind: "read"; name: string; runs: TextRun[] };
+  | { kind: "read"; name: string; runs: TextRun[]; source: Source };
 
 const ACCOUNT_TYPES: { value: OfxAccountType; label: string }[] = [
   { value: "cheque", label: "Everyday (cheque) account" },
@@ -61,13 +72,24 @@ const ACCOUNT_TYPES: { value: OfxAccountType; label: string }[] = [
 const negate = (cents: number) => (cents === 0 ? 0 : -cents);
 
 function failure(e: unknown): string {
-  if (e instanceof PdfReadError) return e.message;
-  return `We couldn't read this PDF: ${e instanceof Error ? e.message : String(e)}`;
+  if (e instanceof PdfReadError || e instanceof PictureReadError) return e.message;
+  return `We couldn't read this file: ${e instanceof Error ? e.message : String(e)}`;
 }
 
+/** What to say while a file is read. */
+function readingText(name: string, progress: OcrProgress | null): string {
+  if (!progress) return `Reading ${name}…`;
+  if (progress.step === "loading") return "Getting the text reader ready (the first time takes a little while)…";
+  const pct = `${Math.round(progress.done * 100)}%`;
+  return progress.pages === 1 ? `Reading the words in ${name}… ${pct}` : `Reading page ${progress.page} of ${progress.pages}… ${pct}`;
+}
+
+const TAKE_A_BETTER_PICTURE =
+  "Photos read best taken straight on, in good light, with the page flat and filling the picture; a screenshot of the statement on screen is better still.";
+
 /** Hands the browser a file to save. */
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/x-ofx" }));
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
@@ -83,48 +105,84 @@ function Converter() {
   const [account, setAccount] = useState("");
   const [accountType, setAccountType] = useState<OfxAccountType>("cheque");
   const [swapped, setSwapped] = useState(false);
+  const [format, setFormat] = useState<StatementFormat>("ofx");
   const [saved, setSaved] = useState<string | null>(null);
   // Only the last file dropped in gets shown, however long an earlier one takes to read.
   const latest = useRef(0);
 
-  const open = async (file: File) => {
+  const open = async (files: File[]) => {
     const token = ++latest.current;
+    const name = files.length === 1 ? files[0]!.name : `${files.length} pictures`;
+    const fail = (message: string) => {
+      if (token === latest.current) setStage({ kind: "failed", name, message });
+    };
     setSaved(null);
-    if (file.size > MAX_BYTES) {
-      setStage({
-        kind: "failed",
-        name: file.name,
-        message: "This file is too big to be a statement. Drop in the PDF you downloaded from your internet banking.",
-      });
+    if (files.some((f) => f.size > MAX_BYTES)) {
+      fail("This file is too big to be a statement. Drop in the PDF you downloaded from your internet banking.");
       return;
     }
-    setStage({ kind: "reading", name: file.name });
+    if (files.length > MAX_PICTURES) {
+      fail(`That's more than ${MAX_PICTURES} files. Drop in the pages of one statement at a time.`);
+      return;
+    }
+    setStage({ kind: "reading", name, progress: null });
+    const onProgress = (progress: OcrProgress) => {
+      if (token === latest.current) setStage({ kind: "reading", name, progress });
+    };
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      if (!looksLikePdf(bytes)) {
-        throw new PdfReadError(
-          /\.(ofx|qfx|qif|csv)$/i.test(file.name)
+      const typed = await Promise.all(
+        files.map(async (file) => {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          return { file, bytes, kind: fileKind(bytes, file.name) };
+        }),
+      );
+      let runs: TextRun[];
+      let source: Source;
+      if (typed.length === 1 && typed[0]!.kind === "pdf") {
+        const { bytes } = typed[0]!;
+        runs = await pdfTextRuns(bytes);
+        source = "text";
+        if (!hasReadableText(runs)) {
+          // A scan: no text, only pictures of the pages. Draw them and read the words off them.
+          if (token !== latest.current) return;
+          runs = await ocrTextRuns(await pdfPagePictures(bytes, canvasBlob), onProgress);
+          source = "scan";
+        }
+      } else if (typed.every((t) => t.kind === "picture")) {
+        runs = await ocrTextRuns(inPageOrder(typed.map((t) => t.file)), onProgress);
+        source = typed.length === 1 ? "picture" : "pictures";
+      } else if (typed.length === 1) {
+        fail(
+          typed[0]!.kind === "bankFile"
             ? "This is already a bank file, not a PDF: you can use it as it is."
-            : "This isn't a PDF. Drop in the statement PDF from your internet banking.",
-          "invalid",
+            : "This isn't a PDF or a picture. Drop in the statement PDF from your internet banking, or photos or screenshots of its pages.",
         );
+        return;
+      } else {
+        fail("Drop in one PDF at a time, or pictures of the pages of one statement together.");
+        return;
       }
-      const runs = await pdfTextRuns(bytes);
       if (token !== latest.current) return;
+      const what = source === "scan" ? "this scan" : source === "picture" ? "this picture" : "these pictures";
+      if (source !== "text" && !hasReadableText(runs)) {
+        fail(`We couldn't make out any words in ${what}. ${TAKE_A_BETTER_PICTURE}`);
+        return;
+      }
       const fallbackYear = new Date().getFullYear();
       const first = readStatement(runs, { fallbackYear });
       if (first.lines.length === 0) {
         // Nothing to check or download: say why, and keep the drop zone up for the next try.
-        setStage({ kind: "failed", name: file.name, message: first.notes.map((n) => n.text).join(" ") });
+        const notes = first.notes.map((n) => n.text).join(" ");
+        fail(source === "text" ? notes : `${notes} ${TAKE_A_BETTER_PICTURE}`);
         return;
       }
       setYear(fallbackYear);
       setAccount(first.account ?? "");
       setAccountType(first.kind === "card" ? "card" : first.savings ? "savings" : "cheque");
       setSwapped(false);
-      setStage({ kind: "read", name: file.name, runs });
+      setStage({ kind: "read", name, runs, source });
     } catch (e) {
-      if (token === latest.current) setStage({ kind: "failed", name: file.name, message: failure(e) });
+      fail(failure(e));
     }
   };
 
@@ -136,10 +194,10 @@ function Converter() {
 
   return (
     <div className={styles.converter}>
-      {stage.kind !== "read" && <Drop busy={stage.kind === "reading"} onFile={(f) => void open(f)} />}
+      {stage.kind !== "read" && <Drop busy={stage.kind === "reading"} onFiles={(f) => void open(f)} />}
       {stage.kind === "reading" && (
         <p className="muted" role="status">
-          <Emoji>⏳</Emoji> Reading {stage.name}…
+          <Emoji>⏳</Emoji> {readingText(stage.name, stage.progress)}
         </p>
       )}
       {stage.kind === "failed" && (
@@ -151,6 +209,9 @@ function Converter() {
         <Result
           name={stage.name}
           runs={stage.runs}
+          source={stage.source}
+          format={format}
+          onFormat={setFormat}
           year={year}
           onYear={setYear}
           account={account}
@@ -165,14 +226,15 @@ function Converter() {
         />
       )}
       <p className={styles.promise}>
-        <Emoji>🔒</Emoji> Your PDF never leaves this device, and no AI reads it: fixed rules do, so the same PDF always
-        gives the same file.
+        <Emoji>🔒</Emoji> Your statement never leaves this device, and no AI service reads it: fixed rules do, so the
+        same PDF always gives the same file. Scans and pictures are read with text recognition (OCR) that also runs on
+        this device.
       </p>
     </div>
   );
 }
 
-function Drop({ busy, onFile }: { busy: boolean; onFile: (file: File) => void }) {
+function Drop({ busy, onFiles }: { busy: boolean; onFiles: (files: File[]) => void }) {
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes("Files");
@@ -195,32 +257,34 @@ function Drop({ busy, onFile }: { busy: boolean; onFile: (file: File) => void })
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        const file = e.dataTransfer.files[0];
-        if (file) onFile(file);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) onFiles(files);
       }}
     >
       <span className={styles.dropIcon}>
         <Icon name="tools.pdfToOfx" fallback="🔄" />
       </span>
-      <p className={styles.dropText}>{over ? "Drop it here" : "Drag a statement PDF here"}</p>
+      <p className={styles.dropText}>{over ? "Drop it here" : "Drag a statement PDF, or pictures of its pages, here"}</p>
       <Button size="sm" busy={busy} onClick={() => input.current?.click()}>
-        <Emoji>📂</Emoji> Choose a PDF
+        <Emoji>📂</Emoji> Choose a PDF or pictures
       </Button>
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pdf"
+        multiple
+        accept="application/pdf,.pdf,image/*,.heic"
         className={styles.hiddenInput}
-        aria-label="Statement PDF"
+        aria-label="Statement PDF or pictures"
         tabIndex={-1}
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 0) onFiles(files);
           e.target.value = "";
         }}
       />
       <span className={styles.dropHint}>
-        The PDF from your internet banking works best. A scan or a photo of a statement has no text to read.
+        The PDF from your internet banking works best. A scan works too, as do photos or screenshots of each page
+        (choose them all at once). Check what's read from a picture carefully.
       </span>
     </div>
   );
@@ -248,6 +312,9 @@ function YearField({ year, onYear }: { year: number; onYear: (year: number) => v
 interface ResultProps {
   name: string;
   runs: TextRun[];
+  source: Source;
+  format: StatementFormat;
+  onFormat: (format: StatementFormat) => void;
   year: number;
   onYear: (year: number) => void;
   account: string;
@@ -285,12 +352,14 @@ function Result(p: ResultProps) {
   const trimmed = p.account.trim();
   const canSave = lines.length > 0 && trimmed !== "" && read.periodStart !== null && read.periodEnd !== null;
 
+  const format = STATEMENT_FORMATS.find((f) => f.value === p.format) ?? STATEMENT_FORMATS[0]!;
+
   const save = () => {
     if (!canSave) return;
-    const name = ofxFileName(trimmed, read.periodEnd!);
+    const name = statementFileName(trimmed, read.periodEnd!, format.value);
     download(
       name,
-      buildOfx({
+      buildStatementFile(format.value, {
         accountType: p.accountType,
         account: trimmed,
         periodStart: read.periodStart!,
@@ -298,6 +367,7 @@ function Result(p: ResultProps) {
         closing: closing?.amount ?? null,
         lines,
       }),
+      format.mime,
     );
     p.onSaved(name);
   };
@@ -306,12 +376,20 @@ function Result(p: ResultProps) {
     <>
       <div className={styles.head}>
         <p className={styles.file}>
-          <Emoji>📄</Emoji> <strong>{p.name}</strong>
+          <Emoji>{p.source === "picture" || p.source === "pictures" ? "🖼️" : "📄"}</Emoji> <strong>{p.name}</strong>
         </p>
         <Button size="sm" variant="ghost" onClick={p.onReset}>
-          <Emoji>🔁</Emoji> Convert another PDF
+          <Emoji>🔁</Emoji> Convert another statement
         </Button>
       </div>
+
+      {p.source !== "text" && (
+        <Notice tone="info" role="status">
+          We read this from {p.source === "scan" ? "a scan" : p.source === "pictures" ? "pictures" : "a picture"}{" "}
+          with text recognition, which can misread a character (an 8 for a 3, say). Check each line against the
+          statement before you download it: lines whose running balance doesn't follow are marked.
+        </Notice>
+      )}
 
       {read.notes.map((n) => (
         <Notice key={n.text} tone={n.tone} role={n.tone === "warn" ? "alert" : "status"}>
@@ -390,10 +468,19 @@ function Result(p: ResultProps) {
                 </select>
               </Field>
               {read.assumedYear !== null && <YearField year={p.year} onYear={p.onYear} />}
+              <Field label="File type" hint="OFX suits almost everything. Pick another if your software asks for it.">
+                <select value={format.value} onChange={(e) => p.onFormat(e.target.value as StatementFormat)}>
+                  {STATEMENT_FORMATS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
             <div className={styles.actions}>
               <Button variant="primary" disabled={!canSave} onClick={save}>
-                <Emoji>⬇️</Emoji> Download OFX
+                <Emoji>⬇️</Emoji> Download {format.value.toUpperCase()}
               </Button>
               <Button variant="ghost" onClick={p.onSwap} aria-pressed={p.swapped}>
                 <Emoji>🔃</Emoji> Swap money in and out
@@ -401,7 +488,10 @@ function Result(p: ResultProps) {
             </div>
             {p.saved && (
               <Notice tone="ok" role="status">
-                Saved {p.saved}. Import it into your accounting software as a bank statement file.
+                Saved {p.saved}.{" "}
+                {p.saved.endsWith(".csv")
+                  ? "Open it in a spreadsheet, or import it into your accounting software."
+                  : "Import it into your accounting software as a bank statement file."}
               </Notice>
             )}
           </Card>

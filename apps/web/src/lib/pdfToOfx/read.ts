@@ -463,9 +463,13 @@ function nothing(hasText: boolean, note: ReadNote, rest: Partial<ReadStatement> 
   };
 }
 
+/** Whether there's enough text to read: a PDF with less is a scan or a photo of the page. */
+export function hasReadableText(runs: readonly TextRun[]): boolean {
+  return runs.reduce((n, r) => n + (r.text.match(/[\p{L}\p{N}]/gu)?.length ?? 0), 0) >= 20;
+}
+
 export function readStatement(runs: readonly TextRun[], options: ReadOptions): ReadStatement {
-  const letters = runs.reduce((n, r) => n + (r.text.match(/[\p{L}\p{N}]/gu)?.length ?? 0), 0);
-  if (letters < 20) {
+  if (!hasReadableText(runs)) {
     return nothing(false, {
       tone: "warn",
       text: "This PDF has no text in it, only a picture of the page: it's probably a scan or a photo. Download the statement from your internet banking instead.",
@@ -638,7 +642,7 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
       true,
       {
         tone: "warn",
-        text: "We couldn't find any transactions in this PDF. It needs a table of dated lines with amounts, as statements from internet banking have.",
+        text: "We couldn't find any transactions in this statement. It needs a table of dated lines with amounts, as statements from internet banking have.",
       },
       { kind, account },
     );

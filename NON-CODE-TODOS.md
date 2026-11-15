@@ -289,3 +289,8 @@ tried on the live site.
       two credit cards) and check each against its PDF. For any that read wrong, describe the layout (columns,
       how dates and signs are printed) without client details, so a synthetic look-alike can be added to the tests.
 - [ ] Import one converted file each into Xero and MYOB to confirm they accept it.
+- [ ] Pictures and scans (added 2026-11-16): on an office machine, try a phone photo of a printed statement, a
+      screenshot of one in internet banking, and a scanned PDF, in Chrome, Safari (iPhone, so HEIC photos too)
+      and Edge. Check every line against the paper, and note how long the first read takes on a slow connection
+      (it loads about 7 MB of OCR engine and data once, then the browser keeps it).
+- [ ] Import one QIF and one CSV from the converter into Xero (or MYOB) to confirm they're accepted.

@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { ocrPlugin } from "./vite.ocr";
 import { readSiteConfig, sitePlugin } from "./vite.site";
 
 const site = readSiteConfig();
@@ -7,7 +8,7 @@ const site = readSiteConfig();
 const gate = process.env.VITEST ? true : site.gate;
 
 export default defineConfig({
-  plugins: [react(), sitePlugin({ ...site, gate })],
+  plugins: [react(), sitePlugin({ ...site, gate }), ocrPlugin()],
   define: { __SITE_GATE__: JSON.stringify(gate) },
   test: {
     // Every file gets its own jsdom worker, so a loaded machine can push a render past the 5s default.

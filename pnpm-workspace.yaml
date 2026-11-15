@@ -3,7 +3,9 @@ packages:
   - packages/*
 allowBuilds:
   core-js: false
-# pdf.js lists a native canvas build as optional, for drawing pages in Node. We only read text from
-# PDFs (the PDF to OFX tool), so skip the download.
+  # Its install script only prints a request for donations.
+  tesseract.js: false
+# pdf.js lists a native canvas build as optional, for drawing pages in Node. The PDF to OFX tool only
+# draws pages in the browser (to read scans), with the browser's own canvas, so skip the download.
 ignoredOptionalDependencies:
   - "@napi-rs/canvas"

@@ -33,17 +33,12 @@ export function looksLikePdf(bytes: Uint8Array): boolean {
   return head.includes("%PDF-");
 }
 
-/**
- * Every run of text on every page, with its position in points from the page's top left. Text
- * drawn at an angle (a watermark, a sideways margin note) is left out: it isn't part of the table.
- */
-export async function pdfTextRuns(data: Uint8Array, pdfjs?: PdfJsModule): Promise<TextRun[]> {
-  const lib = pdfjs ?? (await loadBrowserPdfJs());
+/** Opens a PDF, with errors worded for the person who dropped it in. Destroy the task when done. */
+async function openPdf(lib: PdfJsModule, data: Uint8Array): Promise<{ task: PdfJs.PDFDocumentLoadingTask; doc: PdfJs.PDFDocumentProxy }> {
   // pdf.js takes ownership of the buffer it's given, so it gets a copy.
   const task = lib.getDocument({ data: data.slice(), verbosity: 0 });
-  let doc: PdfJs.PDFDocumentProxy;
   try {
-    doc = await task.promise;
+    return { task, doc: await task.promise };
   } catch (e) {
     await task.destroy();
     const name = e instanceof Error ? e.name : "";
@@ -58,6 +53,15 @@ export async function pdfTextRuns(data: Uint8Array, pdfjs?: PdfJsModule): Promis
     }
     throw new PdfReadError(`We couldn't open this PDF: ${e instanceof Error ? e.message : String(e)}`, "other");
   }
+}
+
+/**
+ * Every run of text on every page, with its position in points from the page's top left. Text
+ * drawn at an angle (a watermark, a sideways margin note) is left out: it isn't part of the table.
+ */
+export async function pdfTextRuns(data: Uint8Array, pdfjs?: PdfJsModule): Promise<TextRun[]> {
+  const lib = pdfjs ?? (await loadBrowserPdfJs());
+  const { task, doc } = await openPdf(lib, data);
   try {
     const runs: TextRun[] = [];
     for (let n = 1; n <= doc.numPages; n++) {
@@ -78,6 +82,40 @@ export async function pdfTextRuns(data: Uint8Array, pdfjs?: PdfJsModule): Promis
     return runs;
   } finally {
     // Ends the worker's copy of the document too.
+    await task.destroy();
+  }
+}
+
+/** The most pages of a scan that get read: a statement longer than this isn't one person's month. */
+export const MAX_SCAN_PAGES = 20;
+
+/**
+ * Each page drawn as a picture, for reading a scan with OCR: at three times the PDF's size (about
+ * 216 dots per inch), which is sharp enough for OCR without being slow. Browser only.
+ */
+export async function pdfPagePictures(data: Uint8Array, toBlob: (canvas: HTMLCanvasElement) => Promise<Blob>): Promise<Blob[]> {
+  const lib = await loadBrowserPdfJs();
+  const { task, doc } = await openPdf(lib, data);
+  try {
+    if (doc.numPages > MAX_SCAN_PAGES) {
+      throw new PdfReadError(
+        `This scan has ${doc.numPages} pages, more than the ${MAX_SCAN_PAGES} we read. Split it into shorter PDFs and convert each one.`,
+        "other",
+      );
+    }
+    const pictures: Blob[] = [];
+    for (let n = 1; n <= doc.numPages; n++) {
+      const page = await doc.getPage(n);
+      const viewport = page.getViewport({ scale: 3 });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvas, viewport, background: "#ffffff" }).promise;
+      pictures.push(await toBlob(canvas));
+      page.cleanup();
+    }
+    return pictures;
+  } finally {
     await task.destroy();
   }
 }

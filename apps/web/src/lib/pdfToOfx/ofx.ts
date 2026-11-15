@@ -175,11 +175,3 @@ export function buildOfx(s: OfxStatement): string {
   ];
   return `${header.join("\r\n")}\r\n\r\n${body.join("\r\n")}\r\n`;
 }
-
-/** A file name for the statement: `statement-12-3456-0123456-00-2026-03-31.ofx`. */
-export function ofxFileName(account: string, periodEnd: string): string {
-  const safe = asciiText(account)
-    .replace(/[^A-Za-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return `statement-${safe ? `${safe}-` : ""}${periodEnd}.ofx`;
-}

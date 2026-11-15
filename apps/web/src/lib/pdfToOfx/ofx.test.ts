@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asciiText, buildOfx, fitIds, ofxFileName, splitName } from "./ofx";
+import { asciiText, buildOfx, fitIds, splitName } from "./ofx";
 
 const lines = [
   { date: "2026-03-03", description: "POS W/D COFFEE CART WELLINGTON", amount: -450 },
@@ -118,14 +118,8 @@ describe("splitName", () => {
   });
 });
 
-describe("asciiText and ofxFileName", () => {
+describe("asciiText", () => {
   it("folds accents and macrons to plain letters", () => {
     expect(asciiText("Café Māori “Kai” – Ōtaki  ")).toBe('Cafe Maori "Kai" - Otaki');
-  });
-
-  it("names the file after the account and the end of the period", () => {
-    expect(ofxFileName("12-3456-0123456-00", "2026-03-31")).toBe("statement-12-3456-0123456-00-2026-03-31.ofx");
-    expect(ofxFileName("Online Saver #1", "2026-03-31")).toBe("statement-Online-Saver-1-2026-03-31.ofx");
-    expect(ofxFileName("", "2026-03-31")).toBe("statement-2026-03-31.ofx");
   });
 });

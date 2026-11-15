@@ -136,8 +136,8 @@ export function ToolsTab() {
       </Card>
       <Card title="PDF to OFX" icon={<Icon name="tools.pdfToOfx" fallback="🔄" />}>
         <p>
-          Turn a bank or credit card statement PDF into an OFX file that accounting software can import. The PDF is
-          read on this device and never uploaded.
+          Turn a bank or credit card statement (the PDF, a scan, or photos or screenshots of its pages) into an OFX,
+          QIF or CSV file that accounting software can import. It's read on this device and never uploaded.
         </p>
         <ButtonLink to="/tools/pdf-to-ofx" variant="primary">
           Open PDF to OFX
