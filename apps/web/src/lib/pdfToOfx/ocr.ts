@@ -37,6 +37,8 @@ export interface OcrLineIn {
 
 /** Table rules and smudges that OCR reads as characters. */
 const NOISE = /^[|¦_~=[\]{}<>«»•·]+$/;
+/** A word that's only a number: an amount, a date, a reference. */
+const FIGURES = /^[-+($]?\d[\d,./)-]*$/;
 
 function median(values: readonly number[]): number {
   if (values.length === 0) return 0;
@@ -65,12 +67,17 @@ export function ocrPageRuns(lines: readonly OcrLineIn[], page: number): TextRun[
     return b && b.has_baseline !== false && b.x1 - b.x0 > 4 * (l.bbox.y1 - l.bbox.y0) ? [(b.y1 - b.y0) / (b.x1 - b.x0)] : [];
   });
   const slope = slopes.length > 0 ? median(slopes) : 0;
+  // The type's size from how tall its numbers are: a figure stands about as tall as a capital,
+  // some 72% of the size, plus however much the slant drops across it. Numbers are steadier than
+  // whole lines, whose boxes take in any table rule touching them (and are then twice the height).
+  const tilted = (b: OcrBox) => b.y1 - b.y0 - Math.abs(slope) * (b.x1 - b.x0);
+  const figures = lines.flatMap((l) => l.words.filter((w) => FIGURES.test(w.text.trim())).map((w) => tilted(w.bbox)));
   // A line's box runs from the tops of its capitals to the tails of letters like g, about 85% of
-  // the type's size, plus however much the slant drops across it.
-  const heights = lines
-    .filter((l) => l.words.length > 0)
-    .map((l) => l.bbox.y1 - l.bbox.y0 - Math.abs(slope) * (l.bbox.x1 - l.bbox.x0));
-  const size = median(heights) / 0.85;
+  // the type's size: for a page with few numbers on it.
+  const size =
+    figures.length >= 5
+      ? median(figures) / 0.72
+      : median(lines.filter((l) => l.words.length > 0).map((l) => tilted(l.bbox))) / 0.85;
   if (!(size > 0)) return [];
   const runs: TextRun[] = [];
   for (const line of lines) {

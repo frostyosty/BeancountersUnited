@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCsv, buildQif, buildStatementFile, statementFileName, type StatementFile } from "./formats";
+import { buildCsv, buildQif, buildStatementFile, buildXeroCsv, statementFileName, type StatementFile } from "./formats";
 
 const statement: StatementFile = {
   accountType: "cheque",
@@ -59,6 +59,19 @@ describe("buildCsv", () => {
       "06/03/2026,'=SUM(A1),-1.00,",
       "",
     ]);
+  });
+});
+
+describe("buildXeroCsv", () => {
+  it("writes Xero's columns, splitting the description as OFX does", () => {
+    expect(buildXeroCsv(statement).split("\r\n")).toEqual([
+      "Date,Amount,Payee,Description,Reference,Check Number",
+      '03/03/2026,-4.50,"POS W/D COFFEE CART, WELLINGTON",CENTRAL BRANCH,,',
+      '05/03/2026,350.00,"SALARY ""ACME"" LTD",,,',
+      "06/03/2026,-1.00,'=SUM(A1),,,",
+      "",
+    ]);
+    expect(buildStatementFile("csv", statement, "xero")).toBe(buildXeroCsv(statement));
   });
 });
 

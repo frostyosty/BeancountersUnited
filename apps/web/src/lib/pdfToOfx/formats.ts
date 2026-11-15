@@ -13,6 +13,14 @@ export const STATEMENT_FORMATS: { value: StatementFormat; label: string; mime: s
   { value: "csv", label: "CSV: a spreadsheet", mime: "text/csv" },
 ];
 
+/** How a CSV's columns are laid out: our plain one, or the one Xero's bank statement import takes. */
+export type CsvLayout = "plain" | "xero";
+
+export const CSV_LAYOUTS: { value: CsvLayout; label: string }[] = [
+  { value: "plain", label: "Plain: Date, Description, Amount, Balance" },
+  { value: "xero", label: "Xero: Date, Amount, Payee, Description, Reference, Check Number" },
+];
+
 /** A line with the running balance printed beside it, for the CSV. */
 export interface StatementFileLine extends OfxLine {
   balance?: number | null;
@@ -63,8 +71,24 @@ export function buildCsv(s: StatementFile): string {
   return `${rows.join("\r\n")}\r\n`;
 }
 
-export function buildStatementFile(format: StatementFormat, s: StatementFile): string {
-  return format === "qif" ? buildQif(s) : format === "csv" ? buildCsv(s) : buildOfx(s);
+/**
+ * The CSV Xero's bank statement import takes, with its column headings: `Date,Amount,Payee,
+ * Description,Reference,Check Number`, day-first dates and money out negative. The description is
+ * split as OFX splits it (the first 32 characters as the payee, the rest as the description), so a
+ * statement comes into Xero the same whichever file it's imported from.
+ */
+export function buildXeroCsv(s: StatementFile): string {
+  const rows = [["Date", "Amount", "Payee", "Description", "Reference", "Check Number"].join(",")];
+  for (const l of s.lines) {
+    const { name, memo } = splitName(l.description);
+    rows.push([dayFirst(l.date), formatPlainMoney(l.amount), cell(name), cell(memo), "", ""].join(","));
+  }
+  return `${rows.join("\r\n")}\r\n`;
+}
+
+export function buildStatementFile(format: StatementFormat, s: StatementFile, layout: CsvLayout = "plain"): string {
+  if (format === "csv") return layout === "xero" ? buildXeroCsv(s) : buildCsv(s);
+  return format === "qif" ? buildQif(s) : buildOfx(s);
 }
 
 /** A file name for the statement: `statement-12-3456-0123456-00-2026-03-31.qif`. */

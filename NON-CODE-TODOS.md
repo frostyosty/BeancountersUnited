@@ -295,9 +295,13 @@ tried on the live site.
       (it loads about 7 MB of OCR engine and data once, then the browser keeps it).
 - [ ] Import one QIF and one CSV from the converter into Xero (or MYOB) to confirm they're accepted.
 - [ ] Black-and-white scans (added 2026-11-16): an 8-page fax-style scan of a home loan (revolving) statement
-      now reads, but about a third of its lines had a running balance that didn't follow, mostly misread
-      amounts and some money in/out mix-ups. On an office machine, compare the converter's lines with the paper
-      and note the kinds of misreads (a 5 read as 6, a missing decimal point, an amount in the wrong column),
-      without client details, so a synthetic look-alike can be added to the tests.
+      now reads. Lost minus signs, missing spaces in dates (26 May2025, 310ct), and two printouts in one file
+      have since been dealt with: of its 167 lines, 3 running balances still don't follow (one where the
+      printout starts part way through, two real misreads). On an office machine, check its lines against the
+      paper once more, and look at the lines marked "date unclear".
 - [ ] CSV in (added 2026-11-16): drop in the CSV export from each bank you see most and check the dates, signs,
       descriptions and account number it picks up. Note any bank whose column headings it doesn't find.
+- [ ] Xero CSV (added 2026-11-16): download a statement as CSV with Xero's columns and import it into a Xero
+      bank account (Import a statement), to confirm Xero maps the columns without being asked.
+- [ ] MYOB CSV: find out whether MYOB Business or AccountRight imports a bank statement CSV and, if so, which
+      columns it wants, so it can be added beside Xero's under CSV columns. OFX works for MYOB meanwhile.

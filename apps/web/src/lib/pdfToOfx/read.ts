@@ -37,6 +37,8 @@ export interface ReadLine {
   balance: number | null;
   /** How far the printed balance is from the balance before it plus this line, when they disagree. */
   balanceOff?: number;
+  /** Its date couldn't be read (on a scan or a photo), so it has the date of the line printed above it. */
+  dateUnread?: true;
 }
 
 export interface ReadBalance {
@@ -72,6 +74,12 @@ export interface ReadStatement {
 export interface ReadOptions {
   /** For dates printed without a year on a statement that never gives one: usually this year. */
   fallbackYear: number;
+  /**
+   * The text came from text recognition (a scan, a photo, a screenshot), which misreads. Then a
+   * line whose date can't be made out is kept, and a running balance misread on its own is put
+   * right. A PDF's own text is exactly what was printed, so neither is done to it.
+   */
+  recognised?: boolean;
 }
 
 type MoneyRole = "debit" | "credit" | "amount" | "balance";
@@ -111,7 +119,8 @@ function readAmounts(words: readonly Word[], from: number): Amount[] {
       parsed = parseStatementAmount(`${w.text} ${next.text}`);
       if (parsed) to = i + 1;
     }
-    parsed ??= parseStatementAmount(w.text);
+    // A stray quote or tick from a scan's smudges isn't part of the amount.
+    parsed ??= parseStatementAmount(w.text.replace(/^["'`]+|["'`]+$/g, ""));
     if (!parsed) continue;
     const before = words[i - 1]?.text ?? "";
     const after = words[to + 1]?.text ?? "";
@@ -275,6 +284,118 @@ function nameFromHeadings(columns: readonly Column[], headings: readonly Heading
     // A heading more than a column's width away isn't over this column.
     if (best && score > -(c.x1 - c.x0)) c.role = best.role;
   }
+}
+
+/** What a running balance that doesn't follow costs, against one sign turned round. */
+const BREAK = 3;
+
+/**
+ * Puts right signs that were read the wrong way round, where the running balances prove it. Text
+ * recognition often loses a minus (the smallest mark on the page), and a lost minus on an amount
+ * or a balance breaks the running balance either side of it. So this finds the fewest signs to
+ * turn round, of amounts and of balances, that leave the fewest breaks: a sign is only turned
+ * when that makes the balances follow to the cent. Changes `lines`; returns how many signs it
+ * turned, and the opening balance (whose sign may have been turned too).
+ */
+function repairSigns(lines: ReadLine[], opening: number | null): { turned: number; opening: number | null } {
+  const anchors = lines.flatMap((l, i) => (l.balance === null ? [] : [i]));
+  if (anchors.length === 0) return { turned: 0, opening };
+  interface Step {
+    cost: number;
+    from: number; // the sign chosen for the balance before: 0 as read, 1 turned round
+    amount: number; // the line whose amount was turned round, or -1
+  }
+  // Ways the balance before can be: as read and turned round. Before the first line, that's the
+  // opening balance, if there is one.
+  const signed = (value: number, turned: number) => (turned ? -value : value);
+  const startCosts = opening === null ? [0, Infinity] : [0, opening === 0 ? Infinity : 1];
+  let costs = startCosts;
+  let previousValue: number | null = opening;
+  const steps: Step[][] = [];
+  let from = 0;
+  for (const at of anchors) {
+    const balance = lines[at]!.balance!;
+    const between = lines.slice(from, at + 1);
+    const total = sumCents(between.map((l) => l.amount));
+    const here: Step[] = [0, 1].map((turned) => {
+      if (turned && balance === 0) return { cost: Infinity, from: 0, amount: -1 };
+      const target = signed(balance, turned);
+      let best: Step = { cost: Infinity, from: 0, amount: -1 };
+      [0, 1].forEach((before) => {
+        if (costs[before] === Infinity) return;
+        let step: Step;
+        if (previousValue === null) step = { cost: 0, from: before, amount: -1 };
+        else {
+          const need = target - (signed(previousValue, before) + total);
+          const k = need === 0 ? -1 : between.findIndex((l) => l.amount !== 0 && -2 * l.amount === need);
+          step =
+            need === 0
+              ? { cost: 0, from: before, amount: -1 }
+              : k >= 0
+                ? { cost: 1, from: before, amount: from + k }
+                : { cost: BREAK, from: before, amount: -1 };
+        }
+        const cost = costs[before]! + step.cost + turned;
+        if (cost < best.cost) best = { ...step, cost };
+      });
+      return best;
+    });
+    steps.push(here);
+    costs = here.map((s) => s.cost);
+    previousValue = balance;
+    from = at + 1;
+  }
+  // Back from the cheapest way the last balance can be.
+  let state = costs[1]! < costs[0]! ? 1 : 0;
+  let turned = 0;
+  for (let t = anchors.length - 1; t >= 0; t--) {
+    const step = steps[t]![state]!;
+    const line = lines[anchors[t]!]!;
+    if (state) {
+      line.balance = -line.balance!;
+      turned++;
+    }
+    if (step.amount >= 0) {
+      lines[step.amount]!.amount = -lines[step.amount]!.amount;
+      turned++;
+    }
+    state = step.from;
+  }
+  if (state && opening !== null) {
+    opening = -opening;
+    turned++;
+  }
+  return { turned, opening };
+}
+
+/**
+ * Puts right a running balance misread on its own (a digit wrong or lost): one that doesn't follow
+ * from the balance before, where the balance after it does follow from that one through it. Changes
+ * `lines`; returns how many it put right.
+ */
+function repairBalances(lines: ReadLine[], opening: number | null): number {
+  let fixed = 0;
+  let previous = opening;
+  let run = 0;
+  lines.forEach((line, i) => {
+    run += line.amount;
+    if (line.balance === null) return;
+    const should = previous === null ? null : previous + run;
+    if (should !== null && should !== line.balance) {
+      const next = lines.findIndex((l, j) => j > i && l.balance !== null);
+      if (next >= 0) {
+        const after = sumCents(lines.slice(i + 1, next + 1).map((l) => l.amount));
+        const nextBalance = lines[next]!.balance!;
+        if (should + after === nextBalance && line.balance + after !== nextBalance) {
+          line.balance = should;
+          fixed++;
+        }
+      }
+    }
+    previous = line.balance;
+    run = 0;
+  });
+  return fixed;
 }
 
 /** The ways to sign `sizes` (each + or −) so they add up to `target`, stopping at two. Too many to try gives none. */
@@ -444,6 +565,8 @@ interface Draft {
   dates: DateWords[];
   words: string[];
   money: Partial<Record<MoneyRole, Amount>>;
+  /** Its own date couldn't be read, so `dates` are the line above's. */
+  dateUnread?: true;
 }
 
 function nothing(hasText: boolean, note: ReadNote, rest: Partial<ReadStatement> = {}): ReadStatement {
@@ -543,8 +666,10 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   let open: Draft | null = null; // the transaction the next lines may carry on
   let pending: Draft | null = null; // a dated line whose money may be on the line below
   let lastDates: DateWords[] | null = null;
-  let opening: StatementAmount | null = null;
-  let closing: StatementAmount | null = null;
+  // Every opening and closing balance printed: a file can hold several statements (or several
+  // printouts of internet banking) one after another, each with its own.
+  const openings: StatementAmount[] = [];
+  const closings: StatementAmount[] = [];
   let last = { page: 0, y: 0 }; // the last line that was part of the table
 
   parsed.forEach((p, i) => {
@@ -566,9 +691,9 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
         const value = stated.length === 1 ? (money.balance ?? amount) : amount;
         const isOpening = label === "opening" || (label === "balance" && underHeading[i] && drafts.length === 0 && !pending);
         if (isOpening) {
-          if (drafts.length === 0) opening ??= value;
+          if (drafts.length === 0 || label === "opening") openings.push(value);
         } else if (label === "closing" || underHeading[i]) {
-          closing = value;
+          closings.push(value);
         }
       }
       open = pending = null;
@@ -616,6 +741,14 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
       } else if (lastDates && startsAfterDates && words.length > 0 && near(4)) {
         // Printed without a date: the date above it carries down.
         const draft: Draft = { page: line.page, dates: lastDates, words, money };
+        drafts.push(draft);
+        open = draft;
+      } else if (options.recognised && lastDates && /\d/.test(line.words[0]?.text ?? "") && near(4)) {
+        // A date that text recognition couldn't make out (`16.1 2025`, `28Jut 2025`). The line
+        // still counts, or the money and the running balance would be lost with it: it takes the
+        // date above it, and is marked so that date gets checked.
+        const after = line.words.filter((w, k) => !used.has(k) && w.x0 >= dateRight - 0.2 * size).map((w) => w.text);
+        const draft: Draft = { page: line.page, dates: lastDates, words: after, money, dateUnread: true };
         drafts.push(draft);
         open = draft;
       } else {
@@ -685,7 +818,11 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
     });
   }
   // A statement that lists the newest first is turned round.
-  if (dated.length > 1 && dated[0]!.date > dated.at(-1)!.date) dated.reverse();
+  const newestFirst = dated.length > 1 && dated[0]!.date > dated.at(-1)!.date;
+  if (newestFirst) dated.reverse();
+  // The whole file's opening balance is the earliest statement's, and its closing the latest's.
+  const opening = (newestFirst ? openings.at(-1) : openings[0]) ?? null;
+  const closing = (newestFirst ? closings[0] : closings.at(-1)) ?? null;
 
   // Signs. Money-out and money-in columns sign themselves, as do amounts marked -, CR or DR. An
   // unmarked amount is the opposite of the marked ones.
@@ -771,9 +908,50 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
       balance: b === null || b === undefined ? null : flip * b,
     };
     if (madeOn) line.madeOn = madeOn;
+    if (draft.dateUnread) line.dateUnread = true;
     return line;
   });
-  let previous: number | null = openingRaw === null ? null : flip * openingRaw;
+  const unread = out.filter((l) => l.dateUnread).length;
+  if (unread > 0) {
+    notes.push({
+      tone: "warn",
+      text:
+        unread === 1
+          ? "One line's date couldn't be made out, so it has the date of the line above it. It's marked: check it."
+          : `${unread} lines' dates couldn't be made out, so they have the dates of the lines above them. They're marked: check them.`,
+    });
+  }
+  const repaired = repairSigns(out, openingRaw === null ? null : flip * openingRaw);
+  // The closing balance, with its sign put right too when it's the last balance turned round.
+  let closingAmount = closingRaw === null ? null : flip * closingRaw;
+  const lastBalanced = out.map((l) => l.balance !== null).lastIndexOf(true);
+  if (closingAmount !== null && closingAmount !== 0 && lastBalanced >= 0) {
+    const expected = out[lastBalanced]!.balance! + sumCents(out.slice(lastBalanced + 1).map((l) => l.amount));
+    if (closingAmount === -expected) {
+      closingAmount = expected;
+      repaired.turned++;
+    }
+  }
+  if (repaired.turned > 0) {
+    notes.push({
+      tone: "info",
+      text:
+        repaired.turned === 1
+          ? "One minus sign was read the wrong way round. The running balances show where, so it's been put right."
+          : `${repaired.turned} minus signs were read the wrong way round. The running balances show where, so they've been put right.`,
+    });
+  }
+  const misread = options.recognised ? repairBalances(out, repaired.opening) : 0;
+  if (misread > 0) {
+    notes.push({
+      tone: "info",
+      text:
+        misread === 1
+          ? "One running balance was misread. The balances either side of it show what it should be, so it's been put right."
+          : `${misread} running balances were misread. The balances either side of each show what it should be, so they've been put right.`,
+    });
+  }
+  let previous: number | null = repaired.opening;
   let run = 0;
   for (const line of out) {
     run += line.amount;
@@ -794,7 +972,7 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   }
 
   // Opening and closing balances: as printed, or worked out from the running balance.
-  let openingBalance: ReadBalance | null = openingRaw === null ? null : { amount: flip * openingRaw, printed: true };
+  let openingBalance: ReadBalance | null = repaired.opening === null ? null : { amount: repaired.opening, printed: true };
   const firstWithBalance = out.findIndex((l) => l.balance !== null);
   if (!openingBalance && firstWithBalance >= 0) {
     openingBalance = {
@@ -804,8 +982,8 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   }
   const lastLine = out.at(-1)!;
   const closingBalance: ReadBalance | null =
-    closingRaw !== null
-      ? { amount: flip * closingRaw, printed: true }
+    closingAmount !== null
+      ? { amount: closingAmount, printed: true }
       : lastLine.balance !== null
         ? { amount: lastLine.balance, printed: false }
         : null;

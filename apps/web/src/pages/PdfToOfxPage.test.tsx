@@ -319,5 +319,15 @@ describe("PDF to OFX", () => {
     expect(await blobs[0]!.text()).toContain(`D03/03/${year}\r\nT-4.50\r\nPCOFFEE CART`);
     expect((await blobs[1]!.text()).split("\r\n")[1]).toBe(`03/03/${year},COFFEE CART,-4.50,995.50`);
     expect(screen.getByText(/Open it in a spreadsheet/)).toBeTruthy();
+
+    // A CSV can have Xero's columns instead.
+    await user.selectOptions(screen.getByLabelText("CSV columns"), "xero");
+    await user.click(screen.getByRole("button", { name: /Download CSV/ }));
+    expect((await blobs[2]!.text()).split("\r\n").slice(0, 2)).toEqual([
+      "Date,Amount,Payee,Description,Reference,Check Number",
+      `03/03/${year},-4.50,COFFEE CART,,,`,
+    ]);
+    await user.selectOptions(screen.getByLabelText("File type"), "ofx");
+    expect(screen.queryByLabelText("CSV columns")).toBeNull();
   });
 });

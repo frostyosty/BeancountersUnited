@@ -9,6 +9,8 @@ import {
   buildStatementFile,
   STATEMENT_FORMATS,
   type StatementFormat,
+  CSV_LAYOUTS,
+  type CsvLayout,
   statementFileName,
 } from "../lib/pdfToOfx/formats";
 import { canvasBlob, ocrTextRuns, type OcrProgress, PictureReadError } from "../lib/pdfToOfx/ocr";
@@ -129,6 +131,7 @@ function Converter() {
   const [accountType, setAccountType] = useState<OfxAccountType>("cheque");
   const [swapped, setSwapped] = useState(false);
   const [format, setFormat] = useState<StatementFormat>("ofx");
+  const [csvLayout, setCsvLayout] = useState<CsvLayout>("plain");
   const [readAs, setReadAs] = useState<ReadAs>("auto");
   const [saved, setSaved] = useState<string | null>(null);
   // Only the last file dropped in gets shown, however long an earlier one takes to read.
@@ -218,7 +221,8 @@ function Converter() {
           fail(`We couldn't make out any words in ${what}. ${TAKE_A_BETTER_PICTURE}`);
           return;
         }
-        read = (fallbackYear) => readStatement(runs, { fallbackYear });
+        const recognised = source !== "text";
+        read = (fallbackYear) => readStatement(runs, { fallbackYear, recognised });
       }
       if (token !== latest.current) return;
       const fallbackYear = new Date().getFullYear();
@@ -288,6 +292,8 @@ function Converter() {
           source={stage.source}
           format={format}
           onFormat={setFormat}
+          csvLayout={csvLayout}
+          onCsvLayout={setCsvLayout}
           year={year}
           onYear={setYear}
           account={account}
@@ -393,6 +399,8 @@ interface ResultProps {
   source: Source;
   format: StatementFormat;
   onFormat: (format: StatementFormat) => void;
+  csvLayout: CsvLayout;
+  onCsvLayout: (layout: CsvLayout) => void;
   year: number;
   onYear: (year: number) => void;
   account: string;
@@ -438,14 +446,18 @@ function Result(p: ResultProps) {
     const name = statementFileName(trimmed, read.periodEnd!, format.value);
     download(
       name,
-      buildStatementFile(format.value, {
-        accountType: p.accountType,
-        account: trimmed,
-        periodStart: read.periodStart!,
-        periodEnd: read.periodEnd!,
-        closing: closing?.amount ?? null,
-        lines,
-      }),
+      buildStatementFile(
+        format.value,
+        {
+          accountType: p.accountType,
+          account: trimmed,
+          periodStart: read.periodStart!,
+          periodEnd: read.periodEnd!,
+          closing: closing?.amount ?? null,
+          lines,
+        },
+        p.csvLayout,
+      ),
       format.mime,
     );
     p.onSaved(name);
@@ -559,6 +571,17 @@ function Result(p: ResultProps) {
                   ))}
                 </select>
               </Field>
+              {format.value === "csv" && (
+                <Field label="CSV columns" hint="Plain suits a spreadsheet. Xero's suits its bank statement import.">
+                  <select value={p.csvLayout} onChange={(e) => p.onCsvLayout(e.target.value as CsvLayout)}>
+                    {CSV_LAYOUTS.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
             </div>
             <div className={styles.actions}>
               <Button variant="primary" disabled={!canSave} onClick={save}>
@@ -591,10 +614,15 @@ function Result(p: ResultProps) {
               </thead>
               <tbody>
                 {lines.map((l, i) => (
-                  <tr key={i} className={l.balanceOff !== undefined ? styles.off : undefined}>
+                  <tr key={i} className={l.balanceOff !== undefined || l.dateUnread ? styles.off : undefined}>
                     <td className={styles.date}>
                       {formatDate(l.date)}
                       {l.madeOn && <span className={styles.madeOn}>made {formatDate(l.madeOn)}</span>}
+                      {l.dateUnread && (
+                        <span className={styles.madeOn}>
+                          <Emoji>⚠️</Emoji> date unclear: the line above's
+                        </span>
+                      )}
                     </td>
                     <td>{l.description || <span className="muted">(no description)</span>}</td>
                     <td className="num">{l.amount > 0 ? formatMoney(l.amount) : ""}</td>

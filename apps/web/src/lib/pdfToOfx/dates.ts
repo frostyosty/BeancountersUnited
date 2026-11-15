@@ -38,7 +38,7 @@ function year(text: string): number {
 }
 
 function dayOf(word: string): number | null {
-  const m = /^(\d{1,2})(?:st|nd|rd|th)?,?$/i.exec(word);
+  const m = /^(\d{1,2})(?:st|nd|rd|th)?[,.]?$/i.exec(word);
   const n = m ? Number(m[1]) : 0;
   return n >= 1 && n <= 31 ? n : null;
 }
@@ -57,7 +57,7 @@ function withYear(words: number, day: number, month: number, y: { year: number; 
   return date;
 }
 
-/** A date in one word: `2026-03-12`, `12/03/2026`, `12.03.26`, `12/03`, `12-Mar-2026`, `12MAR26`, `12Mar`. */
+/** A date in one word: `2026-03-12`, `12/03/2026`, `12.03.26`, `12/03`, `12-Mar-2026`, `12.Mar`, `12MAR26`, `12Mar`. */
 function oneWord(word: string): DateWords | null {
   let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(word);
   if (m) return { words: 1, numeric: null, year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
@@ -73,7 +73,7 @@ function oneWord(word: string): DateWords | null {
     const second = Number(m[2]);
     return { words: 1, numeric: { first, second }, day: first, month: second, year: null };
   }
-  m = /^(\d{1,2})[-\s]?([A-Za-z]{3,9})\.?(?:[-\s]?(\d{4}|\d{2}))?$/.exec(word);
+  m = /^(\d{1,2})[-\s.]?([A-Za-z]{3,9})\.?(?:[-\s]?(\d{4}|\d{2}))?$/.exec(word);
   if (m) {
     const month = monthNumber(m[2]!);
     if (month) return { words: 1, numeric: null, day: Number(m[1]), month, year: m[3] ? year(m[3]) : null };
@@ -82,23 +82,39 @@ function oneWord(word: string): DateWords | null {
 }
 
 /**
+ * A word with text recognition's usual slips in a month's name put right: a zero for the O of Oct
+ * (`310ct`, `0ct`) and a five for the S of Sep (`255ep`). Anything else is left as it was.
+ */
+function unslip(word: string): string {
+  return word.replace(/^(\d{0,2})0(ct)/i, "$1O$2").replace(/^(\d{0,2})5(ep)/i, "$1S$2");
+}
+
+/**
  * The date that starts at `words[at]`, if one does: the longest reading wins, so `12 Mar 2026` is
  * one date of three words rather than `12 Mar` followed by a stray year. Day and month are checked
  * only loosely here (a day up to 31); the reader checks the whole date once it knows the year.
  */
 export function readDateAt(words: readonly string[], at: number): DateWords | null {
-  const [a, b, c] = [words[at], words[at + 1], words[at + 2]];
+  const [a, b, c] = [words[at], words[at + 1], words[at + 2]].map((w) => (w === undefined ? w : unslip(w)));
   if (a === undefined) return null;
   // 12 Mar 2026, 12 March, 2026, 12th Mar
   const day = dayOf(a);
   const monthAfter = b ? monthNumber(b) : 0;
   if (day && monthAfter) return withYear(2, day, monthAfter, yearOf(c));
+  // 12 Mar2026: text recognition often loses the space between the month and the year.
+  const glued = b ? /^([a-z]{3,9})\.?(\d{4})$/i.exec(b) : null;
+  const gluedMonth = glued ? monthNumber(glued[1]!) : 0;
+  if (day && gluedMonth) return { words: 2, numeric: null, day, month: gluedMonth, year: Number(glued![2]) };
   // Mar 12, 2026 or Mar 12
   const monthFirst = monthNumber(a);
   const dayAfter = b ? dayOf(b) : null;
   if (monthFirst && dayAfter) return withYear(2, dayAfter, monthFirst, yearOf(c));
   const single = oneWord(a);
   if (single && single.day >= 1 && single.day <= 31 && single.month >= 1 && single.month <= 31) {
+    // 12Mar 2026: the space lost between the day and the month instead. Only a four-digit year is
+    // taken, as two digits could start the description.
+    const after = single.year === null && !single.numeric ? yearOf(b) : null;
+    if (after && !after.short) return withYear(1, single.day, single.month, after);
     return single;
   }
   return null;

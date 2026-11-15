@@ -22,6 +22,20 @@ describe("readDateAt", () => {
     expect(iso("03/12/2026", "mdy")).toBe("2026-03-12");
   });
 
+  it("reads the ways text recognition gets dates a little wrong", () => {
+    // A space lost, between the month and the year or the day and the month.
+    expect(read("26 May2026 TRANSFER")).toMatchObject({ words: 2, day: 26, month: 5, year: 2026 });
+    expect(read("26May 2026 TRANSFER")).toMatchObject({ words: 2, day: 26, month: 5, year: 2026 });
+    // A dot for the space, a zero for the O of Oct, a five for the S of Sep.
+    expect(iso("24.Jul 2026")).toBe("2026-07-24");
+    expect(iso("31 0ct 2026")).toBe("2026-10-31");
+    expect(iso("310ct 2026")).toBe("2026-10-31");
+    expect(iso("230ct2026")).toBe("2026-10-23");
+    expect(iso("255ep 2026")).toBe("2026-09-25");
+    // Two digits after a glued date could start the description, so they aren't taken as its year.
+    expect(read("12Mar 24 HOUR PHARMACY")).toMatchObject({ words: 1, year: null });
+  });
+
   it("counts the words a date takes, longest reading first", () => {
     expect(read("12 Mar 2026 COFFEE")?.words).toBe(3);
     expect(read("12 Mar COFFEE")?.words).toBe(2);

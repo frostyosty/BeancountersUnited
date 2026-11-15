@@ -222,6 +222,99 @@ describe("readStatement: no headings", () => {
   });
 });
 
+describe("readStatement: printouts read with text recognition", () => {
+  // Internet banking printouts, newest first, with money out marked with a minus: April's
+  // printout, then March's, in one file. All made up.
+  const HEAD: TestCell[] = [
+    [40, "Date"],
+    [110, "Description"],
+    [450, "Amount", "right"],
+    [530, "Balance", "right"],
+  ];
+  const printout = (n: number, opening: string, closing: string, rows: TestCell[][]) =>
+    page(n, [
+      [[40, "Example Bank Everyday 12-3456-0123456-00"]],
+      [
+        [40, "Opening balance"],
+        [530, opening, "right"],
+      ],
+      [
+        [40, "Closing balance"],
+        [530, closing, "right"],
+      ],
+      HEAD,
+      ...rows,
+    ]);
+  const line = (date: string, what: string, amount: string, balance: string): TestCell[] => [
+    [40, date],
+    [110, what],
+    [450, amount, "right"],
+    [530, balance, "right"],
+  ];
+  const file = (o: { coffee?: string; afterCoffee?: string; power?: string; wagesDate?: string; afterMarchWages?: string } = {}) => [
+    ...printout(1, "-100.00", "-40.00", [
+      line("15 Apr 2026", "POWER CO", o.power ?? "-35.00", "-40.00"),
+      line(o.wagesDate ?? "9 Apr 2026", "WAGES", "100.00", "-5.00"),
+      line("2 Apr 2026", "COFFEE", o.coffee ?? "-5.00", o.afterCoffee ?? "-105.00"),
+    ]),
+    ...printout(2, "-200.00", "-100.00", [
+      line("10 Mar 2026", "WAGES", "150.00", o.afterMarchWages ?? "-100.00"),
+      line("3 Mar 2026", "RENT", "-50.00", "-250.00"),
+    ]),
+  ];
+  const recognised = { ...options, recognised: true };
+  const rows = (s: ReturnType<typeof readStatement>) => s.lines.map((l) => [l.date, l.description, l.amount, l.balance]);
+  const RIGHT = [
+    ["2026-03-03", "RENT", -5000, -25000],
+    ["2026-03-10", "WAGES", 15000, -10000],
+    ["2026-04-02", "COFFEE", -500, -10500],
+    ["2026-04-09", "WAGES", 10000, -500],
+    ["2026-04-15", "POWER CO", -3500, -4000],
+  ];
+
+  it("takes the earliest printout's opening balance and the latest's closing", () => {
+    const s = readStatement(file(), recognised);
+    expect(rows(s)).toEqual(RIGHT);
+    expect(s.opening).toEqual({ amount: -20000, printed: true });
+    expect(s.closing).toEqual({ amount: -4000, printed: true });
+    expect(s.notes).toEqual([]);
+  });
+
+  it("puts back minus signs it lost, where the running balances prove it", () => {
+    const s = readStatement(file({ coffee: "5.00", afterCoffee: "105.00", power: "35.00" }), recognised);
+    expect(rows(s)).toEqual(RIGHT);
+    expect(s.lines.every((l) => l.balanceOff === undefined)).toBe(true);
+    expect(s.notes.map((n) => n.text)).toEqual([
+      "3 minus signs were read the wrong way round. The running balances show where, so they've been put right.",
+    ]);
+  });
+
+  it("puts right a balance misread on its own, but only when it was read from a picture", () => {
+    const misread = file({ afterMarchWages: "-700.00" });
+    const s = readStatement(misread, recognised);
+    expect(rows(s)).toEqual(RIGHT);
+    expect(s.notes.map((n) => n.text)).toEqual([
+      "One running balance was misread. The balances either side of it show what it should be, so it's been put right.",
+    ]);
+    // A PDF's own text is what was printed, so there it's only marked.
+    expect(readStatement(misread, options).lines.map((l) => l.balanceOff)).toEqual([undefined, -60000, 60000, undefined, undefined]);
+  });
+
+  it("keeps a line whose date it can't make out, with the date above it, and marks it", () => {
+    const s = readStatement(file({ wagesDate: "9 Aqr 2026" }), recognised);
+    expect(s.lines.map((l) => [l.date, l.description, l.amount, l.dateUnread])).toEqual([
+      ["2026-03-03", "RENT", -5000, undefined],
+      ["2026-03-10", "WAGES", 15000, undefined],
+      ["2026-04-02", "COFFEE", -500, undefined],
+      ["2026-04-15", "WAGES", 10000, true],
+      ["2026-04-15", "POWER CO", -3500, undefined],
+    ]);
+    expect(s.notes.map((n) => n.text)).toEqual([
+      "One line's date couldn't be made out, so it has the date of the line above it. It's marked: check it.",
+    ]);
+  });
+});
+
 describe("readStatement: what it can't read", () => {
   it("says when a PDF is only a picture", () => {
     const s = readStatement([], options);

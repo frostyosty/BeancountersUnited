@@ -58,8 +58,10 @@ function photographed(runs: readonly TextRun[], slope: number): OcrLineIn[] {
     const words = [...run.text.matchAll(/\S+/g)].map((m) => {
       const x0 = run.x + m.index * charWidth;
       const x1 = x0 + m[0].length * charWidth;
-      const top = at(x0, run.y - 0.7 * run.size);
-      const bottom = at(x1, run.y + 0.15 * run.size);
+      // Figures stand as tall as capitals; words may have tails below the line.
+      const figure = /^[\d,.()$+-]+$/.test(m[0]);
+      const top = at(x0, run.y - (figure ? 0.72 : 0.7) * run.size);
+      const bottom = at(x1, run.y + (figure ? 0 : 0.15) * run.size);
       return { text: m[0], confidence: 90, bbox: { x0: top.x, y0: top.y, x1: bottom.x, y1: bottom.y } };
     });
     const start = at(run.x, run.y);
@@ -116,6 +118,14 @@ describe("ocrPageRuns", () => {
     expect(runs.some((r) => r.text === "|" || r.text === "~,")).toBe(false);
     expect(runs.every((r) => r.page === 2)).toBe(true);
     expect(summary(runs).lines).toHaveLength(3);
+  });
+
+  it("takes the text size from the numbers, when table rules make the lines look twice as tall", () => {
+    const pdf = page(1, STATEMENT);
+    const lines = photographed(pdf, 0);
+    // Each line's box takes in the rule above it, as Tesseract's do on a ruled table.
+    for (const l of lines) l.bbox.y0 -= 9 * 4;
+    expect(summary(ocrPageRuns(lines, 1))).toEqual(summary(pdf));
   });
 
   it("gives nothing for a page with no words", () => {
