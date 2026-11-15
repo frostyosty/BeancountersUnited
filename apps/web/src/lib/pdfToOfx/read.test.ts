@@ -315,6 +315,71 @@ describe("readStatement: printouts read with text recognition", () => {
   });
 });
 
+describe("readStatement: pages of two printouts, scanned", () => {
+  // A scan of internet banking printouts, newest first, money out with a minus, and no headings
+  // over the table: the newer printout's last page (its empty table's headings drawn at the foot),
+  // then the older printout's first page, whose summary gives balances for its own pages only.
+  // The misreads are text recognition's: `ot` for 01, a tilde for a minus, a colon for a point,
+  // and a table rule read as letters and dashes. All made up.
+  const line = (date: string, what: string, amount: string, balance: string): TestCell[] => [
+    [40, date],
+    [110, what],
+    [450, amount, "right"],
+    [530, balance, "right"],
+  ];
+  const file = [
+    ...page(1, [
+      [[40, "6/15/26, 1:05 PM"]],
+      line("21 Aug 2025", "PARK 9", "120.00", "1,340:00"),
+      line("18 Aug 2025", "SHED", "180.00", "1,220.00"),
+      [],
+      [
+        [200, "Last 30 days: In 300.00"],
+        [330, "Out 0.00 Net +300.00"],
+      ],
+      [
+        [40, "Date"],
+        [450, "Amount", "right"],
+        [530, "Balance", "right"],
+      ],
+    ]),
+    ...page(2, [
+      [[40, "Yard Rental 12-3456-0123456-00"]],
+      [
+        [300, "Opening balance 24/11/2024*"],
+        [530, "1,000.00", "right"],
+      ],
+      [
+        [300, "Closing balance 12/08/2025*"],
+        [530, "1,040.00", "right"],
+      ],
+      [],
+      line("12 Aug 2025", "YARD 6", "120.00", "1,040.00"),
+      line("07 Aug 2025", "SIGNS", "~230.00", "920.00"),
+      [[200, "PUS——"]],
+      line("ot Aug 2025", "PARK 2", "150.00", "1,150.00"),
+    ]),
+  ];
+
+  it("reads every line, and a closing balance dated before the last line gives way to the running balance", () => {
+    // A streak across the page stretched one balance's box far past its column.
+    const streaked = file.map((r) => (r.text === "1,220.00" ? { ...r, width: r.width + 40 } : r));
+    const s = readStatement(streaked, { ...options, recognised: true });
+    expect(s.lines.map((l) => [l.date, l.description, l.amount, l.balance, l.balanceOff])).toEqual([
+      ["2025-08-01", "PARK 2", 15000, 115000, undefined],
+      ["2025-08-07", "SIGNS", -23000, 92000, undefined],
+      ["2025-08-12", "YARD 6", 12000, 104000, undefined],
+      ["2025-08-18", "SHED", 18000, 122000, undefined],
+      ["2025-08-21", "PARK 9", 12000, 134000, undefined],
+    ]);
+    expect(s.opening).toEqual({ amount: 100000, printed: true });
+    expect(s.closing).toEqual({ amount: 134000, printed: false });
+    expect(s.notes.map((n) => n.text)).toEqual([
+      "The closing balance printed for 12 Aug 2025 is for part of this file only, as its lines run past that date, so it's worked out from the running balances instead.",
+    ]);
+  });
+});
+
 describe("readStatement: what it can't read", () => {
   it("says when a PDF is only a picture", () => {
     const s = readStatement([], options);

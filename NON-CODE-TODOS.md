@@ -303,5 +303,13 @@ tried on the live site.
       descriptions and account number it picks up. Note any bank whose column headings it doesn't find.
 - [ ] Xero CSV (added 2026-11-16): download a statement as CSV with Xero's columns and import it into a Xero
       bank account (Import a statement), to confirm Xero maps the columns without being asked.
+- [ ] Scanned internet banking printout (added 2026-11-16): a 6-page scan of two BNZ printouts' pages, out of
+      order and with a scanner streak across each page, now reads all 124 lines with every running balance
+      following, bar two marked for a person: the first line (the printed opening balance is for a page not in
+      the file) and one date struck through by the streak. Text recognition now reads every word on the page
+      (sparse text) instead of guessing at blocks, which had dropped a whole column of amounts on one page.
+      Re-run the home loan fax scan above and a phone photo to check they read at least as well as before.
+- [ ] Fix buttons (added 2026-11-16): on a statement with marked lines, try the buttons under each one and
+      Change on a line, on a phone as well as a computer, and say whether the wording makes sense to an owner.
 - [ ] MYOB CSV: find out whether MYOB Business or AccountRight imports a bank statement CSV and, if so, which
       columns it wants, so it can be added beside Xero's under CSV columns. OFX works for MYOB meanwhile.

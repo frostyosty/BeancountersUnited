@@ -158,9 +158,11 @@ async function startWorker(onLog: (m: { status: string; progress: number }) => v
     langPath: absolute(__OCR_LANG_PATH__),
     logger: onLog,
   });
-  // Automatic layout may give a statement's columns back as blocks of their own. That doesn't
-  // matter: the reader puts words back into rows by where they sit.
-  await w.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+  // Sparse text: every word on the page, wherever it is. Automatic layout guesses at blocks first,
+  // and can drop a whole column of a table as a picture (a scanned printout lost every amount on a
+  // page that way, and a minus here and there). Order doesn't matter: the reader puts words back
+  // into rows by where they sit.
+  await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
   return w;
 }
 

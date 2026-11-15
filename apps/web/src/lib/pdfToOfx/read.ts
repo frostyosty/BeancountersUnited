@@ -16,6 +16,7 @@
  * 5. Signs come from the columns (money out, money in), the marks on the amounts (`-`, `CR`, `DR`)
  *    or, failing those, the running balance. The running balance is then checked line by line.
  */
+import { formatDate } from "../dates";
 import { parseStatementAmount, type StatementAmount, sumCents } from "../money";
 import { type DateOrder, type DateWords, dateOrder, readDateAt, resolveDate, yearBefore } from "./dates";
 import { buildLines, type Line, lineText, type TextRun, type Word } from "./layout";
@@ -51,6 +52,11 @@ export interface ReadBalance {
 export interface ReadNote {
   tone: "info" | "warn";
   text: string;
+  /**
+   * What the note counts, when it counts lines that are marked: running balances that don't follow,
+   * or dates that couldn't be read. A page that lets the person put lines right says these afresh.
+   */
+  about?: "balances" | "dates";
 }
 
 export interface ReadStatement {
@@ -119,8 +125,15 @@ function readAmounts(words: readonly Word[], from: number): Amount[] {
       parsed = parseStatementAmount(`${w.text} ${next.text}`);
       if (parsed) to = i + 1;
     }
-    // A stray quote or tick from a scan's smudges isn't part of the amount.
-    parsed ??= parseStatementAmount(w.text.replace(/^["'`]+|["'`]+$/g, ""));
+    // A stray quote or tick from a scan's smudges isn't part of the amount, and a minus sign text
+    // recognition reads as a tilde or a long dash (`~230.00`) is still a minus.
+    // So is a decimal point read as a colon in an amount with thousands (`4,204:33`; never a time).
+    parsed ??= parseStatementAmount(
+      w.text
+        .replace(/^["'`]+|["'`]+$/g, "")
+        .replace(/^[~—–]/, "-")
+        .replace(/^(\d{1,3}(?:,\d{3})+):(\d{2})$/, "$1.$2"),
+    );
     if (!parsed) continue;
     const before = words[i - 1]?.text ?? "";
     const after = words[to + 1]?.text ?? "";
@@ -229,7 +242,13 @@ function balancesOn(p: Parsed): { label: BalanceLabel; amount: Amount }[] {
 const TOTAL =
   /^(sub[- ]?)?totals?\b(\s+(of|for|this|the|statement|period|page|debits?|credits?|withdrawals?|deposits?|payments?|purchases?|fees?|charges?|interest|transactions?|amounts?|money|in|out|:))*\s*:?$/i;
 const SUMMARY =
-  /\bpage \d+( of \d+)?\b|\bcontinued\b|minimum (payment|amount)|payment due|due date|credit limit|available (credit|balance|funds)|interest rate/i;
+  /\bpage \d+( of \d+)?\b|\bcontinued\b|minimum (payment|amount)|payment due|due date|credit limit|available (credit|balance|funds)|interest rate|\blast \d+ days\b/i;
+
+/**
+ * A word that's only a table's rule or a smudge, as text recognition reads them: dashes, tildes,
+ * underscores, or dots and dashes on their own. It's no part of a description.
+ */
+const RULE_WORD = /[—–~_]|^[-.,'"`:;|]+$/;
 
 // ---- Columns of money ----
 
@@ -559,6 +578,22 @@ function shortYearsAreYears(dates: readonly DateWords[]): boolean {
 
 // ---- Putting it together ----
 
+/** An opening or closing balance the statement prints, and the date it's printed with, if any. */
+interface Stated {
+  amount: StatementAmount;
+  date: DateWords | null;
+}
+
+/** A full date printed on the line before `amount`, as in `Closing balance 01/11/2025* 3,604.33`. */
+function dateBefore(p: Parsed, amount: Amount): DateWords | null {
+  const texts = p.line.words.map((w) => w.text.replace(/[*:,]+$/, ""));
+  for (let i = 0; i < amount.from; i++) {
+    const d = readDateAt(texts, i);
+    if (d?.year && !d.shortYear && i + d.words <= amount.from) return d;
+  }
+  return null;
+}
+
 interface Draft {
   page: number;
   /** Its own dates, or the ones carried down from the line above when it's printed without one. */
@@ -584,6 +619,49 @@ function nothing(hasText: boolean, note: ReadNote, rest: Partial<ReadStatement> 
     notes: [note],
     ...rest,
   };
+}
+
+/**
+ * Marks each line whose running balance doesn't follow from the balance before it plus the lines
+ * since (`balanceOff`), and clears the mark from those that do. Changes `lines`; returns how many
+ * are marked. `opening` is the balance before the first line, when the statement prints one.
+ */
+export function markBalances(lines: ReadLine[], opening: number | null): number {
+  let previous = opening;
+  let run = 0;
+  let marked = 0;
+  for (const line of lines) {
+    delete line.balanceOff;
+    run += line.amount;
+    if (line.balance === null) continue;
+    if (previous !== null && previous + run !== line.balance) {
+      line.balanceOff = line.balance - (previous + run);
+      marked++;
+    }
+    previous = line.balance;
+    run = 0;
+  }
+  return marked;
+}
+
+/** The opening and closing balances: as printed (or set), or else worked out from the running balances. */
+export function endBalances(
+  lines: readonly ReadLine[],
+  opening: number | null,
+  closing: number | null,
+): { opening: ReadBalance | null; closing: ReadBalance | null } {
+  let openingBalance: ReadBalance | null = opening === null ? null : { amount: opening, printed: true };
+  const firstWithBalance = lines.findIndex((l) => l.balance !== null);
+  if (!openingBalance && firstWithBalance >= 0) {
+    openingBalance = {
+      amount: lines[firstWithBalance]!.balance! - sumCents(lines.slice(0, firstWithBalance + 1).map((l) => l.amount)),
+      printed: false,
+    };
+  }
+  const lastBalance = lines.at(-1)?.balance ?? null;
+  const closingBalance: ReadBalance | null =
+    closing !== null ? { amount: closing, printed: true } : lastBalance !== null ? { amount: lastBalance, printed: false } : null;
+  return { opening: openingBalance, closing: closingBalance };
 }
 
 /** Whether there's enough text to read: a PDF with less is a scan or a photo of the page. */
@@ -617,7 +695,13 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   // Table headings, and which lines sit under them. On a page with headings, what's above them
   // (addresses, summaries) isn't the table.
   const headings = parsed.map(headingsOf);
-  const pagesWithHeadings = new Set(parsed.filter((_, i) => headings[i]).map((p) => p.line.page));
+  // Only headings with transactions under them count: a printout of internet banking can draw an
+  // empty table's headings at the foot of its last page, under the transactions.
+  const pagesWithHeadings = new Set(
+    parsed
+      .filter((p, i) => headings[i] && parsed.some((q, j) => j > i && q.line.page === p.line.page && q.dates.length > 0 && q.amounts.length > 0))
+      .map((p) => p.line.page),
+  );
   const underHeading: boolean[] = [];
   let page = 0;
   let seen = false;
@@ -668,8 +752,8 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   let lastDates: DateWords[] | null = null;
   // Every opening and closing balance printed: a file can hold several statements (or several
   // printouts of internet banking) one after another, each with its own.
-  const openings: StatementAmount[] = [];
-  const closings: StatementAmount[] = [];
+  const openings: Stated[] = [];
+  const closings: Stated[] = [];
   let last = { page: 0, y: 0 }; // the last line that was part of the table
 
   parsed.forEach((p, i) => {
@@ -683,12 +767,22 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
       money[role] = a;
       for (let w = a.from; w <= a.to; w++) used.add(w);
     }
+    // A balance whose box text recognition stretched along a line struck through it (a scanner's
+    // streak, say) ends too far right for its column, but still starts in it.
+    const balanceColumn = options.recognised ? columns.find((c) => c.role === "balance") : undefined;
+    if (balanceColumn && !money.balance) {
+      const a = p.amounts.find((x) => !used.has(x.from) && Math.abs(x.x0 - balanceColumn.x0) <= size && x.x1 > balanceColumn.x1);
+      if (a) {
+        money.balance = a;
+        for (let w = a.from; w <= a.to; w++) used.add(w);
+      }
+    }
 
     // Balances count wherever they're printed, even in a summary above the table.
     const stated = balancesOn(p);
     if (stated.length > 0) {
       for (const { label, amount } of stated) {
-        const value = stated.length === 1 ? (money.balance ?? amount) : amount;
+        const value: Stated = { amount: stated.length === 1 ? (money.balance ?? amount) : amount, date: dateBefore(p, amount) };
         const isOpening = label === "opening" || (label === "balance" && underHeading[i] && drafts.length === 0 && !pending);
         if (isOpening) {
           if (drafts.length === 0 || label === "opening") openings.push(value);
@@ -707,7 +801,11 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
     }
     if (!underHeading[i]) return;
 
-    const words = line.words.filter((_, w) => w >= p.dateWords && !used.has(w)).map((w) => w.text);
+    // Text recognition reads a table's rules as dashes and tildes: they aren't part of a description.
+    const describes = (text: string) => !options.recognised || !RULE_WORD.test(text);
+    const words = line.words
+      .filter((w, k) => k >= p.dateWords && !used.has(k) && describes(w.text))
+      .map((w) => w.text);
     if (TOTAL.test(words.join(" ")) || SUMMARY.test(lineText(line))) {
       open = pending = null;
       return;
@@ -747,7 +845,9 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
         // A date that text recognition couldn't make out (`16.1 2025`, `28Jut 2025`). The line
         // still counts, or the money and the running balance would be lost with it: it takes the
         // date above it, and is marked so that date gets checked.
-        const after = line.words.filter((w, k) => !used.has(k) && w.x0 >= dateRight - 0.2 * size).map((w) => w.text);
+        const after = line.words
+          .filter((w, k) => !used.has(k) && w.x0 >= dateRight - 0.2 * size && describes(w.text))
+          .map((w) => w.text);
         const draft: Draft = { page: line.page, dates: lastDates, words: after, money, dateUnread: true };
         drafts.push(draft);
         open = draft;
@@ -820,9 +920,30 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   // A statement that lists the newest first is turned round.
   const newestFirst = dated.length > 1 && dated[0]!.date > dated.at(-1)!.date;
   if (newestFirst) dated.reverse();
-  // The whole file's opening balance is the earliest statement's, and its closing the latest's.
-  const opening = (newestFirst ? openings.at(-1) : openings[0]) ?? null;
-  const closing = (newestFirst ? closings[0] : closings.at(-1)) ?? null;
+  // The whole file's opening balance is the earliest statement's, and its closing the latest's. A
+  // balance printed with a date the lines run past is only part of the file's: a printout of
+  // internet banking prints them for its own pages, and a file can hold pages from several.
+  const firstDate = dated.map((d) => d.date).reduce((a, b) => (b < a ? b : a), dated[0]?.date ?? "");
+  const lastDate = dated.map((d) => d.date).reduce((a, b) => (b > a ? b : a), "");
+  const dateOf = (s: Stated) => (s.date ? resolveDate(s.date, order, () => s.date!.year!) : null);
+  const ends = (stated: Stated[], fits: (iso: string) => boolean, label: string) => {
+    const kept = stated.filter((s) => {
+      const iso = dateOf(s);
+      return iso === null || fits(iso);
+    });
+    const dropped = stated.find((s) => !kept.includes(s));
+    if (dropped && kept.length === 0) {
+      notes.push({
+        tone: "info",
+        text: `The ${label} balance printed for ${formatDate(dateOf(dropped)!)} is for part of this file only, as its lines run past that date, so it's worked out from the running balances instead.`,
+      });
+    }
+    return kept;
+  };
+  const openingsKept = ends(openings, (iso) => iso <= firstDate, "opening");
+  const closingsKept = ends(closings, (iso) => iso >= lastDate, "closing");
+  const opening = (newestFirst ? openingsKept.at(-1) : openingsKept[0])?.amount ?? null;
+  const closing = (newestFirst ? closingsKept[0] : closingsKept.at(-1))?.amount ?? null;
 
   // Signs. Money-out and money-in columns sign themselves, as do amounts marked -, CR or DR. An
   // unmarked amount is the opposite of the marked ones.
@@ -915,6 +1036,7 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
   if (unread > 0) {
     notes.push({
       tone: "warn",
+      about: "dates",
       text:
         unread === 1
           ? "One line's date couldn't be made out, so it has the date of the line above it. It's marked: check it."
@@ -951,19 +1073,11 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
           : `${misread} running balances were misread. The balances either side of each show what it should be, so they've been put right.`,
     });
   }
-  let previous: number | null = repaired.opening;
-  let run = 0;
-  for (const line of out) {
-    run += line.amount;
-    if (line.balance === null) continue;
-    if (previous !== null && previous + run !== line.balance) line.balanceOff = line.balance - (previous + run);
-    previous = line.balance;
-    run = 0;
-  }
-  const off = out.filter((l) => l.balanceOff !== undefined).length;
+  const off = markBalances(out, repaired.opening);
   if (off > 0) {
     notes.push({
       tone: "warn",
+      about: "balances",
       text:
         off === 1
           ? "One running balance doesn't follow from the line before. That line is marked: check it against the PDF."
@@ -971,22 +1085,7 @@ export function readStatement(runs: readonly TextRun[], options: ReadOptions): R
     });
   }
 
-  // Opening and closing balances: as printed, or worked out from the running balance.
-  let openingBalance: ReadBalance | null = repaired.opening === null ? null : { amount: repaired.opening, printed: true };
-  const firstWithBalance = out.findIndex((l) => l.balance !== null);
-  if (!openingBalance && firstWithBalance >= 0) {
-    openingBalance = {
-      amount: out[firstWithBalance]!.balance! - sumCents(out.slice(0, firstWithBalance + 1).map((l) => l.amount)),
-      printed: false,
-    };
-  }
-  const lastLine = out.at(-1)!;
-  const closingBalance: ReadBalance | null =
-    closingAmount !== null
-      ? { amount: closingAmount, printed: true }
-      : lastLine.balance !== null
-        ? { amount: lastLine.balance, printed: false }
-        : null;
+  const { opening: openingBalance, closing: closingBalance } = endBalances(out, repaired.opening, closingAmount);
 
   const dates = out.map((l) => l.date).sort();
   return {

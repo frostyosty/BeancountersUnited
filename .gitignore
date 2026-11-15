@@ -9,3 +9,5 @@ tools/**/out/
 # Tauri writes these on every build.
 apps/desktop/*/gen/
 config.env
+# Statements dropped at the root to try PDF to OFX on are real data: never committed (hard rule 1).
+/*.pdf

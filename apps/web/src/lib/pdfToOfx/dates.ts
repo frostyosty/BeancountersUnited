@@ -98,8 +98,11 @@ export function readDateAt(words: readonly string[], at: number): DateWords | nu
   const [a, b, c] = [words[at], words[at + 1], words[at + 2]].map((w) => (w === undefined ? w : unslip(w)));
   if (a === undefined) return null;
   // 12 Mar 2026, 12 March, 2026, 12th Mar
-  const day = dayOf(a);
   const monthAfter = b ? monthNumber(b) : 0;
+  // Before a month's name, text recognition's letters for figures are figures: `ot Aug` is 01 Aug.
+  // (Not the words `to` and `it`: "1 Jan to Mar 2026" isn't the 10th of March.)
+  const slipped = monthAfter && /^[\dOoIilt|]{1,2}$/.test(a) && !/^(to|it)$/i.test(a);
+  const day = dayOf(a) ?? (slipped ? dayOf(a.replace(/[Oo]/g, "0").replace(/[Iilt|]/g, "1")) : null);
   if (day && monthAfter) return withYear(2, day, monthAfter, yearOf(c));
   // 12 Mar2026: text recognition often loses the space between the month and the year.
   const glued = b ? /^([a-z]{3,9})\.?(\d{4})$/i.exec(b) : null;

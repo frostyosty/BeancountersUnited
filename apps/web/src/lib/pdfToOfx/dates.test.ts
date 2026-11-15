@@ -31,6 +31,11 @@ describe("readDateAt", () => {
     expect(iso("31 0ct 2026")).toBe("2026-10-31");
     expect(iso("310ct 2026")).toBe("2026-10-31");
     expect(iso("230ct2026")).toBe("2026-10-23");
+    // Letters for figures in the day, before a month: `ot Aug` is 01 Aug, `l2` is 12. Not elsewhere.
+    expect(iso("ot Aug 2025")).toBe("2025-08-01");
+    expect(iso("O5 Aug 2025")).toBe("2025-08-05");
+    expect(iso("l2 Aug 2025")).toBe("2025-08-12");
+    expect(read("to Mar 2026")).toBeNull();
     expect(iso("255ep 2026")).toBe("2026-09-25");
     // Two digits after a glued date could start the description, so they aren't taken as its year.
     expect(read("12Mar 24 HOUR PHARMACY")).toMatchObject({ words: 1, year: null });

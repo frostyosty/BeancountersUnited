@@ -118,7 +118,7 @@ describe("PDF to OFX", () => {
 
     const table = await screen.findByRole("table", { name: "Transactions" });
     const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows.map((r) => r.textContent)).toEqual([`3 Mar ${new Date().getFullYear()}COFFEE CART4.50995.50`, `5 Mar ${new Date().getFullYear()}SALARY ACME LTD350.001,345.50`]);
+    expect(rows.map((r) => r.textContent)).toEqual([`3 Mar ${new Date().getFullYear()}COFFEE CART4.50995.50✏️ Change`, `5 Mar ${new Date().getFullYear()}SALARY ACME LTD350.001,345.50✏️ Change`]);
     expect(screen.getByText(/It adds up/)).toBeTruthy();
     // The statement never says the year, so it's asked for.
     expect(screen.getByRole("alert").textContent).toContain("doesn't say which year");
@@ -139,6 +139,81 @@ describe("PDF to OFX", () => {
     expect(await screen.findByText(/Saved statement-12-3456/)).toBeTruthy();
     // Nothing about the statement went to the server.
     expect(calls.filter((c) => c.path !== "/api/me")).toEqual([]);
+  });
+
+  it("offers ways to put right a line whose balance doesn't follow, and the totals and file follow them", async () => {
+    // The coffee line's balance misread: 905.50 for 995.50. That breaks it and the line after.
+    runs.current = statement().map((r) => (r.text === "995.50" ? { ...r, text: "905.50" } : r));
+    const blobs: Blob[] = [];
+    vi.mocked(URL.createObjectURL).mockImplementation((b) => {
+      blobs.push(b as Blob);
+      return "blob:ofx";
+    });
+    stubApi({ "GET /api/me": () => null });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+    drop(pdf());
+
+    expect(await screen.findByText(/2 lines need a look/)).toBeTruthy();
+    // The read's own count of marked lines gives way to the live one.
+    expect(screen.queryByText(/running balances don't follow from the line before/)).toBeNull();
+    // Putting the balance right clears both lines, so it's the likeliest.
+    await user.click(screen.getByRole("button", { name: /The balance is 995\.50 \(most likely\)/ }));
+    expect(screen.getByText(/Every line checks out now/)).toBeTruthy();
+    expect(screen.getByText("changed by you")).toBeTruthy();
+    expect(screen.getByText(/One change of yours/)).toBeTruthy();
+
+    // A line changed by hand: the salary was 360.00, say. Now its balance doesn't follow.
+    await user.click(screen.getByRole("button", { name: /Change the line .*SALARY/ }));
+    const form = screen.getByRole("form", { name: "Change the line" });
+    const moneyIn = within(form).getByLabelText("Money in");
+    await user.clear(moneyIn);
+    await user.type(moneyIn, "360");
+    await user.click(within(form).getByRole("button", { name: /Save/ }));
+    expect(screen.getByText(/One line needs a look/)).toBeTruthy();
+    expect(screen.getByText(/360\.00 in, 4\.50 out/)).toBeTruthy();
+    // Undone again, it checks out, and the file has the balance as put right.
+    const salary = screen.getAllByRole("row").find((r) => r.textContent?.includes("SALARY"))!;
+    await user.click(within(salary).getByRole("button", { name: /Undo/ }));
+    expect(screen.getByText(/Every line checks out now/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Download OFX/ }));
+    const text = await blobs[0]!.text();
+    expect(text).toContain("<TRNAMT>350.00</TRNAMT>");
+    expect(text).toContain("<BALAMT>1345.50</BALAMT>");
+
+    // Everything undone at once brings the misread back.
+    await user.click(screen.getByRole("button", { name: /Undo them all/ }));
+    expect(screen.getByText(/2 lines need a look/)).toBeTruthy();
+  });
+
+  it("takes a line out and puts it back, and adds one the reader missed", async () => {
+    stubApi({ "GET /api/me": () => null });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+    drop(pdf());
+    await screen.findByRole("table", { name: "Transactions" });
+
+    await user.click(screen.getByRole("button", { name: /Change the line .*COFFEE/ }));
+    await user.click(screen.getByRole("button", { name: /Take this line out/ }));
+    expect(screen.getByText("taken out")).toBeTruthy();
+    expect(screen.getByText(/350\.00 in, 0\.00 out/)).toBeTruthy();
+    // Without the coffee, the salary's balance doesn't follow; a missing line of the difference is offered.
+    expect(screen.getByRole("button", { name: /A line of 4\.50 out is missing above it/ })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /Put back/ }));
+    expect(screen.queryByText("taken out")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Change the line .*SALARY/ }));
+    await user.click(screen.getByRole("button", { name: /Add a line after it/ }));
+    const form = screen.getByRole("form", { name: "Change the line" });
+    await user.type(within(form).getByLabelText("Description"), "BANK FEE");
+    await user.type(within(form).getByLabelText("Money out"), "5");
+    await user.click(within(form).getByRole("button", { name: /Save/ }));
+    expect(screen.getByText("added by you")).toBeTruthy();
+    expect(screen.getByText(/3: 350\.00 in, 9\.50 out/)).toBeTruthy();
+    // The closing balance printed no longer adds up, as the statement has no such fee.
+    expect(screen.getByText(/comes to 1,340\.50/)).toBeTruthy();
   });
 
   it("swaps money in and out, and needs an account number to download", async () => {
@@ -250,8 +325,8 @@ describe("PDF to OFX", () => {
 
     const table = await screen.findByRole("table", { name: "Transactions" });
     expect(within(table).getAllByRole("row").slice(1).map((r) => r.textContent)).toEqual([
-      "3 Mar 2026COFFEE CART4.50995.50",
-      "5 Mar 2026SALARY ACME LTD350.001,345.50",
+      "3 Mar 2026COFFEE CART4.50995.50✏️ Change",
+      "5 Mar 2026SALARY ACME LTD350.001,345.50✏️ Change",
     ]);
     expect(screen.getByText("A CSV")).toBeTruthy();
     expect(screen.getByText(/It adds up/)).toBeTruthy();

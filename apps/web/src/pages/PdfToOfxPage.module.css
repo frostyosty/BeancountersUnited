@@ -110,3 +110,92 @@
 .readAs {
   max-width: 24rem;
 }
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fixSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.changes {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.rowActions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.changed > td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.removed > td {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.removed > td:last-child {
+  text-decoration: none;
+}
+
+.fixRow > td {
+  background: var(--warn-soft);
+  border-top: none;
+}
+
+.fixes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fixGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fixText {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.fixButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.likely {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.editRow > td {
+  background: var(--surface-sunken);
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-2);
+  align-items: start;
+}

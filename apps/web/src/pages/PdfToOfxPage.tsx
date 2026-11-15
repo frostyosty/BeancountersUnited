@@ -16,9 +16,11 @@ import {
 import { canvasBlob, ocrTextRuns, type OcrProgress, PictureReadError } from "../lib/pdfToOfx/ocr";
 import type { OfxAccountType } from "../lib/pdfToOfx/ofx";
 import { PdfReadError, pdfPagePictures, pdfTextRuns } from "../lib/pdfToOfx/pdfText";
+import { applyFixes, type Fixes, NO_FIXES } from "../lib/pdfToOfx/fixes";
 import { hasReadableText, type ReadLine, type ReadStatement, readStatement } from "../lib/pdfToOfx/read";
 import type { TextRun } from "../lib/pdfToOfx/layout";
 import { Button, Card, Field, Notice, PageHeader } from "../ui";
+import { StatementLines } from "./PdfToOfxLines";
 import styles from "./PdfToOfxPage.module.css";
 
 const SUBTITLE =
@@ -130,6 +132,7 @@ function Converter() {
   const [account, setAccount] = useState("");
   const [accountType, setAccountType] = useState<OfxAccountType>("cheque");
   const [swapped, setSwapped] = useState(false);
+  const [fixes, setFixes] = useState<Fixes>(NO_FIXES);
   const [format, setFormat] = useState<StatementFormat>("ofx");
   const [csvLayout, setCsvLayout] = useState<CsvLayout>("plain");
   const [readAs, setReadAs] = useState<ReadAs>("auto");
@@ -237,6 +240,7 @@ function Converter() {
       setAccount(first.account ?? "");
       setAccountType(first.kind === "card" ? "card" : first.savings ? "savings" : "cheque");
       setSwapped(false);
+      setFixes(NO_FIXES);
       setStage({ kind: "read", name, read, source });
     } catch (e) {
       fail(failure(e));
@@ -302,6 +306,11 @@ function Converter() {
           onAccountType={setAccountType}
           swapped={swapped}
           onSwap={() => setSwapped((s) => !s)}
+          fixes={fixes}
+          onFixes={(f) => {
+            setFixes(f);
+            setSaved(null);
+          }}
           saved={saved}
           onSaved={setSaved}
           onReset={reset}
@@ -409,6 +418,8 @@ interface ResultProps {
   onAccountType: (type: OfxAccountType) => void;
   swapped: boolean;
   onSwap: () => void;
+  fixes: Fixes;
+  onFixes: (fixes: Fixes) => void;
   saved: string | null;
   onSaved: (name: string) => void;
   onReset: () => void;
@@ -418,32 +429,37 @@ interface ResultProps {
 function Result(p: ResultProps) {
   const { read: readWithYear, year } = p;
   const read: ReadStatement = useMemo(() => readWithYear(year), [readWithYear, year]);
+  // The person's fixes laid over what was read: everything below, and the file, follow them.
+  const fixed = useMemo(() => applyFixes(read, p.fixes), [read, p.fixes]);
   const lines: ReadLine[] = useMemo(
     () =>
-      p.swapped
-        ? read.lines.map((l) => {
-            const balance = l.balance === null ? null : negate(l.balance);
-            const line: ReadLine = { ...l, amount: negate(l.amount), balance };
-            if (l.balanceOff !== undefined) line.balanceOff = negate(l.balanceOff);
-            return line;
-          })
-        : read.lines,
-    [read, p.swapped],
+      fixed.lines.map((l) => {
+        const line: ReadLine = { page: l.page, date: l.date, description: l.description, amount: l.amount, balance: l.balance };
+        if (l.madeOn) line.madeOn = l.madeOn;
+        if (!p.swapped) return line;
+        return { ...line, amount: negate(l.amount), balance: l.balance === null ? null : negate(l.balance) };
+      }),
+    [fixed, p.swapped],
   );
   const flip = (cents: number) => (p.swapped ? negate(cents) : cents);
-  const opening = read.opening && { ...read.opening, amount: flip(read.opening.amount) };
-  const closing = read.closing && { ...read.closing, amount: flip(read.closing.amount) };
+  const opening = fixed.opening && { ...fixed.opening, amount: flip(fixed.opening.amount) };
+  const closing = fixed.closing && { ...fixed.closing, amount: flip(fixed.closing.amount) };
+  const lastBalance = fixed.lines.at(-1)?.balance ?? null;
   const moneyIn = sumCents(lines.filter((l) => l.amount > 0).map((l) => l.amount));
   const moneyOut = sumCents(lines.filter((l) => l.amount < 0).map((l) => l.amount));
   const worksOut = opening && closing ? sumCents([opening.amount, moneyIn, moneyOut]) : null;
   const trimmed = p.account.trim();
-  const canSave = lines.length > 0 && trimmed !== "" && read.periodStart !== null && read.periodEnd !== null;
+  // Lines whose dates were changed can fall outside the period read off the statement.
+  const dates = lines.map((l) => l.date).sort();
+  const periodStart = [read.periodStart, dates[0]].filter((d) => d != null).sort()[0] ?? null;
+  const periodEnd = [read.periodEnd, dates.at(-1)].filter((d) => d != null).sort().at(-1) ?? null;
+  const canSave = lines.length > 0 && trimmed !== "" && periodStart !== null && periodEnd !== null;
 
   const format = STATEMENT_FORMATS.find((f) => f.value === p.format) ?? STATEMENT_FORMATS[0]!;
 
   const save = () => {
     if (!canSave) return;
-    const name = statementFileName(trimmed, read.periodEnd!, format.value);
+    const name = statementFileName(trimmed, periodEnd!, format.value);
     download(
       name,
       buildStatementFile(
@@ -451,8 +467,8 @@ function Result(p: ResultProps) {
         {
           accountType: p.accountType,
           account: trimmed,
-          periodStart: read.periodStart!,
-          periodEnd: read.periodEnd!,
+          periodStart: periodStart!,
+          periodEnd: periodEnd!,
           closing: closing?.amount ?? null,
           lines,
         },
@@ -483,13 +499,16 @@ function Result(p: ResultProps) {
         </Notice>
       )}
 
-      {read.notes.map((n) => (
-        <Notice key={n.text} tone={n.tone} role={n.tone === "warn" ? "alert" : "status"}>
-          {n.text}
-        </Notice>
-      ))}
+      {/* What's still marked is counted afresh beside the lines, as fixes are made. */}
+      {read.notes
+        .filter((n) => !n.about)
+        .map((n) => (
+          <Notice key={n.text} tone={n.tone} role={n.tone === "warn" ? "alert" : "status"}>
+            {n.text}
+          </Notice>
+        ))}
 
-      {lines.length > 0 && (
+      {fixed.all.length > 0 && (
         <>
           <Card title="What we read" icon={<Emoji>🔎</Emoji>}>
             <dl className="facts">
@@ -499,18 +518,18 @@ function Result(p: ResultProps) {
               <dd>{SOURCE_TEXT[p.source]}</dd>
               <dt>Period</dt>
               <dd>
-                {formatDate(read.periodStart!)} to {formatDate(read.periodEnd!)}
+                {formatDate(periodStart!)} to {formatDate(periodEnd!)}
               </dd>
               <dt>Opening balance</dt>
               <dd>
                 {opening
-                  ? `${formatMoney(opening.amount)}${opening.printed ? "" : " (worked out from the running balance)"}`
+                  ? `${formatMoney(opening.amount)}${p.fixes.opening !== undefined ? " (set by you)" : opening.printed ? "" : " (worked out from the running balance)"}`
                   : "Not shown"}
               </dd>
               <dt>Closing balance</dt>
               <dd>
                 {closing
-                  ? `${formatMoney(closing.amount)}${closing.printed ? "" : " (the last running balance)"}`
+                  ? `${formatMoney(closing.amount)}${p.fixes.closing !== undefined ? " (set by you)" : closing.printed ? "" : " (the last running balance)"}`
                   : "Not shown"}
               </dd>
               <dt>Transactions</dt>
@@ -529,6 +548,16 @@ function Result(p: ResultProps) {
                     The opening balance plus every line comes to {formatMoney(worksOut)}, but the closing balance is{" "}
                     {formatMoney(closing.amount)}. A line may be missing or misread: check the list against the PDF
                     before you import it.
+                    {closing.printed && lastBalance !== null && lastBalance !== fixed.closing?.amount && (
+                      <>
+                        {" "}
+                        If the printed closing balance is for part of the file only, use the last running balance
+                        instead.{" "}
+                        <Button size="sm" onClick={() => p.onFixes({ ...p.fixes, closing: lastBalance })}>
+                          <Emoji>🏁</Emoji> Close at {formatMoney(flip(lastBalance))}
+                        </Button>
+                      </>
+                    )}
                   </Notice>
                 )}
               </div>
@@ -601,45 +630,7 @@ function Result(p: ResultProps) {
             )}
           </Card>
 
-          <div className={styles.tableWrap}>
-            <table className="table" aria-label="Transactions">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th className="num">Money in</th>
-                  <th className="num">Money out</th>
-                  <th className="num">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((l, i) => (
-                  <tr key={i} className={l.balanceOff !== undefined || l.dateUnread ? styles.off : undefined}>
-                    <td className={styles.date}>
-                      {formatDate(l.date)}
-                      {l.madeOn && <span className={styles.madeOn}>made {formatDate(l.madeOn)}</span>}
-                      {l.dateUnread && (
-                        <span className={styles.madeOn}>
-                          <Emoji>⚠️</Emoji> date unclear: the line above's
-                        </span>
-                      )}
-                    </td>
-                    <td>{l.description || <span className="muted">(no description)</span>}</td>
-                    <td className="num">{l.amount > 0 ? formatMoney(l.amount) : ""}</td>
-                    <td className="num">{l.amount < 0 ? formatMoney(negate(l.amount)) : ""}</td>
-                    <td className="num">
-                      {l.balanceOff !== undefined && (
-                        <span title={`This balance is ${formatMoney(l.balanceOff)} away from the one before plus this line`}>
-                          <Emoji>⚠️</Emoji>{" "}
-                        </span>
-                      )}
-                      {l.balance === null ? "" : formatMoney(l.balance)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StatementLines read={read} fixes={p.fixes} onFixes={p.onFixes} fixed={fixed} flip={p.swapped ? -1 : 1} />
         </>
       )}
     </>
