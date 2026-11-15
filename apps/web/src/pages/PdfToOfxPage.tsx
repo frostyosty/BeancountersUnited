@@ -3,6 +3,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { formatDate } from "../lib/dates";
 import { Emoji, Icon } from "../lib/icons";
 import { formatMoney, sumCents } from "../lib/money";
+import { decodeText, readCsvStatement } from "../lib/pdfToOfx/csvIn";
 import { fileKind, inPageOrder, MAX_PICTURES } from "../lib/pdfToOfx/files";
 import {
   buildStatementFile,
@@ -19,8 +20,9 @@ import { Button, Card, Field, Notice, PageHeader } from "../ui";
 import styles from "./PdfToOfxPage.module.css";
 
 const SUBTITLE =
-  "Drop in a bank or credit card statement (the PDF, a scan, or photos or screenshots of its pages), check what we " +
-  "read, and download it as an OFX file for your accounting software. It's read on this device and never uploaded.";
+  "Drop in a bank or credit card statement (the PDF, a scan, photos or screenshots of its pages, or the bank's CSV), " +
+  "check what we read, and download it as an OFX, QIF or CSV file for your accounting software. It's read on this " +
+  "device and never uploaded.";
 
 /** Bigger than any statement; a file this size is something else. */
 const MAX_BYTES = 30 * 1024 * 1024;
@@ -53,14 +55,35 @@ export function PublicPdfToOfxPage() {
   );
 }
 
-/** Where the text came from: drawn in the PDF, or read with OCR off a scanned PDF or pictures. */
-type Source = "text" | "scan" | "picture" | "pictures";
+/** Where the statement came from: the PDF's text, OCR off a scanned PDF or pictures, or a CSV. */
+type Source = "text" | "scan" | "picture" | "pictures" | "csv";
+
+const SOURCE_TEXT: Record<Source, string> = {
+  text: "The PDF's text",
+  scan: "A scanned PDF, with text recognition",
+  picture: "A picture, with text recognition",
+  pictures: "Pictures, with text recognition",
+  csv: "A CSV",
+};
+
+/** How to read what's dropped in: worked out from the file, or as the person says. */
+type ReadAs = "auto" | "text" | "ocr" | "csv";
+
+const READ_AS: Record<ReadAs, string> = {
+  auto: "Work it out from the file",
+  text: "A PDF's text",
+  ocr: "A scan or pictures (text recognition)",
+  csv: "A CSV from the bank",
+};
+
+/** The statement as read, given the year for dates printed without one. */
+type ReadWithYear = (fallbackYear: number) => ReadStatement;
 
 type Stage =
   | { kind: "idle" }
   | { kind: "reading"; name: string; progress: OcrProgress | null }
   | { kind: "failed"; name: string; message: string }
-  | { kind: "read"; name: string; runs: TextRun[]; source: Source };
+  | { kind: "read"; name: string; read: ReadWithYear; source: Source };
 
 const ACCOUNT_TYPES: { value: OfxAccountType; label: string }[] = [
   { value: "cheque", label: "Everyday (cheque) account" },
@@ -106,12 +129,16 @@ function Converter() {
   const [accountType, setAccountType] = useState<OfxAccountType>("cheque");
   const [swapped, setSwapped] = useState(false);
   const [format, setFormat] = useState<StatementFormat>("ofx");
+  const [readAs, setReadAs] = useState<ReadAs>("auto");
   const [saved, setSaved] = useState<string | null>(null);
   // Only the last file dropped in gets shown, however long an earlier one takes to read.
   const latest = useRef(0);
+  // Kept so a file that couldn't be read can be tried again another way, straight from Read as.
+  const lastFiles = useRef<File[] | null>(null);
 
-  const open = async (files: File[]) => {
+  const open = async (files: File[], how: ReadAs) => {
     const token = ++latest.current;
+    lastFiles.current = files;
     const name = files.length === 1 ? files[0]!.name : `${files.length} pictures`;
     const fail = (message: string) => {
       if (token === latest.current) setStage({ kind: "failed", name, message });
@@ -136,51 +163,77 @@ function Converter() {
           return { file, bytes, kind: fileKind(bytes, file.name) };
         }),
       );
-      let runs: TextRun[];
+      const only = typed.length === 1 ? typed[0]! : null;
+      let read: ReadWithYear;
       let source: Source;
-      if (typed.length === 1 && typed[0]!.kind === "pdf") {
-        const { bytes } = typed[0]!;
-        runs = await pdfTextRuns(bytes);
-        source = "text";
-        if (!hasReadableText(runs)) {
-          // A scan: no text, only pictures of the pages. Draw them and read the words off them.
-          if (token !== latest.current) return;
-          runs = await ocrTextRuns(await pdfPagePictures(bytes, canvasBlob), onProgress);
-          source = "scan";
+      if (only && (how === "csv" || (how === "auto" && only.kind === "csv"))) {
+        if (only.kind === "pdf" || only.kind === "picture") {
+          fail(`This is a ${only.kind === "pdf" ? "PDF" : "picture"}, not a CSV: choose “${READ_AS.auto}” under Read as.`);
+          return;
         }
-      } else if (typed.every((t) => t.kind === "picture")) {
-        runs = await ocrTextRuns(inPageOrder(typed.map((t) => t.file)), onProgress);
-        source = typed.length === 1 ? "picture" : "pictures";
-      } else if (typed.length === 1) {
-        fail(
-          typed[0]!.kind === "bankFile"
-            ? "This is already a bank file, not a PDF: you can use it as it is."
-            : "This isn't a PDF or a picture. Drop in the statement PDF from your internet banking, or photos or screenshots of its pages.",
-        );
+        const text = decodeText(only.bytes);
+        read = (fallbackYear) => readCsvStatement(text, { fallbackYear });
+        source = "csv";
+      } else if (how === "csv") {
+        fail("Drop in one CSV at a time.");
         return;
       } else {
-        fail("Drop in one PDF at a time, or pictures of the pages of one statement together.");
-        return;
+        let runs: TextRun[];
+        if (only?.kind === "pdf") {
+          runs = how === "ocr" ? [] : await pdfTextRuns(only.bytes);
+          source = "text";
+          if (!hasReadableText(runs)) {
+            if (how === "text") {
+              fail(`This PDF has no text in it, only pictures of its pages. Choose “${READ_AS.ocr}” under Read as to read them.`);
+              return;
+            }
+            // A scan: no text, only pictures of the pages. Draw them and read the words off them.
+            if (token !== latest.current) return;
+            runs = await ocrTextRuns(await pdfPagePictures(only.bytes, canvasBlob), onProgress);
+            source = "scan";
+          }
+        } else if (typed.every((t) => t.kind === "picture")) {
+          if (how === "text") {
+            fail(`A picture has no text in it to read. Choose “${READ_AS.ocr}” under Read as.`);
+            return;
+          }
+          runs = await ocrTextRuns(inPageOrder(typed.map((t) => t.file)), onProgress);
+          source = typed.length === 1 ? "picture" : "pictures";
+        } else if (only) {
+          fail(
+            only.kind === "csv"
+              ? `This is a CSV, not a PDF or a picture. Choose “${READ_AS.csv}” under Read as.`
+              : only.kind === "bankFile"
+                ? "This is already a bank file (OFX or QIF): you can use it as it is."
+                : "This isn't a PDF, a picture or a CSV. Drop in the statement PDF from your internet banking, photos or screenshots of its pages, or the bank's CSV.",
+          );
+          return;
+        } else {
+          fail("Drop in one PDF or CSV at a time, or pictures of the pages of one statement together.");
+          return;
+        }
+        if (token !== latest.current) return;
+        const what = source === "scan" ? "this scan" : source === "picture" ? "this picture" : "these pictures";
+        if (source !== "text" && !hasReadableText(runs)) {
+          fail(`We couldn't make out any words in ${what}. ${TAKE_A_BETTER_PICTURE}`);
+          return;
+        }
+        read = (fallbackYear) => readStatement(runs, { fallbackYear });
       }
       if (token !== latest.current) return;
-      const what = source === "scan" ? "this scan" : source === "picture" ? "this picture" : "these pictures";
-      if (source !== "text" && !hasReadableText(runs)) {
-        fail(`We couldn't make out any words in ${what}. ${TAKE_A_BETTER_PICTURE}`);
-        return;
-      }
       const fallbackYear = new Date().getFullYear();
-      const first = readStatement(runs, { fallbackYear });
+      const first = read(fallbackYear);
       if (first.lines.length === 0) {
         // Nothing to check or download: say why, and keep the drop zone up for the next try.
         const notes = first.notes.map((n) => n.text).join(" ");
-        fail(source === "text" ? notes : `${notes} ${TAKE_A_BETTER_PICTURE}`);
+        fail(source === "text" || source === "csv" ? notes : `${notes} ${TAKE_A_BETTER_PICTURE}`);
         return;
       }
       setYear(fallbackYear);
       setAccount(first.account ?? "");
       setAccountType(first.kind === "card" ? "card" : first.savings ? "savings" : "cheque");
       setSwapped(false);
-      setStage({ kind: "read", name, runs, source });
+      setStage({ kind: "read", name, read, source });
     } catch (e) {
       fail(failure(e));
     }
@@ -194,7 +247,30 @@ function Converter() {
 
   return (
     <div className={styles.converter}>
-      {stage.kind !== "read" && <Drop busy={stage.kind === "reading"} onFiles={(f) => void open(f)} />}
+      {stage.kind !== "read" && (
+        <>
+          <div className={styles.readAs}>
+            <Field label="Read as" hint="Working it out suits almost every file. Choose another if what's read looks wrong.">
+              <select
+                value={readAs}
+                onChange={(e) => {
+                  const how = e.target.value as ReadAs;
+                  setReadAs(how);
+                  // A file that couldn't be read is tried again the new way.
+                  if (stage.kind === "failed" && lastFiles.current) void open(lastFiles.current, how);
+                }}
+              >
+                {(Object.keys(READ_AS) as ReadAs[]).map((value) => (
+                  <option key={value} value={value}>
+                    {READ_AS[value]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Drop busy={stage.kind === "reading"} onFiles={(f) => void open(f, readAs)} />
+        </>
+      )}
       {stage.kind === "reading" && (
         <p className="muted" role="status">
           <Emoji>⏳</Emoji> {readingText(stage.name, stage.progress)}
@@ -208,7 +284,7 @@ function Converter() {
       {stage.kind === "read" && (
         <Result
           name={stage.name}
-          runs={stage.runs}
+          read={stage.read}
           source={stage.source}
           format={format}
           onFormat={setFormat}
@@ -264,17 +340,19 @@ function Drop({ busy, onFiles }: { busy: boolean; onFiles: (files: File[]) => vo
       <span className={styles.dropIcon}>
         <Icon name="tools.pdfToOfx" fallback="🔄" />
       </span>
-      <p className={styles.dropText}>{over ? "Drop it here" : "Drag a statement PDF, or pictures of its pages, here"}</p>
+      <p className={styles.dropText}>
+        {over ? "Drop it here" : "Drag a statement PDF, pictures of its pages, or the bank's CSV here"}
+      </p>
       <Button size="sm" busy={busy} onClick={() => input.current?.click()}>
-        <Emoji>📂</Emoji> Choose a PDF or pictures
+        <Emoji>📂</Emoji> Choose a file or pictures
       </Button>
       <input
         ref={input}
         type="file"
         multiple
-        accept="application/pdf,.pdf,image/*,.heic"
+        accept="application/pdf,.pdf,image/*,.heic,text/csv,.csv"
         className={styles.hiddenInput}
-        aria-label="Statement PDF or pictures"
+        aria-label="Statement PDF, pictures or CSV"
         tabIndex={-1}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
@@ -284,7 +362,7 @@ function Drop({ busy, onFiles }: { busy: boolean; onFiles: (files: File[]) => vo
       />
       <span className={styles.dropHint}>
         The PDF from your internet banking works best. A scan works too, as do photos or screenshots of each page
-        (choose them all at once). Check what's read from a picture carefully.
+        (choose them all at once), and so does the CSV your bank exports. Check what's read from a picture carefully.
       </span>
     </div>
   );
@@ -311,7 +389,7 @@ function YearField({ year, onYear }: { year: number; onYear: (year: number) => v
 
 interface ResultProps {
   name: string;
-  runs: TextRun[];
+  read: ReadWithYear;
   source: Source;
   format: StatementFormat;
   onFormat: (format: StatementFormat) => void;
@@ -330,7 +408,8 @@ interface ResultProps {
 
 /** What was read, with the few things a person may need to put right, and the download. */
 function Result(p: ResultProps) {
-  const read: ReadStatement = useMemo(() => readStatement(p.runs, { fallbackYear: p.year }), [p.runs, p.year]);
+  const { read: readWithYear, year } = p;
+  const read: ReadStatement = useMemo(() => readWithYear(year), [readWithYear, year]);
   const lines: ReadLine[] = useMemo(
     () =>
       p.swapped
@@ -376,14 +455,15 @@ function Result(p: ResultProps) {
     <>
       <div className={styles.head}>
         <p className={styles.file}>
-          <Emoji>{p.source === "picture" || p.source === "pictures" ? "🖼️" : "📄"}</Emoji> <strong>{p.name}</strong>
+          <Emoji>{p.source === "picture" || p.source === "pictures" ? "🖼️" : p.source === "csv" ? "📊" : "📄"}</Emoji>{" "}
+          <strong>{p.name}</strong>
         </p>
         <Button size="sm" variant="ghost" onClick={p.onReset}>
           <Emoji>🔁</Emoji> Convert another statement
         </Button>
       </div>
 
-      {p.source !== "text" && (
+      {p.source !== "text" && p.source !== "csv" && (
         <Notice tone="info" role="status">
           We read this from {p.source === "scan" ? "a scan" : p.source === "pictures" ? "pictures" : "a picture"}{" "}
           with text recognition, which can misread a character (an 8 for a 3, say). Check each line against the
@@ -403,6 +483,8 @@ function Result(p: ResultProps) {
             <dl className="facts">
               <dt>Statement</dt>
               <dd>{read.kind === "card" ? "Credit card" : "Bank account"}</dd>
+              <dt>Read from</dt>
+              <dd>{SOURCE_TEXT[p.source]}</dd>
               <dt>Period</dt>
               <dd>
                 {formatDate(read.periodStart!)} to {formatDate(read.periodEnd!)}

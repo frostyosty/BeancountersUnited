@@ -294,3 +294,10 @@ tried on the live site.
       and Edge. Check every line against the paper, and note how long the first read takes on a slow connection
       (it loads about 7 MB of OCR engine and data once, then the browser keeps it).
 - [ ] Import one QIF and one CSV from the converter into Xero (or MYOB) to confirm they're accepted.
+- [ ] Black-and-white scans (added 2026-11-16): an 8-page fax-style scan of a home loan (revolving) statement
+      now reads, but about a third of its lines had a running balance that didn't follow, mostly misread
+      amounts and some money in/out mix-ups. On an office machine, compare the converter's lines with the paper
+      and note the kinds of misreads (a 5 read as 6, a missing decimal point, an amount in the wrong column),
+      without client details, so a synthetic look-alike can be added to the tests.
+- [ ] CSV in (added 2026-11-16): drop in the CSV export from each bank you see most and check the dates, signs,
+      descriptions and account number it picks up. Note any bank whose column headings it doesn't find.

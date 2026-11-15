@@ -134,6 +134,7 @@ describe("fileKind and inPageOrder", () => {
     expect(fileKind(bytes("RIFF", 0, 0, 0, 0, "WEBP"), "page.webp")).toBe("picture");
     expect(fileKind(bytes(0, 0, 0, 0x18, "ftypheic"), "IMG_0002.HEIC")).toBe("picture");
     expect(fileKind(bytes("OFXHEADER:100"), "march.ofx")).toBe("bankFile");
+    expect(fileKind(bytes("Date,Amount"), "march.csv")).toBe("csv");
     expect(fileKind(bytes("hello"), "notes.txt")).toBe("other");
   });
 

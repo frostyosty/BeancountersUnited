@@ -4,7 +4,7 @@
  */
 import { looksLikePdf } from "./pdfText";
 
-export type FileKind = "pdf" | "picture" | "bankFile" | "other";
+export type FileKind = "pdf" | "picture" | "csv" | "bankFile" | "other";
 
 /** Pictures browsers can open: PNG, JPEG, GIF, WebP, BMP, and HEIC/AVIF (which only some can). */
 function looksLikePicture(b: Uint8Array): boolean {
@@ -22,7 +22,8 @@ function looksLikePicture(b: Uint8Array): boolean {
 export function fileKind(bytes: Uint8Array, name: string): FileKind {
   if (looksLikePdf(bytes)) return "pdf";
   if (looksLikePicture(bytes)) return "picture";
-  if (/\.(ofx|qfx|qif|csv)$/i.test(name)) return "bankFile";
+  if (/\.csv$/i.test(name)) return "csv";
+  if (/\.(ofx|qfx|qif)$/i.test(name)) return "bankFile";
   return "other";
 }
 

@@ -70,7 +70,7 @@ function statement(closing = "1,345.50") {
 
 const pdf = (name = "march.pdf") => new File(["%PDF-1.7\n%made up\n"], name, { type: "application/pdf" });
 const png = (name: string) => new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], name, { type: "image/png" });
-const INPUT = "Statement PDF or pictures";
+const INPUT = "Statement PDF, pictures or CSV";
 const drop = (...files: File[]) => fireEvent.change(screen.getByLabelText(INPUT), { target: { files } });
 
 let saved: { name: string; text: string }[] = [];
@@ -174,10 +174,10 @@ describe("PDF to OFX", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("already a bank file");
 
     drop(new File(["just some notes"], "notes.txt"));
-    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("isn't a PDF or a picture"));
+    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("isn't a PDF, a picture or a CSV"));
 
     drop(pdf(), png("page 1.png"));
-    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("one PDF at a time"));
+    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("one PDF or CSV at a time"));
 
     // A scan where text recognition finds nothing.
     runs.current = [];
@@ -200,6 +200,82 @@ describe("PDF to OFX", () => {
     // Both drawn pages went to the text reader, and the page says to check what it read.
     expect(vi.mocked(ocrTextRuns).mock.calls[0]![0]).toHaveLength(2);
     expect(screen.getByText(/We read this from a scan with text recognition/)).toBeTruthy();
+    expect(screen.getByText("A scanned PDF, with text recognition")).toBeTruthy();
+  });
+
+  it("reads a PDF the way Read as says, and tries a file that failed again when it's changed", async () => {
+    runs.current = [];
+    runs.ocr = statement();
+    stubApi({ "GET /api/me": () => null });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+
+    // Only the PDF's text: a scan has none, so it says how to read it instead.
+    await user.selectOptions(screen.getByLabelText("Read as"), "text");
+    drop(pdf("scan.pdf"));
+    expect((await screen.findByRole("alert")).textContent).toContain("Choose “A scan or pictures (text recognition)”");
+    expect(ocrTextRuns).not.toHaveBeenCalled();
+
+    // Choosing text recognition reads the same file again, without dropping it in again.
+    await user.selectOptions(screen.getByLabelText("Read as"), "ocr");
+    await screen.findByRole("table", { name: "Transactions" });
+    expect(ocrTextRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a PDF with text recognition when asked to, even if it has text", async () => {
+    runs.ocr = statement();
+    stubApi({ "GET /api/me": () => null });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+    await user.selectOptions(screen.getByLabelText("Read as"), "ocr");
+    drop(pdf());
+    await screen.findByRole("table", { name: "Transactions" });
+    expect(ocrTextRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a bank's CSV, and downloads it as OFX", async () => {
+    stubApi({ "GET /api/me": () => null });
+    const blobs: Blob[] = [];
+    vi.mocked(URL.createObjectURL).mockImplementation((b) => {
+      blobs.push(b as Blob);
+      return "blob:file";
+    });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+    const csv = "Account,12-3456-0123456-00\nDate,Details,Amount,Balance\n03/03/2026,COFFEE CART,-4.50,995.50\n05/03/2026,SALARY ACME LTD,350.00,\"1,345.50\"\n";
+    drop(new File([csv], "export.csv", { type: "text/csv" }));
+
+    const table = await screen.findByRole("table", { name: "Transactions" });
+    expect(within(table).getAllByRole("row").slice(1).map((r) => r.textContent)).toEqual([
+      "3 Mar 2026COFFEE CART4.50995.50",
+      "5 Mar 2026SALARY ACME LTD350.001,345.50",
+    ]);
+    expect(screen.getByText("A CSV")).toBeTruthy();
+    expect(screen.getByText(/It adds up/)).toBeTruthy();
+    expect(screen.queryByText(/text recognition, which can misread/)).toBeNull();
+    expect(ocrTextRuns).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /Download OFX/ }));
+    expect(saved.map((s) => s.name)).toEqual(["statement-12-3456-0123456-00-2026-03-05.ofx"]);
+    expect(await blobs[0]!.text()).toContain("<TRNAMT>-4.50</TRNAMT>");
+  });
+
+  it("says when a CSV is dropped in with Read as set to a PDF way, and when a PDF is read as a CSV", async () => {
+    stubApi({ "GET /api/me": () => null });
+    renderApp(<App />, "/tools/pdf-to-ofx");
+    const user = userEvent.setup();
+    await screen.findByLabelText(INPUT);
+    await user.selectOptions(screen.getByLabelText("Read as"), "text");
+    drop(new File(["Date,Amount\n"], "export.csv"));
+    expect((await screen.findByRole("alert")).textContent).toContain("Choose “A CSV from the bank”");
+
+    await user.selectOptions(screen.getByLabelText("Read as"), "csv");
+    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("no lines with a date and an amount"));
+    drop(pdf());
+    await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toContain("This is a PDF, not a CSV"));
   });
 
   it("reads photos or screenshots of the pages, in page order", async () => {

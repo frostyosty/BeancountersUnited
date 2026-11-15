@@ -192,7 +192,7 @@ const groups: { icon: string; fallback: string; title: string; features: Feature
       },
       {
         title: "PDF to OFX",
-        body: "Only have a statement as a PDF, a scan or photos of the pages? Turn it into an OFX file that Xero, MYOB and other accounting software can import (or QIF or CSV). Read on your device, never uploaded. No account needed.",
+        body: "Only have a statement as a PDF, a scan, photos of the pages or a CSV? Turn it into an OFX file that Xero, MYOB and other accounting software can import (or QIF or CSV). Read on your device, never uploaded. No account needed.",
         target: { to: "/tools/pdf-to-ofx" },
       },
     ],

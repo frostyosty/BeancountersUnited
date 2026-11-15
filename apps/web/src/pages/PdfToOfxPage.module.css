@@ -106,3 +106,7 @@
     transition: none;
   }
 }
+
+.readAs {
+  max-width: 24rem;
+}

@@ -33,10 +33,22 @@ export function looksLikePdf(bytes: Uint8Array): boolean {
   return head.includes("%PDF-");
 }
 
+/**
+ * Where pdf.js fetches the WebAssembly decoders for a scan's pictures (vite.ocr.ts serves them).
+ * Without them, black-and-white (CCITT fax, JBIG2) and JPEG 2000 scans draw as blank pages.
+ */
+function browserWasmUrl(): string {
+  return new URL(`${__PDFJS_WASM_PATH__}/`, window.location.href).href;
+}
+
 /** Opens a PDF, with errors worded for the person who dropped it in. Destroy the task when done. */
-async function openPdf(lib: PdfJsModule, data: Uint8Array): Promise<{ task: PdfJs.PDFDocumentLoadingTask; doc: PdfJs.PDFDocumentProxy }> {
+async function openPdf(
+  lib: PdfJsModule,
+  data: Uint8Array,
+  wasmUrl?: string,
+): Promise<{ task: PdfJs.PDFDocumentLoadingTask; doc: PdfJs.PDFDocumentProxy }> {
   // pdf.js takes ownership of the buffer it's given, so it gets a copy.
-  const task = lib.getDocument({ data: data.slice(), verbosity: 0 });
+  const task = lib.getDocument({ data: data.slice(), verbosity: 0, ...(wasmUrl ? { wasmUrl } : {}) });
   try {
     return { task, doc: await task.promise };
   } catch (e) {
@@ -61,7 +73,7 @@ async function openPdf(lib: PdfJsModule, data: Uint8Array): Promise<{ task: PdfJ
  */
 export async function pdfTextRuns(data: Uint8Array, pdfjs?: PdfJsModule): Promise<TextRun[]> {
   const lib = pdfjs ?? (await loadBrowserPdfJs());
-  const { task, doc } = await openPdf(lib, data);
+  const { task, doc } = await openPdf(lib, data, pdfjs ? undefined : browserWasmUrl());
   try {
     const runs: TextRun[] = [];
     for (let n = 1; n <= doc.numPages; n++) {
@@ -95,7 +107,7 @@ export const MAX_SCAN_PAGES = 20;
  */
 export async function pdfPagePictures(data: Uint8Array, toBlob: (canvas: HTMLCanvasElement) => Promise<Blob>): Promise<Blob[]> {
   const lib = await loadBrowserPdfJs();
-  const { task, doc } = await openPdf(lib, data);
+  const { task, doc } = await openPdf(lib, data, browserWasmUrl());
   try {
     if (doc.numPages > MAX_SCAN_PAGES) {
       throw new PdfReadError(
