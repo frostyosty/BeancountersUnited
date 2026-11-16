@@ -5,7 +5,7 @@ import styles from "./Notice.module.css";
 
 const icons = {
   info: <Icon name="ui.info" fallback="✨️" />,
-  ok: <Icon name="ui.ok" fallback="✅" />,
+  ok: <Icon name="ui.ok" fallback="🏁" />,
   warn: <Icon name="ui.warning" fallback="⚠️" />,
   danger: <Icon name="ui.warning" fallback="⚠️" />,
 };

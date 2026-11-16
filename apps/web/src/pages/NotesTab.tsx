@@ -101,7 +101,7 @@ export function NotesTab() {
                     {canEdit && (
                       <div className="row">
                         <button type="button" disabled={command.isPending} onClick={() => setEditing(n.paragraph_id)}>
-                          <Icon name="notes.edit" fallback="⏳️" /> Edit
+                          <Icon name="notes.edit" fallback="✏️" /> Edit
                         </button>
                         <button
                           type="button"
@@ -140,7 +140,7 @@ export function NotesTab() {
       {canEdit && (
         <>
           <h2>
-            <Icon name="ui.empty" fallback="📚" /> Add from the library
+            <Icon name="ui.empty" fallback="📖" /> Add from the library
           </h2>
           {unpicked.length === 0 ? (
             <p className="muted">Every paragraph in the library is already in this year.</p>

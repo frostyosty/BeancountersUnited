@@ -174,7 +174,7 @@ function Preview({ proof: p, explains, onConfirm, onCancel }: { proof: AccountPr
         Afterwards your books will say <strong>{balanceWords(ledger, p.kind)}</strong> at the end of {formatDate(p.proof.books_date)},{" "}
         {left === 0 ? (
           <>
-            the same as your bank <Icon name="proof.agrees" fallback="✅" />
+            the same as your bank <Icon name="proof.agrees" fallback="🏁" />
           </>
         ) : (
           <>still out by ${formatMoney(Math.abs(left))}</>

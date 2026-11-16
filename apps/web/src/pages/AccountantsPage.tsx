@@ -15,7 +15,7 @@ const screens: { view: BooksView; icon: string; fallback: string; title: string;
   {
     view: "statements",
     icon: "year.statements",
-    fallback: "📑",
+    fallback: "📄",
     title: "Statements that foot",
     body: "Whole dollars with last year alongside, rounding lines so every column foots, and drill-down from any line to its accounts.",
   },
@@ -29,7 +29,7 @@ const screens: { view: BooksView; icon: string; fallback: string; title: string;
   {
     view: "journals",
     icon: "ui.empty",
-    fallback: "⏳️",
+    fallback: "✏️",
     title: "Journals",
     body: "Balanced, dated inside the year, and never changed once posted. Corrections are reversing journals.",
   },
@@ -83,7 +83,7 @@ const guardrails: { icon: string; fallback: string; text: string }[] = [
   },
   {
     icon: "ui.ok",
-    fallback: "✅",
+    fallback: "🏁",
     text: "Every journal balances and every statement foots. The server checks it, not just the screen.",
   },
   {
@@ -140,7 +140,7 @@ export function AccountantsPage() {
       <main>
         <section className={home.section}>
           <h1 className={home.sectionTitle}>
-            <Icon name="accountant_view.accountant" fallback="📊" /> For accountants
+            <Icon name="accountant_view.accountant" fallback="🧮" /> For accountants
           </h1>
           <p className={home.sectionLede}>
             Your clients sort their own bank statements. You get proper books underneath, and the final say.
@@ -181,7 +181,7 @@ export function AccountantsPage() {
 
           <aside className={styles.sample}>
             <span className={home.featureIcon}>
-              <Icon name="year.statements" fallback="📑" />
+              <Icon name="year.statements" fallback="📄" />
             </span>
             <div>
               <h3>See what you'd send a client</h3>
@@ -211,7 +211,7 @@ export function AccountantsPage() {
             </section>
             <section className={styles.side} aria-labelledby="you-do">
               <h3 id="you-do">
-                <Icon name="accountant_view.accountant" fallback="📊" /> You
+                <Icon name="accountant_view.accountant" fallback="🧮" /> You
               </h3>
               <ul>
                 {you.map((t) => (

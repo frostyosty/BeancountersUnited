@@ -288,7 +288,7 @@ export function FeaturesPage() {
 
           <p className={styles.more}>
             <Link to="/accountants">
-              <Icon name="accountant_view.accountant" fallback="📊" /> Are you an accountant? See what's there for you
+              <Icon name="accountant_view.accountant" fallback="🧮" /> Are you an accountant? See what's there for you
             </Link>
             <Link to="/pricing">
               <Icon name="business.save_categorise" fallback="🏷️" /> See pricing

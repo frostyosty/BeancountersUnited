@@ -199,7 +199,7 @@ function OtherIncome({ year, canEdit, busy, error, onAnswer }: { year: number; c
           </label>
           <div className="row">
             <button type="submit" className="primary" disabled={!valid || busy}>
-              <Icon name="business.save_ok" fallback="✅" /> Save
+              <Icon name="business.save_ok" fallback="🏁" /> Save
             </button>
           </div>
         </form>
@@ -240,7 +240,7 @@ function Ietc({ year, canEdit, busy, error, onAnswer }: { year: number; canEdit:
           </label>
           <div className="row">
             <button type="submit" className="primary" disabled={busy}>
-              <Icon name="business.save_ok" fallback="✅" /> Save
+              <Icon name="business.save_ok" fallback="🏁" /> Save
             </button>
           </div>
         </form>
@@ -258,7 +258,7 @@ function TransferCard({ card, clientId, canEdit }: CardProps) {
   }
   return (
     <>
-      <Heading icon="business.save_transfer" fallback="🔁">
+      <Heading icon="business.save_transfer" fallback="🔄">
         Did you move this money between your own accounts?
       </Heading>
       <p className="muted">

@@ -33,7 +33,7 @@ export function TrialLink({
   const className = badge ? `${styles.badge} ${styles.tryNow} ${styles.badgeLink}` : styles.go;
   const label = badge ? (
     <>
-      <Emoji>✅</Emoji> {"trial" in target && o.opening === id ? "Opening…" : "Try it now"}
+      <Emoji>🏁</Emoji> {"trial" in target && o.opening === id ? "Opening…" : "Try it now"}
     </>
   ) : (
     <>
@@ -72,7 +72,7 @@ export function Badge({ kind }: { kind: Access }) {
     case "try":
       return (
         <span className={`${styles.badge} ${styles.tryNow}`}>
-          <Emoji>✅</Emoji> Try it now
+          <Emoji>🏁</Emoji> Try it now
         </span>
       );
     case "free":

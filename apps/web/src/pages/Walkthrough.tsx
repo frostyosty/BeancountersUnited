@@ -66,7 +66,7 @@ export function Walkthrough() {
             <span className={styles.barFill} />
           </span>
           <span className={styles.read}>
-            <Icon name="business.ok" fallback="✅" /> 42 lines read
+            <Icon name="business.ok" fallback="🏁" /> 42 lines read
           </span>
           <span className={`${styles.button} ${styles.b1}`}>
             <Icon name="business.upload" fallback="📤" /> Choose files

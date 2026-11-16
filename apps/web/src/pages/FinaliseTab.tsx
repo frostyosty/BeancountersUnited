@@ -89,7 +89,7 @@ function PreChecks({ check }: { check: FinaliseCheck }) {
         {items.map((i) => (
           <li key={i.key} className={styles[i.state]}>
             <span className={styles.mark}>
-              {i.state === "passed" && <Icon name="year.finalise_passed" fallback="✅" />}
+              {i.state === "passed" && <Icon name="year.finalise_passed" fallback="🏁" />}
               {i.state === "failed" && <Icon name="year.finalise_failed" fallback="⚠️" />}
               {i.state === "skipped" && <Icon name="year.finalise_skipped" fallback="➖" />}
             </span>

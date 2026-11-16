@@ -57,7 +57,7 @@ const features: { icon: string; fallback: string; title: string; body: string; v
   },
   {
     icon: "year.statements",
-    fallback: "📑",
+    fallback: "📄",
     view: "statements",
     title: "Statements that foot",
     body: "Whole-dollar statements with last year alongside, balanced to the dollar, drill down to any account.",

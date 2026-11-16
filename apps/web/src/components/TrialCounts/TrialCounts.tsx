@@ -46,7 +46,7 @@ export function TrialCounts() {
 function TrialCountsCard() {
   const counts = useQuery({ queryKey: ["overseer", "trials"], queryFn: () => getJson<Counts>("/api/overseer/trials") });
   return (
-    <Card title="Trials" icon={<Icon name="overseer.trials" fallback="📊" />}>
+    <Card title="Trials" icon={<Icon name="overseer.trials" fallback="🧮" />}>
       <p className="muted">
         The last 12 weeks, newest first, weeks starting Monday (UTC). Counts only: nothing here shows what a visitor
         uploaded.

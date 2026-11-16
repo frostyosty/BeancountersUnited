@@ -264,7 +264,7 @@ function Upload({ clientId }: { clientId: string }) {
           {results.map((r, i) =>
             r.ok ? (
               <li key={i}>
-                <Icon name="business.ok" fallback="✅" /> {r.name}: read. Lines already uploaded were skipped.
+                <Icon name="business.ok" fallback="🏁" /> {r.name}: read. Lines already uploaded were skipped.
               </li>
             ) : (
               <li key={i}>
@@ -431,7 +431,7 @@ function BankAccount({ account: a, clientId, canEdit }: { account: BankAccountVi
             </>
           ) : rec.agrees ? (
             <>
-              <Icon name="business.ok" fallback="✅" /> Matches the statement: ${formatMoney(rec.ledger)} on{" "}
+              <Icon name="business.ok" fallback="🏁" /> Matches the statement: ${formatMoney(rec.ledger)} on{" "}
               {formatDate(rec.date)}.
             </>
           ) : (

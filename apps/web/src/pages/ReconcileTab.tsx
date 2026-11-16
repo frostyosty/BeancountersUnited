@@ -58,7 +58,7 @@ const statusText: Record<ReconcileStatus, string> = {
 };
 
 const statusEmoji: Record<ReconcileStatus, string> = {
-  agrees: "✅",
+  agrees: "🏁",
   explained: "🔎",
   differs: "⚠️",
   no_balance: "❔",

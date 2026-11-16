@@ -60,7 +60,7 @@ function AiOff({ clientId }: { clientId: string }) {
           onClick={() => command.mutate({ kind: "set_ai_suggestions", payload: { client_id: clientId, enabled: true } })}
           disabled={command.isPending}
         >
-          <Icon name="business.ok" fallback="✅" /> Turn the experts on
+          <Icon name="business.ok" fallback="🏁" /> Turn the experts on
         </button>
       </div>
       {command.error && <ErrorMessage error={command.error} />}
@@ -92,7 +92,7 @@ function AiSettingsForm({ clientId, view }: { clientId: string; view: AiSuggesti
         </label>
         <div className="row">
           <button type="button" onClick={save} disabled={command.isPending}>
-            <Icon name="business.ok" fallback="✅" /> Save
+            <Icon name="business.ok" fallback="🏁" /> Save
           </button>
         </div>
         {command.isSuccess && <p role="status">Saved.</p>}

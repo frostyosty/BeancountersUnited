@@ -30,7 +30,7 @@ export function ClientPage() {
         actions={
           <>
             <ButtonLink to={`/clients/${c.id}/chart`}>
-              <Icon name="client.chart" fallback="📚" /> Chart of accounts and rounding priority
+              <Icon name="client.chart" fallback="📖" /> Chart of accounts and rounding priority
             </ButtonLink>
             {c.is_business && (
               <ButtonLink to={`/businesses/${c.id}`}>

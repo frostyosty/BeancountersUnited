@@ -238,7 +238,7 @@ function Editor({ account, initialHtml }: { account: boolean; initialHtml: strin
       <div className={styles.toolbar} role="toolbar" aria-label="Invoice tools">
         <div className={styles.group}>
           <Button size="sm" onClick={() => editor.current?.add("text")}>
-            <Emoji>⏳️</Emoji> Text
+            <Emoji>✏️</Emoji> Text
           </Button>
           <Button size="sm" onClick={() => editor.current?.add("image")}>
             <Emoji>🖼️</Emoji> Image
@@ -258,7 +258,7 @@ function Editor({ account, initialHtml }: { account: boolean; initialHtml: strin
             <Emoji>↪️</Emoji> Redo
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void startAgain()}>
-            <Emoji>🔁</Emoji> Start again
+            <Emoji>🔄</Emoji> Start again
           </Button>
         </div>
         {account ? (
@@ -297,7 +297,7 @@ function Editor({ account, initialHtml }: { account: boolean; initialHtml: strin
         )}
         <div className={styles.group}>
           <span className={`muted ${styles.saveState}`} role="status" aria-label="Save status">
-            <Emoji>{saveState === "failed" ? "⚠️" : saveState === "saved" ? (account ? "☁️" : "💾") : "⏳"}</Emoji>{" "}
+            <Emoji>{saveState === "failed" ? "⚠️" : saveState === "saved" ? (account ? "☁️" : "💾") : "✏️"}</Emoji>{" "}
             {saveLabel[saveState]}
           </span>
           <Button variant="primary" size="sm" busy={busy === "pdf"} onClick={() => void exportPdf()}>

@@ -73,7 +73,7 @@ export function YearLayout() {
           <Icon name="year.gl" fallback="📖" /> General ledger
         </Tab>
         <Tab to="analysis">
-          <Icon name="year.analysis" fallback="📊" /> Analysis
+          <Icon name="year.analysis" fallback="🧮" /> Analysis
         </Tab>
         <Tab to="finalise">
           <Icon name="year.finalise" fallback="🔏" /> Finalise

@@ -158,7 +158,7 @@ function Editor({ detail }: { detail: MappingDetail }) {
               <p>
                 {unmapped.length === 0 ? (
                   <>
-                    <Icon name="layouts.covered" fallback="✅" /> Every master chart account maps to a line.
+                    <Icon name="layouts.covered" fallback="🏁" /> Every master chart account maps to a line.
                   </>
                 ) : (
                   <>

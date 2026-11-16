@@ -95,7 +95,7 @@ export function PricingPage() {
                 <ul className={styles.perks}>
                   {t.perks.map((perk) => (
                     <li key={perk}>
-                      <Icon name="business.ok" fallback="✅" /> {perk}
+                      <Icon name="business.ok" fallback="🏁" /> {perk}
                     </li>
                   ))}
                 </ul>

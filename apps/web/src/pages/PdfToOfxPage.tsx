@@ -281,7 +281,7 @@ function Converter() {
       )}
       {stage.kind === "reading" && (
         <p className="muted" role="status">
-          <Emoji>⏳</Emoji> {readingText(stage.name, stage.progress)}
+          <Emoji>✏️</Emoji> {readingText(stage.name, stage.progress)}
         </p>
       )}
       {stage.kind === "failed" && (
@@ -483,11 +483,11 @@ function Result(p: ResultProps) {
     <>
       <div className={styles.head}>
         <p className={styles.file}>
-          <Emoji>{p.source === "picture" || p.source === "pictures" ? "🖼️" : p.source === "csv" ? "📊" : "📄"}</Emoji>{" "}
+          <Emoji>{p.source === "picture" || p.source === "pictures" ? "🖼️" : p.source === "csv" ? "🧮" : "📄"}</Emoji>{" "}
           <strong>{p.name}</strong>
         </p>
         <Button size="sm" variant="ghost" onClick={p.onReset}>
-          <Emoji>🔁</Emoji> Convert another statement
+          <Emoji>🔄</Emoji> Convert another statement
         </Button>
       </div>
 
@@ -617,7 +617,7 @@ function Result(p: ResultProps) {
                 <Emoji>⬇️</Emoji> Download {format.value.toUpperCase()}
               </Button>
               <Button variant="ghost" onClick={p.onSwap} aria-pressed={p.swapped}>
-                <Emoji>🔃</Emoji> Swap money in and out
+                <Emoji>🔄</Emoji> Swap money in and out
               </Button>
             </div>
             {p.saved && (

@@ -45,7 +45,7 @@ export function ChartPage() {
           { to: "/", label: "Clients" },
           { to: `/clients/${clientId}`, label: client.data.name },
         ]}
-        icon={<Icon name="client.chart" fallback="📚" />}
+        icon={<Icon name="client.chart" fallback="📖" />}
         title="Chart of accounts"
       />
       <div className={styles.layout}>

@@ -129,7 +129,7 @@ export function BankVsBooks({ open, onClose, proofs }: BankVsBooksProps) {
             ) : (
               <>
                 <span className={styles.verdictText}>
-                  {difference === 0 ? <Icon name="proof.agrees" fallback="✅" /> : <Icon name="proof.out" fallback="⚠️" />}{" "}
+                  {difference === 0 ? <Icon name="proof.agrees" fallback="🏁" /> : <Icon name="proof.out" fallback="⚠️" />}{" "}
                   {verdictWords(difference)}
                 </span>
                 {difference !== 0 && (

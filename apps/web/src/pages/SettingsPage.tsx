@@ -98,7 +98,7 @@ function Defaults() {
       </p>
       <p>
         <Link to="/settings/paragraphs">
-          <Icon name="ui.empty" fallback="📚" /> Paragraph library
+          <Icon name="ui.empty" fallback="📖" /> Paragraph library
         </Link>{" "}
         <span className="muted">(accounting policies and notes)</span>
       </p>
@@ -399,7 +399,7 @@ function AssetClasses() {
               </button>
             ))}
             <button type="button" aria-pressed={preset === null} onClick={() => setPreset(null)}>
-              <Emoji>⏳️</Emoji> Custom
+              <Emoji>✏️</Emoji> Custom
             </button>
           </div>
           <AssetClassForm

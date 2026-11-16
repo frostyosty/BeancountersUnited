@@ -37,7 +37,7 @@ function ExpenseAnalysis({ view }: { view: ExpenseAnalysisView }) {
   return (
     <div>
       <h2>
-        <Icon name="year.analysis" fallback="📊" /> Expenses by category
+        <Icon name="year.analysis" fallback="🧮" /> Expenses by category
       </h2>
       {view.comparatives === "unfinalised" && (
         <p className={styles.notice}>

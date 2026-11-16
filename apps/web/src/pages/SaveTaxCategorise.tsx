@@ -26,7 +26,7 @@ type OutChoice = "expense" | "part_private" | "asset_purchase" | "personal" | "t
 
 const IN_CHOICES: [InChoice, string, string][] = [
   ["income", "💵", "Money the business earned"],
-  ["transfer", "🔁", "Moved from another of my accounts"],
+  ["transfer", "🔄", "Moved from another of my accounts"],
   ["owner_funds", "👀", "Money I put in myself"],
   ["loan", "🏛", "A loan"],
   ["gst_refund", "🏛️", "A GST refund from IRD"],
@@ -39,7 +39,7 @@ const OUT_CHOICES: [OutChoice, string, string][] = [
   ["part_private", "➗", "Partly business, partly personal"],
   ["asset_purchase", "🔧", "Something for the business that lasts years (tools, a vehicle, a computer)"],
   ["personal", "🛒", "Personal spending"],
-  ["transfer", "🔁", "Moved to another of my accounts"],
+  ["transfer", "🔄", "Moved to another of my accounts"],
   ["ird_gst", "🏛️", "GST paid to IRD"],
   ["ird_income_tax", "🏛️", "Income tax paid to IRD"],
 ];
@@ -382,7 +382,7 @@ export function CategoriseForm({
       <ErrorMessage error={command.error} />
       <div className="row">
         <button type="submit" className="primary" disabled={command.isPending}>
-          <Icon name="business.save_ok" fallback="✅" /> Save
+          <Icon name="business.save_ok" fallback="🏁" /> Save
         </button>
       </div>
     </form>

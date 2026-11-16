@@ -41,7 +41,7 @@ export function ParagraphLibraryPage() {
     <>
       <PageHeader
         crumbs={[{ to: "/settings", label: "Settings" }]}
-        icon={<Icon name="ui.empty" fallback="📚" />}
+        icon={<Icon name="ui.empty" fallback="📖" />}
         title="Paragraph library"
       />
       <p className="muted">
@@ -140,7 +140,7 @@ function Library({ entityType }: { entityType: string }) {
             {m === null && (
               <div className="row">
                 <button type="button" onClick={() => setMode({ id: p.id, kind: "revise" })}>
-                  <Icon name="notes.edit" fallback="⏳️" /> Revise
+                  <Icon name="notes.edit" fallback="✏️" /> Revise
                 </button>
                 <button type="button" onClick={() => setMode({ id: p.id, kind: "push" })}>
                   <Icon name="notes.push" fallback="📤" /> Push to open years…

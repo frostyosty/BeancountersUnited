@@ -51,7 +51,7 @@ function suggestionLabel(s: Suggestion, flip: 1 | -1): { icon: string; text: str
     case "remove":
       return { icon: "🗑️", text: "It isn't a transaction: take it out" };
     case "dateRight":
-      return { icon: "✅", text: `${date} is right` };
+      return { icon: "🏁", text: `${date} is right` };
     case "date":
       return { icon: "📅", text: `It's ${date}` };
   }
@@ -386,7 +386,7 @@ function EditLine(p: {
       )}
       <div className={styles.fixButtons}>
         <Button size="sm" variant="primary" type="submit">
-          <Emoji>✅</Emoji> Save
+          <Emoji>🏁</Emoji> Save
         </Button>
         <Button size="sm" variant="ghost" onClick={p.onCancel}>
           Cancel
